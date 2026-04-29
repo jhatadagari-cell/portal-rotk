@@ -11,7 +11,13 @@
       "Bash(node -e \"const d=require\\('C:/Users/usuario/Desktop/Portal ROTK/assets/js/data.js'.replace\\(/\\\\\\\\/g,'/'\\)\\); console.log\\('CHARS:',d\\)\")",
       "Bash(start *)",
       "Bash(node *)",
-      "Bash(identify \"C:\\\\Users\\\\usuario\\\\Desktop\\\\Portal ROTK\\\\assets\\\\img\\\\Diao Chan\\\\Diao Chan 1.png\")"
+      "Bash(identify \"C:\\\\Users\\\\usuario\\\\Desktop\\\\Portal ROTK\\\\assets\\\\img\\\\Diao Chan\\\\Diao Chan 1.png\")",
+      "Read(//c/Users/usuario/Desktop/**)",
+      "Bash(python -m http.server 8000)",
+      "Bash(curl -s http://localhost:8000/Portal%20ROTK/index.html)",
+      "Bash(curl -s http://localhost:8000/Portal%20ROTK/assets/js/ui.js)",
+      "Bash(curl -s http://localhost:8000/Portal%20ROTK/assets/css/main.css)",
+      "Bash(pkill *)"
     ]
   }
 }

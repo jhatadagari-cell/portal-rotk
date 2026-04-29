@@ -1,6 +1,8 @@
 // ── Shared era state (read by era-fx.js) ──
 let activeEra = null;
 let showAllChars = false;
+let filterText = '';
+let selectedFactions = new Set();
 
 // ── Multi-faction cursor transition ──
 function lerpHex(a, b, t) {
@@ -75,11 +77,63 @@ function effectiveRank(c, eraId) {
   return (eraId && c.eraRank && c.eraRank[eraId] != null) ? c.eraRank[eraId] : (c.rank ?? 3);
 }
 
+// ── Character filter helpers ──
+function getCharFactions(c) {
+  if (c.facs) return c.facs.map(f => ({ label: f.label, color: f.color }));
+  return [{ label: c.fac, color: c.fc }];
+}
+
+function charMatchesText(c) {
+  if (!filterText) return true;
+  const normalize = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  const q = normalize(filterText);
+  const en = normalize(c.en || '');
+  const zh = c.zh || '';
+  return en.includes(q) || zh.includes(filterText.toLowerCase());
+}
+
+function charMatchesFactions(c) {
+  if (selectedFactions.size === 0) return true;
+  return getCharFactions(c).some(f => selectedFactions.has(f.label));
+}
+
+function renderFactionFilters(basePool) {
+  const container = document.getElementById('char-faction-btns');
+  const factionMap = new Map();
+  basePool.forEach(({ c }) => {
+    getCharFactions(c).forEach(({ label, color }) => {
+      if (!factionMap.has(label)) factionMap.set(label, color);
+    });
+  });
+  for (const sel of selectedFactions) {
+    if (!factionMap.has(sel)) selectedFactions.delete(sel);
+  }
+  container.innerHTML = '';
+  for (const [label, color] of factionMap) {
+    const btn = document.createElement('button');
+    btn.className = 'fac-filter-btn' + (selectedFactions.has(label) ? ' active' : '');
+    btn.style.setProperty('--fc', color);
+    btn.textContent = label;
+    btn.addEventListener('click', () => {
+      if (selectedFactions.has(label)) selectedFactions.delete(label);
+      else selectedFactions.add(label);
+      renderCharacters(activeEra);
+    });
+    container.appendChild(btn);
+  }
+}
+
 function renderCharacters(filterEraId = null) {
   cgrid.innerHTML = '';
-  const pool = CHARS
+  const basePool = CHARS
     .map((c, i) => ({ c, i }))
     .filter(({ c }) => !filterEraId || (c.eras || []).includes(filterEraId));
+
+  renderFactionFilters(basePool);
+
+  const pool = basePool
+    .filter(({ c }) => charMatchesText(c))
+    .filter(({ c }) => charMatchesFactions(c));
 
   const maxRank = filterEraId ? 2 : 1;
   const shown = showAllChars ? pool : pool.filter(({ c }) => effectiveRank(c, filterEraId) <= maxRank);
@@ -243,6 +297,9 @@ PERIODS.forEach(p => {
 function setActiveEra(eraId) {
   activeEra = eraId;
   showAllChars = false;
+  selectedFactions.clear();
+  filterText = '';
+  document.getElementById('char-search').value = '';
   const era = PERIODS.find(p => p.id === eraId);
   document.querySelectorAll('.pcard').forEach(card => {
     card.classList.toggle('active', card.dataset.pid === eraId);
@@ -365,6 +422,12 @@ function closeMod() {
   document.getElementById('cmod').classList.remove('open');
 }
 document.addEventListener('keydown', e => { if(e.key==='Escape') closeMod(); });
+
+// ── Character search filter ──
+document.getElementById('char-search').addEventListener('input', e => {
+  filterText = e.target.value.trim();
+  renderCharacters(activeEra);
+});
 
 // ── Init + scroll reveal ──
 renderCharacters();

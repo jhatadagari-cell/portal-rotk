@@ -76,6 +76,7 @@ const CHARS=[
    ttl:'El Pequeño Conquistador',bio:'Con apenas 17 años comenzó la conquista de Jiangdong con 1.000 soldados heredados. En cinco años forjó el futuro reino de Wu. Murió a los 26 por una flecha envenenada, dejando todo a su hermano Sun Quan.',
    tags:['Wu 吳','Jiangdong','175–200 d.C.'],fac:'Wu 吳',
    stats:[['Facción','Wu 吳'],['Logro','Conquista de Jiangdong'],['Período','175–200 d.C.'],['Hermano','Sun Quan 孫權']],
+   detailHref:'assets/Periods/sun-ce.html',
    eras:['dong-zhuo','guerras-senores'],eraRank:{'guerras-senores':1,'dong-zhuo':2}},
 
   {zh:'荀彧',en:'Xun Yu',zi:'Wenruo 文若',ico:'📋',fc:'#1e5abf',fcbg:'rgba(30,90,191,.12)',rank:2,
@@ -100,6 +101,7 @@ const CHARS=[
    ttl:'El Anciano de Hierro',bio:'Veterano de Wu que se ofreció voluntario para el plan del ataque de fuego en Chibi. Soportó 50 golpes de vara para infiltrarse como desertor ante Cao Cao. "Huang Gai usó el truco; uno sufrió, el otro fue engañado." Su sacrificio cambió la historia.',
    tags:['Wu 吳','Chibi','?–~215 d.C.'],fac:'Wu 吳',
    stats:[['Facción','Wu 吳'],['Batalla','Chibi 208 d.C.'],['Plan','Ataque de Fuego 火攻'],['Título','General']],
+   detailHref:'assets/Periods/huang-gai.html',
    eras:['guerras-senores','chibi'],eraRank:{'chibi':1}},
 
   {zh:'鲁肃',en:'Lu Su',zi:'Zijing 子敬',ico:'🕊️',fc:'#bf2020',fcbg:'rgba(191,32,32,.12)',rank:2,
