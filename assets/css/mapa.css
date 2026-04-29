@@ -1,0 +1,154 @@
+:root{
+  --ink:#0b0600;--parch:#f0ddb0;--parch2:#d4b870;
+  --gold:#c9a84c;--goldf:rgba(201,168,76,.25);--red:#8b1a1a;
+  --border:rgba(201,168,76,.2);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--ink);
+  font-family:'IM Fell English',Georgia,serif;color:var(--parch)}
+
+#hdr{position:fixed;top:0;left:0;right:0;height:48px;z-index:300;
+  background:rgba(5,2,0,.97);border-bottom:1px solid var(--goldf);
+  display:flex;align-items:center;justify-content:space-between;padding:0 14px}
+.hzh{font-family:'Noto Serif SC',serif;font-size:20px;font-weight:900;
+  color:var(--red);letter-spacing:.2em;text-shadow:0 0 16px rgba(139,26,26,.5)}
+.hen{font-family:'Cinzel Decorative',serif;font-size:10px;color:var(--gold);
+  letter-spacing:.16em;opacity:.75;margin-left:10px}
+.hbtns{display:flex;gap:5px}
+.hb{font-family:'Noto Sans SC',sans-serif;font-size:10px;color:var(--parch2);
+  border:1px solid var(--border);background:none;padding:4px 10px;border-radius:2px;
+  cursor:pointer;transition:all .18s}
+.hb:hover,.hb.on{color:var(--gold);border-color:var(--gold);background:rgba(201,168,76,.06)}
+.hb-link{display:inline-flex;align-items:center;text-decoration:none}
+
+#bc{position:fixed;top:48px;left:0;right:0;height:26px;z-index:299;
+  background:rgba(4,2,0,.93);border-bottom:1px solid rgba(201,168,76,.1);
+  display:flex;align-items:center;padding:0 12px;gap:5px}
+.bci{font-family:'Noto Sans SC',sans-serif;font-size:10px;color:var(--parch2);
+  cursor:pointer;opacity:.62;transition:all .18s}
+.bci:hover{opacity:1;color:var(--gold)}
+.bci.on{color:var(--gold);opacity:1;cursor:default}
+.bcsep{color:var(--goldf);font-size:9px}
+
+#main{position:fixed;top:74px;left:0;bottom:82px;right:0;display:flex}
+
+/* ── MAP ── */
+#mpanel{flex:1;position:relative;overflow:hidden;background:#101810}
+
+/* El mapa base ocupa todo el panel */
+#map-container{position:absolute;inset:0;
+  display:flex;align-items:center;justify-content:center}
+
+/* Imagen base del mapa */
+#map-img{position:absolute;top:0;left:0;width:100%;height:100%;
+  object-fit:contain;object-position:center;
+  image-rendering:crisp-edges}
+
+/* Canvas SVG overlay — mismo tamaño que el panel */
+#map-overlay{position:absolute;top:0;left:0;width:100%;height:100%;
+  pointer-events:none}
+#map-overlay .interactive{pointer-events:all}
+
+#backbtn{position:absolute;top:10px;left:10px;z-index:20;display:none;
+  background:rgba(5,2,0,.92);border:1px solid var(--gold);color:var(--gold);
+  font-family:'Noto Sans SC',sans-serif;font-size:10px;padding:4px 10px;
+  border-radius:2px;cursor:pointer;transition:all .18s}
+#backbtn:hover{background:rgba(201,168,76,.1)}
+
+/* ── INFO ── */
+#ipanel{width:282px;flex-shrink:0;border-left:1px solid var(--border);
+  display:flex;flex-direction:column;
+  background:linear-gradient(180deg,rgba(7,3,0,.98),rgba(10,5,0,.96))}
+#ihdr{padding:11px 13px 8px;border-bottom:1px solid rgba(201,168,76,.12);flex-shrink:0}
+#izh{font-family:'Noto Serif SC',serif;font-size:16px;font-weight:700;color:var(--gold)}
+#iname{font-family:'Cinzel Decorative',serif;font-size:9px;color:var(--gold);opacity:.58;letter-spacing:.13em;margin-top:1px}
+#iyrs{font-family:'IM Fell English',serif;font-style:italic;font-size:10.5px;color:var(--parch2);opacity:.62;margin-top:2px}
+#ibody{flex:1;overflow-y:auto;padding:9px 11px;
+  scrollbar-width:thin;scrollbar-color:var(--goldf) transparent}
+#ibody::-webkit-scrollbar{width:3px}
+#ibody::-webkit-scrollbar-thumb{background:var(--goldf)}
+.idesc{font-family:'IM Fell English',serif;font-size:11.5px;line-height:1.65;
+  color:var(--parch2);border-left:2px solid var(--red);padding-left:8px;margin-bottom:7px}
+.isect{font-family:'Cinzel Decorative',serif;font-size:8.5px;color:var(--gold);
+  letter-spacing:.17em;text-transform:uppercase;
+  border-bottom:1px solid rgba(201,168,76,.12);padding-bottom:4px;margin:7px 0 5px}
+.crow{display:flex;align-items:center;gap:6px;padding:5px 7px;
+  background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.05);
+  border-radius:2px;cursor:pointer;transition:all .15s;
+  border-left:2px solid var(--fc,var(--gold));margin-bottom:3px}
+.crow:hover{background:rgba(201,168,76,.06);transform:translateX(2px)}
+.cico{width:25px;height:25px;border-radius:50%;background:rgba(201,168,76,.1);
+  display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0}
+.cnm{font-family:'Noto Serif SC',serif;font-size:10.5px;color:var(--parch)}
+.csb{font-family:'Noto Sans SC',sans-serif;font-size:9px;color:var(--gold);opacity:.58}
+.erow{display:flex;gap:5px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.038)}
+.erow:last-child{border:none}
+.eyr{font-family:'Cinzel Decorative',serif;font-size:8px;color:var(--gold);
+  opacity:.62;white-space:nowrap;min-width:36px;padding-top:1px}
+.etxt{font-family:'Noto Sans SC',sans-serif;font-size:10px;color:var(--parch2);line-height:1.4}
+.wbox{display:flex;flex-direction:column;align-items:center;justify-content:center;
+  height:100%;gap:10px;opacity:.42;text-align:center;padding:14px}
+.wico{font-size:38px;animation:br 3s ease-in-out infinite}
+@keyframes br{0%,100%{opacity:.3;transform:scale(.97)}50%{opacity:.8;transform:scale(1.03)}}
+.wtxt{font-family:'Cinzel Decorative',serif;font-size:9.5px;color:var(--gold);letter-spacing:.14em;line-height:1.8}
+
+/* TIMELINE */
+#tl{position:fixed;bottom:0;left:0;right:0;height:82px;z-index:300;
+  background:linear-gradient(0deg,rgba(4,2,0,.99),rgba(7,3,0,.94));
+  border-top:1px solid var(--border)}
+#tlsc{overflow-x:auto;height:100%;scrollbar-width:none;
+  display:flex;align-items:center;padding:0 18px;position:relative}
+#tlsc::-webkit-scrollbar{display:none}
+.tlr{position:absolute;top:38px;left:18px;right:18px;height:2px;
+  background:linear-gradient(90deg,transparent,var(--gold) 5%,var(--gold) 95%,transparent);
+  pointer-events:none}
+.pc{flex:0 0 auto;width:108px;display:flex;flex-direction:column;align-items:center;
+  cursor:pointer;padding:0 3px;transition:transform .18s}
+.pc:hover{transform:translateY(-3px)}
+.pcico{width:29px;height:29px;border-radius:50%;display:flex;align-items:center;
+  justify-content:center;font-size:14px;border:2px solid;transition:all .2s}
+.pcdot{width:10px;height:10px;border-radius:50%;border:2px solid var(--gold);
+  background:var(--ink);position:relative;z-index:2;transition:all .2s;margin-top:17px}
+.pc.on .pcdot,.pc:hover .pcdot{background:var(--gold);box-shadow:0 0 8px var(--gold);transform:scale(1.5)}
+.pcstem{width:2px;height:11px;background:var(--gold);opacity:.28}
+.pclbl{font-family:'Noto Sans SC',sans-serif;font-size:8px;color:var(--parch2);
+  text-align:center;line-height:1.25;margin-top:3px;transition:color .18s}
+.pc.on .pclbl{color:var(--gold);font-weight:700}
+.pcyr{font-family:'Cinzel Decorative',serif;font-size:7px;color:var(--gold);opacity:.42;text-align:center;margin-top:1px}
+
+/* MODAL */
+#cmod{position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:500;
+  display:flex;align-items:center;justify-content:center;padding:14px;
+  opacity:0;pointer-events:none;transition:opacity .24s}
+#cmod.open{opacity:1;pointer-events:all}
+.cmbox{background:#060300;border:1px solid var(--gold);border-radius:3px;
+  max-width:440px;width:100%;padding:18px;position:relative;
+  transform:translateY(14px);transition:transform .24s;
+  box-shadow:0 0 40px rgba(139,26,26,.28)}
+#cmod.open .cmbox{transform:translateY(0)}
+.cmx{position:absolute;top:8px;right:10px;background:none;border:none;
+  color:var(--gold);font-size:16px;cursor:pointer;opacity:.5}
+.cmx:hover{opacity:1}
+.cmnm{font-family:'Noto Serif SC',serif;font-size:18px;color:var(--gold);margin-bottom:2px}
+.cmzi{font-family:'IM Fell English',serif;font-style:italic;font-size:11.5px;color:var(--parch2);opacity:.72;margin-bottom:8px}
+.cmbadge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:2px;
+  font-family:'Noto Sans SC',sans-serif;font-size:9.5px;margin-bottom:9px;border:1px solid}
+.cmbio{font-family:'IM Fell English',serif;font-size:12px;line-height:1.7;
+  color:var(--parch2);border-top:1px solid rgba(201,168,76,.13);padding-top:9px}
+.cmst{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:9px}
+.cmsb{background:rgba(255,255,255,.025);border:1px solid rgba(201,168,76,.1);padding:5px 7px;border-radius:2px}
+.cmsl{font-size:7.5px;color:var(--gold);opacity:.52;font-family:'Noto Sans SC',sans-serif}
+.cmsv{font-size:10.5px;color:var(--parch);font-family:'Noto Serif SC',serif;margin-top:1px}
+
+#tip{position:fixed;background:rgba(5,2,0,.97);border:1px solid var(--gold);
+  padding:5px 9px;border-radius:2px;font-family:'Noto Sans SC',sans-serif;
+  font-size:10px;color:var(--parch);pointer-events:none;z-index:400;
+  display:none;max-width:195px;line-height:1.38}
+
+/* Marcadores sobre el mapa */
+.region-hit{cursor:pointer;fill:transparent;stroke:none}
+.region-hit:hover ~ .region-fill{opacity:.85!important}
+.char-pin{cursor:pointer;transition:transform .15s;transform-origin:center}
+.char-pin:hover{transform:scale(1.25)}
+.city-pin{cursor:pointer}
+.city-pin:hover circle{filter:brightness(1.4)}

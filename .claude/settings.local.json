@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:www.marvelfandom.com)",
+      "Bash(mkdir -p \"/c/Users/usuario/Desktop/Portal ROTK/assets/img\" \"/c/Users/usuario/Desktop/Portal ROTK/assets/css\")",
+      "Bash(mv \"/c/Users/usuario/Desktop/Portal ROTK/assets/Han_provinces.jpg\" \"/c/Users/usuario/Desktop/Portal ROTK/assets/img/\")",
+      "Bash(mv \"/c/Users/usuario/Desktop/Portal ROTK/assets/image.png\" \"/c/Users/usuario/Desktop/Portal ROTK/assets/img/\")",
+      "Bash(mv \"/c/Users/usuario/Desktop/Portal ROTK/assets/mapa.css\" \"/c/Users/usuario/Desktop/Portal ROTK/assets/css/\")",
+      "Bash(mv \"/c/Users/usuario/Desktop/Portal ROTK/assets/era-turbantes-amarillos.css\" \"/c/Users/usuario/Desktop/Portal ROTK/assets/css/\")",
+      "WebSearch",
+      "Bash(node -e \"const d=require\\('C:/Users/usuario/Desktop/Portal ROTK/assets/js/data.js'.replace\\(/\\\\\\\\/g,'/'\\)\\); console.log\\('CHARS:',d\\)\")",
+      "Bash(start *)",
+      "Bash(node *)",
+      "Bash(identify \"C:\\\\Users\\\\usuario\\\\Desktop\\\\Portal ROTK\\\\assets\\\\img\\\\Diao Chan\\\\Diao Chan 1.png\")"
+    ]
+  }
+}

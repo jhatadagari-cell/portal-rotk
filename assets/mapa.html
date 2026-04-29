@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>三國演義 · Romance de los Tres Reinos</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700;900&family=Cinzel+Decorative:wght@400;700&family=IM+Fell+English:ital@0;1&family=Noto+Sans+SC:wght@300;400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/mapa.css">
+</head>
+<body>
+
+<div id="hdr">
+  <div style="display:flex;align-items:center">
+    <span class="hzh">三國演義</span>
+    <span class="hen">ROMANCE DE LOS TRES REINOS · 168–316 d.C.</span>
+  </div>
+  <div class="hbtns">
+    <button class="hb on" id="bn" onclick="tog('n')">州 Nombres</button>
+    <button class="hb on" id="bc2" onclick="tog('c')">城 Ciudades</button>
+    <button class="hb on" id="bp" onclick="tog('p')">将 Personajes</button>
+    <a class="hb hb-link" href="../index.html">← Inicio</a>
+  </div>
+</div>
+
+<div id="bc">
+  <span class="bci on" onclick="goL0()">🗺 China Han</span>
+</div>
+
+<div id="main">
+  <div id="mpanel">
+    <button id="backbtn" onclick="goL0()">← Volver</button>
+    <div id="map-container">
+      <!-- El mapa base SVG se inyecta aquí -->
+      <div id="map-base" style="position:relative;width:100%;height:100%;display:flex;align-items:center;justify-content:center"></div>
+    </div>
+  </div>
+  <div id="ipanel">
+    <div id="ihdr">
+      <div id="izh">三國演義</div>
+      <div id="iname">Romance de los Tres Reinos</div>
+      <div id="iyrs">Selecciona un periodo</div>
+    </div>
+    <div id="ibody">
+      <div class="wbox">
+        <span class="wico">⚔</span>
+        <div class="wtxt">Elige un periodo<br>en la línea temporal<br><br>Clic en una región<br>para hacer zoom</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="tl"><div id="tlsc"><div class="tlr"></div></div></div>
+
+<div id="cmod" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="cmbox">
+    <button class="cmx" onclick="document.getElementById('cmod').classList.remove('open')">✕</button>
+    <div id="cminner"></div>
+  </div>
+</div>
+<div id="tip"></div>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+//  MAPA BASE: SVG real de China Han con paths geográficos precisos
+//  Basado en proyección simple sobre viewBox 800×750
+//  Las regiones tienen paths reales calibrados manualmente
+//  sobre la forma geográfica de China
+// ══════════════════════════════════════════════════════════════
+
+// Cada Zhou tiene: path SVG real + centroide + ciudades + desc
+// ViewBox del mapa base: 0 0 800 750
+// Calibración: aproximadamente
+//   x: 73°E=20px, 135°E=780px → 1°lon = (780-20)/62 = 12.26px
+//   y: 53°N=20px, 18°N=730px  → 1°lat = (730-20)/35 = 20.29px
+// lon→x: (lon-73)*12.26 + 20
+// lat→y: (53-lat)*20.29 + 20
+
+function lx(lon){ return ((lon-73)*12.26+20).toFixed(1) }
+function ly(lat){ return ((53-lat)*20.29+20).toFixed(1) }
+function lxy(lon,lat){ return lx(lon)+','+ly(lat) }
+
+// Contorno exterior de China Han — trazado a mano sobre geografía real
+// 80+ puntos clave del perímetro histórico Han
+const OUTER = `
+  M ${lxy(102,40)} L ${lxy(104,42)} L ${lxy(107,42)} L ${lxy(110,43)}
+  L ${lxy(114,43)} L ${lxy(116,43)} L ${lxy(118,43)} L ${lxy(120,42)}
+  L ${lxy(123,42)} L ${lxy(126,42)} L ${lxy(129,42)} L ${lxy(131,43)}
+  L ${lxy(133,43)} L ${lxy(134,41)} L ${lxy(133,38)} L ${lxy(132,35)}
+  L ${lxy(131,32)} L ${lxy(129,29)} L ${lxy(124,25)} L ${lxy(121,23)}
+  L ${lxy(117,22)} L ${lxy(114,21)} L ${lxy(111,20)} L ${lxy(110,18)}
+  L ${lxy(109,19)} L ${lxy(108,22)} L ${lxy(106,22)} L ${lxy(104,22)}
+  L ${lxy(102,22)} L ${lxy(100,22)} L ${lxy(99,23)}
+  L ${lxy(98,24)} L ${lxy(97,25)} L ${lxy(98,28)} L ${lxy(97,29)}
+  L ${lxy(97,31)} L ${lxy(98,33)} L ${lxy(100,34)}
+  L ${lxy(102,35)} L ${lxy(103,36)} L ${lxy(102,38)} L ${lxy(100,39)}
+  L ${lxy(98,40)} L ${lxy(97,38)} L ${lxy(95,38)} L ${lxy(93,39)}
+  L ${lxy(91,40)} L ${lxy(90,38)} L ${lxy(88,38)} L ${lxy(86,38)}
+  L ${lxy(85,40)} L ${lxy(83,43)} L ${lxy(81,43)} L ${lxy(79,40)}
+  L ${lxy(79,37)} L ${lxy(80,35)} L ${lxy(82,34)} L ${lxy(84,34)}
+  L ${lxy(76,37)} L ${lxy(74,36)} L ${lxy(73,37)} L ${lxy(73,40)}
+  L ${lxy(75,42)} L ${lxy(78,44)} L ${lxy(80,46)} L ${lxy(82,47)}
+  L ${lxy(85,47)} L ${lxy(87,48)} L ${lxy(90,50)} L ${lxy(93,50)}
+  L ${lxy(96,50)} L ${lxy(99,50)} L ${lxy(102,50)} L ${lxy(105,50)}
+  L ${lxy(108,50)} L ${lxy(111,50)} L ${lxy(114,49)} L ${lxy(116,48)}
+  L ${lxy(119,48)} L ${lxy(122,47)} L ${lxy(125,46)} L ${lxy(128,45)}
+  L ${lxy(130,44)} L ${lxy(131,43)}
+  Z`.trim();
+
+// Regiones Zhou — paths reales sobre la geografía
+const ZHOU = [
+{id:'liangzhou',zh:'凉州',en:'Liangzhou',lon:97,lat:37,
+ path:`M ${lxy(96,40)} L ${lxy(98,40)} L ${lxy(100,40)} L ${lxy(102,40)}
+   L ${lxy(104,38)} L ${lxy(104,36)} L ${lxy(103,35)} L ${lxy(102,34)}
+   L ${lxy(100,34)} L ${lxy(98,34)} L ${lxy(97,34)} L ${lxy(96,35)}
+   L ${lxy(95,36)} L ${lxy(95,38)} L ${lxy(96,39)} Z`,
+ desc:'Liangzhou — Gansu. Tierra de caballería y vientos esteparios. Patria de Dong Zhuo. Puerta de la Ruta de la Seda.',
+ cities:['wuwei','tianshui']},
+
+{id:'bingzhou',zh:'并州',en:'Bingzhou',lon:112,lat:38,
+ path:`M ${lxy(110,40)} L ${lxy(112,40)} L ${lxy(114,40)} L ${lxy(114,38)}
+   L ${lxy(114,36)} L ${lxy(113,35)} L ${lxy(111,35)} L ${lxy(110,35)}
+   L ${lxy(109,36)} L ${lxy(109,37)} L ${lxy(109,38)} L ${lxy(110,39)} Z`,
+ desc:'Bingzhou — Shanxi. Tierra montañosa al oeste del Taihang. Corredor entre la estepa del norte y el corazón Han.',
+ cities:['jinyang']},
+
+{id:'jizhou',zh:'冀州',en:'Jizhou',lon:115.5,lat:38,
+ path:`M ${lxy(114,40)} L ${lxy(116,40)} L ${lxy(118,40)} L ${lxy(120,39)}
+   L ${lxy(120,37)} L ${lxy(118,36)} L ${lxy(116,36)} L ${lxy(114,36)}
+   L ${lxy(114,38)} Z`,
+ desc:'Jizhou — Hebei central y sur. La Zhou más rica y poblada. Base de Yuan Shao y Cao Cao. Capital: Ye (邺).',
+ cities:['ye','handan']},
+
+{id:'youzhou',zh:'幽州',en:'Youzhou',lon:117,lat:41,
+ path:`M ${lxy(114,43)} L ${lxy(116,43)} L ${lxy(118,43)} L ${lxy(120,42)}
+   L ${lxy(123,42)} L ${lxy(126,42)} L ${lxy(127,41)} L ${lxy(126,40)}
+   L ${lxy(123,40)} L ${lxy(120,40)} L ${lxy(118,40)} L ${lxy(116,40)}
+   L ${lxy(114,40)} Z`,
+ desc:'Youzhou — Hebei norte y Beijing. Frontera septentrional del Han. Liu Bei nació en Zhuo.',
+ cities:['zhuo','ji']},
+
+{id:'qingzhou',zh:'青州',en:'Qingzhou',lon:119.5,lat:36.5,
+ path:`M ${lxy(118,38)} L ${lxy(120,38)} L ${lxy(122,38)} L ${lxy(122,37)}
+   L ${lxy(121,35)} L ${lxy(120,35)} L ${lxy(118,35)} L ${lxy(117,36)}
+   L ${lxy(117,37)} Z`,
+ desc:'Qingzhou — Shandong. Provincia costera. Escenario de batallas de los Turbantes Amarillos.',
+ cities:['linzi']},
+
+{id:'yanzhou',zh:'兗州',en:'Yanzhou',lon:115.5,lat:35.5,
+ path:`M ${lxy(114,37)} L ${lxy(116,37)} L ${lxy(118,37)} L ${lxy(118,35)}
+   L ${lxy(116,35)} L ${lxy(114,35)} L ${lxy(113,36)} Z`,
+ desc:'Yanzhou — Shandong occidental. Base militar de Cao Cao.',
+ cities:['puyang','dingtao']},
+
+{id:'sizhou',zh:'司州',en:'Sizhou',lon:111.5,lat:34.5,
+ path:`M ${lxy(109,36)} L ${lxy(111,36)} L ${lxy(113,36)} L ${lxy(114,35)}
+   L ${lxy(113,34)} L ${lxy(111,34)} L ${lxy(110,34)} L ${lxy(109,34)}
+   L ${lxy(108,35)} Z`,
+ desc:'Sizhou — Capital imperial Luoyang. Sede del Hijo del Cielo, quemada por Dong Zhuo en 190 d.C.',
+ cities:['luoyang','changan2']},
+
+{id:'xuzhou',zh:'徐州',en:'Xuzhou',lon:117.5,lat:34,
+ path:`M ${lxy(116,36)} L ${lxy(118,36)} L ${lxy(120,36)} L ${lxy(120,34)}
+   L ${lxy(119,33)} L ${lxy(117,33)} L ${lxy(116,34)} Z`,
+ desc:'Xuzhou — Jiangsu norte. Liu Bei la gobernó brevemente. Aquí cayó Lü Bu (199 d.C.).',
+ cities:['xiapi','pengcheng']},
+
+{id:'yuzhou',zh:'豫州',en:'Yuzhou',lon:113.5,lat:33.5,
+ path:`M ${lxy(110,35)} L ${lxy(113,35)} L ${lxy(114,35)} L ${lxy(116,35)}
+   L ${lxy(116,33)} L ${lxy(114,32)} L ${lxy(112,32)} L ${lxy(110,33)} Z`,
+ desc:'Yuzhou — Henan central. Corazón agrícola. Capital de Cao Cao en Xu (许都). Escenario de Guandu.',
+ cities:['xu','guandu']},
+
+{id:'yangzhou',zh:'扬州',en:'Yangzhou',lon:118.5,lat:30.5,
+ path:`M ${lxy(116,33)} L ${lxy(118,33)} L ${lxy(120,33)} L ${lxy(122,32)}
+   L ${lxy(122,30)} L ${lxy(121,29)} L ${lxy(120,29)} L ${lxy(118,29)}
+   L ${lxy(116,29)} L ${lxy(115,30)} L ${lxy(115,32)} Z`,
+ desc:'Yangzhou — Jiangsu, Anhui y Zhejiang. Capital de Wu: Jianye (建业), la futura Nanjing.',
+ cities:['jianye','hefei']},
+
+{id:'jingzhou',zh:'荆州',en:'Jingzhou',lon:112,lat:30,
+ path:`M ${lxy(108,33)} L ${lxy(110,33)} L ${lxy(112,33)} L ${lxy(114,33)}
+   L ${lxy(116,32)} L ${lxy(116,30)} L ${lxy(114,28)} L ${lxy(112,28)}
+   L ${lxy(110,28)} L ${lxy(108,30)} Z`,
+ desc:'Jingzhou — Hubei y Hunan. La Zhou más disputada. Escenario de la Batalla de Chibi (208 d.C.).',
+ cities:['jiangling','chibi','xiangyang']},
+
+{id:'yizhou',zh:'益州',en:'Yizhou',lon:104,lat:29,
+ path:`M ${lxy(98,33)} L ${lxy(100,33)} L ${lxy(102,33)} L ${lxy(104,33)}
+   L ${lxy(106,33)} L ${lxy(108,33)} L ${lxy(108,30)} L ${lxy(106,28)}
+   L ${lxy(104,26)} L ${lxy(102,24)} L ${lxy(100,23)} L ${lxy(99,23)}
+   L ${lxy(98,24)} L ${lxy(97,25)} L ${lxy(97,29)} L ${lxy(98,31)} Z`,
+ desc:'Yizhou — Sichuan, Yunnan y Guizhou. Gran bastión de Shu Han. Capital: Chengdu (成都).',
+ cities:['chengdu','jiange','baidicheng']},
+
+{id:'hanzhong',zh:'汉中',en:'Hanzhong',lon:107,lat:33,
+ path:`M ${lxy(104,34)} L ${lxy(106,34)} L ${lxy(108,34)} L ${lxy(108,33)}
+   L ${lxy(108,32)} L ${lxy(106,32)} L ${lxy(104,32)} L ${lxy(104,33)} Z`,
+ desc:'Hanzhong — Sur de Shaanxi. Paso estratégico entre Wei y Shu. Base de las Expediciones del Norte.',
+ cities:['hanzhong_c','wuzhang']},
+
+{id:'jiaozhi',zh:'交州',en:'Jiaozhi',lon:107,lat:22,
+ path:`M ${lxy(104,26)} L ${lxy(106,26)} L ${lxy(108,26)} L ${lxy(110,24)}
+   L ${lxy(112,22)} L ${lxy(110,20)} L ${lxy(108,20)} L ${lxy(106,20)}
+   L ${lxy(104,20)} L ${lxy(102,20)} L ${lxy(100,21)} L ${lxy(100,22)}
+   L ${lxy(101,23)} L ${lxy(102,24)} Z`,
+ desc:'Jiaozhi — Vietnam norte y Guangdong. La Zhou más meridional. Controlada por Wu.',
+ cities:['panyu']},
+];
+
+// Ciudades
+const CITIES = {
+  luoyang:   {zh:'洛阳',en:'Luoyang',   lon:112.5,lat:34.7,cap:true, info:'Capital imperial Han Oriental. Quemada por Dong Zhuo en 190 d.C.'},
+  changan2:  {zh:'长安',en:"Chang'an",  lon:108.9,lat:34.3,cap:true, info:'Capital occidental. Sede de Dong Zhuo y objetivo de Zhuge Liang.'},
+  ye:        {zh:'邺',en:'Ye',          lon:114.4,lat:36.3,cap:true, info:'Capital real de Wei bajo Cao Cao y Cao Pi.'},
+  xu:        {zh:'许都',en:'Xu',        lon:113.8,lat:34.0,cap:true, info:'Capital de Cao Cao. Aquí trasladó al Emp. Xian en 196 d.C.'},
+  chengdu:   {zh:'成都',en:'Chengdu',   lon:104.1,lat:30.6,cap:true, info:'Capital de Shu Han. Liu Bei se coronó aquí en 221 d.C.'},
+  jianye:    {zh:'建业',en:'Jianye',    lon:118.8,lat:32.1,cap:true, info:'Capital de Wu (la futura Nanjing).'},
+  chibi:     {zh:'赤壁',en:'Chibi',     lon:113.9,lat:29.7,cap:false,info:'Los Acantilados Rojos. Zhou Yu destruyó la flota de Cao Cao con fuego (208 d.C.).'},
+  guandu:    {zh:'官渡',en:'Guandu',    lon:114.0,lat:34.5,cap:false,info:'Batalla de Guandu (200 d.C.): Cao Cao derrotó a Yuan Shao.'},
+  xiangyang: {zh:'襄阳',en:'Xiangyang', lon:112.1,lat:32.0,cap:false,info:'Gran fortaleza de Jingzhou. Base en el Yangtzé medio.'},
+  jiangling: {zh:'江陵',en:'Jiangling', lon:112.2,lat:30.3,cap:false,info:'Ciudad clave de Jingzhou.'},
+  hefei:     {zh:'合肥',en:'Hefei',     lon:117.3,lat:31.9,cap:false,info:'Fortaleza de Wei. Zhang Liao la defendió con 800 hombres contra 100.000 de Wu.'},
+  jiange:    {zh:'剑阁',en:'Jiange',    lon:105.5,lat:32.3,cap:false,info:'El Paso de la Espada. Jiang Wei lo defendió en 263 d.C.'},
+  baidicheng:{zh:'白帝城',en:'Baidicheng',lon:109.0,lat:31.0,cap:false,info:'Liu Bei murió aquí en 223 d.C.'},
+  wuzhang:   {zh:'五丈原',en:'Wuzhang', lon:107.8,lat:34.1,cap:false,info:'Aquí murió Zhuge Liang en 234 d.C.'},
+  jinyang:   {zh:'晋阳',en:'Jinyang',   lon:112.5,lat:37.9,cap:false,info:'Capital de Bingzhou.'},
+  handan:    {zh:'邯郸',en:'Handan',    lon:114.5,lat:36.6,cap:false,info:'Ciudad histórica de Jizhou.'},
+  zhuo:      {zh:'涿',en:'Zhuo',        lon:115.6,lat:39.5,cap:false,info:'Ciudad natal de Liu Bei.'},
+  ji:        {zh:'蓟',en:'Ji',          lon:116.4,lat:40.0,cap:false,info:'Capital de Youzhou.'},
+  linzi:     {zh:'临淄',en:'Linzi',     lon:118.3,lat:36.9,cap:false,info:'Capital de Qingzhou.'},
+  puyang:    {zh:'濮阳',en:'Puyang',    lon:115.0,lat:35.7,cap:false,info:'Base inicial de Cao Cao.'},
+  dingtao:   {zh:'定陶',en:'Dingtao',   lon:115.6,lat:35.1,cap:false,info:'Ciudad de Yanzhou.'},
+  pengcheng: {zh:'彭城',en:'Pengcheng', lon:117.2,lat:34.3,cap:false,info:'Capital de Xuzhou.'},
+  xiapi:     {zh:'下邳',en:'Xiapi',     lon:118.0,lat:34.0,cap:false,info:'Donde Cao Cao ejecutó a Lü Bu (199 d.C.).'},
+  wuwei:     {zh:'武威',en:'Wuwei',     lon:102.6,lat:37.9,cap:false,info:'Puerta de la Ruta de la Seda en Liangzhou.'},
+  tianshui:  {zh:'天水',en:'Tianshui',  lon:105.7,lat:34.6,cap:false,info:'Aquí Zhuge Liang capturó a Jiang Wei.'},
+  hanzhong_c:{zh:'汉中',en:'Hanzhong', lon:107.0,lat:33.1,cap:false,info:'Capital del paso estratégico.'},
+  panyu:     {zh:'番禺',en:'Panyu',     lon:113.3,lat:23.1,cap:false,info:'Capital de Jiaozhi (actual Guangzhou).'},
+};
+
+const FAC={
+  han: {n:'Han Imperial 漢',c:'#c8962a',fill:'rgba(200,150,42,.36)',s:'漢'},
+  tb:  {n:'Turbantes Amarillos',c:'#b87e10',fill:'rgba(184,126,16,.44)',s:'黄'},
+  dong:{n:'Dong Zhuo 董卓',c:'#9922cc',fill:'rgba(153,34,204,.38)',s:'董'},
+  cao: {n:'Cao Cao / Wei',c:'#1e5abf',fill:'rgba(30,90,191,.38)',s:'曹'},
+  wei: {n:'Wei 魏',c:'#1e5abf',fill:'rgba(30,90,191,.40)',s:'魏'},
+  shu: {n:'Shu Han 蜀漢',c:'#1e8a2e',fill:'rgba(30,138,46,.38)',s:'蜀'},
+  wu:  {n:'Wu 吳',c:'#bf2020',fill:'rgba(191,32,32,.40)',s:'吳'},
+  jin: {n:'Jin 晉',c:'#8820b0',fill:'rgba(136,32,176,.40)',s:'晉'},
+  sima:{n:'Clan Sima 司馬',c:'#8820b0',fill:'rgba(136,32,176,.34)',s:'司'},
+  liu: {n:'Liu Bei',c:'#1e8a2e',fill:'rgba(30,138,46,.30)',s:'劉'},
+  sun: {n:'Sun / Wu',c:'#bf2020',fill:'rgba(191,32,32,.30)',s:'孫'},
+  neut:{n:'Varios',c:'#7a6040',fill:'rgba(122,96,64,.26)',s:'?'},
+};
+
+const RF={
+  p0:{liangzhou:'han',bingzhou:'han',jizhou:'han',youzhou:'han',qingzhou:'han',yanzhou:'han',sizhou:'han',xuzhou:'han',yuzhou:'han',yangzhou:'han',jingzhou:'han',yizhou:'han',hanzhong:'han',jiaozhi:'han'},
+  p1:{liangzhou:'han',bingzhou:'han',jizhou:'tb',youzhou:'tb',qingzhou:'tb',yanzhou:'tb',sizhou:'han',xuzhou:'tb',yuzhou:'tb',yangzhou:'han',jingzhou:'tb',yizhou:'han',hanzhong:'han',jiaozhi:'han'},
+  p2:{liangzhou:'dong',bingzhou:'dong',jizhou:'neut',youzhou:'neut',qingzhou:'neut',yanzhou:'neut',sizhou:'dong',xuzhou:'neut',yuzhou:'neut',yangzhou:'neut',jingzhou:'neut',yizhou:'han',hanzhong:'han',jiaozhi:'han'},
+  p3:{liangzhou:'neut',bingzhou:'cao',jizhou:'cao',youzhou:'cao',qingzhou:'cao',yanzhou:'cao',sizhou:'cao',xuzhou:'neut',yuzhou:'cao',yangzhou:'sun',jingzhou:'liu',yizhou:'neut',hanzhong:'neut',jiaozhi:'neut'},
+  p4:{liangzhou:'cao',bingzhou:'cao',jizhou:'cao',youzhou:'cao',qingzhou:'cao',yanzhou:'cao',sizhou:'cao',xuzhou:'cao',yuzhou:'cao',yangzhou:'sun',jingzhou:'neut',yizhou:'neut',hanzhong:'neut',jiaozhi:'sun'},
+  p5:{liangzhou:'wei',bingzhou:'wei',jizhou:'wei',youzhou:'wei',qingzhou:'wei',yanzhou:'wei',sizhou:'wei',xuzhou:'wei',yuzhou:'wei',yangzhou:'wu',jingzhou:'wu',yizhou:'shu',hanzhong:'shu',jiaozhi:'wu'},
+  p6:{liangzhou:'wei',bingzhou:'wei',jizhou:'wei',youzhou:'wei',qingzhou:'wei',yanzhou:'wei',sizhou:'wei',xuzhou:'wei',yuzhou:'wei',yangzhou:'wu',jingzhou:'shu',yizhou:'shu',hanzhong:'shu',jiaozhi:'wu'},
+  p7:{liangzhou:'sima',bingzhou:'sima',jizhou:'sima',youzhou:'sima',qingzhou:'sima',yanzhou:'sima',sizhou:'sima',xuzhou:'sima',yuzhou:'sima',yangzhou:'wu',jingzhou:'wu',yizhou:'sima',hanzhong:'sima',jiaozhi:'wu'},
+  p8:{liangzhou:'jin',bingzhou:'jin',jizhou:'jin',youzhou:'jin',qingzhou:'jin',yanzhou:'jin',sizhou:'jin',xuzhou:'jin',yuzhou:'jin',yangzhou:'jin',jingzhou:'jin',yizhou:'jin',hanzhong:'jin',jiaozhi:'jin'},
+  p9:{liangzhou:'neut',bingzhou:'neut',jizhou:'neut',youzhou:'neut',qingzhou:'neut',yanzhou:'neut',sizhou:'neut',xuzhou:'neut',yuzhou:'neut',yangzhou:'neut',jingzhou:'neut',yizhou:'neut',hanzhong:'neut',jiaozhi:'neut'},
+};
+
+const PERIODS=[
+{id:'p0',ico:'👑',c:'#c9a84c',n:'Han Tardío',zh:'東漢末年',y:'~168',legs:['han'],
+ desc:'El Gran Imperio Han se resquebraja. Los Diez Eunucos corrompen la corte, el Emp. Ling vende cargos públicos y las hambrunas envenenan al pueblo. Las semillas de la catástrofe.',
+ chars:[
+  {n:'Emp. Ling',zi:'Liu Hong 劉宏',e:'👑',f:'han',zhou:'sizhou',bio:'Decimotercer Emp. Han. Vendió cargos y entregó el poder a los eunucos. Detonante del colapso Han.',st:[['Capital','Luoyang'],['Muere','189 d.C.']]},
+  {n:'Cao Cao',zi:'Mengde 孟德',e:'🦅',f:'cao',zhou:'sizhou',bio:'"Serás el héroe que salve el mundo, o el bandido que lo destruya." Joven magistrado de Luoyang.',st:[['Título','Magistrado'],['Nace','155 d.C.']]},
+  {n:'Zhang Jue',zi:'Gran Maestro 大賢良師',e:'📿',f:'tb',zhou:'jizhou',bio:'Fundador del Camino de la Gran Paz. Organizó 36 distritos militares secretos antes de la revuelta.',st:[['Sede','Jizhou'],['Muere','184 d.C.']]},
+ ]},
+{id:'p1',ico:'🟡',c:'#b87e10',n:'Turbantes Amarillos',zh:'黃巾之亂',y:'184',legs:['tb','han'],
+ desc:'Zhang Jue proclama el "Año del Jiazi": el Cielo Amarillo reemplaza al Cielo Azul Han. Cientos de miles toman las armas. Liu Bei, Guan Yu y Zhang Fei juran hermandad bajo el melocotonero.',
+ chars:[
+  {n:'Zhang Jue',zi:'Gran Maestro',e:'📿',f:'tb',zhou:'jizhou',bio:'Profeta y general campesino. Murió de enfermedad antes de la batalla decisiva.',st:[['Facción','Turbantes 黄巾'],['Muere','184 d.C.']]},
+  {n:'Liu Bei',zi:'Xuande 玄德',e:'🌿',f:'liu',zhou:'youzhou',bio:'Reclutó voluntarios en Zhuo (Youzhou). Bajo un melocotonero juró hermandad eterna con Guan Yu y Zhang Fei.',st:[['Sede','Zhuo / Youzhou'],['Nace','161 d.C.']]},
+  {n:'Guan Yu',zi:'Yunchang 雲長',e:'🐉',f:'liu',zhou:'youzhou',bio:'Cara de dátil maduro, barba de dos chi. Su Llave de la Luna Verde segó enemigos como la hoz al trigo.',st:[['Facción','Liu Bei'],['Muere','219 d.C.']]},
+  {n:'Zhang Fei',zi:'Yide 翼德',e:'⚡',f:'liu',zhou:'youzhou',bio:'Voz de trueno, ojos de lince. Tercer hermano del melocotonero.',st:[['Facción','Liu Bei'],['Muere','221 d.C.']]},
+  {n:'Cao Cao',zi:'Mengde 孟德',e:'🦅',f:'cao',zhou:'yanzhou',bio:'Sirvió bajo Huangfu Song. Su brillantez táctica le granjeó ascensos rápidos.',st:[['Sede','Yanzhou'],['Nace','155 d.C.']]},
+  {n:'Sun Jian',zi:'Wentai 文臺',e:'🐯',f:'sun',zhou:'yangzhou',bio:'Tigre de Jiangdong. Reprimió a los Turbantes en el sur con ferocidad legendaria.',st:[['Sede','Yangzhou'],['Muere','191 d.C.']]},
+ ]},
+{id:'p2',ico:'🐉',c:'#9922cc',n:'Dong Zhuo',zh:'董卓之亂',y:'189–192',legs:['dong','neut'],
+ desc:'Dong Zhuo toma el trono, quema Luoyang y la traslada a Chang\'an. Cao Cao intenta asesinarlo. 18 señores forman la Gran Coalición Anti-Dong.',
+ chars:[
+  {n:'Dong Zhuo',zi:'Zhongying 仲穎',e:'🐉',f:'dong',zhou:'sizhou',bio:'Irrumpió en Luoyang, destronó al Emp. Shao, quemó la capital. Su tiranía extrema lo condenó.',st:[['Sede','Chang\'an'],['Muere','192 d.C.']]},
+  {n:'Lü Bu',zi:'Fengxian 奉先',e:'⚔️',f:'dong',zhou:'sizhou',bio:'El guerrero más formidable. Ningún rival podía mantenerse ante él. Sin lealtad fija: mató a Dong Zhuo por Diaochan.',st:[['Facción','Dong Zhuo'],['Muere','199 d.C.']]},
+  {n:'Diaochan',zi:'La Belleza del Firmamento',e:'🌸',f:'neut',zhou:'sizhou',bio:'Su belleza sembró celos entre Dong Zhuo y Lü Bu, logrando el fin del tirano.',st:[['Facción','Han (Wang Yun)'],['Período','189–192 d.C.']]},
+  {n:'Cao Cao',zi:'Mengde 孟德',e:'🦅',f:'cao',zhou:'yanzhou',bio:'Intentó asesinar a Dong Zhuo con una daga. Fingió ofrecérsela y huyó. Reclutó su ejército en Yanzhou.',st:[['Sede','Yanzhou'],['Nace','155 d.C.']]},
+  {n:'Yuan Shao',zi:'Benchu 本初',e:'👑',f:'neut',zhou:'jizhou',bio:'Aristócrata. Líder nominal de los 18 señores. Su indecisión dejó escapar la victoria.',st:[['Sede','Jizhou'],['Muere','202 d.C.']]},
+ ]},
+{id:'p3',ico:'⚔️',c:'#a0522d',n:'Guerras de Señores',zh:'群雄割據',y:'192–208',legs:['cao','liu','sun','neut'],
+ desc:'Cao Cao consolida el norte. Derrota a Yuan Shao en Guandu (200 d.C.) y gobierna en nombre del Emp. Xian. Liu Bei visita tres veces a Zhuge Liang en Longzhong.',
+ chars:[
+  {n:'Cao Cao',zi:'Mengde 孟德',e:'🦅',f:'cao',zhou:'jizhou',bio:'Quemó los graneros de Wuchao en Guandu y derrotó a Yuan Shao. Trasladó al Emp. Xian a Xu gobernando "bajo su nombre".',st:[['Sede','Xu / Ye'],['Muere','220 d.C.']]},
+  {n:'Zhuge Liang',zi:'Kongming 孔明 — El Dragón Dormido',e:'🪄',f:'liu',zhou:'jingzhou',bio:'Vivía retirado en Longzhong. Liu Bei lo visitó tres veces. Su Plan Longzhong trazó el futuro de Shu Han.',st:[['Sede','Longzhong → Chengdu'],['Muere','234 d.C.']]},
+  {n:'Liu Bei',zi:'Xuande 玄德',e:'🌿',f:'liu',zhou:'jingzhou',bio:'Señor errante. Vagó entre señores. Visitó tres veces a Zhuge Liang en su retiro.',st:[['Sede','Jingzhou / Xinye'],['Nace','161 d.C.']]},
+  {n:'Guo Jia',zi:'Fengxiao 奉孝',e:'🧠',f:'cao',zhou:'jizhou',bio:'El más brillante consejero de Cao Cao. "Si Guo Jia viviera, Chibi no habría ocurrido."',st:[['Sede','Ye'],['Muere','207 d.C.']]},
+  {n:'Sun Ce',zi:'Bofu 伯符',e:'🦁',f:'sun',zhou:'yangzhou',bio:'"El Pequeño Conquistador". Conquistó Jiangdong en seis años. Murió joven.',st:[['Sede','Jianye'],['Muere','200 d.C.']]},
+  {n:'Zhao Yun',zi:'Zilong 子龍',e:'🌟',f:'liu',zhou:'jingzhou',bio:'En Changban penetró solo en el ejército de Cao Cao, rescató al bebé Liu Shan, y salió indemne.',st:[['Sede','Jingzhou → Chengdu'],['Muere','229 d.C.']]},
+ ]},
+{id:'p4',ico:'🔥',c:'#e74c3c',n:'Batalla de Chibi',zh:'赤壁之戰',y:'208',legs:['cao','liu','sun'],
+ desc:'Chibi — los Acantilados Rojos. Cao Cao marcha al sur con 800.000 hombres. La alianza Liu-Sun diseña el ataque de fuego que cambia China para siempre.',
+ chars:[
+  {n:'Zhou Yu',zi:'Gongjin 公瑾',e:'🎵',f:'sun',zhou:'jingzhou',bio:'Arquitecto de Chibi. Diseñó el ataque de fuego. Convenció a Sun Quan de resistir. Murió a los 36 años.',st:[['Facción','Wu'],['Muere','210 d.C.']]},
+  {n:'Zhuge Liang',zi:'Kongming 孔明',e:'🪄',f:'liu',zhou:'jingzhou',bio:'En el Romance convocó el viento sureste mediante ceremonia de siete días. Sin ese viento, el fuego era imposible.',st:[['Sede','Chibi / Jing'],['Muere','234 d.C.']]},
+  {n:'Huang Gai',zi:'Gongfu 公覆',e:'🔥',f:'sun',zhou:'jingzhou',bio:'Fingió rendición sufriendo azotes. Sus barcos cargados de aceite prendieron la flota de Cao.',st:[['Facción','Wu'],['Período','208 d.C.']]},
+  {n:'Cao Cao',zi:'Mengde 孟德',e:'🦅',f:'cao',zhou:'yuzhou',bio:'Subestimó el sur. Sus tropas encadenaron los barcos — facilitando el incendio. Huyó casi capturado.',st:[['Sede','Norte / Chibi'],['Muere','220 d.C.']]},
+  {n:'Guan Yu',zi:'Yunchang 雲長',e:'🐉',f:'liu',zhou:'jingzhou',bio:'Guardó el paso de Huarong. Dejó escapar a Cao Cao pagando su deuda de honor.',st:[['Sede','Jingzhou'],['Muere','219 d.C.']]},
+  {n:'Sun Quan',zi:'Zhongmou 仲謀',e:'🟢',f:'sun',zhou:'yangzhou',bio:'"Quien hable de rendirse acabará como esta mesa." Su decisión salvó Wu y cambió la historia.',st:[['Sede','Jianye'],['Muere','252 d.C.']]},
+ ]},
+{id:'p5',ico:'⚖️',c:'#3498db',n:'Los Tres Reinos',zh:'三國鼎立',y:'220–263',legs:['wei','shu','wu'],
+ desc:'El trípode: Wei en el norte, Shu en el suroeste, Wu en el sureste. Zhuge Liang lanza sus Expediciones del Norte para restaurar el Han.',
+ chars:[
+  {n:'Zhuge Liang',zi:'Kongming 孔明',e:'🪄',f:'shu',zhou:'yizhou',bio:'Primer Ministro de Shu Han. Seis Expediciones del Norte (228–234 d.C.). Murió en los Cinco Zhangyuan.',st:[['Sede','Chengdu'],['Muere','234 d.C.']]},
+  {n:'Sima Yi',zi:'Zhongda 仲達',e:'🦊',f:'wei',zhou:'sizhou',bio:'Paciencia sobrehumana. Frustró todas las campañas de Zhuge Liang. Sobrevivió a tres emperadores Wei.',st:[['Sede','Luoyang'],['Muere','251 d.C.']]},
+  {n:'Sun Quan',zi:'Zhongmou 仲謀',e:'🟢',f:'wu',zhou:'yangzhou',bio:'Gobernó Wu 52 años. Se proclamó Emp. en 229 d.C.',st:[['Sede','Jianye'],['Muere','252 d.C.']]},
+  {n:'Jiang Wei',zi:'Boyue 伯約',e:'🗡️',f:'shu',zhou:'hanzhong',bio:'Discípulo de Zhuge Liang. Nueve campañas del norte. Luchó hasta el colapso final de Shu.',st:[['Sede','Hanzhong'],['Muere','264 d.C.']]},
+  {n:'Lu Xun',zi:'Boyan 伯言',e:'📚',f:'wu',zhou:'jingzhou',bio:'Destruyó el ejército de Liu Bei en Yiling (222 d.C.) incendiando su campamento.',st:[['Sede','Jianye / Jing'],['Muere','245 d.C.']]},
+ ]},
+{id:'p6',ico:'🗡️',c:'#e67e22',n:'Guerras del Ocaso',zh:'三國後期',y:'240–263',legs:['wei','shu','wu'],
+ desc:'Jiang Wei lanza nueve campañas. La familia Sima devora Wei desde dentro. En 263 d.C. Deng Ai cruza Yinping. Shu Han cae.',
+ chars:[
+  {n:'Jiang Wei',zi:'Boyue 伯約',e:'🗡️',f:'shu',zhou:'hanzhong',bio:'Nueve campañas del norte. Cuando Deng Ai cruzó Yinping, Jiang Wei aún resistía en Jiange.',st:[['Sede','Hanzhong / Jiange'],['Muere','264 d.C.']]},
+  {n:'Deng Ai',zi:'Shizai 士載',e:'🏔️',f:'cao',zhou:'yizhou',bio:'Cruzó las montañas "imposables" de Yinping con 2.000 hombres en 263 d.C. Shu se rindió.',st:[['Sede','Yinping → Chengdu'],['Muere','264 d.C.']]},
+  {n:'Sima Yi',zi:'Zhongda 仲達',e:'🦊',f:'sima',zhou:'sizhou',bio:'Golpe del Gaoping (249 d.C.): eliminó a Cao Shuang. Control absoluto de Wei.',st:[['Sede','Luoyang'],['Muere','251 d.C.']]},
+ ]},
+{id:'p7',ico:'🦊',c:'#9b59b6',n:'Ascenso de los Sima',zh:'司馬代魏',y:'249–265',legs:['sima','wu'],
+ desc:'Tres generaciones Sima convierten a los Cao en marionetas. El Emp. Cao Mao marcha con una lanza a matar a Sima Zhao — y es asesinado en la calle.',
+ chars:[
+  {n:'Sima Zhao',zi:'Zishang 子上',e:'🕯️',f:'sima',zhou:'sizhou',bio:'"Las intenciones de Sima Zhao son conocidas por todos en la calle." Mandó asesinar al Emp. Cao Mao.',st:[['Sede','Luoyang'],['Muere','265 d.C.']]},
+  {n:'Cao Mao',zi:'Último Emp. Wei',e:'⚰️',f:'cao',zhou:'sizhou',bio:'Marchó con una lanza a matar a Sima Zhao. Fue asesinado en la calle. Último acto de dignidad Wei.',st:[['Sede','Luoyang'],['Muere','260 d.C.']]},
+  {n:'Sima Yan',zi:'Anshi 安世',e:'👑',f:'jin',zhou:'sizhou',bio:'Nieto de Sima Yi. Fundó Jin en 265 d.C. y reunificó China en 280 d.C.',st:[['Título','Emp. Wu de Jin'],['Muere','290 d.C.']]},
+ ]},
+{id:'p8',ico:'🌅',c:'#1abc9c',n:'Unificación Jin',zh:'三國歸晉',y:'265–280',legs:['jin','wu'],
+ desc:'Jin completa la reunificación. Wu bajo el tirano Sun Hao se desangra. Wang Jun desciende por el Yangtzé. Sun Hao se rinde atado de manos.',
+ chars:[
+  {n:'Sima Yan',zi:'Anshi — Emp. de Jin',e:'👑',f:'jin',zhou:'sizhou',bio:'Completó la unificación en 280 d.C. Su error: repartir el Imperio entre sus hijos.',st:[['Título','Emp. Wu de Jin'],['Muere','290 d.C.']]},
+  {n:'Sun Hao',zi:'Último Emp. de Wu',e:'😰',f:'wu',zhou:'yangzhou',bio:'El tirano más cruel de Wu. Se rindió atado de manos cuando Jin descendió por el Yangtzé.',st:[['Sede','Jianye'],['Se rinde','280 d.C.']]},
+  {n:'Wang Jun',zi:'Shizhi 士治',e:'⛵',f:'jin',zhou:'jingzhou',bio:'Quemó las cadenas de hierro del Yangtzé y descendió imparable hasta Jianye.',st:[['Facción','Jin'],['Período','280 d.C.']]},
+ ]},
+{id:'p9',ico:'💀',c:'#7f8c8d',n:'Rebeliones de los Príncipes',zh:'八王之亂',y:'291–316',legs:['neut'],
+ desc:'Jin se desintegra. Las Ocho Rebeliones desgarran el Imperio. Los Xiongnu invaden. Luoyang y Chang\'an caen. El ciclo se repite.',
+ chars:[
+  {n:'Sima Zhong',zi:'Emp. Hui',e:'🌾',f:'jin',zhou:'sizhou',bio:'"¿Por qué no comen carne?" Símbolo de la debilidad que desencadenó las Ocho Rebeliones.',st:[['Sede','Luoyang'],['Muere','306 d.C.']]},
+  {n:'Liu Yuan',zi:'Yuanhai',e:'⚔️',f:'neut',zhou:'bingzhou',bio:'Líder Xiongnu. Fundó Han-Zhao (304 d.C.). Inauguró la era de los Dieciséis Reinos.',st:[['Sede','Norte Shanxi'],['Muere','310 d.C.']]},
+ ]},
+];
+
+// ══════════════════════════════════════════════════════════════
+//  ESTADO Y RENDER
+// ══════════════════════════════════════════════════════════════
+let P=null, level=0, selZ=null;
+let showN=true,showC=true,showPP=true;
+
+const VW=800, VH=750;
+
+function buildSVG(){
+  const rf=P?RF[P.id]:{};
+  const focusZ = level===1 ? ZHOU.find(z=>z.id===selZ) : null;
+
+  // ViewBox: zoom a zhou o mapa completo
+  let vx=0,vy=0,vw=VW,vh=VH;
+  if(focusZ){
+    // Bbox de la zhou seleccionada con margen
+    const coords=[];
+    focusZ.path.replace(/[\d.]+,[\d.]+/g,m=>{coords.push(m.split(',').map(Number));});
+    if(coords.length){
+      const xs=coords.map(c=>c[0]), ys=coords.map(c=>c[1]);
+      const margin=60;
+      vx=Math.max(0,Math.min(...xs)-margin);
+      vy=Math.max(0,Math.min(...ys)-margin);
+      vw=Math.min(VW,Math.max(...xs)+margin)-vx;
+      vh=Math.min(VH,Math.max(...ys)+margin)-vy;
+    }
+  }
+
+  let s=`<svg viewBox="${vx} ${vy} ${vw} ${vh}" xmlns="http://www.w3.org/2000/svg"
+    preserveAspectRatio="xMidYMid meet"
+    style="width:100%;height:100%;display:block;max-height:calc(100vh - 162px)">
+  <defs>
+    <filter id="gl"><feGaussianBlur stdDeviation="2.5" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <filter id="sh"><feDropShadow dx="0" dy="2" stdDeviation="5"
+      flood-color="#000" flood-opacity="0.6"/></filter>
+    <filter id="gll"><feGaussianBlur stdDeviation="4" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+
+    <!-- PATRÓN MAR — olas sutiles -->
+    <pattern id="sea-wave" x="0" y="0" width="24" height="10" patternUnits="userSpaceOnUse">
+      <path d="M0,5 Q6,2 12,5 Q18,8 24,5" fill="none" stroke="rgba(80,150,220,.18)" stroke-width="0.9"/>
+    </pattern>
+    <!-- PATRÓN TIERRA — textura pergamino -->
+    <pattern id="land-tex" x="0" y="0" width="4" height="4" patternUnits="userSpaceOnUse">
+      <rect width="4" height="4" fill="none"/>
+      <circle cx="2" cy="2" r="0.4" fill="rgba(100,60,10,.12)"/>
+    </pattern>
+
+    <!-- Gradiente tierra base -->
+    <radialGradient id="land-g" cx="40%" cy="45%" r="65%">
+      <stop offset="0%" stop-color="#d8b878"/>
+      <stop offset="50%" stop-color="#c49a50"/>
+      <stop offset="100%" stop-color="#a07830"/>
+    </radialGradient>
+    <!-- Gradiente mar -->
+    <linearGradient id="sea-g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1a3a5c"/>
+      <stop offset="100%" stop-color="#0d2030"/>
+    </linearGradient>
+    <!-- Ríos -->
+    <linearGradient id="riv-g" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#5090c8" stop-opacity=".9"/>
+      <stop offset="100%" stop-color="#3a6fa8" stop-opacity=".7"/>
+    </linearGradient>
+  </defs>
+
+  <!-- ══ FONDO MAR ══ -->
+  <rect width="${VW}" height="${VH}" fill="url(#sea-g)"/>
+  <rect width="${VW}" height="${VH}" fill="url(#sea-wave)"/>`;
+
+  // Etiquetas mar (solo en nivel 0)
+  if(!focusZ){
+    s+=`
+  <text x="720" y="380" text-anchor="middle" font-family="IM Fell English"
+    font-style="italic" font-size="16" fill="rgba(100,160,220,.25)"
+    transform="rotate(-8,720,380)">東 海</text>
+  <text x="650" y="690" text-anchor="middle" font-family="IM Fell English"
+    font-style="italic" font-size="14" fill="rgba(100,160,220,.2)">南 海</text>
+  <text x="75" y="180" text-anchor="middle" font-family="IM Fell English"
+    font-style="italic" font-size="12" fill="rgba(100,160,220,.15)">西 域</text>`;
+  }
+
+  // ══ TIERRA BASE ══
+  s+=`\n  <path d="${OUTER}" fill="url(#land-g)" stroke="#8a6020" stroke-width="1.8"
+    filter="url(#sh)"/>
+  <path d="${OUTER}" fill="url(#land-tex)"/>`;
+
+  // ══ ZHOU COLOREADAS ══
+  s+=`\n  <g id="g-zhou">`;
+  ZHOU.forEach(z=>{
+    const fk=rf[z.id]||'neut';
+    const f=FAC[fk]||FAC.neut;
+    const isSelected=focusZ&&focusZ.id===z.id;
+    const dimmed=focusZ&&!isSelected;
+    const op=dimmed?0.3:0.92;
+    s+=`\n    <path id="zp_${z.id}"
+      d="${z.path}"
+      fill="${f.fill}" stroke="${isSelected?f.c:'rgba(60,40,10,.5)'}"
+      stroke-width="${isSelected?2.2:0.9}" opacity="${op}"
+      ${focusZ?'':`class="zreg-hit" style="cursor:pointer"` }
+      ${!focusZ?`onclick="clickZ('${z.id}')" ` :''}
+      ${isSelected?'filter="url(#gll)"':''}
+    />`;
+  });
+  s+=`\n  </g>`;
+
+  // ══ RÍOS ══
+  // Huang He — polilínea con los puntos reales
+  const hhPts=[[96,36],[98,36],[100,36],[102,36],[103,37],[104,37],[104,38],[103,38],
+    [105,38],[106,40],[107,40],[108,40],[109,40],[110,40],[111,40],[111,39],
+    [111,38],[110,37],[110,36],[111,35],[112,35],[113,35],[114,35],[115,35],
+    [116,35],[117,36],[118,36],[119,36],[120,37],[121,37]];
+  const yyPts=[[98,30],[100,28],[101,28],[102,28],[103,28],[104,29],[105,29],
+    [106,29],[107,29],[108,30],[109,30],[110,30],[111,29],[112,30],[113,30],
+    [114,30],[115,30],[116,30],[117,30],[118,31],[119,31],[120,32],[121,31]];
+  const weiPts=[[104,34],[106,34],[108,34],[109,34],[110,34]];
+  const hanPts=[[107,33],[108,32],[109,32],[110,31],[111,31],[112,30]];
+
+  function rPts(arr){return arr.map(([lo,la])=>`${lx(lo)},${ly(la)}`).join(' ')}
+
+  s+=`
+  <!-- RÍO AMARILLO -->
+  <polyline id="hh" points="${rPts(hhPts)}"
+    fill="none" stroke="url(#riv-g)" stroke-width="4.5"
+    stroke-linecap="round" stroke-linejoin="round" opacity=".8"/>
+  <text font-family="IM Fell English" font-size="9" fill="rgba(80,140,210,.6)" font-style="italic">
+    <textPath href="#hh" startOffset="15%">黄河 · Río Amarillo</textPath></text>
+
+  <!-- YANGTZÉ -->
+  <polyline id="yy" points="${rPts(yyPts)}"
+    fill="none" stroke="url(#riv-g)" stroke-width="5.5"
+    stroke-linecap="round" stroke-linejoin="round" opacity=".78"/>
+  <text font-family="IM Fell English" font-size="9.5" fill="rgba(80,140,210,.6)" font-style="italic">
+    <textPath href="#yy" startOffset="10%">长江 · Yangtzé</textPath></text>
+
+  <!-- Río Wei -->
+  <polyline points="${rPts(weiPts)}"
+    fill="none" stroke="url(#riv-g)" stroke-width="2.5" opacity=".55"/>
+  <!-- Río Han -->
+  <polyline points="${rPts(hanPts)}"
+    fill="none" stroke="url(#riv-g)" stroke-width="2.5" opacity=".5"/>`;
+
+  // Lagos
+  s+=`
+  <ellipse cx="${lx(113.2)}" cy="${ly(29.4)}" rx="14" ry="8"
+    fill="#2a4a7a" opacity=".55" stroke="#4a8fc0" stroke-width="0.8"/>
+  <text x="${lx(113.2)}" y="${ly(29.0)}" text-anchor="middle"
+    font-family="Noto Serif SC" font-size="6.5" fill="rgba(100,160,210,.55)">洞庭湖</text>
+  <ellipse cx="${lx(116.5)}" cy="${ly(29.0)}" rx="8" ry="13"
+    fill="#2a4a7a" opacity=".48" stroke="#4a8fc0" stroke-width="0.8"/>
+  <text x="${lx(116.5)}" y="${ly(28.5)}" text-anchor="middle"
+    font-family="Noto Serif SC" font-size="6" fill="rgba(100,160,210,.5)">鄱陽</text>`;
+
+  // ══ MONTAÑAS — símbolos en posición correcta ══
+  const mtns=[
+    // Qinling
+    [104.2,33.5],[106,33.5],[108,33.5],[110,33.5],
+    // Taihang
+    [113,36],[113,37],[113,38],[113,39],
+    // Daxue (oeste Sichuan)
+    [101,30],[101,31],[101,32],
+  ];
+  s+=`\n  <g opacity=".52">`;
+  mtns.forEach(([lo,la])=>{
+    const mx=lx(lo), my=ly(la);
+    s+=`<path d="M${mx-7},${+my+5} L${mx},${+my-6} L${+mx+7},${+my+5}" fill="rgba(180,140,80,.2)" stroke="#8a6030" stroke-width="1.1"/>
+    <path d="M${mx-4},${+my+5} L${+mx+2},${+my} L${+mx+6},${+my+5}" fill="none" stroke="#8a6030" stroke-width=".75"/>`;
+  });
+  s+=`\n  </g>`;
+
+  // ══ BORDE DIVISORIO ENTRE ZHOU (líneas internas) ══
+  if(!focusZ){
+    s+=`\n  <g opacity=".35" stroke="#7a5520" stroke-width="0.7" fill="none" stroke-dasharray="4,3">`;
+    ZHOU.forEach(z=>{
+      s+=`<path d="${z.path}"/>`;
+    });
+    s+=`\n  </g>`;
+  }
+
+  // ══ NOMBRES DE ZHOU ══
+  if(showN){
+    s+=`\n  <g id="g-names">`;
+    ZHOU.forEach(z=>{
+      const nx=lx(z.lon), ny=ly(z.lat);
+      const isF=focusZ&&focusZ.id===z.id;
+      const dim=focusZ&&!isF;
+      const op=dim?0.2:isF?1:0.8;
+      const sz=isF?22:14;
+      s+=`<text x="${nx}" y="${ny}" text-anchor="middle"
+        font-family="Noto Serif SC,serif" font-size="${sz}" font-weight="700"
+        fill="rgba(20,10,0,${op})" pointer-events="none">${z.zh}</text>
+      <text x="${nx}" y="${+ny+sz*0.95}" text-anchor="middle"
+        font-family="Noto Sans SC,sans-serif" font-size="${isF?10:7.5}"
+        fill="rgba(20,10,0,${op*0.65})" pointer-events="none">${z.en}</text>`;
+    });
+    s+=`\n  </g>`;
+  }
+
+  // ══ CIUDADES ══
+  if(showC){
+    s+=`\n  <g id="g-cities">`;
+    const citiesToShow=focusZ
+      ? (focusZ.cities||[]).map(k=>({k,c:CITIES[k]})).filter(x=>x.c)
+      : Object.entries(CITIES).map(([k,c])=>({k,c}));
+
+    citiesToShow.forEach(({k,c})=>{
+      const cx=lx(c.lon), cy=ly(c.lat);
+      const r=c.cap?(focusZ?9:6.5):(focusZ?6.5:4.5);
+      const col=c.cap?'#f0d050':'#c8a840';
+      const sw=c.cap?1.8:1;
+      const fs=c.cap?(focusZ?11:9):(focusZ?9:7.5);
+      s+=`\n    <g class="city-pin" onclick="clickCity(event,'${k}')">
+        <circle cx="${cx}" cy="${cy}" r="${r}" fill="${col}" opacity=".9"
+          stroke="${c.cap?'#8a5800':'#7a4800'}" stroke-width="${sw}"
+          ${c.cap?'filter="url(#gl)"':''}/>
+        ${c.cap?`<polygon points="${cx},${+cy-r-5} ${+cx+3.5},${+cy-r} ${cx},${+cy-r+2.5} ${+cx-3.5},${+cy-r}"
+          fill="#c0392b" opacity=".85"/>`:``}
+        <text x="${+cx+r+3}" y="${+cy+4}" font-family="Noto Serif SC,serif"
+          font-size="${fs}" fill="${c.cap?'#f0d070':'rgba(230,200,140,.82)'}"
+          font-weight="${c.cap?'700':'400'}" pointer-events="none">${c.zh}${c.cap?' ★':''}</text>
+      </g>`;
+    });
+    s+=`\n  </g>`;
+  }
+
+  // ══ PERSONAJES ══
+  if(showPP && P){
+    s+=`\n  <g id="g-chars">`;
+    const placed={};
+    const charsToShow=focusZ
+      ? P.chars.filter(ch=>ch.zhou===selZ)
+      : P.chars;
+
+    charsToShow.forEach((ch)=>{
+      const z=ZHOU.find(x=>x.id===ch.zhou); if(!z)return;
+      const k=ch.zhou;
+      const n=placed[k]||0; placed[k]=n+1;
+      const angle=n*(Math.PI*2/6)- Math.PI/2;
+      const dist=focusZ?(n===0?0:40):(n===0?0:26);
+      const px=(+lx(z.lon)+Math.cos(angle)*dist).toFixed(1);
+      const py=(+ly(z.lat)+22+Math.sin(angle)*dist).toFixed(1);
+      const r=focusZ?14:10;
+      const ir=focusZ?9:6;
+      const fs=focusZ?10:8;
+      const f=FAC[ch.f]||FAC.neut;
+      const idx=P.chars.indexOf(ch);
+      s+=`\n    <g class="char-pin" onclick="clickChar(event,${idx})">
+        <circle cx="${px}" cy="${py}" r="${r}" fill="${f.c}" fill-opacity=".22"
+          stroke="${f.c}" stroke-width="${focusZ?2.2:1.8}"/>
+        <circle cx="${px}" cy="${py}" r="${ir}" fill="${f.c}" fill-opacity=".92"/>
+        <text x="${px}" y="${+py+fs*0.38}" text-anchor="middle"
+          font-size="${fs}" fill="white" font-family="Noto Serif SC"
+          pointer-events="none">${f.s}</text>
+        <text x="${px}" y="${+py-(focusZ?19:14)}" text-anchor="middle"
+          font-size="${focusZ?9.5:7.5}" fill="${f.c}" font-family="Noto Serif SC"
+          pointer-events="none">${ch.n.split(' ')[0]}</text>
+        ${focusZ?`<text x="${px}" y="${+py+(focusZ?26:0)}" text-anchor="middle"
+          font-size="13" pointer-events="none">${ch.e}</text>`:''}
+      </g>`;
+    });
+    s+=`\n  </g>`;
+  }
+
+  // ══ DECORACIÓN ══
+  // Título cartográfico
+  s+=`
+  <rect x="${vx+10}" y="${vy+10}" width="178" height="60" rx="2"
+    fill="rgba(5,2,0,.84)" stroke="rgba(201,168,76,.4)" stroke-width="1"/>
+  <text x="${vx+99}" y="${vy+34}" text-anchor="middle" font-family="Noto Serif SC,serif"
+    font-size="19" font-weight="900" fill="#c9a84c" filter="url(#gl)">三國演義</text>
+  <text x="${vx+99}" y="${vy+50}" text-anchor="middle" font-family="Cinzel Decorative,serif"
+    font-size="8" fill="rgba(201,168,76,.68)" letter-spacing="1">ROMANCE DE LOS TRES REINOS</text>
+  <text x="${vx+99}" y="${vy+63}" text-anchor="middle" font-family="IM Fell English,serif"
+    font-size="8.5" fill="rgba(201,168,76,.48)" font-style="italic">168–316 d.C.</text>`;
+
+  // Brújula
+  const bx=vx+vw-40, by=vy+40;
+  s+=`
+  <g transform="translate(${bx},${by})">
+    <circle r="26" fill="rgba(5,2,0,.88)" stroke="rgba(201,168,76,.42)" stroke-width="1.4"/>
+    <circle r="19" fill="none" stroke="rgba(201,168,76,.18)" stroke-width=".7"/>
+    <text y="-13" text-anchor="middle" fill="rgba(201,168,76,.8)" font-size="10" font-family="Noto Serif SC">北</text>
+    <text y="19" text-anchor="middle" fill="rgba(201,168,76,.65)" font-size="9" font-family="Noto Serif SC">南</text>
+    <text x="15" y="4" text-anchor="middle" fill="rgba(201,168,76,.65)" font-size="9" font-family="Noto Serif SC">东</text>
+    <text x="-15" y="4" text-anchor="middle" fill="rgba(201,168,76,.65)" font-size="9" font-family="Noto Serif SC">西</text>
+    <polygon points="0,-19 3.5,0 0,19 -3.5,0" fill="#c0392b" opacity=".85"/>
+    <polygon points="0,-19 3.5,0 0,0 -3.5,0" fill="rgba(255,255,255,.55)"/>
+    <circle r="3.5" fill="#c9a84c"/>
+  </g>`;
+
+  // Leyenda factiones
+  if(P){
+    const fks=[...new Set(Object.values(RF[P.id]))].slice(0,6);
+    s+=`\n  <g>`;
+    fks.forEach((fk,i)=>{
+      const f=FAC[fk]; if(!f)return;
+      const lbx=vx+12, lby=vy+vh-14-i*16;
+      s+=`<circle cx="${lbx+6}" cy="${lby}" r="5" fill="${f.c}" opacity=".85"/>
+      <text x="${lbx+15}" y="${lby+4}" font-family="Noto Sans SC,sans-serif"
+        font-size="9.5" fill="rgba(201,168,76,.72)">${f.n}</text>`;
+    });
+    s+=`\n  </g>`;
+  }
+
+  s+=`\n</svg>`;
+  return s;
+}
+
+// ══════════════════════════════════════════════════════════════
+//  TOOLTIPS DINÁMICOS
+// ══════════════════════════════════════════════════════════════
+function attachTooltips(){
+  document.querySelectorAll('.zreg-hit').forEach(el=>{
+    el.removeEventListener('mouseenter',el._te);
+    el.removeEventListener('mouseleave',el._tl);
+    const id=el.id.replace('zp_','');
+    const z=ZHOU.find(x=>x.id===id);
+    if(!z)return;
+    el._te=e=>tip(e,z.zh+' · '+z.en,z.desc.substring(0,72)+'…');
+    el._tl=hidetip;
+    el.addEventListener('mouseenter',el._te);
+    el.addEventListener('mouseleave',el._tl);
+  });
+  document.querySelectorAll('.city-pin').forEach(el=>{
+    const k=el.querySelector('[onclick]')?.getAttribute('onclick')?.match(/'(\w+)'/)?.[1];
+    if(!k||!CITIES[k])return;
+    const c=CITIES[k];
+    el._te=e=>tip(e,c.zh+' '+c.en,c.info.substring(0,72)+'…');
+    el._tl=hidetip;
+    el.addEventListener('mouseenter',el._te);
+    el.addEventListener('mouseleave',el._tl);
+  });
+  if(P){
+    document.querySelectorAll('.char-pin').forEach(el=>{
+      const oc=el.getAttribute('onclick');
+      const m=oc&&oc.match(/\d+/);
+      if(!m)return;
+      const ch=P.chars[parseInt(m[0])];
+      if(!ch)return;
+      el._te=e=>tip(e,ch.n,ch.zi||'');
+      el._tl=hidetip;
+      el.addEventListener('mouseenter',el._te);
+      el.addEventListener('mouseleave',el._tl);
+    });
+  }
+}
+
+function render(){
+  document.getElementById('map-base').innerHTML=buildSVG();
+  attachTooltips();
+}
+
+// ══════════════════════════════════════════════════════════════
+//  EVENTOS
+// ══════════════════════════════════════════════════════════════
+function clickZ(id){
+  selZ=id; level=1;
+  document.getElementById('backbtn').style.display='block';
+  updateBC(); render();
+  if(P) updateInfoZ(id);
+}
+function clickCity(e,k){
+  e.stopPropagation();
+  const c=CITIES[k]; if(!c)return;
+  document.getElementById('cminner').innerHTML=`
+    <div class="cmnm">🏯 ${c.zh}</div>
+    <div class="cmzi">${c.en}</div>
+    <div class="cmbio" style="border-top:none;padding-top:0">${c.info}</div>`;
+  document.getElementById('cmod').classList.add('open');
+}
+function clickChar(e,i){
+  e.stopPropagation();
+  if(!P)return;
+  openModChar(P.chars[i]);
+}
+function goL0(){
+  level=0;selZ=null;
+  document.getElementById('backbtn').style.display='none';
+  updateBC();render();
+  if(P)updateInfoP();
+}
+function updateBC(){
+  const bc=document.getElementById('bc');
+  let h=`<span class="bci ${level===0?'on':''}" onclick="goL0()">🗺 China Han</span>`;
+  if(level===1&&selZ){
+    const z=ZHOU.find(x=>x.id===selZ);
+    h+=`<span class="bcsep">›</span><span class="bci on">${z.zh} ${z.en}</span>`;
+  }
+  bc.innerHTML=h;
+}
+
+function updateInfoP(){
+  if(!P)return;
+  document.getElementById('izh').textContent=P.zh;
+  document.getElementById('iname').textContent=P.n;
+  document.getElementById('iyrs').textContent=P.y+' d.C.';
+  let h=`<div class="idesc">${P.desc}</div>`;
+  h+=`<div class="isect">⚔ Figuras del Periodo</div>`;
+  P.chars.forEach((ch,i)=>{
+    const f=FAC[ch.f]||FAC.neut;
+    h+=`<div class="crow" style="--fc:${f.c}" data-ci="${i}">
+      <div class="cico">${ch.e}</div>
+      <div><div class="cnm">${ch.n}</div><div class="csb">${f.n}</div></div>
+    </div>`;
+  });
+  h+=`<div class="isect" style="margin-top:5px">📜 Eventos</div>`;
+  (P.events||[]).forEach(ev=>{
+    h+=`<div class="erow"><div class="eyr">${ev.y} d.C.</div><div class="etxt">${ev.t}</div></div>`;
+  });
+  document.getElementById('ibody').innerHTML=h;
+  document.querySelectorAll('.crow[data-ci]').forEach(r=>{
+    r.addEventListener('click',()=>openModChar(P.chars[parseInt(r.dataset.ci)]));
+  });
+}
+
+function updateInfoZ(zid){
+  if(!P)return;
+  const z=ZHOU.find(x=>x.id===zid);
+  const f=FAC[(RF[P.id]||{})[zid]||'neut']||FAC.neut;
+  const zhc=P.chars.filter(ch=>ch.zhou===zid);
+  let h=`<div class="idesc">${z.desc}</div>`;
+  h+=`<div style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border:1px solid ${f.c};border-radius:2px;margin:3px 0;font-family:Noto Sans SC,sans-serif;font-size:9.5px;color:${f.c};background:${f.c}12">${f.s} · ${f.n}</div>`;
+  if(zhc.length){
+    h+=`<div class="isect" style="margin-top:5px">⚔ Figuras en ${z.zh}</div>`;
+    zhc.forEach(ch=>{
+      const fc=FAC[ch.f]||FAC.neut;
+      h+=`<div class="crow" style="--fc:${fc.c}" data-ci="${P.chars.indexOf(ch)}">
+        <div class="cico">${ch.e}</div>
+        <div><div class="cnm">${ch.n}</div><div class="csb">${fc.n}</div></div>
+      </div>`;
+    });
+  } else {
+    h+=`<div class="isect" style="margin-top:5px">Ciudades de ${z.zh}</div>`;
+    (z.cities||[]).forEach(ck=>{
+      const c=CITIES[ck]; if(!c)return;
+      h+=`<div style="padding:4px 6px;background:rgba(255,255,255,.02);border-radius:2px;
+        margin-bottom:3px;border-left:2px solid rgba(201,168,76,.25)">
+        <div style="font-family:Noto Serif SC,serif;font-size:11px;color:var(--parch)">${c.zh} <span style="opacity:.5;font-family:Noto Sans SC;font-size:9px">${c.en}</span></div>
+        <div style="font-family:Noto Sans SC,sans-serif;font-size:9px;color:var(--parch2);margin-top:1px;opacity:.7">${c.info.substring(0,70)}…</div>
+      </div>`;
+    });
+  }
+  document.getElementById('ibody').innerHTML=h;
+  document.querySelectorAll('.crow[data-ci]').forEach(r=>{
+    r.addEventListener('click',()=>openModChar(P.chars[parseInt(r.dataset.ci)]));
+  });
+}
+
+function openModChar(ch){
+  const f=FAC[ch.f]||FAC.neut;
+  const st=(ch.st||[]).map(([l,v])=>`<div class="cmsb"><div class="cmsl">${l}</div><div class="cmsv">${v}</div></div>`).join('');
+  document.getElementById('cminner').innerHTML=`
+    <div class="cmnm">${ch.e} ${ch.n}</div>
+    <div class="cmzi">${ch.zi||''}</div>
+    <div class="cmbadge" style="color:${f.c};border-color:${f.c};background:${f.c}14">${f.s} · ${f.n}</div>
+    <div class="cmbio">${ch.bio||''}</div>
+    ${st?`<div class="cmst">${st}</div>`:''}`;
+  document.getElementById('cmod').classList.add('open');
+}
+
+function tip(e,t,s){
+  const el=document.getElementById('tip');
+  el.innerHTML=`<strong>${t}</strong>${s?`<br><span style="opacity:.6;font-size:9px">${s}</span>`:''}`;
+  el.style.display='block';
+  el.style.left=(e.clientX+13)+'px';
+  el.style.top=Math.min(e.clientY-5,window.innerHeight-65)+'px';
+}
+function hidetip(){document.getElementById('tip').style.display='none';}
+document.addEventListener('mousemove',e=>{
+  const el=document.getElementById('tip');
+  if(el.style.display!=='none'){
+    el.style.left=(e.clientX+13)+'px';
+    el.style.top=Math.min(e.clientY-5,window.innerHeight-65)+'px';
+  }
+});
+
+function tog(t){
+  if(t==='n'){showN=!showN;document.getElementById('bn').classList.toggle('on',showN);}
+  if(t==='c'){showC=!showC;document.getElementById('bc2').classList.toggle('on',showC);}
+  if(t==='p'){showPP=!showPP;document.getElementById('bp').classList.toggle('on',showPP);}
+  render();
+}
+
+function initTL(){
+  const sc=document.getElementById('tlsc');
+  const rail=sc.querySelector('.tlr');
+  sc.innerHTML=''; sc.appendChild(rail);
+  PERIODS.forEach(pp=>{
+    const el=document.createElement('div');
+    el.className='pc'; el.id='pc-'+pp.id;
+    el.innerHTML=`<div class="pcico" style="border-color:${pp.c};color:${pp.c}">${pp.ico}</div>
+      <div class="pcdot" style="border-color:${pp.c}"></div>
+      <div class="pcstem"></div>
+      <div class="pclbl">${pp.n}</div>
+      <div class="pcyr">${pp.y} d.C.</div>`;
+    el.addEventListener('click',()=>selP(pp.id));
+    sc.appendChild(el);
+  });
+}
+
+function selP(id){
+  const pp=PERIODS.find(x=>x.id===id); if(!pp)return;
+  P=pp;
+  document.querySelectorAll('.pc').forEach(c=>c.classList.remove('on'));
+  document.getElementById('pc-'+id)?.classList.add('on');
+  level=0;selZ=null;
+  document.getElementById('backbtn').style.display='none';
+  updateBC();render();updateInfoP();
+}
+
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape')document.getElementById('cmod').classList.remove('open');
+});
+
+initTL();
+render();
+setTimeout(()=>selP('p1'),280);
+</script>
+</body>
+</html>

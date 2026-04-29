@@ -1,0 +1,250 @@
+# Skill: Ficha Completa de Personaje · Portal ROTK
+
+Crea la ficha completa de un personaje del Portal ROTK: HTML, CSS y actualización de data.js.
+
+**Personaje solicitado:** $ARGUMENTS
+
+---
+
+## Paso 0 — Sin argumento
+
+Si `$ARGUMENTS` está vacío, lee `assets/js/data.js`, encuentra todos los personajes sin campo `detailHref` y muéstralos en una lista numerada. Pregunta al usuario cuál quiere crear primero y espera su respuesta antes de continuar.
+
+---
+
+## Paso 1 — Localizar el personaje en data.js
+
+Busca en `assets/js/data.js` la entrada cuyo campo `en` coincida con `$ARGUMENTS` (búsqueda insensible a mayúsculas si hace falta).
+
+Extrae y anota estos campos:
+- `zh`, `en`, `zi`, `ttl`, `bio`, `fac`, `fc`, `fcbg`, `tags`, `stats`, `eras`
+- Si tiene `facs` (multi-facción), usa el primer `facs[0].color` como color secundario pero `fc` como color principal.
+
+---
+
+## Paso 2 — Calcular el slug
+
+Convierte `en` a slug: minúsculas, espacios → guiones, elimina tildes y caracteres especiales.
+
+| en original | slug |
+|---|---|
+| Guan Yu | guan-yu |
+| Lü Bu | lu-bu |
+| Sun Quan | sun-quan |
+| Zhang Fei | zhang-fei |
+| Diao Chan | diao-chan |
+| Sima Yi | sima-yi |
+| Yuan Shao | yuan-shao |
+| Ma Chao | ma-chao |
+| Huang Zhong | huang-zhong |
+| Lu Xun | lu-xun |
+| Gan Ning | gan-ning |
+| Jiang Wei | jiang-wei |
+| Deng Ai | deng-ai |
+| Sima Zhao | sima-zhao |
+| Cao Pi | cao-pi |
+| Xu Chu | xu-chu |
+| Dian Wei | dian-wei |
+| Xu Shu | xu-shu |
+| Gongsun Zan | gongsun-zan |
+
+---
+
+## Paso 3 — Verificar si existe imagen
+
+Comprueba si existe el archivo `assets/img/[en]/[en].png`.
+
+- **Con imagen:** el `<section class="hero">` usará grid de 2 columnas e incluirá el bloque `<div class="hero-media">`.
+- **Sin imagen:** el `<section class="hero">` usará grid de 1 columna y no incluirá `hero-media`. Aplica en el CSS: `.hero{grid-template-columns:1fr}`.
+
+---
+
+## Paso 4 — Paleta CSS según el campo `fc`
+
+Usa esta tabla. Para `[gold24]`, `[gold12]`, `[gold45]` extrae los 3 bytes hex del color `--gold` y úsalos como `rgba(R,G,B,.24)`, etc.
+
+| fc | --accent | --gold | --muted | body bg | gradient color | gradient pos |
+|---|---|---|---|---|---|---|
+| `#1e5abf` (Wei) | `#1e5abf` | `#9bb1d3` | `#99a5b8` | `#05080d` | `#364475` | top right |
+| `#1e8a2e` (Shu) | `#49804a` | `#d9b76a` | `#b9c2a5` | `#07110b` | `#2a5b35` | top left |
+| `#bf2020` (Wu) | `#bf2020` | `#d49e6a` | `#bba38d` | `#0b0906` | `#53271a` | top left |
+| `#9922cc` (Dong Zhuo) | `#9922cc` | `#cfa66f` | `#b7afb9` | `#07050a` | `#4d2d5e` | top right |
+| `#b87e10` (Turbantes) | `#b87e10` | `#d4a84a` | `#b8a880` | `#080600` | `#4d3c0a` | top left |
+| `#8b6914` (Yuan Shao) | `#a08020` | `#d4b870` | `#b8a870` | `#080600` | `#3d300a` | top right |
+| `#c060a0` (Diao Chan) | `#c060a0` | `#d4a4c0` | `#b8a0b0` | `#080509` | `#5a2545` | top right |
+| `#607080` (neutro) | `#607080` | `#a0b0c0` | `#9098a8` | `#060809` | `#2a3848` | top left |
+| `#c9a84c` (Han dorado) | `#c9a84c` | `#d4b870` | `#b8a870` | `#080600` | `#4d3c18` | top left |
+| `#2e8b57` (verde) | `#2e8b57` | `#a0d4a0` | `#90b890` | `#060b06` | `#1a4d28` | top left |
+
+Para `[accent08]` y `[accent18]`: extrae los bytes RGB del `--accent` y usa `rgba(R,G,B,.08)` y `rgba(R,G,B,.18)`.
+
+El color `darkbg` del gradiente es la misma bg pero ~30% más oscura (si `#05080d`, usa `#04060b`; si `#07110b`, usa `#040705`; etc.).
+
+---
+
+## Paso 5 — Crear `assets/css/[slug].css`
+
+Crea el archivo con exactamente esta estructura (sin saltos de línea excepto el `@media` final):
+
+```
+:root{--bg:[bg];--panel:[panel];--text:#f2ede2;--muted:[muted];--gold:[gold];--accent:[accent];--border:rgba(255,255,255,.08)}
+*{box-sizing:border-box}
+html{font-family:'Noto Sans SC',sans-serif;background:[bg];color:var(--text)}
+body{margin:0;min-height:100vh;background:radial-gradient(circle at [pos],[gradient] 0%,[bg] 28%,[darkbg] 100%);background-attachment:fixed}
+img{display:block;max-width:100%;height:auto}
+body,a{color:inherit}
+a{text-decoration:none}
+#hdr{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:24px 20px 16px;border-bottom:1px solid rgba(255,255,255,.08)}
+#hdr > div{max-width:calc(100% - 220px)}
+.hzh{font-family:'Noto Serif SC',serif;font-size:22px;font-weight:700;letter-spacing:.12em;color:var(--text)}
+.hen{font-family:'Cinzel Decorative',serif;font-size:12px;text-transform:uppercase;letter-spacing:.3em;color:var(--gold);margin-top:8px;opacity:.92}
+.hbtns{display:flex;gap:12px;flex-wrap:wrap}
+.hb{font-family:'Cinzel Decorative',serif;font-size:12px;padding:10px 16px;border:1px solid [gold24];border-radius:4px;color:var(--gold);background:rgba(255,255,255,.03);transition:background .22s,border-color .22s}
+.hb:hover{background:[gold12];border-color:[gold45]}
+.wrap{max-width:1040px;margin:0 auto;padding:30px 18px 60px}
+.hero{display:grid;grid-template-columns:[hero-cols];gap:24px;align-items:start;margin-bottom:36px}
+.hero-media{border:1px solid var(--border);border-radius:18px;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,.35);background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(0,0,0,.18))}
+.hero-copy{padding:18px 0 0}
+.eyebrow{font-family:'Cinzel Decorative',serif;font-size:12px;letter-spacing:.28em;text-transform:uppercase;color:var(--gold);opacity:.85;margin-bottom:18px}
+.title{font-family:'Noto Serif SC',serif;font-size:clamp(34px,4.4vw,52px);line-height:1.02;color:var(--text);margin:0 0 14px}
+.subtitle{font-family:'IM Fell English',serif;font-style:italic;font-size:18px;line-height:1.78;color:var(--muted);margin:0 0 24px}
+.hero-quote{position:relative;padding:28px 22px 18px 22px;margin:0 0 24px;border-left:4px solid var(--accent);background:rgba(255,255,255,.03);border-radius:10px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.025)}
+.quote-mark{display:block;font-size:42px;line-height:.7;color:var(--accent);margin-bottom:-10px}
+.lede{font-family:'IM Fell English',serif;font-size:17px;line-height:1.88;color:var(--muted);margin:0}
+.intro{margin-bottom:42px;padding:22px 24px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:14px;box-shadow:0 24px 70px rgba(0,0,0,.16)}
+.intro p{margin:0;font-size:16px;line-height:1.9;color:var(--muted)}
+.sec-title{font-family:'Noto Serif SC',serif;font-size:22px;color:var(--text);margin-bottom:18px}
+.era-block{margin-bottom:34px}
+.era-block.alt .era-card{background:[accent08];border-color:[accent18]}
+.era-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px}
+.era-card{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:22px;box-shadow:0 18px 50px rgba(0,0,0,.16);backdrop-filter:blur(6px)}
+.era-card h3{font-family:'Noto Serif SC',serif;font-size:18px;color:var(--text);margin:0 0 10px}
+.era-card p{margin:0;font-size:15px;line-height:1.8;color:var(--muted)}
+.epilogue{padding:28px 26px;background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(0,0,0,.08));border:1px solid rgba(255,255,255,.08);border-radius:18px}
+.epilogue h2{font-family:'Noto Serif SC',serif;font-size:20px;color:var(--text);margin:0 0 14px}
+.epilogue p{margin:0;font-size:16px;line-height:1.9;color:var(--muted)}
+@media(max-width:900px){#hdr{flex-direction:column;align-items:flex-start} .hero{grid-template-columns:1fr}}
+@media(max-width:640px){.wrap{padding:22px 16px 48px} .hbtns{width:100%;justify-content:flex-start} .hb{width:100%;text-align:center}}
+```
+
+---
+
+## Paso 6 — Crear `assets/Periods/[slug].html`
+
+### Mapeo de eras a títulos en español
+
+| id era | título sección |
+|---|---|
+| han-tardio | Han Tardío |
+| turbantes | Turbantes Amarillos |
+| dong-zhuo | Era de Dong Zhuo |
+| guerras-senores | Guerras de los Señores |
+| chibi | Chibi |
+| tres-reinos | Los Tres Reinos |
+| guerras-ocaso | Guerras del Ocaso |
+| sima | Era Sima |
+| jin | Dinastía Jin |
+
+### Reglas de contenido
+
+- Escribe **en español literario**, fluido y evocador, al estilo de las fichas de Cao Cao y Sun Jian.
+- Para cada era en el array `eras` del personaje, crea una `<section class="era-block">`. Alterna sin clase / con clase `alt` empezando sin clase.
+- Cada sección lleva exactamente **2 `<article class="era-card">`**, cada uno con un `<h3>` (título corto y evocador del episodio) y un `<p>` (2-3 frases sobre el rol del personaje en ese período).
+- El contenido se basa en el `bio` del personaje más el conocimiento del Romance de los Tres Reinos. Sé preciso históricamente.
+- Si `zi` está vacío, el `<h1 class="title">` muestra solo `[en] · [zh]`.
+- Si `zi` no está vacío, muestra `[en] · [zi]`.
+- La `hero-quote` debe ser una cita real (o muy característica) del personaje o sobre él. Si no hay cita famosa, escribe una frase narrativa en tercera persona entre «guillemets».
+
+### Plantilla HTML
+
+```html
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>[en] · Ficha Completa</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700;900&family=Cinzel+Decorative:wght@400;700&family=IM+Fell+English:ital@0;1&family=Noto+Sans+SC:wght@300;400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/[slug].css">
+</head>
+<body>
+<header id="hdr">
+  <div>
+    <div class="hzh">[zh] · [en]</div>
+    <div class="hen">[fac] · [ttl]</div>
+  </div>
+  <nav class="hbtns">
+    <a class="hb" href="../../index.html#heroes">← Volver a Personajes</a>
+    <a class="hb" href="../../index.html">Inicio</a>
+  </nav>
+</header>
+
+<main class="wrap">
+  <section class="hero">
+    <!-- Incluir solo si hay imagen -->
+    <div class="hero-media">
+      <img src="../img/[en]/[en].png" alt="[en]" />
+    </div>
+    <!-- /imagen -->
+    <div class="hero-copy">
+      <div class="eyebrow">Ficha completa</div>
+      <h1 class="title">[en] · [zi o zh]</h1>
+      <p class="subtitle">[frase corta y evocadora, 1-2 líneas]</p>
+      <blockquote class="hero-quote">
+        <span class="quote-mark">"</span>
+        [cita o frase narrativa característica]
+      </blockquote>
+      <p class="lede">[párrafo introductorio evocador, 2-3 frases]</p>
+    </div>
+  </section>
+
+  <section class="intro">
+    <p>[Párrafo general sobre el arco del personaje en la novela, 2-3 frases que sitúen al lector.]</p>
+  </section>
+
+  <!-- Repetir para cada era en c.eras, alternando sin/con "alt" -->
+  <section class="era-block [alt si corresponde]">
+    <h2 class="sec-title">[nombre era en español]</h2>
+    <div class="era-grid">
+      <article class="era-card">
+        <h3>[Título del episodio]</h3>
+        <p>[2-3 frases sobre el personaje en esta era]</p>
+      </article>
+      <article class="era-card">
+        <h3>[Título del otro episodio]</h3>
+        <p>[2-3 frases sobre el personaje en esta era]</p>
+      </article>
+    </div>
+  </section>
+
+  <section class="epilogue">
+    <h2>Epílogo</h2>
+    <p>[Párrafo final sobre el legado o la muerte del personaje. Cierre literario.]</p>
+  </section>
+</main>
+</body>
+</html>
+```
+
+---
+
+## Paso 7 — Actualizar `assets/js/data.js`
+
+Localiza el objeto del personaje en data.js. Añade el campo `detailHref:'assets/Periods/[slug].html'` **justo antes** del campo `eras:`.
+
+Ejemplo: si la línea contiene `eras:['turbantes','dong-zhuo']`, insertar antes de ella:
+```
+detailHref:'assets/Periods/[slug].html',
+```
+
+Edita solo la entrada del personaje. No toques ninguna otra línea.
+
+---
+
+## Paso 8 — Confirmar al usuario
+
+Informa de:
+1. Archivos creados: `assets/css/[slug].css` y `assets/Periods/[slug].html`
+2. Modificación en `assets/js/data.js`: campo `detailHref` añadido
+3. Si se incluyó imagen o no, y por qué
+4. Si quedan más personajes sin ficha, pregunta si continuar con el siguiente
