@@ -192,7 +192,7 @@ const CHARS=[
   {zh:'许褚',en:'Xu Chu',zi:'Zhongkang 仲康',ico:'💪',fc:'#1e5abf',fcbg:'rgba(30,90,191,.12)',rank:3,
    ttl:'El Tigre Loco',bio:'Guardaespaldas personal de Cao Cao, capaz de luchar desnudo de cintura para arriba. Una vez detuvo un carro de bueyes agarrándolo con sus propias manos. Solo Lü Bu y Ma Chao lo igualaron en fuerza. Lloró la muerte de Cao Cao como un hijo.',
    tags:['Wei 魏','Guardaespaldas','?–? d.C.'],fac:'Wei 魏',
-   stats:[['Facción','Wei 魏'],['Rol','Guardaespaldas Imperial'],['Apodo','Tigre Loco 虎痴'],['Rival','Ma Chao 馬超']],
+   stats:[['Facción','Wei 魏'],['Rol','Guardaespaldas Imperial'],['Apodo','Tigre Loco 虎痴'],['Rival','Ma Chao 馬超']],detailHref:'assets/Periods/xu-chu.html',
    eras:['guerras-senores','chibi','tres-reinos'],eraRank:{'guerras-senores':2,'chibi':2}},
 
   {zh:'曹丕',en:'Cao Pi',zi:'Zihuan 子桓',ico:'👑',fc:'#1e5abf',fcbg:'rgba(30,90,191,.12)',rank:1,
@@ -216,7 +216,7 @@ const CHARS=[
   {zh:'典韦',en:'Dian Wei',zi:'',ico:'🪓',fc:'#1e5abf',fcbg:'rgba(30,90,191,.12)',rank:3,
    ttl:'El Dios Guardián',bio:'El guardaespaldas definitivo. Armado con dos alabardas de 40 jin cada una, era el muro humano de Cao Cao. En la batalla de Wan (197 d.C.) fue traicionado mientras Cao Cao dormía. Murió en la puerta solo y rodeado, defendiendo la retirada de su señor. Cao Cao lloró más por él que por su propio hijo.',
    tags:['Wei 魏','Guardaespaldas','?–197 d.C.'],fac:'Wei 魏',
-   stats:[['Facción','Wei 魏'],['Arma','Dos alabardas 戟'],['Período','?–197 d.C.'],['Muerte','Batalla de Wan 宛 197 d.C.']],
+   stats:[['Facción','Wei 魏'],['Arma','Dos alabardas 戟'],['Período','?–197 d.C.'],['Muerte','Batalla de Wan 宛 197 d.C.']],detailHref:'assets/Periods/dian-wei.html',
    eras:['guerras-senores'],eraRank:{'guerras-senores':2}},
 
   {zh:'徐庶',en:'Xu Shu',zi:'Yuanzhi 元直',ico:'🪈',fc:'#1e8a2e',fcbg:'rgba(30,138,46,.12)',rank:3,
