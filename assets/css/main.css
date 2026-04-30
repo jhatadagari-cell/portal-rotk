@@ -22,12 +22,12 @@ body{background:var(--ink);color:var(--parch);font-family:'IM Fell English',Geor
   padding:0 clamp(16px,4vw,64px);gap:16px
 }
 .nav-brand{display:flex;align-items:baseline;gap:10px;text-decoration:none;flex-shrink:0}
-.nav-zh{font-family:'Noto Serif SC',serif;font-size:20px;font-weight:900;color:var(--red);letter-spacing:.12em;text-shadow:0 0 20px rgba(139,26,26,.4)}
-.nav-en{font-family:'Cinzel Decorative',serif;font-size:12px;color:var(--gold);opacity:.6;letter-spacing:.16em}
+.nav-zh{font-family:'Noto Serif SC',serif;font-size:24px;font-weight:900;color:var(--red);letter-spacing:.12em;text-shadow:0 0 20px rgba(139,26,26,.4)}
+.nav-en{font-family:'Cinzel Decorative',serif;font-size:16px;color:var(--gold);opacity:.6;letter-spacing:.16em}
 .nav-links{display:flex;gap:22px;list-style:none}
 .nav-links a{font-family:'Noto Sans SC',sans-serif;font-size:14px;color:var(--parch2);text-decoration:none;letter-spacing:.07em;opacity:.72;transition:all .18s}
 .nav-links a:hover{opacity:1;color:var(--gold)}
-.nav-cta{font-family:'Cinzel Decorative',serif;font-size:12px;color:var(--ink);background:var(--gold);padding:7px 17px;border-radius:2px;text-decoration:none;letter-spacing:.13em;transition:all .18s;white-space:nowrap;flex-shrink:0}
+.nav-cta{font-family:'Cinzel Decorative',serif;font-size:16px;color:var(--ink);background:var(--gold);padding:7px 17px;border-radius:2px;text-decoration:none;letter-spacing:.13em;transition:all .18s;white-space:nowrap;flex-shrink:0}
 .nav-cta:hover{background:var(--parch2)}
 .hamburger{display:none;background:none;border:none;cursor:pointer;flex-direction:column;gap:5px;padding:4px}
 .hamburger span{display:block;width:20px;height:2px;background:var(--gold);border-radius:1px;transition:all .2s}
@@ -88,7 +88,7 @@ body{background:var(--ink);color:var(--parch);font-family:'IM Fell English',Geor
 }
 .stat-item:last-child{border-right:none}
 .stat-n{font-family:'Noto Serif SC',serif;font-size:clamp(26px,4vw,40px);font-weight:900;color:var(--gold);line-height:1}
-.stat-l{font-family:'Cinzel Decorative',serif;font-size:12px;color:var(--parch2);opacity:.5;letter-spacing:.15em;margin-top:4px;text-transform:uppercase}
+.stat-l{font-family:'Cinzel Decorative',serif;font-size:16px;color:var(--parch2);opacity:.5;letter-spacing:.15em;margin-top:4px;text-transform:uppercase}
 
 /* ── SECTION BASE ── */
 .sec{padding:clamp(52px,7vw,88px) clamp(16px,5vw,72px)}
@@ -132,14 +132,14 @@ body{background:var(--ink);color:var(--parch);font-family:'IM Fell English',Geor
 .ccard:hover{transform:translateY(-5px);box-shadow:0 10px 28px rgba(0,0,0,.5),0 0 0 1px var(--fc,var(--goldf));overflow:visible;z-index:2}
 .ccard-hd{display:flex;align-items:center;gap:10px;margin-bottom:11px}
 .ccard-ico{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0;border:2px solid var(--fc,var(--gold));background:rgba(0,0,0,.3)}
-.ccard-zh{font-family:'Noto Serif SC',serif;font-size:16px;font-weight:700;color:var(--fc,var(--gold))}
-.ccard-en{font-family:'Cinzel Decorative',serif;font-size:12px;color:var(--gold);opacity:.48;letter-spacing:.1em;margin-top:1px}
-.ccard-ttl{font-family:'IM Fell English',serif;font-style:italic;font-size:15px;color:var(--parch2);opacity:.62;margin-bottom:7px}
+.ccard-zh{font-family:'Noto Serif SC',serif;font-size:20px;font-weight:700;color:var(--fc,var(--gold))}
+.ccard-en{font-family:'Cinzel Decorative',serif;font-size:16px;color:var(--gold);opacity:.48;letter-spacing:.1em;margin-top:1px}
+.ccard-ttl{font-family:'IM Fell English',serif;font-style:italic;font-size:19px;color:var(--parch2);opacity:.62;margin-bottom:7px}
 .ccard-bio{font-family:'Noto Sans SC',sans-serif;font-size:14px;color:var(--parch2);line-height:1.55;opacity:.74;flex:1;min-height:0;max-height:6.6em;overflow:hidden;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;text-overflow:ellipsis;transition:max-height .22s ease}
 .ccard:hover .ccard-bio{max-height:30em}
 .ccard-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:9px}
-.ccard-tag{font-family:'Noto Sans SC',sans-serif;font-size:12px;color:var(--fc,var(--gold));border:1px solid var(--fc,var(--goldf));padding:2px 6px;border-radius:2px;opacity:.78}
-.ccard-btn{display:block;margin-top:13px;text-align:center;font-family:'Cinzel Decorative',serif;font-size:12px;color:var(--fc,var(--gold));border:1px solid var(--fc,var(--goldf));padding:7px 10px;border-radius:2px;letter-spacing:.12em;text-transform:uppercase;transition:all .18s;background:transparent;cursor:pointer;width:100%}
+.ccard-tag{font-family:'Noto Sans SC',sans-serif;font-size:16px;color:var(--fc,var(--gold));border:1px solid var(--fc,var(--goldf));padding:2px 6px;border-radius:2px;opacity:.78}
+.ccard-btn{display:block;margin-top:13px;text-align:center;font-family:'Cinzel Decorative',serif;font-size:16px;color:var(--fc,var(--gold));border:1px solid var(--fc,var(--goldf));padding:7px 10px;border-radius:2px;letter-spacing:.12em;text-transform:uppercase;transition:all .18s;background:transparent;cursor:pointer;width:100%}
 .ccard-btn:hover{background:rgba(255,255,255,.04);border-color:var(--fc,var(--gold))}
 
 /* Rank 2 card (compact square) */
@@ -147,10 +147,10 @@ body{background:var(--ink);color:var(--parch);font-family:'IM Fell English',Geor
   display:flex;flex-direction:column;align-items:center;text-align:center;
   padding:14px 10px 12px;gap:4px;
 }
-.ccard--sm .ccard-ico{width:34px;height:34px;font-size:15px;margin-bottom:2px}
+.ccard--sm .ccard-ico{width:34px;height:34px;font-size:19px;margin-bottom:2px}
 .ccard--sm .ccard-zh{font-size:14px}
 .ccard--sm .ccard-en{font-size:10px;letter-spacing:.06em}
-.ccard--sm .ccard-ttl{font-size:12px;margin-bottom:0;-webkit-line-clamp:2;display:-webkit-box;-webkit-box-orient:vertical;overflow:hidden}
+.ccard--sm .ccard-ttl{font-size:16px;margin-bottom:0;-webkit-line-clamp:2;display:-webkit-box;-webkit-box-orient:vertical;overflow:hidden}
 .ccard--sm .ccard-tags{justify-content:center;margin-top:6px}
 .ccard--sm .ccard-tag{font-size:10px;padding:1px 5px}
 
@@ -185,7 +185,7 @@ body{background:var(--ink);color:var(--parch);font-family:'IM Fell English',Geor
 .ccard-row-name{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
 .ccard-row .ccard-zh{font-size:14px}
 .ccard-row .ccard-en{font-size:10px;letter-spacing:.06em}
-.ccard-row .ccard-ttl{font-size:12px;margin-bottom:0;opacity:.52;margin-top:1px}
+.ccard-row .ccard-ttl{font-size:16px;margin-bottom:0;opacity:.52;margin-top:1px}
 .ccard-row .ccard-tags{flex-shrink:0;display:flex;flex-wrap:wrap;gap:4px;margin-top:0}
 .ccard-row .ccard-tag{font-size:10px;padding:1px 5px}
 @media(max-width:540px){.ccard-row .ccard-tags{display:none}}
@@ -205,9 +205,9 @@ body{background:var(--ink);color:var(--parch);font-family:'IM Fell English',Geor
   font-weight:900;color:var(--fc,var(--gold));opacity:.026;pointer-events:none;user-select:none
 }
 .fcard-zh{font-family:'Noto Serif SC',serif;font-size:36px;font-weight:900;color:var(--fc,var(--gold));position:relative}
-.fcard-en{font-family:'Cinzel Decorative',serif;font-size:15px;color:var(--parch2);opacity:.52;letter-spacing:.18em;margin:5px 0 2px;position:relative}
-.fcard-yrs{font-family:'IM Fell English',serif;font-style:italic;font-size:15px;color:var(--parch2);opacity:.4;position:relative}
-.fcard-desc{font-family:'IM Fell English',serif;font-size:16px;color:var(--parch2);line-height:1.72;margin:13px 0 14px;opacity:.78;position:relative}
+.fcard-en{font-family:'Cinzel Decorative',serif;font-size:19px;color:var(--parch2);opacity:.52;letter-spacing:.18em;margin:5px 0 2px;position:relative}
+.fcard-yrs{font-family:'IM Fell English',serif;font-style:italic;font-size:19px;color:var(--parch2);opacity:.4;position:relative}
+.fcard-desc{font-family:'IM Fell English',serif;font-size:20px;color:var(--parch2);line-height:1.72;margin:13px 0 14px;opacity:.78;position:relative}
 .fcard-cap{font-family:'Noto Sans SC',sans-serif;font-size:13px;color:var(--parch2);opacity:.48;margin-bottom:10px;position:relative}
 .fcard-cap b{color:var(--fc,var(--gold));opacity:.85;font-weight:400}
 .fcard-rulers{display:flex;flex-wrap:wrap;gap:5px;justify-content:center;position:relative}
@@ -266,7 +266,7 @@ body{background:var(--ink);color:var(--parch);font-family:'IM Fell English',Geor
 .pcard-en{
   flex:1;display:flex;align-items:center;justify-content:center;
   font-family:'IM Fell English',serif;font-style:italic;
-  font-size:17px;color:var(--parch);line-height:1.3;
+  font-size:21px;color:var(--parch);line-height:1.3;
   position:relative;z-index:1
 }
 .pcard-zh{
@@ -296,7 +296,7 @@ body{background:var(--ink);color:var(--parch);font-family:'IM Fell English',Geor
 }
 .pcard-detail:hover{opacity:1}
 .pcard-yr{
-  font-family:'Cinzel Decorative',serif;font-size:12px;
+  font-family:'Cinzel Decorative',serif;font-size:16px;
   color:var(--pc,var(--gold));opacity:.68;letter-spacing:.08em
 }
 
@@ -322,7 +322,7 @@ body{background:var(--ink);color:var(--parch);font-family:'IM Fell English',Geor
 }
 .map-inner{position:relative;z-index:1;max-width:600px;margin:0 auto}
 .map-chips{display:flex;align-items:center;justify-content:center;gap:14px;margin:18px 0 26px;flex-wrap:wrap}
-.map-chip{display:flex;align-items:center;gap:6px;font-family:'Noto Sans SC',sans-serif;font-size:15px;color:var(--parch2);opacity:.62}
+.map-chip{display:flex;align-items:center;gap:6px;font-family:'Noto Sans SC',sans-serif;font-size:19px;color:var(--parch2);opacity:.62}
 .map-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
 .btn-map{display:inline-block;font-family:'Cinzel Decorative',serif;font-size:14px;color:var(--ink);background:var(--gold);padding:13px 32px;border-radius:2px;text-decoration:none;letter-spacing:.15em;font-weight:700;transition:all .2s}
 .btn-map:hover{background:var(--parch2);transform:translateY(-2px);box-shadow:0 6px 20px rgba(201,168,76,.28)}
@@ -330,11 +330,11 @@ body{background:var(--ink);color:var(--parch);font-family:'IM Fell English',Geor
 /* ── FAQ ── */
 .faq-list{max-width:720px;margin:0 auto}
 .faq-item{border-bottom:1px solid rgba(201,168,76,.1)}
-.faq-q{width:100%;text-align:left;background:none;border:none;cursor:pointer;font-family:'IM Fell English',serif;font-size:18px;color:var(--parch);padding:16px 0;display:flex;justify-content:space-between;align-items:center;gap:12px;transition:color .18s}
+.faq-q{width:100%;text-align:left;background:none;border:none;cursor:pointer;font-family:'IM Fell English',serif;font-size:22px;color:var(--parch);padding:16px 0;display:flex;justify-content:space-between;align-items:center;gap:12px;transition:color .18s}
 .faq-q:hover{color:var(--gold)}
 .faq-arrow{color:var(--gold);font-size:14px;transition:transform .24s;flex-shrink:0}
 .faq-item.open .faq-arrow{transform:rotate(180deg)}
-.faq-a{font-family:'Noto Sans SC',sans-serif;font-size:15px;color:var(--parch2);opacity:.7;line-height:1.78;overflow:hidden;max-height:0;transition:max-height .32s ease,padding .32s}
+.faq-a{font-family:'Noto Sans SC',sans-serif;font-size:19px;color:var(--parch2);opacity:.7;line-height:1.78;overflow:hidden;max-height:0;transition:max-height .32s ease,padding .32s}
 .faq-item.open .faq-a{max-height:400px;padding-bottom:15px}
 
 /* ── MODAL ── */
@@ -342,19 +342,19 @@ body{background:var(--ink);color:var(--parch);font-family:'IM Fell English',Geor
 #cmod.open{opacity:1;pointer-events:all}
 .cmod-box{background:#080400;border:1px solid var(--gold);border-radius:4px;max-width:460px;width:100%;padding:22px;position:relative;transform:translateY(16px);transition:transform .22s;box-shadow:0 0 60px rgba(0,0,0,.6)}
 #cmod.open .cmod-box{transform:translateY(0)}
-.cmod-x{position:absolute;top:9px;right:11px;background:none;border:none;color:var(--gold);font-size:17px;cursor:pointer;opacity:.48;transition:opacity .18s}
+.cmod-x{position:absolute;top:9px;right:11px;background:none;border:none;color:var(--gold);font-size:21px;cursor:pointer;opacity:.48;transition:opacity .18s}
 .cmod-x:hover{opacity:1}
 .cmod-hd{display:flex;align-items:center;gap:13px;margin-bottom:11px}
-.cmod-ico{width:50px;height:50px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;border:2px solid var(--gold);background:rgba(0,0,0,.4);flex-shrink:0}
+.cmod-ico{width:50px;height:50px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:26px;border:2px solid var(--gold);background:rgba(0,0,0,.4);flex-shrink:0}
 .cmod-zh{font-family:'Noto Serif SC',serif;font-size:21px;font-weight:700;color:var(--gold)}
 .cmod-en{font-family:'Cinzel Decorative',serif;font-size:13px;color:var(--gold);opacity:.5;letter-spacing:.12em;margin-top:2px}
-.cmod-zi{font-family:'IM Fell English',serif;font-style:italic;font-size:15px;color:var(--parch2);opacity:.62}
+.cmod-zi{font-family:'IM Fell English',serif;font-style:italic;font-size:19px;color:var(--parch2);opacity:.62}
 .cmod-badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:2px;font-family:'Noto Sans SC',sans-serif;font-size:13px;margin-bottom:11px;border:1px solid var(--gold);background:rgba(201,168,76,.08);color:var(--gold)}
-.cmod-bio{font-family:'IM Fell English',serif;font-size:16px;line-height:1.78;color:var(--parch2);border-top:1px solid rgba(201,168,76,.1);padding-top:10px}
+.cmod-bio{font-family:'IM Fell English',serif;font-size:20px;line-height:1.78;color:var(--parch2);border-top:1px solid rgba(201,168,76,.1);padding-top:10px}
 .cmod-stats{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:11px}
 .cmod-stat{background:rgba(255,255,255,.024);border:1px solid rgba(201,168,76,.09);padding:6px 8px;border-radius:2px}
 .cmod-sl{font-size:11px;color:var(--gold);opacity:.48;font-family:'Noto Sans SC',sans-serif}
-.cmod-sv{font-size:15px;color:var(--parch);font-family:'Noto Serif SC',serif;margin-top:1px}
+.cmod-sv{font-size:19px;color:var(--parch);font-family:'Noto Serif SC',serif;margin-top:1px}
 .cmod-detail-btn{display:block;width:100%;margin-top:14px;padding:11px 16px;font-family:'Cinzel Decorative',serif;font-size:13px;letter-spacing:.12em;text-align:center;color:var(--gold);background:transparent;border:1px solid rgba(201,168,76,.3);border-radius:2px;text-decoration:none;transition:.22s}
 .cmod-detail-btn:hover{background:rgba(201,168,76,.06);border-color:rgba(201,168,76,.5)}
 .cmod-detail-btn[disabled]{cursor:not-allowed;opacity:.45}
@@ -516,8 +516,8 @@ body.lubu-shaking{animation:lubu-shake .98s ease-in-out}
 /* ── FOOTER ── */
 footer{border-top:1px solid var(--border);background:rgba(4,2,0,.97);padding:clamp(26px,4vw,40px) clamp(16px,5vw,72px);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:18px}
 .foot-brand{display:flex;flex-direction:column;gap:3px}
-.foot-zh{font-family:'Noto Serif SC',serif;font-size:16px;font-weight:900;color:var(--red);letter-spacing:.1em}
-.foot-en{font-family:'Cinzel Decorative',serif;font-size:12px;color:var(--gold);opacity:.45;letter-spacing:.16em}
+.foot-zh{font-family:'Noto Serif SC',serif;font-size:20px;font-weight:900;color:var(--red);letter-spacing:.1em}
+.foot-en{font-family:'Cinzel Decorative',serif;font-size:16px;color:var(--gold);opacity:.45;letter-spacing:.16em}
 .foot-links{display:flex;gap:18px;flex-wrap:wrap}
 .foot-links a{font-family:'Noto Sans SC',sans-serif;font-size:14px;color:var(--parch2);opacity:.42;text-decoration:none;transition:opacity .18s}
 .foot-links a:hover{opacity:1;color:var(--gold)}
@@ -590,7 +590,7 @@ footer{border-top:1px solid var(--border);background:rgba(4,2,0,.97);padding:cla
   color:rgba(255,255,255,.35)
 }
 .km-hcap{
-  font-family:'Noto Sans SC',sans-serif;font-size:12px;
+  font-family:'Noto Sans SC',sans-serif;font-size:16px;
   color:var(--km-fc,#aaa);opacity:.5;margin-top:3px
 }
 
@@ -623,7 +623,7 @@ footer{border-top:1px solid var(--border);background:rgba(4,2,0,.97);padding:cla
   text-transform:uppercase;color:var(--km-fc,#aaa);opacity:.55
 }
 .km-year-num{
-  font-family:'Noto Serif SC',serif;font-size:17px;font-weight:700;
+  font-family:'Noto Serif SC',serif;font-size:21px;font-weight:700;
   color:var(--km-fc,#aaa)
 }
 .km-range{
@@ -685,7 +685,7 @@ footer{border-top:1px solid var(--border);background:rgba(4,2,0,.97);padding:cla
   color:rgba(255,255,255,.3);margin-bottom:2px
 }
 .km-stat-value{
-  font-family:'Noto Serif SC',serif;font-size:12px;
+  font-family:'Noto Serif SC',serif;font-size:16px;
   color:rgba(255,255,255,.75)
 }
 .km-ruler-row{
@@ -734,7 +734,7 @@ footer{border-top:1px solid var(--border);background:rgba(4,2,0,.97);padding:cla
   color:var(--km-fc,#aaa);opacity:.12;line-height:1;margin-bottom:4px
 }
 .km-soon-title{
-  font-family:'Cinzel Decorative',serif;font-size:17px;
+  font-family:'Cinzel Decorative',serif;font-size:21px;
   color:var(--km-fc,#aaa);letter-spacing:.24em;opacity:.65
 }
 .km-soon-sub{
@@ -775,7 +775,7 @@ footer{border-top:1px solid var(--border);background:rgba(4,2,0,.97);padding:cla
   left:12px;
   top:50%;
   transform:translateY(-50%);
-  font-size:17px;
+  font-size:21px;
   color:var(--gold);
   opacity:.5;
   pointer-events:none
@@ -787,7 +787,7 @@ footer{border-top:1px solid var(--border);background:rgba(4,2,0,.97);padding:cla
   border:1px solid var(--border);
   color:var(--parch);
   font-family:'IM Fell English',serif;
-  font-size:15px;
+  font-size:19px;
   padding:9px 14px 9px 36px;
   border-radius:2px;
   outline:none;
