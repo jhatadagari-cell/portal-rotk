@@ -244,7 +244,7 @@ const CHARS=[
   {zh:'公孙瓒',en:'Gongsun Zan',zi:'Bogui 伯珪',ico:'🐎',fc:'#607080',fcbg:'rgba(96,112,128,.12)',rank:3,
    ttl:'El Señor del Blanco',bio:'Su caballería de caballos blancos fue el terror de las fronteras del norte. Primer patrón de Liu Bei. Fue derrotado y asediado por Yuan Shao. Encendió él mismo la hoguera de su torre y murió quemado antes de rendirse. El orgullo por encima de la vida.',
    tags:['Gongsun Zan 公孙瓒','Youzhou','?–199 d.C.'],fac:'Gongsun Zan 公孙瓒',
-   stats:[['Facción','Gongsun Zan 公孙瓒'],['Capital','Youzhou 幽州'],['Período','?–199 d.C.'],['Muerte','Quemado en su propia torre']],
+   stats:[['Facción','Gongsun Zan 公孙瓒'],['Capital','Youzhou 幽州'],['Período','?–199 d.C.'],['Muerte','Quemado en su propia torre']],detailHref:'assets/Periods/gongsun-zan.html',
    eras:['turbantes','dong-zhuo','guerras-senores'],eraRank:{'guerras-senores':2,'dong-zhuo':2,'turbantes':2}},
 
   {zh:'王允',en:'Wang Yun',zi:'Zishi 子師',ico:'🏮',fc:'#c9a84c',fcbg:'rgba(201,168,76,.12)',rank:2,
