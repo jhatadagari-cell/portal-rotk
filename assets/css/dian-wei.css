@@ -33,5 +33,15 @@ a{text-decoration:none}
 .epilogue{padding:28px 26px;background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(0,0,0,.08));border:1px solid rgba(255,255,255,.08);border-radius:18px}
 .epilogue h2{font-family:'Noto Serif SC',serif;font-size:24px;color:var(--text);margin:0 0 14px}
 .epilogue p{margin:0;font-size:20px;line-height:1.9;color:var(--muted)}
+.sec-nav{display:flex;gap:12px;padding:12px 20px;background:rgba(255,255,255,.02);border-bottom:1px solid rgba(255,255,255,.08);position:sticky;top:0;z-index:100;flex-wrap:wrap;justify-content:center}
+.sec-link{font-family:'Cinzel Decorative',serif;font-size:12px;padding:8px 12px;border-radius:3px;color:var(--gold);text-decoration:none;transition:background .22s,color .22s;border:1px solid transparent;scroll-behavior:smooth}
+.sec-link:hover:not(.soon){background:rgba(217,183,106,.08)}
+.sec-link.active{background:rgba(217,183,106,.15);border-color:rgba(217,183,106,.3)}
+.sec-link.soon{opacity:.45;cursor:not-allowed}
 @media(max-width:900px){#hdr{flex-direction:column;align-items:flex-start} .hero{grid-template-columns:1fr}}
+.sec-nav{display:flex;gap:12px;padding:12px 20px;background:rgba(255,255,255,.02);border-bottom:1px solid rgba(255,255,255,.08);position:sticky;top:0;z-index:100;flex-wrap:wrap;justify-content:center}
+.sec-link{font-family:'Cinzel Decorative',serif;font-size:12px;padding:8px 12px;border-radius:3px;color:var(--gold);text-decoration:none;transition:background .22s,color .22s;border:1px solid transparent;scroll-behavior:smooth}
+.sec-link:hover:not(.soon){background:rgba(217,183,106,.08)}
+.sec-link.active{background:rgba(217,183,106,.15);border-color:rgba(217,183,106,.3)}
+.sec-link.soon{opacity:.45;cursor:not-allowed}
 @media(max-width:640px){.wrap{padding:22px 16px 48px} .hbtns{width:100%;justify-content:flex-start} .hb{width:100%;text-align:center}}
