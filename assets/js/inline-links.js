@@ -457,7 +457,7 @@ function processTextNodes(kmap, sortedKeywords) {
         const span = document.createElement('span');
         span.className = 'ilink';
         span.textContent = keyword;
-        span.style.cssText = `color:${entry.fc};border-bottom:1px solid ${entry.fc};cursor:pointer`;
+        span.style.cssText = `color:${entry.fc};cursor:pointer`;
 
         if (entry.type === 'char') {
           span.dataset.type = 'char';
