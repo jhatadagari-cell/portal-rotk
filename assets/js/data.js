@@ -73,6 +73,13 @@ const CHARS=[
    stats:[['Facción','Yuan Shao 袁紹'],['Derrota','Guandu 官渡 200 d.C.'],['Período','?–202 d.C.'],['Capital','Ye 鄴']],
    eras:['dong-zhuo','guerras-senores'],eraRank:{'dong-zhuo':1,'guerras-senores':1},detailHref:'assets/Periods/yuan-shao.html'},
 
+  {zh:'陶谦',en:'Tao Qian',zi:'Yuanxiu 元休',ico:'🛡️',fc:'#7a4c1d',fcbg:'rgba(122,76,29,.12)',rank:3,
+   ttl:'Gobernador de Xuzhou',bio:'Gobernador de Xuzhou y figura clave en los inicios de las guerras civiles. Su decisión de ceder Xuzhou a Cao Cao cambió el curso del conflicto y liberó a Liu Bei para crear Shu Han.',
+   tags:['Xuzhou 徐州','Gobernador','?–194 d.C.'],fac:'Xuzhou 徐州',
+   stats:[['Facción','Xuzhou 徐州'],['Rol','Gobernador'],['Período','?–194 d.C.'],['Acontecimiento','Cedió Xuzhou a Cao Cao']],
+   detailHref:'assets/Periods/tao-qian.html',
+   eras:['turbantes','dong-zhuo','guerras-senores'],eraRank:{'turbantes':2,'dong-zhuo':2,'guerras-senores':2}},
+
   {zh:'孙策',en:'Sun Ce',zi:'Bofu 伯符',ico:'🦁',fc:'#bf2020',fcbg:'rgba(191,32,32,.12)',rank:1,
    ttl:'El Pequeño Conquistador',bio:'Con apenas 17 años comenzó la conquista de Jiangdong con 1.000 soldados heredados. En cinco años forjó el futuro reino de Wu. Murió a los 26 por una flecha envenenada, dejando todo a su hermano Sun Quan.',
    tags:['Wu 吳','Jiangdong','175–200 d.C.'],fac:'Wu 吳',
@@ -117,6 +124,7 @@ const CHARS=[
    ttl:'Tigre del Oeste',bio:'Señor de Liangzhou cuyo ejército de jinetes fue el terror del norte. Derrotó a Cao Cao en Tong Pass obligándole a huir cortándose la barba y la capa. Al perder a su familia, buscó refugio en Shu Han. Uno de los Cinco Tigres.',
    tags:['Shu Han 蜀漢','Liangzhou','176–222 d.C.'],fac:'Shu Han 蜀漢',
    stats:[['Facción','Shu Han 蜀漢'],['Batalla','Tong Pass 潼關'],['Período','176–222 d.C.'],['Título','Cinco Tigres']],
+   detailHref:'assets/Periods/ma-chao.html',
    eras:['guerras-senores','chibi','tres-reinos'],eraRank:{'guerras-senores':1,'tres-reinos':2}},
 
   {zh:'黄忠',en:'Huang Zhong',zi:'Hansheng 漢升',ico:'🏹',fc:'#1e8a2e',fcbg:'rgba(30,138,46,.12)',rank:2,
@@ -323,6 +331,7 @@ const CHARS=[
    ttl:'El Último Hijo del Han',bio:'Rescatado de bebé en Changban por Zhao Yun. Gobernó Shu Han 41 años bajo la sombra de Zhuge Liang. Cuando Jin lo trasladó a Luoyang le preguntaron si echaba de menos su tierra: "Aquí estoy tan a gusto que no pienso en Shu." ¿Tonto irreparable o el más hábil superviviente?',
    tags:['Shu Han 蜀漢','Último Emp.','207–271 d.C.'],fac:'Shu Han 蜀漢',
    stats:[['Facción','Shu Han 蜀漢'],['Reinado','41 años'],['Período','207–271 d.C.'],['Frase','乐不思蜀 "No pienso en Shu"']],
+   detailHref:'assets/Periods/liu-shan.html',
    eras:['tres-reinos','guerras-ocaso','sima'],eraRank:{'tres-reinos':1,'guerras-ocaso':1}},
 
   {zh:'张鲁',en:'Zhang Lu',zi:'Gongqi 公祺',ico:'☯️',fc:'#2e8b57',fcbg:'rgba(46,139,87,.12)',rank:3,

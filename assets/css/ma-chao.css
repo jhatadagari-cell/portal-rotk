@@ -1,7 +1,7 @@
-:root{--bg:#060809;--panel:#0f1520;--text:#f2ede2;--muted:#9098a8;--gold:#a0b0c0;--accent:#607080;--border:rgba(255,255,255,.08)}
+:root{--bg:#060e0c;--panel:#102018;--text:#f0ece1;--muted:#9db5a4;--gold:#c8b46e;--accent:#167a6a;--border:rgba(255,255,255,.08)}
 *{box-sizing:border-box}
-html{font-family:'Noto Sans SC',sans-serif;background:#060809;color:var(--text)}
-body{margin:0;min-height:100vh;background:radial-gradient(circle at top left,#2a3848 0%,#060809 28%,#040506 100%);background-attachment:fixed;}
+html{font-family:'Noto Sans SC',sans-serif;background:#050d0b;color:var(--text)}
+body{margin:0;min-height:100vh;background:radial-gradient(circle at top left,#1a4a3c 0%,#060e0c 28%,#030806 100%);background-attachment:fixed;}
 img{display:block;max-width:100%;height:auto}
 body,a{color:inherit}
 a{text-decoration:none}
@@ -10,12 +10,12 @@ a{text-decoration:none}
 .hzh{font-family:'Noto Serif SC',serif;font-size:26px;font-weight:700;letter-spacing:.12em;color:var(--text)}
 .hen{font-family:'Cinzel Decorative',serif;font-size:16px;text-transform:uppercase;letter-spacing:.3em;color:var(--gold);margin-top:8px;opacity:.92}
 .hbtns{display:flex;gap:12px;flex-wrap:wrap;}
-.hb{font-family:'Cinzel Decorative',serif;font-size:16px;padding:10px 16px;border:1px solid rgba(160,176,192,.24);border-radius:4px;color:var(--gold);background:rgba(255,255,255,.03);transition:background .22s,border-color .22s}
-.hb:hover{background:rgba(160,176,192,.12);border-color:rgba(160,176,192,.45)}
+.hb{font-family:'Cinzel Decorative',serif;font-size:16px;padding:10px 16px;border:1px solid rgba(200,180,110,.24);border-radius:4px;color:var(--gold);background:rgba(255,255,255,.03);transition:background .22s,border-color .22s}
+.hb:hover{background:rgba(200,180,110,.12);border-color:rgba(200,180,110,.45)}
 .sec-nav{display:flex;gap:12px;padding:12px 20px;background:rgba(255,255,255,.02);border-bottom:1px solid rgba(255,255,255,.08);position:sticky;top:0;z-index:100;flex-wrap:wrap;justify-content:center}
 .sec-link{font-family:'Cinzel Decorative',serif;font-size:12px;padding:8px 12px;border-radius:3px;color:var(--gold);text-decoration:none;transition:background .22s,color .22s;border:1px solid transparent;scroll-behavior:smooth}
-.sec-link:hover:not(.soon){background:rgba(217,183,106,.08)}
-.sec-link.active{background:rgba(217,183,106,.15);border-color:rgba(217,183,106,.3)}
+.sec-link:hover:not(.soon){background:rgba(212,140,86,.08)}
+.sec-link.active{background:rgba(212,140,86,.15);border-color:rgba(212,140,86,.3)}
 .sec-link.soon{opacity:.45;cursor:not-allowed}
 .wrap{max-width:1040px;margin:0 auto;padding:30px 18px 60px}
 .hero{display:grid;grid-template-columns:minmax(280px,1.1fr) 1fr;gap:24px;align-items:start;margin-bottom:36px}
@@ -31,9 +31,9 @@ a{text-decoration:none}
 .intro p{margin:0;font-size:20px;line-height:1.9;color:var(--muted)}
 .sec-title{font-family:'Noto Serif SC',serif;font-size:26px;color:var(--text);margin-bottom:18px}
 .era-block{margin-bottom:34px}
-.era-block.alt .era-card{background:rgba(96,112,128,.08);border-color:rgba(96,112,128,.18)}
+.era-block.alt .era-card{background:rgba(22,122,106,.10);border-color:rgba(22,122,106,.24)}
 .era-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px}
-.era-card{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:22px;box-shadow:0 18px 50px rgba(0,0,0,.16);backdrop-filter:blur(6px)}
+.era-card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:22px;box-shadow:0 18px 50px rgba(0,0,0,.16);backdrop-filter:blur(6px)}
 .era-card h3{font-family:'Noto Serif SC',serif;font-size:22px;color:var(--text);margin:0 0 10px}
 .era-card p{margin:0;font-size:19px;line-height:1.8;color:var(--muted)}
 .epilogue{padding:28px 26px;background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(0,0,0,.08));border:1px solid rgba(255,255,255,.08);border-radius:18px}

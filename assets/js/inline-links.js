@@ -400,6 +400,8 @@ const TARGET_SELECTORS = [
   '.intro p',
   '.era-card p',
   '.epilogue p',
+  '.rel-name',
+  '.rel-desc',
   '.t-desc',
   '.char-txt'
 ];

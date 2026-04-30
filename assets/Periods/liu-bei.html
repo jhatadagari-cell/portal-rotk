@@ -20,14 +20,14 @@
 </header>
 
 <nav class="sec-nav">
-  <a href="#presentacion" class="sec-link active">Presentación</a>
-  <a href="#relaciones" class="sec-link">Relaciones Clave</a>
-  <a href="#eras" class="sec-link">Eras</a>
-  <a href="#legado" class="sec-link soon">Legado · Próximamente</a>
+  <a href="#" data-page="el-personaje" class="sec-link active">El Personaje</a>
+  <a href="#" data-page="relaciones" class="sec-link">Relaciones Clave</a>
 </nav>
 
-<main class="wrap">
-  <section class="hero" id="presentacion">
+<main class="wrap wrap-pager">
+  <div class="wrap-pages">
+    <div class="wrap-page" data-page="el-personaje">
+  <section class="hero" id="el-personaje">
     <div class="hero-media">
       <img src="../img/Liu%20Bei/Liu%20Bei.png" alt="Liu Bei" />
     </div>
@@ -45,20 +45,6 @@
 
   <section class="intro">
     <p>De la revuelta de los Turbantes Amarillos al trono de Shu, Liu Bei encarna el héroe que no busca el cetro para sí mismo, sino la restauración de la legitimidad. Esta página recorre sus etapas claves como si fueran escenas de un poema épico.</p>
-  </section>
-
-  <section class="era-block" id="relaciones">
-    <h2 class="sec-title">Relaciones Clave</h2>
-    <div class="era-grid">
-      <article class="era-card">
-        <h3>Los Hermanos Jurados</h3>
-        <p>Guan Yu y Zhang Fei fueron más que generales: fueron su círculo íntimo, sus pilares emocionales. El juramento bajo el melocotonero en 184 d.C. selló una hermandad que ninguna batalla podría romper. Guan Yu, leal hasta la muerte; Zhang Fei, su mano derecha en el caos. Sin ellos, Liu Bei sería un soñador sin ejército.</p>
-      </article>
-      <article class="era-card">
-        <h3>Zhuge Liang, el Estratega del Destino</h3>
-        <p>Las tres visitas a Longzhong buscaban un consejero; encontraron a un visionario que entendía el Cielo. Zhuge Liang no solo planeó la estrategia de Shu, sino que validó el reclamo de Liu Bei como heredero legítimo del Han. Con él llegó la esperanza de que un reino pequeño podía desafiar a Cao Cao.</p>
-      </article>
-    </div>
   </section>
 
   <section class="era-block alt" id="eras">
@@ -135,7 +121,263 @@
     <h2>Epílogo</h2>
     <p>Su trono duró poco, pero su causa trascendió el tiempo. En los versos del Romance, Liu Bei es el puente entre el Han perdido y el sueño de un nuevo orden. Su auténtico triunfo fue mantener viva la promesa de un mundo gobernado por la bondad.</p>
   </section>
+    </div>
+
+    <div class="wrap-page" data-page="relaciones">
+
+  <div class="rel-featured">
+    <h2 class="rel-label">Primer Círculo</h2>
+    <div class="rel-grid">
+      <div class="rel-card">
+        <div class="rel-badge" style="color:#49804a;border-color:#49804a">Hermano Jurado</div>
+        <div class="rel-name">Guan Yu · 关羽</div>
+        <p class="rel-desc">El general invicto cuyo juramento bajo el melocotonero fue la piedra angular de la leyenda de Liu Bei. Su lealtad nunca vaciló, ni siquiera ante la muerte.</p>
+      </div>
+      <div class="rel-card">
+        <div class="rel-badge" style="color:#49804a;border-color:#49804a">Hermano Jurado</div>
+        <div class="rel-name">Zhang Fei · 张飞</div>
+        <p class="rel-desc">El rugido del sur. Feroz en batalla pero leal hasta el sacrificio, fue la ferocidad emocional que equilibraba la templanza de Liu Bei.</p>
+      </div>
+      <div class="rel-card">
+        <div class="rel-badge" style="color:#d9b76a;border-color:#d9b76a">Estratega Principal</div>
+        <div class="rel-name">Zhuge Liang · 诸葛亮</div>
+        <p class="rel-desc">El genio que convirtió un sueño en reino. Zhuge Liang no solo planificó la expansión de Shu, sino que legitimó el reclamo de Liu Bei.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="rel-accordion-controls">
+    <button class="rel-btn rel-btn--expand">Expandir Todo</button>
+    <button class="rel-btn rel-btn--collapse">Colapsar Todo</button>
+  </div>
+
+  <div class="rel-accordion">
+
+    <div class="rel-group" data-type="consejeros">
+      <button class="rel-group-toggle">
+        <span class="rel-group-title">Consejeros y Estrategas</span>
+        <span class="rel-group-count">2</span>
+        <span class="rel-group-chevron">▾</span>
+      </button>
+      <div class="rel-group-body" hidden>
+        <div class="rel-grid">
+          <div class="rel-card">
+            <div class="rel-badge" style="color:#d9b76a;border-color:#d9b76a">Consejero</div>
+            <div class="rel-name">Xu Shu · 徐庶</div>
+            <p class="rel-desc">El consejero que llegó primero. Su lealtad fue absoluta hasta que fue llevado a servir a Cao Cao, momento en que guardó silencio para proteger a Liu Bei.</p>
+          </div>
+          <div class="rel-card">
+            <div class="rel-badge" style="color:#d9b76a;border-color:#d9b76a">Consejero</div>
+            <div class="rel-name">Pang Tong · 庞统</div>
+            <p class="rel-desc">El consejero que llegó tarde pero cambió el curso. Su estrategia para tomar Yiling mostró un lado diferente de Shu.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="rel-group" data-type="rivales">
+      <button class="rel-group-toggle">
+        <span class="rel-group-title">Rivales y Antagonistas</span>
+        <span class="rel-group-count">2</span>
+        <span class="rel-group-chevron">▾</span>
+      </button>
+      <div class="rel-group-body" hidden>
+        <div class="rel-grid">
+          <div class="rel-card">
+            <div class="rel-badge" style="color:#1e5abf;border-color:#1e5abf">Gran Rival</div>
+            <div class="rel-name">Cao Cao · 曹操</div>
+            <p class="rel-desc">El adversario que nunca fue completamente vencido en batalla pero sí en visión. Su derrota fue política, no militar.</p>
+          </div>
+          <div class="rel-card">
+            <div class="rel-badge" style="color:#bf2020;border-color:#bf2020">Aliado Rival</div>
+            <div class="rel-name">Sun Quan · 孙权</div>
+            <p class="rel-desc">El señor de Wu cuya alianza en Chibi fue el punto de inflexión. Un hermano rival, no vasallo ni patrón.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="rel-group" data-type="familia">
+      <button class="rel-group-toggle">
+        <span class="rel-group-title">Familia y Herederos</span>
+        <span class="rel-group-count">3</span>
+        <span class="rel-group-chevron">▾</span>
+      </button>
+      <div class="rel-group-body" hidden>
+        <div class="rel-grid">
+          <div class="rel-card">
+            <div class="rel-badge" style="color:#c060a0;border-color:#c060a0">Padre</div>
+            <div class="rel-name">Liu Hong · 刘弘</div>
+            <p class="rel-desc">El padre de Liu Bei, fallecido en los años tempranos de su vida. Aunque su influencia directa fue limitada, su linaje y legado fueron fundamentales para la identidad de Liu Bei como heredero de la dinastía Han.</p>
+          </div>
+          <div class="rel-card">
+            <div class="rel-badge" style="color:#c060a0;border-color:#c060a0">Hijo y Heredero</div>
+            <div class="rel-name">Liu Shan · 刘禅</div>
+            <p class="rel-desc">El Adepto, hijo y heredero de Liu Bei. Aunque carecía del genio de su padre, fue quien heredó el trono de Shu Han y perpetuó el legado. Su reinado es el continuación de la visión de Liu Bei.</p>
+          </div>
+          <div class="rel-card">
+            <div class="rel-badge" style="color:#c060a0;border-color:#c060a0">Esposa</div>
+            <div class="rel-name">Lady Mi · 糜氏</div>
+            <p class="rel-desc">Una de las esposas principales de Liu Bei, hermana de Mi Fang. Madre de Liu Shan. Fue su compañera en los años de errancias, simbolizando los vínculos dinásticos que sostenían el reino.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="rel-group" data-type="generales">
+      <button class="rel-group-toggle">
+        <span class="rel-group-title">Generales y Oficiales</span>
+        <span class="rel-group-count">3</span>
+        <span class="rel-group-chevron">▾</span>
+      </button>
+      <div class="rel-group-body" hidden>
+        <div class="rel-grid">
+          <div class="rel-card">
+            <div class="rel-badge" style="color:#49804a;border-color:#49804a">General</div>
+            <div class="rel-name">Zhao Yun · 赵云</div>
+            <p class="rel-desc">El tigre del sur. Su lealtad a Liu Bei fue inquebrantable, protegiendo incluso al hijo heredero en medio del caos de la corte de Chengdu.</p>
+          </div>
+          <div class="rel-card">
+            <div class="rel-badge" style="color:#49804a;border-color:#49804a">General</div>
+            <div class="rel-name">Liao Hua · 廖化</div>
+            <p class="rel-desc">El soldado que envejeció en servicio de Shu. Su lealtad fue constante, pasando de ser capturado a ser uno de los pilares del reino.</p>
+          </div>
+          <div class="rel-card">
+            <div class="rel-badge" style="color:#49804a;border-color:#49804a">General</div>
+            <div class="rel-name">Ma Dai · 马岱</div>
+            <p class="rel-desc">El general leal y confiable. Sobrino de Ma Teng y hermano de Ma Chao. Un ejecutor de órdenes difíciles, símbolo de la disciplina militar de Shu Han.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="rel-group" data-type="patrones">
+      <button class="rel-group-toggle">
+        <span class="rel-group-title">Patrones y Mentores</span>
+        <span class="rel-group-count">5</span>
+        <span class="rel-group-chevron">▾</span>
+      </button>
+      <div class="rel-group-body" hidden>
+        <div class="rel-grid">
+          <div class="rel-card">
+            <div class="rel-badge" style="color:#a9a9a9;border-color:#a9a9a9">Maestro</div>
+            <div class="rel-name">Lu Zhi · 卢植</div>
+            <p class="rel-desc">El maestro confuciano que vio en Liu Bei la chispa del futuro. Le enseñó estrategia militar y filosofía de gobernar con virtud.</p>
+          </div>
+          <div class="rel-card">
+            <div class="rel-badge" style="color:#a9a9a9;border-color:#a9a9a9">Primer Patrón</div>
+            <div class="rel-name">Gongsun Zan · 公孙瓒</div>
+            <p class="rel-desc">El señor de Youzhou que reconoció el potencial en el joven Liu Bei. Fue el trampolín que llevó a Liu Bei al destino.</p>
+          </div>
+          <div class="rel-card">
+            <div class="rel-badge" style="color:#a9a9a9;border-color:#a9a9a9">Patrón</div>
+            <div class="rel-name">Tao Qian · 陶谦</div>
+            <p class="rel-desc">El señor de Xu que reconoció la virtud en Liu Bei y le ofreció su territorio. Su gesto generoso permitió a Liu Bei tener una base territorial propia. Cuando murió, pidió que Liu Bei lo sucediera como símbolo de confianza.</p>
+          </div>
+          <div class="rel-card">
+            <div class="rel-badge" style="color:#a9a9a9;border-color:#a9a9a9">Patrón</div>
+            <div class="rel-name">Liu Biao · 刘表</div>
+            <p class="rel-desc">El señor de Jingzhou que acogió a Liu Bei cuando más lo necesitaba. Su apoyo permitió a Liu Bei consolidar fuerzas para el futuro.</p>
+          </div>
+          <div class="rel-card">
+            <div class="rel-badge" style="color:#8b6914;border-color:#8b6914">Patrón Decepcionante</div>
+            <div class="rel-name">Yuan Shao · 袁绍</div>
+            <p class="rel-desc">El señor más poderoso del norte en quien Liu Bei depositó esperanzas. Su indecisión y arrogancia lo llevaron a la derrota en Guandu, marcando el punto de quiebre donde Liu Bei comprendió que necesitaba su propio camino.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="rel-group" data-type="alianzas">
+      <button class="rel-group-toggle">
+        <span class="rel-group-title">Alianzas Políticas</span>
+        <span class="rel-group-count">1</span>
+        <span class="rel-group-chevron">▾</span>
+      </button>
+      <div class="rel-group-body" hidden>
+        <div class="rel-grid">
+          <div class="rel-card">
+            <div class="rel-badge" style="color:#c060a0;border-color:#c060a0">Esposa Aliada</div>
+            <div class="rel-name">Sun Shangxiang · 孙尚香</div>
+            <p class="rel-desc">La hermana de Sun Ce y Sun Quan. Su matrimonio con Liu Bei fue un acto de alianza política que selló la unión entre Shu y Wu en tiempos de Chibi.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="rel-group" data-type="legitimidad">
+      <button class="rel-group-toggle">
+        <span class="rel-group-title">Símbolo de Legitimidad</span>
+        <span class="rel-group-count">1</span>
+        <span class="rel-group-chevron">▾</span>
+      </button>
+      <div class="rel-group-body" hidden>
+        <div class="rel-grid">
+          <div class="rel-card">
+            <div class="rel-badge" style="color:#c9a84c;border-color:#c9a84c">Emperador Han</div>
+            <div class="rel-name">Liu Xie · 刘协</div>
+            <p class="rel-desc">El último emperador de la Dinastía Han. Liu Bei lo consideraba el símbolo viviente de la legitimidad Han y se presentaba como su protector. Su presencia fue el fundamento ideológico del reclamo de Liu Bei al trono: no conquistador, sino restaurador.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+    </div>
+  </div>
 </main>
+
+  <script>
+  (function(){
+    const links = document.querySelectorAll('.sec-link[data-page]');
+    const pages = document.querySelectorAll('.wrap-page');
+    const slider = document.querySelector('.wrap-pages');
+
+    function goTo(pageId) {
+      const idx = [...pages].findIndex(p => p.dataset.page === pageId);
+      if (idx < 0) return;
+      slider.style.transform = `translateX(-${idx * 100}%)`;
+      links.forEach(l => l.classList.toggle('active', l.dataset.page === pageId));
+    }
+
+    links.forEach(link => {
+      link.addEventListener('click', e => {
+        e.preventDefault();
+        goTo(link.dataset.page);
+      });
+    });
+
+    // Acordeón de relaciones
+    function toggleGroup(btn, shouldOpen) {
+      const body = btn.nextElementSibling;
+      const group = btn.parentElement;
+      body.hidden = !shouldOpen;
+      group.classList.toggle('open', shouldOpen);
+    }
+
+    document.querySelectorAll('.rel-group-toggle').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const body = btn.nextElementSibling;
+        const isHidden = body.hidden;
+        toggleGroup(btn, isHidden);
+      });
+    });
+
+    // Botones de expandir/colapsar todo
+    document.querySelector('.rel-btn--expand')?.addEventListener('click', () => {
+      document.querySelectorAll('.rel-group-toggle').forEach(btn => {
+        toggleGroup(btn, true);
+      });
+    });
+
+    document.querySelector('.rel-btn--collapse')?.addEventListener('click', () => {
+      document.querySelectorAll('.rel-group-toggle').forEach(btn => {
+        toggleGroup(btn, false);
+      });
+    });
+  })();
+  </script>
 
   <script src="../js/data.js"></script>
   <script src="../js/inline-links.js"></script>
