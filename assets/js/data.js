@@ -19,10 +19,11 @@ const CHARS=[
    ttl:'Dios de la Guerra',bio:'El guerrero más leal. Su rostro de dátil maduro y su barba de seda son inconfundibles. Venerado como dios del honor en toda Asia.',
    tags:['Shu Han 蜀漢','Hermano','~160–219 d.C.'],fac:'Shu Han 蜀漢',
    stats:[['Facción','Shu Han 蜀漢'],['Arma','Gran Sable del Dragón Verde'],['Período','~160–219 d.C.'],['Título','Marqués Han']],detailHref:'assets/Periods/guan-yu.html',eras:['turbantes','dong-zhuo','guerras-senores','chibi']},
-  {zh:'吕布',en:'Lü Bu',zi:'Fengxian 奉先',ico:'⚔️',fc:'#7a6040',fcbg:'rgba(122,96,64,.12)',rank:1,
+  {zh:'吕布',en:'Lü Bu',zi:'Fengxian 奉先',ico:'⚔️',fc:'#c41e3a',fcbg:'rgba(196,30,58,.12)',rank:1,
+   facs:[{color:'#9922cc',ico:'👹',label:'Dong Zhuo 董卓'},{color:'#c41e3a',ico:'⚔️',label:'Lü Bu 呂布'}],
    ttl:'El Invencible',bio:'"De entre los hombres, Lü Bu. De entre los caballos, Liebre Roja." Sin rival en el campo, sin igual en la traición.',
    tags:['Lü Bu 呂布','Guerrero','~160–199 d.C.'],fac:'Lü Bu 呂布',
-   stats:[['Facción','Lü Bu 呂布'],['Arma','Alabarda del Guerrero de los Cielos'],['Período','~160–199 d.C.'],['Muere','Xiapi 199 d.C.']],eras:['dong-zhuo','guerras-senores'],detailHref:'assets/Periods/lu-bu.html'},
+   stats:[['Facción','Lü Bu 呂布'],['Arma','Alabarda del Guerrero de los Cielos'],['Período','~160–199 d.C.'],['Muere','Xiapi 199 d.C.']],eras:['dong-zhuo','guerras-senores'],eraRank:{'dong-zhuo':1,'guerras-senores':1},detailHref:'assets/Periods/lu-bu.html'},
   {zh:'赵云',en:'Zhao Yun',zi:'Zilong 子龍',ico:'🌟',fc:'#1e8a2e',fcbg:'rgba(30,138,46,.12)',rank:2,
    facs:[{color:'#607080',ico:'🐎',label:'Gongsun Zan 公孙瓒'},{color:'#1e8a2e',ico:'🌟',label:'Shu Han 蜀漢'}],
    ttl:'Dragón de Changban',bio:'En Changban penetró solo entre 100.000 enemigos para rescatar al heredero Liu Shan y salió indemne. Leal hasta el último aliento.',
@@ -45,7 +46,7 @@ const CHARS=[
   {zh:'张角',en:'Zhang Jiao',zi:'Jue 角',ico:'🟡',fc:'#b87e10',fcbg:'rgba(184,126,16,.12)',rank:1,
    ttl:'El Gran Maestro Celestial',bio:'Fundador del Camino de la Paz y caudillo de los Turbantes Amarillos. Proclamó el Año del Jiazi en 184 d.C. convocando a cientos de miles bajo los estandartes amarillos. Sin él, los Tres Reinos no habrían existido.',
    tags:['Turbantes 黃巾','Fundador','?–184 d.C.'],fac:'Turbantes 黃巾',
-   stats:[['Facción','Turbantes 黃巾'],['Movimiento','Taiping 太平'],['Año','184 d.C.'],['Título','Gran Maestro']],
+   stats:[['Facción','Turbantes 黃巾'],['Movimiento','Taiping 太平'],['Año','184 d.C.'],['Título','Gran Maestro']],detailHref:'assets/Periods/zhang-jiao.html',
    eras:['han-tardio','turbantes'],eraRank:{'han-tardio':1,'turbantes':1}},
 
   {zh:'董卓',en:'Dong Zhuo',zi:'Zhongying 仲穎',ico:'👹',fc:'#9922cc',fcbg:'rgba(153,34,204,.12)',rank:1,
@@ -60,7 +61,7 @@ const CHARS=[
    stats:[['Facción','Independiente'],['Plan','Estratagema de la Cadena'],['Arquitecto','Wang Yun 王允'],['Legado','Muerte de Dong Zhuo']],
    eras:['dong-zhuo'],eraRank:{'dong-zhuo':1},detailHref:'assets/Periods/diao-chan.html'},
 
-  {zh:'孙坚',en:'Sun Jian',zi:'Wentai 文臺',ico:'🐯',fc:'#bf2020',fcbg:'rgba(191,32,32,.12)',rank:2,
+  {zh:'孙坚',en:'Sun Jian',zi:'Wentai 文臺',ico:'🐯',fc:'#bf2020',fcbg:'rgba(191,32,32,.12)',rank:1,
    ttl:'Tigre de Jiangdong',bio:'Padre de Sun Ce y Sun Quan. El único señor que venció a Dong Zhuo en batalla abierta. Halló el Sello Imperial en un pozo de Luoyang. Guerrero sin igual, murió en emboscada a los 37 años. Fundador póstumo del reino de Wu.',
    tags:['Wu 吳','Jiangdong','155–191 d.C.'],fac:'Wu 吳',
    stats:[['Facción','Wu 吳'],['Batalla','Dong Zhuo'],['Período','155–191 d.C.'],['Hallazgo','Sello Imperial 玉璽']],detailHref:'assets/Periods/sun-jian.html',
@@ -72,7 +73,7 @@ const CHARS=[
    stats:[['Facción','Yuan Shao 袁紹'],['Derrota','Guandu 官渡 200 d.C.'],['Período','?–202 d.C.'],['Capital','Ye 鄴']],
    eras:['dong-zhuo','guerras-senores'],eraRank:{'dong-zhuo':1,'guerras-senores':1},detailHref:'assets/Periods/yuan-shao.html'},
 
-  {zh:'孙策',en:'Sun Ce',zi:'Bofu 伯符',ico:'🦁',fc:'#bf2020',fcbg:'rgba(191,32,32,.12)',rank:2,
+  {zh:'孙策',en:'Sun Ce',zi:'Bofu 伯符',ico:'🦁',fc:'#bf2020',fcbg:'rgba(191,32,32,.12)',rank:1,
    ttl:'El Pequeño Conquistador',bio:'Con apenas 17 años comenzó la conquista de Jiangdong con 1.000 soldados heredados. En cinco años forjó el futuro reino de Wu. Murió a los 26 por una flecha envenenada, dejando todo a su hermano Sun Quan.',
    tags:['Wu 吳','Jiangdong','175–200 d.C.'],fac:'Wu 吳',
    stats:[['Facción','Wu 吳'],['Logro','Conquista de Jiangdong'],['Período','175–200 d.C.'],['Hermano','Sun Quan 孫權']],
@@ -95,9 +96,10 @@ const CHARS=[
    ttl:'El Fénix Joven',bio:'Igual al Dragón Dormido Zhuge Liang en genio, pero con aspecto tosco que lo mantuvo ignorado. Fue él quien sugirió encadenar los barcos de Cao Cao en Chibi. Luego aconsejó a Liu Bei tomar Shu. Murió en emboscada en Luofengpo cumpliendo su destino.',
    tags:['Shu Han 蜀漢','Estratega','179–214 d.C.'],fac:'Shu Han 蜀漢',
    stats:[['Facción','Shu Han 蜀漢'],['Apodo','Fénix Joven 鳳雛'],['Período','179–214 d.C.'],['Muerte','Luofengpo 落鳳坡']],
+   detailHref:'assets/Periods/pang-tong.html',
    eras:['guerras-senores','chibi','tres-reinos'],eraRank:{'chibi':1,'guerras-senores':1}},
 
-  {zh:'黄盖',en:'Huang Gai',zi:'Gongfu 公覆',ico:'🔥',fc:'#bf2020',fcbg:'rgba(191,32,32,.12)',rank:3,
+  {zh:'黄盖',en:'Huang Gai',zi:'Gongfu 公覆',ico:'🔥',fc:'#bf2020',fcbg:'rgba(191,32,32,.12)',rank:2,
    ttl:'El Anciano de Hierro',bio:'Veterano de Wu que se ofreció voluntario para el plan del ataque de fuego en Chibi. Soportó 50 golpes de vara para infiltrarse como desertor ante Cao Cao. "Huang Gai usó el truco; uno sufrió, el otro fue engañado." Su sacrificio cambió la historia.',
    tags:['Wu 吳','Chibi','?–~215 d.C.'],fac:'Wu 吳',
    stats:[['Facción','Wu 吳'],['Batalla','Chibi 208 d.C.'],['Plan','Ataque de Fuego 火攻'],['Título','General']],
@@ -108,6 +110,7 @@ const CHARS=[
    ttl:'El Gran Diplomático',bio:'El artífice de la alianza Liu-Sun. Forjó y mantuvo la coalición cuando todos querían romperla. Su visión estratégica fue más decisiva que cualquier espada. Sin Lu Su no habría habido Chibi, ni Tres Reinos. Murió a los 45 años olvidado entre los héroes.',
    tags:['Wu 吳','Diplomático','172–217 d.C.'],fac:'Wu 吳',
    stats:[['Facción','Wu 吳'],['Logro','Alianza Liu-Sun'],['Período','172–217 d.C.'],['Visión','Dos orillas del Yangtsé']],
+   detailHref:'assets/Periods/lu-su.html',
    eras:['chibi','tres-reinos'],eraRank:{'chibi':1,'tres-reinos':2}},
 
   {zh:'马超',en:'Ma Chao',zi:'Mengqi 孟起',ico:'🐴',fc:'#1e8a2e',fcbg:'rgba(30,138,46,.12)',rank:2,
@@ -126,6 +129,7 @@ const CHARS=[
    ttl:'El Sucesor de Zhou Yu',bio:'Joven e infravalorado, fue subestimado por Liu Bei en Yiling (222 d.C.). Con fuego destruyó 700 km de campamento Shu. Vengó a Guan Yu y salvó a Wu. Murió víctima de las intrigas de la corte de Sun Quan al final de su vida.',
    tags:['Wu 吳','Yiling','183–245 d.C.'],fac:'Wu 吳',
    stats:[['Facción','Wu 吳'],['Batalla','Yiling 夷陵 222 d.C.'],['Período','183–245 d.C.'],['Título','Primer Ministro de Wu']],
+   detailHref:'assets/Periods/lu-xun.html',
    eras:['tres-reinos','guerras-ocaso'],eraRank:{'tres-reinos':1}},
 
   {zh:'张辽',en:'Zhang Liao',zi:'Wenyuan 文遠',ico:'🔱',fc:'#1e5abf',fcbg:'rgba(30,90,191,.12)',rank:2,
@@ -139,6 +143,7 @@ const CHARS=[
    ttl:'El Cíclope de Wei',bio:'Primo y fiel guardián de Cao Cao durante 30 años. Perdió su ojo izquierdo en batalla, lo arrancó del suelo y lo devoró exclamando: "¡Esencia de mis padres, carne de mi cuerpo, no lo abandono!" Único general que montaba la misma tienda que Cao Cao.',
    tags:['Wei 魏','General','?–220 d.C.'],fac:'Wei 魏',
    stats:[['Facción','Wei 魏'],['Apodo','El Tuerto 盲夏侯'],['Período','?–220 d.C.'],['Lealtad','30 años junto a Cao Cao']],
+   detailHref:'assets/Periods/xiahou-dun.html',
    eras:['dong-zhuo','guerras-senores','chibi','tres-reinos'],eraRank:{'guerras-senores':2,'dong-zhuo':2}},
 
   {zh:'魏延',en:'Wei Yan',zi:'Wenchang 文長',ico:'🌪️',fc:'#1e8a2e',fcbg:'rgba(30,138,46,.12)',rank:2,
@@ -151,6 +156,7 @@ const CHARS=[
    ttl:'El Pirata de Wu',bio:'Antiguo señor del río con campanillas en la silla. Con 100 guerreros asaltó el campamento de Cao Cao en plena noche y regresó sin perder uno. "Cao Cao tiene a su Zhang Liao, pero yo tengo a mi Gan Ning". Uno de los generales más feroces de Wu.',
    tags:['Wu 吳','Río','?–~220 d.C.'],fac:'Wu 吳',
    stats:[['Facción','Wu 吳'],['Hazaña','100 guerreros de noche'],['Período','?–~220 d.C.'],['Origen','Pirata del Yangtsé']],
+   detailHref:'assets/Periods/gan-ning.html',
    eras:['chibi','tres-reinos'],eraRank:{'chibi':2,'tres-reinos':2}},
 
   {zh:'姜维',en:'Jiang Wei',zi:'Boyue 伯約',ico:'🌀',fc:'#1e8a2e',fcbg:'rgba(30,138,46,.12)',rank:2,
@@ -207,6 +213,7 @@ const CHARS=[
    ttl:'El Escudo de Sun Quan',bio:'Salvó la vida de Sun Quan en múltiples batallas cargando sobre él con su cuerpo. Las cicatrices que cubren su torso eran exhibidas con orgullo: una por cada vez que puso su cuerpo entre el señor de Wu y la muerte. Sun Quan lo comparó con su propia carne.',
    tags:['Wu 吳','Guardaespaldas','?–? d.C.'],fac:'Wu 吳',
    stats:[['Facción','Wu 吳'],['Rol','Escudo de Sun Quan'],['Apodo','El Escudo'],['Lealtad','Cicatrices incontables']],
+   detailHref:'assets/Periods/zhou-tai.html',
    eras:['chibi','tres-reinos'],eraRank:{'chibi':2,'tres-reinos':2}},
 
   {zh:'华佗',en:'Hua Tuo',zi:'Yuanhua 元化',ico:'🍀',fc:'#2e8b57',fcbg:'rgba(46,139,87,.12)',rank:3,
@@ -350,19 +357,19 @@ const CHARS=[
    eras:['sima','jin'],eraRank:{'sima':1,'jin':1}},
 
   // ── Facción Lü Bu ──
-  {zh:'陈宫',en:'Chen Gong',zi:'Gongtai 公臺',ico:'🗣️',fc:'#8b7040',fcbg:'rgba(139,112,64,.12)',rank:2,
+  {zh:'陈宫',en:'Chen Gong',zi:'Gongtai 公臺',ico:'🗣️',fc:'#c41e3a',fcbg:'rgba(196,30,58,.12)',rank:2,
    ttl:'El Consejero Leal',bio:'Abandonó a Cao Cao al ver su crueldad tras la masacre de Xu Jia, eligiendo servir a Lü Bu por principios. Sus planes en Puyang y Xiapi hubieran podido salvar a su señor, pero Lü Bu nunca lo escuchó. Capturado en Xiapi (199 d.C.), rechazó la clemencia de Cao Cao y caminó hacia su ejecución con la cabeza erguida. El hombre más leal al señor más ingrato.',
    tags:['Lü Bu 呂布','Consejero','?–199 d.C.'],fac:'Lü Bu 呂布',
    stats:[['Facción','Lü Bu 呂布'],['Rol','Consejero Supremo'],['Período','?–199 d.C.'],['Muerte','Ejecutado en Xiapi']],
    eras:['dong-zhuo','guerras-senores'],eraRank:{'dong-zhuo':2,'guerras-senores':1}},
 
-  {zh:'高顺',en:'Gao Shun',zi:'',ico:'🔷',fc:'#8b7040',fcbg:'rgba(139,112,64,.12)',rank:3,
+  {zh:'高顺',en:'Gao Shun',zi:'',ico:'🔷',fc:'#c41e3a',fcbg:'rgba(196,30,58,.12)',rank:3,
    ttl:'El Comandante Silencioso',bio:'Comandante de la invencible Guardia Rompedores de Formación de Lü Bu, la unidad de élite que nunca fue derrotada en campo abierto. Hombre de pocas palabras y máxima lealtad. Advirtió repetidamente a Lü Bu de sus errores sin ser escuchado. Capturado en Xiapi, se negó a pronunciar una sola palabra ante Cao Cao. Ejecutado en silencio.',
    tags:['Lü Bu 呂布','General','?–199 d.C.'],fac:'Lü Bu 呂布',
    stats:[['Facción','Lü Bu 呂布'],['Unidad','陷陳營 Rompedores de Formación'],['Período','?–199 d.C.'],['Muerte','Ejecutado en Xiapi']],
    eras:['guerras-senores'],eraRank:{'guerras-senores':2}},
 
-  {zh:'宋宪',en:'Song Xian',zi:'',ico:'🏹',fc:'#8b7040',fcbg:'rgba(139,112,64,.12)',rank:3,
+  {zh:'宋宪',en:'Song Xian',zi:'',ico:'🏹',fc:'#c41e3a',fcbg:'rgba(196,30,58,.12)',rank:3,
    ttl:'El Traidor de Xiapi',bio:'General de Lü Bu que en el momento decisivo del asedio de Xiapi traicionó a su señor junto a Hou Cheng y Wei Xu. Robó el Liebre Roja de Lü Bu y abrió las puertas a Cao Cao. Fue absorbido en Wei como general de menor rango. Un nombre para recordar como símbolo de la deserción en el momento más oscuro.',
    tags:['Lü Bu 呂布','General','?–?'],fac:'Lü Bu 呂布',
    stats:[['Facción','Lü Bu 呂布'],['Traición','Abrió Xiapi a Cao Cao'],['Señor anterior','Lü Bu 呂布'],['Destino','General menor en Wei']],
@@ -385,12 +392,14 @@ const CHARS=[
    ttl:'El General Invencible de Yuan Shao',bio:'El general más temible de Yuan Shao, terror del norte. En Baima derrotó en sucesión a varios generales aliados antes de que Guan Yu cabalgara solo hacia su estandarte. Murió en segundos ante la lanza Verde Dragon, sin llegar a saber quién lo había matado. El guerrero invencible caído por el más leal.',
    tags:['Yuan Shao 袁紹','General','?–200 d.C.'],fac:'Yuan Shao 袁紹',
    stats:[['Facción','Yuan Shao 袁紹'],['Batalla','Baima 白馬 200 d.C.'],['Período','?–200 d.C.'],['Muerte','Muerto por Guan Yu']],
+   detailHref:'assets/Periods/yan-liang.html',
    eras:['guerras-senores'],eraRank:{'guerras-senores':2}},
 
   {zh:'文丑',en:'Wen Chou',zi:'',ico:'🌩️',fc:'#8b6914',fcbg:'rgba(139,105,20,.12)',rank:3,
    ttl:'La Segunda Espada de Yuan Shao',bio:'Compañero en fama de Yan Liang, los dos eran los generales más temidos del norte. Tras la muerte de Yan Liang prometió vengarlo. Cayó ante Cao Cao en la batalla del Vado de Yan Jin, perseguido mientras sus propios soldados huían en pánico por el engaño de Cao Cao. Los dos pilares de Yuan Shao caídos en semanas.',
    tags:['Yuan Shao 袁紹','General','?–200 d.C.'],fac:'Yuan Shao 袁紹',
    stats:[['Facción','Yuan Shao 袁紹'],['Batalla','Yan Jin 延津 200 d.C.'],['Período','?–200 d.C.'],['Muerte','Muerto por Cao Cao']],
+   detailHref:'assets/Periods/wen-chou.html',
    eras:['guerras-senores'],eraRank:{'guerras-senores':2}},
 
   // ── Facción Dong Zhuo ──
@@ -404,6 +413,7 @@ const CHARS=[
    ttl:'La Presa del Vino Caliente',bio:'Guardián del paso de Sishui para Dong Zhuo. Derrotó en duelo a varios generales de la Gran Coalición, presentando sus cabezas al tirano. Solo un jinete desconocido reclamó el combate: Guan Yu. Cuando regresó con la cabeza de Hua Xiong, el vino que le habían servido para celebrar su valentía aún estaba caliente. La muerte más célebre del período.',
    tags:['Dong Zhuo 董卓','General','?–190 d.C.'],fac:'Dong Zhuo 董卓',
    stats:[['Facción','Dong Zhuo 董卓'],['Paso','Sishui 汜水關'],['Año','190 d.C.'],['Muerte','Muerto por Guan Yu']],
+   detailHref:'assets/Periods/hua-xiong.html',
    eras:['dong-zhuo'],eraRank:{'dong-zhuo':1}},
 
   {zh:'李傕',en:'Li Jue',zi:'Jiaxing 稚然',ico:'🔥',fc:'#9922cc',fcbg:'rgba(153,34,204,.12)',rank:3,
@@ -548,13 +558,13 @@ const CHARS=[
   {zh:'张梁',en:'Zhang Liang',zi:'',ico:'🟠',fc:'#b87e10',fcbg:'rgba(184,126,16,.12)',rank:3,
    ttl:'El Segundo General Celestial',bio:'Segundo hermano de Zhang Jiao y uno de los tres jefes militares de la Rebelión de los Turbantes Amarillos. Comandó el ejército del este. Murió en batalla contra el ejército Han en 184 d.C. poco después que su hermano mayor Zhang Jiao. Su caída dejó solo a Zhang Bao para continuar la rebelión brevemente.',
    tags:['Turbantes 黃巾','General','?–184 d.C.'],fac:'Turbantes 黃巾',
-   stats:[['Facción','Turbantes 黃巾'],['Rol','Comandante del Este'],['Período','?–184 d.C.'],['Hermanos','Zhang Jiao, Zhang Bao']],
+   stats:[['Facción','Turbantes 黃巾'],['Rol','Comandante del Este'],['Período','?–184 d.C.'],['Hermanos','Zhang Jiao, Zhang Bao']],detailHref:'assets/Periods/zhang-liang.html',
    eras:['han-tardio','turbantes'],eraRank:{'turbantes':1}},
 
   {zh:'张宝',en:'Zhang Bao',zi:'',ico:'🟤',fc:'#b87e10',fcbg:'rgba(184,126,16,.12)',rank:3,
    ttl:'El Tercer General Celestial',bio:'El menor de los tres hermanos Zhang, comandante del sur en la Rebelión de los Turbantes Amarillos. Se enfrentó directamente a Zhuge Liang en la novela antes de ser derrotado. Murió asesinado por uno de sus propios generales, Yan Zheng, que lo traicionó para entregarlo a las fuerzas Han. El último hermano en caer.',
    tags:['Turbantes 黃巾','General','?–184 d.C.'],fac:'Turbantes 黃巾',
-   stats:[['Facción','Turbantes 黃巾'],['Rol','Comandante del Sur'],['Período','?–184 d.C.'],['Muerte','Traicionado por Yan Zheng']],
+   stats:[['Facción','Turbantes 黃巾'],['Rol','Comandante del Sur'],['Período','?–184 d.C.'],['Muerte','Traicionado por Yan Zheng']],detailHref:'assets/Periods/zhang-bao.html',
    eras:['han-tardio','turbantes'],eraRank:{'turbantes':1}},
 
   // ── Jin: personajes adicionales ──
@@ -574,7 +584,14 @@ const CHARS=[
    ttl:'El Último Emperador de Wu',bio:'El nieto de Sun Quan que gobernó Wu en su ocaso con crueldad extrema. Cegaba a quienes le contrariaban, desollaba vivos a sus enemigos, bebía sin medida. Cuando la flota de Jin apareció en el Yangtsé, se rindió atado de manos. Fin del reino de Wu y fin de los Tres Reinos. Sima Yan lo recibió con ironía: "Tenía preparado este asiento para ti desde hace tiempo."',
    tags:['Wu 吳','Último Emp.','242–284 d.C.'],fac:'Wu 吳',
    stats:[['Facción','Wu 吳'],['Reinado','264–280 d.C.'],['Período','242–284 d.C.'],['Rendición','Atado de manos ante Wang Jun']],
-   eras:['sima','jin'],eraRank:{'jin':1,'sima':2}}
+   eras:['sima','jin'],eraRank:{'jin':1,'sima':2}},
+
+  {zh:'朱然',en:'Zhu Ran',zi:'Junxiao 君孝',ico:'🛡️',fc:'#bf2020',fcbg:'rgba(191,32,32,.12)',rank:3,
+   ttl:'La Fortaleza del Este',bio:'General de Wu que defendió Jiangling contra los ataques de Shu durante años. Leal a Sun Quan, fue el guardián de las fronteras occidentales de Wu. Su determinación mantuvo a raya a los ejércitos de Liu Bei y sus sucesores, construyendo su reputación como uno de los defensores más tenaces de Wu.',
+   tags:['Wu 吳','General','182–249 d.C.'],fac:'Wu 吳',
+   stats:[['Facción','Wu 吳'],['Puesto','Comandante de Jiangling'],['Período','182–249 d.C.'],['Logro','Defensa prolongada']],
+   detailHref:'assets/Periods/zhu-ran.html',
+   eras:['chibi','tres-reinos','guerras-ocaso'],eraRank:{'tres-reinos':2,'guerras-ocaso':1}}
 ];
 
 const PERIODS=[
