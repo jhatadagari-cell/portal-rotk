@@ -10,60 +10,85 @@
 
 const FACTION_DATA = [
   {
-    keywords: ['Wei 魏', 'Wei'],
-    zh: '魏',
-    ico: '🦅',
-    fc: '#1e5abf',
-    fcbg: 'rgba(30,90,191,.12)',
-    fac: 'Reino del Norte',
-    bio: 'El reino septentrional fundado por Cao Cao y oficializado por Cao Pi en 220 d.C. La potencia más grande de los Tres Reinos por extensión, ejército y economía. Capital: Ye.',
-    stats: [['Capital', 'Ye / Luoyang'], ['Color', 'Azul imperial'], ['Fundador', 'Cao Cao / Cao Pi'], ['Período', '220–265 d.C.']],
-    href: '../../index.html'
+    keywords: ["Wei 魏", "Wei"],
+    zh: "魏",
+    ico: "🦅",
+    fc: "#1e5abf",
+    fcbg: "rgba(30,90,191,.12)",
+    fac: "Reino del Norte",
+    bio: "El reino septentrional fundado por Cao Cao y oficializado por Cao Pi en 220 d.C. La potencia más grande de los Tres Reinos por extensión, ejército y economía. Capital: Ye.",
+    stats: [
+      ["Capital", "Ye / Luoyang"],
+      ["Color", "Azul imperial"],
+      ["Fundador", "Cao Cao / Cao Pi"],
+      ["Período", "220–265 d.C."],
+    ],
+    href: "../../index.html",
   },
   {
-    keywords: ['Shu Han 蜀漢', 'Shu Han', 'Shu'],
-    zh: '蜀',
-    ico: '🌿',
-    fc: '#1e8a2e',
-    fcbg: 'rgba(30,138,46,.12)',
-    fac: 'Han Restaurado',
-    bio: 'El reino del suroeste fundado por Liu Bei en 221 d.C., proclamado heredero legítimo de la Dinastía Han. El más pequeño de los tres reinos pero el más rico en héroes legendarios. Capital: Chengdu.',
-    stats: [['Capital', 'Chengdu 成都'], ['Color', 'Verde Han'], ['Fundador', 'Liu Bei'], ['Período', '221–263 d.C.']],
-    href: '../../index.html'
+    keywords: ["Shu Han 蜀漢", "Shu Han", "Shu"],
+    zh: "蜀",
+    ico: "🌿",
+    fc: "#1e8a2e",
+    fcbg: "rgba(30,138,46,.12)",
+    fac: "Han Restaurado",
+    bio: "El reino del suroeste fundado por Liu Bei en 221 d.C., proclamado heredero legítimo de la Dinastía Han. El más pequeño de los tres reinos pero el más rico en héroes legendarios. Capital: Chengdu.",
+    stats: [
+      ["Capital", "Chengdu 成都"],
+      ["Color", "Verde Han"],
+      ["Fundador", "Liu Bei"],
+      ["Período", "221–263 d.C."],
+    ],
+    href: "../../index.html",
   },
   {
-    keywords: ['Wu 吳', 'Wu Oriental', 'Wu'],
-    zh: '吳',
-    ico: '🟢',
-    fc: '#bf2020',
-    fcbg: 'rgba(191,32,32,.12)',
-    fac: 'Señores del Sur',
-    bio: 'El reino del sureste controlado por la dinastía Sun. Dominaba el Yangtzé y las tierras más ricas de Jiangdong. El más longevo de los tres reinos y cultural más sofisticado. Capital: Jianye.',
-    stats: [['Capital', 'Jianye 建業'], ['Color', 'Rojo Wu'], ['Fundador', 'Sun Ce / Sun Quan'], ['Período', '229–280 d.C.']],
-    href: '../../index.html'
+    keywords: ["Wu 吳", "Wu Oriental", "Wu"],
+    zh: "吳",
+    ico: "🟢",
+    fc: "#bf2020",
+    fcbg: "rgba(191,32,32,.12)",
+    fac: "Señores del Sur",
+    bio: "El reino del sureste controlado por la dinastía Sun. Dominaba el Yangtzé y las tierras más ricas de Jiangdong. El más longevo de los tres reinos y cultural más sofisticado. Capital: Jianye.",
+    stats: [
+      ["Capital", "Jianye 建業"],
+      ["Color", "Rojo Wu"],
+      ["Fundador", "Sun Ce / Sun Quan"],
+      ["Período", "229–280 d.C."],
+    ],
+    href: "../../index.html",
   },
   {
-    keywords: ['Turbantes Amarillos', 'Turbantes'],
-    zh: '黃巾',
-    ico: '🟡',
-    fc: '#b87e10',
-    fcbg: 'rgba(184,126,16,.12)',
-    fac: 'Camino de la Paz',
-    bio: 'El movimiento rebelde liderado por los tres hermanos Zhang: Zhang Jiao, Zhang Liang y Zhang Bao. Su Rebelión de los Turbantes Amarillos en 184 d.C. fracturó la Dinastía Han y abrió la puerta a la era de los Tres Reinos.',
-    stats: [['Lema', 'El Cielo Amarillo se alza'], ['Líder', 'Zhang Jiao'], ['Año', '184 d.C.'], ['Resultado', 'Colapso del Han']],
-    href: '../../index.html'
+    keywords: ["Turbantes Amarillos", "Turbantes"],
+    zh: "黃巾",
+    ico: "🟡",
+    fc: "#b87e10",
+    fcbg: "rgba(184,126,16,.12)",
+    fac: "Camino de la Paz",
+    bio: "El movimiento rebelde liderado por los tres hermanos Zhang: Zhang Jiao, Zhang Liang y Zhang Bao. Su Rebelión de los Turbantes Amarillos en 184 d.C. fracturó la Dinastía Han y abrió la puerta a la era de los Tres Reinos.",
+    stats: [
+      ["Lema", "El Cielo Amarillo se alza"],
+      ["Líder", "Zhang Jiao"],
+      ["Año", "184 d.C."],
+      ["Resultado", "Colapso del Han"],
+    ],
+    href: "../../index.html",
   },
   {
-    keywords: ['Jin 晉', 'Dinastía Jin', 'Jin'],
-    zh: '晉',
-    ico: '🐺',
-    fc: '#8820b0',
-    fcbg: 'rgba(136,32,176,.12)',
-    fac: 'Sucesores de Wei',
-    bio: 'La Dinastía Jin fundada por Sima Yan en 265 d.C., heredera oficial de Wei tras el golpe Sima. Reunificó China brevemente en 280 d.C. al absorber a Wu, poniendo fin a la era de los Tres Reinos.',
-    stats: [['Capital', 'Luoyang'], ['Fundador', 'Sima Yan'], ['Período', '265–316 d.C.'], ['Logro', 'Reunificación de China']],
-    href: '../../index.html'
-  }
+    keywords: ["Jin 晉", "Dinastía Jin", "Jin"],
+    zh: "晉",
+    ico: "🐺",
+    fc: "#8820b0",
+    fcbg: "rgba(136,32,176,.12)",
+    fac: "Sucesores de Wei",
+    bio: "La Dinastía Jin fundada por Sima Yan en 265 d.C., heredera oficial de Wei tras el golpe Sima. Reunificó China brevemente en 280 d.C. al absorber a Wu, poniendo fin a la era de los Tres Reinos.",
+    stats: [
+      ["Capital", "Luoyang"],
+      ["Fundador", "Sima Yan"],
+      ["Período", "265–316 d.C."],
+      ["Logro", "Reunificación de China"],
+    ],
+    href: "../../index.html",
+  },
 ];
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -269,12 +294,12 @@ const IL_CSS = `
 
 function resolveHref(detailHref) {
   if (!detailHref) return null;
-  return '../../' + detailHref;
+  return "../../" + detailHref;
 }
 
 function injectModal() {
-  const div = document.createElement('div');
-  div.id = 'ilmod';
+  const div = document.createElement("div");
+  div.id = "ilmod";
   div.innerHTML = `
     <div class="ilmod-box" id="ilmod-box">
       <button class="ilmod-x" id="ilmod-x">✕</button>
@@ -282,47 +307,51 @@ function injectModal() {
     </div>`;
   document.body.appendChild(div);
 
-  document.getElementById('ilmod').addEventListener('click', e => {
-    if (e.target.id === 'ilmod') closeIlmod();
+  document.getElementById("ilmod").addEventListener("click", (e) => {
+    if (e.target.id === "ilmod") closeIlmod();
   });
-  document.getElementById('ilmod-x').addEventListener('click', closeIlmod);
+  document.getElementById("ilmod-x").addEventListener("click", closeIlmod);
 }
 
 function injectCSS() {
-  const style = document.createElement('style');
+  const style = document.createElement("style");
   style.textContent = IL_CSS;
   document.head.appendChild(style);
 }
 
 function closeIlmod() {
-  document.getElementById('ilmod').classList.remove('il-open');
+  document.getElementById("ilmod").classList.remove("il-open");
 }
 
 function openIlmod(data) {
-  const box = document.getElementById('ilmod-box');
+  const box = document.getElementById("ilmod-box");
   box.style.borderColor = data.fc;
-  document.getElementById('ilmod-inner').innerHTML = buildModalHTML(data);
-  document.getElementById('ilmod').classList.add('il-open');
+  document.getElementById("ilmod-inner").innerHTML = buildModalHTML(data);
+  document.getElementById("ilmod").classList.add("il-open");
 }
 
 function getSelfName() {
-  const h1 = document.querySelector('h1.title');
+  const h1 = document.querySelector("h1.title");
   if (!h1) return null;
   const raw = h1.textContent.trim();
-  return raw.split('·')[0].trim();
+  return raw.split("·")[0].trim();
 }
 
 function buildKeywordMap(selfName) {
   const kmap = new Map();
+  const selfWords = selfName ? selfName.split(/\s+/) : [];
 
   CHARS.forEach((c, i) => {
     if (c.en === selfName) return;
-    kmap.set(c.en, { type: 'char', idx: i, fc: c.fc });
+    if (!kmap.has(c.en)) {
+      kmap.set(c.en, { type: "char", idx: i, fc: c.fc });
+    }
   });
 
-  FACTION_DATA.forEach(f => {
-    f.keywords.forEach(kw => {
-      kmap.set(kw, { type: 'faction', data: f, fc: f.fc });
+  FACTION_DATA.forEach((f) => {
+    f.keywords.forEach((kw) => {
+      if (selfWords.includes(kw)) return;
+      kmap.set(kw, { type: "faction", data: f, fc: f.fc });
     });
   });
 
@@ -346,7 +375,7 @@ function buildCharData(c) {
     bio: c.bio,
     stats: c.stats,
     href,
-    btnLabel: `Ver ficha completa · ${c.en}`
+    btnLabel: `Ver ficha completa · ${c.en}`,
   };
 }
 
@@ -357,12 +386,12 @@ function buildFactionData(f) {
     ico: f.ico,
     zh: f.zh,
     en: f.fac,
-    zi: '',
+    zi: "",
     fac: f.fac,
     bio: f.bio,
     stats: f.stats,
     href: f.href,
-    btnLabel: `Ver más`
+    btnLabel: `Ver más`,
   };
 }
 
@@ -373,21 +402,26 @@ function buildModalHTML(d) {
       <div>
         <div class="ilmod-zh" style="color:${d.fc}">${d.zh}</div>
         <div class="ilmod-en">${d.en}</div>
-        ${d.zi ? `<div class="ilmod-zi">${d.zi}</div>` : ''}
+        ${d.zi ? `<div class="ilmod-zi">${d.zi}</div>` : ""}
       </div>
     </div>
     <div class="ilmod-badge" style="border-color:${d.fc};background:${d.fcbg};color:${d.fc}">${d.fac}</div>
     <div class="ilmod-bio">${d.bio}</div>
     <div class="ilmod-stats">
-      ${d.stats.map(s => `
+      ${d.stats
+        .map(
+          (s) => `
         <div class="ilmod-stat">
           <div class="ilmod-sl">${s[0]}</div>
           <div class="ilmod-sv">${s[1]}</div>
-        </div>`).join('')}
+        </div>`,
+        )
+        .join("")}
     </div>
-    ${d.href
-      ? `<a class="ilmod-detail-btn" href="${d.href}">${d.btnLabel}</a>`
-      : `<button class="ilmod-detail-btn" disabled>Ver ficha · Próximamente</button>`
+    ${
+      d.href
+        ? `<a class="ilmod-detail-btn" href="${d.href}">${d.btnLabel}</a>`
+        : `<button class="ilmod-detail-btn" disabled>Ver ficha · Próximamente</button>`
     }`;
 }
 
@@ -396,48 +430,44 @@ function buildModalHTML(d) {
 // ─────────────────────────────────────────────────────────────────────────
 
 const TARGET_SELECTORS = [
-  '.lede',
-  '.intro p',
-  '.era-card p',
-  '.epilogue p',
-  '.rel-name',
-  '.rel-desc',
-  '.t-desc',
-  '.char-txt'
+  ".lede",
+  ".intro p",
+  ".era-card p",
+  ".epilogue p",
+  ".rel-name",
+  ".rel-desc",
+  ".t-desc",
+  ".char-txt",
 ];
 
 function processTextNodes(kmap, sortedKeywords) {
-  const containers = TARGET_SELECTORS.flatMap(sel =>
-    [...document.querySelectorAll(sel)]
-  );
+  const containers = TARGET_SELECTORS.flatMap((sel) => [
+    ...document.querySelectorAll(sel),
+  ]);
 
-  const escaped = sortedKeywords.map(kw =>
-    kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const escaped = sortedKeywords.map((kw) =>
+    kw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
   );
   const pattern = new RegExp(
-    `(?<![\\w\\u00C0-\\u024F])(?:${escaped.join('|')})(?![\\w\\u00C0-\\u024F])`,
-    'gu'
+    `(?<![\\w\\u00C0-\\u024F])(?:${escaped.join("|")})(?![\\w\\u00C0-\\u024F])`,
+    "gu",
   );
 
-  containers.forEach(container => {
-    const walker = document.createTreeWalker(
-      container,
-      NodeFilter.SHOW_TEXT,
-      {
-        acceptNode(node) {
-          const parent = node.parentElement;
-          if (!parent) return NodeFilter.FILTER_REJECT;
-          if (parent.classList.contains('ilink')) return NodeFilter.FILTER_REJECT;
-          return NodeFilter.FILTER_ACCEPT;
-        }
-      }
-    );
+  containers.forEach((container) => {
+    const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, {
+      acceptNode(node) {
+        const parent = node.parentElement;
+        if (!parent) return NodeFilter.FILTER_REJECT;
+        if (parent.classList.contains("ilink")) return NodeFilter.FILTER_REJECT;
+        return NodeFilter.FILTER_ACCEPT;
+      },
+    });
 
     const textNodes = [];
     let node;
     while ((node = walker.nextNode())) textNodes.push(node);
 
-    textNodes.forEach(textNode => {
+    textNodes.forEach((textNode) => {
       const text = textNode.nodeValue;
       pattern.lastIndex = 0;
       if (!pattern.test(text)) return;
@@ -452,20 +482,22 @@ function processTextNodes(kmap, sortedKeywords) {
         const startIdx = match.index;
 
         if (startIdx > lastIdx) {
-          frag.appendChild(document.createTextNode(text.slice(lastIdx, startIdx)));
+          frag.appendChild(
+            document.createTextNode(text.slice(lastIdx, startIdx)),
+          );
         }
 
         const entry = kmap.get(keyword);
-        const span = document.createElement('span');
-        span.className = 'ilink';
+        const span = document.createElement("span");
+        span.className = "ilink";
         span.textContent = keyword;
         span.style.cssText = `color:${entry.fc};cursor:pointer`;
 
-        if (entry.type === 'char') {
-          span.dataset.type = 'char';
+        if (entry.type === "char") {
+          span.dataset.type = "char";
           span.dataset.idx = entry.idx;
         } else {
-          span.dataset.type = 'faction';
+          span.dataset.type = "faction";
           span.dataset.fkey = entry.data.keywords[0];
         }
 
@@ -488,24 +520,24 @@ function processTextNodes(kmap, sortedKeywords) {
 
 function wireClickHandler(kmap) {
   const factionByKey = new Map();
-  FACTION_DATA.forEach(f => factionByKey.set(f.keywords[0], f));
+  FACTION_DATA.forEach((f) => factionByKey.set(f.keywords[0], f));
 
-  document.addEventListener('click', e => {
-    const span = e.target.closest('.ilink');
+  document.addEventListener("click", (e) => {
+    const span = e.target.closest(".ilink");
     if (!span) return;
     e.stopPropagation();
 
-    if (span.dataset.type === 'char') {
+    if (span.dataset.type === "char") {
       const c = CHARS[parseInt(span.dataset.idx)];
       openIlmod(buildCharData(c));
-    } else if (span.dataset.type === 'faction') {
+    } else if (span.dataset.type === "faction") {
       const f = factionByKey.get(span.dataset.fkey);
       openIlmod(buildFactionData(f));
     }
   });
 
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') closeIlmod();
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeIlmod();
   });
 }
 
@@ -513,8 +545,8 @@ function wireClickHandler(kmap) {
 // Entry Point
 // ─────────────────────────────────────────────────────────────────────────
 
-document.addEventListener('DOMContentLoaded', () => {
-  if (typeof CHARS === 'undefined') return;
+document.addEventListener("DOMContentLoaded", () => {
+  if (typeof CHARS === "undefined") return;
 
   injectModal();
   injectCSS();

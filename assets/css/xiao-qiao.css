@@ -1,10 +1,10 @@
 :root {
-  --bg: #060304;
-  --panel: #12090f;
-  --text: #f2eee5;
-  --muted: #b7a79e;
-  --gold: #b28240;
-  --accent: #9d1318;
+  --bg: #130b0b;
+  --panel: #191014;
+  --text: #f3ede6;
+  --muted: #b8a8a0;
+  --gold: #c08b48;
+  --accent: #bf2020;
   --border: rgba(255, 255, 255, 0.08);
 }
 * {
@@ -12,7 +12,7 @@
 }
 html {
   font-family: "Noto Sans SC", sans-serif;
-  background: #130b08;
+  background: #1a0f0e;
   color: var(--text);
 }
 body {
@@ -20,9 +20,9 @@ body {
   min-height: 100vh;
   background: radial-gradient(
     circle at top right,
-    #7f0e10 0%,
-    #150607 28%,
-    #030202 100%
+    #7a1013 0%,
+    #190f0e 30%,
+    #050202 100%
   );
   background-attachment: fixed;
 }
@@ -74,7 +74,7 @@ a {
   font-family: "Cinzel Decorative", serif;
   font-size: 16px;
   padding: 10px 16px;
-  border: 1px solid rgba(160, 128, 64, 0.24);
+  border: 1px solid rgba(200, 150, 100, 0.24);
   border-radius: 4px;
   color: var(--gold);
   background: rgba(255, 255, 255, 0.03);
@@ -83,8 +83,8 @@ a {
     border-color 0.22s;
 }
 .hb:hover {
-  background: rgba(160, 128, 64, 0.12);
-  border-color: rgba(160, 128, 64, 0.45);
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(200, 150, 100, 0.45);
 }
 .wrap {
   max-width: 1040px;
@@ -108,6 +108,11 @@ a {
     rgba(255, 255, 255, 0.02),
     rgba(0, 0, 0, 0.18)
   );
+}
+.hero-media img {
+  display: block;
+  width: 100%;
+  height: auto;
 }
 .hero-copy {
   padding: 18px 0 0;
@@ -183,8 +188,8 @@ a {
   margin-bottom: 34px;
 }
 .era-block.alt .era-card {
-  background: rgba(122, 96, 64, 0.08);
-  border-color: rgba(122, 96, 64, 0.18);
+  background: rgba(191, 32, 32, 0.08);
+  border-color: rgba(191, 32, 32, 0.18);
 }
 .era-grid {
   display: grid;
@@ -277,42 +282,6 @@ a {
   .hero {
     grid-template-columns: 1fr;
   }
-}
-.sec-nav {
-  display: flex;
-  gap: 12px;
-  padding: 12px 20px;
-  background: rgba(255, 255, 255, 0.02);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  flex-wrap: wrap;
-  justify-content: center;
-}
-.sec-link {
-  font-family: "Cinzel Decorative", serif;
-  font-size: 12px;
-  padding: 8px 12px;
-  border-radius: 3px;
-  color: var(--gold);
-  text-decoration: none;
-  transition:
-    background 0.22s,
-    color 0.22s;
-  border: 1px solid transparent;
-  scroll-behavior: smooth;
-}
-.sec-link:hover:not(.soon) {
-  background: rgba(217, 183, 106, 0.08);
-}
-.sec-link.active {
-  background: rgba(217, 183, 106, 0.15);
-  border-color: rgba(217, 183, 106, 0.3);
-}
-.sec-link.soon {
-  opacity: 0.45;
-  cursor: not-allowed;
 }
 @media (max-width: 640px) {
   .wrap {
