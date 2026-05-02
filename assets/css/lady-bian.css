@@ -1,9 +1,9 @@
 :root {
-  --bg: #05080d;
-  --panel: #0f1520;
-  --text: #f2ede2;
-  --muted: #99a5b8;
-  --gold: #9bb1d3;
+  --bg: #0f1222;
+  --panel: #191f33;
+  --text: #f3ede6;
+  --muted: #aeb5c0;
+  --gold: #bfaf6d;
   --accent: #1e5abf;
   --border: rgba(255, 255, 255, 0.08);
 }
@@ -12,7 +12,7 @@
 }
 html {
   font-family: "Noto Sans SC", sans-serif;
-  background: #05080d;
+  background: #080b18;
   color: var(--text);
 }
 body {
@@ -20,20 +20,11 @@ body {
   min-height: 100vh;
   background: radial-gradient(
     circle at top right,
-    #364475 0%,
-    #05080d 28%,
+    #2e416f 0%,
+    #0b1020 28%,
     #04060b 100%
   );
   background-attachment: fixed;
-  transition: background 0.5s ease;
-}
-body.jin-mode {
-  background: radial-gradient(
-    circle at top right,
-    rgba(48, 8, 72, 0.88) 0%,
-    rgba(16, 4, 24, 0.7) 32%,
-    #040205 100%
-  );
 }
 img {
   display: block;
@@ -46,66 +37,6 @@ a {
 }
 a {
   text-decoration: none;
-}
-@keyframes snowfall-a {
-  0% {
-    transform: translate(0, -20px) rotate(0deg);
-    opacity: 0.95;
-  }
-  40% {
-    opacity: 0.85;
-  }
-  100% {
-    transform: translate(45px, 100vh) rotate(540deg);
-    opacity: 0;
-  }
-}
-@keyframes snowfall-b {
-  0% {
-    transform: translate(0, -20px) rotate(0deg);
-    opacity: 0.92;
-  }
-  35% {
-    opacity: 0.82;
-  }
-  100% {
-    transform: translate(-55px, 100vh) rotate(-540deg);
-    opacity: 0;
-  }
-}
-@keyframes snowfall-c {
-  0% {
-    transform: translate(0, -20px) rotate(0deg);
-    opacity: 0.9;
-  }
-  30% {
-    opacity: 0.8;
-  }
-  100% {
-    transform: translate(28px, 100vh) rotate(360deg);
-    opacity: 0;
-  }
-}
-#jin-snow-overlay {
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 98;
-  overflow: hidden;
-  opacity: 0;
-  transition: opacity 0.5s ease;
-}
-body.jin-mode #jin-snow-overlay {
-  opacity: 1;
-}
-.snow-particle {
-  position: absolute;
-  pointer-events: none;
-  border-radius: 50%;
-  background: rgba(200, 230, 255, 0.85);
-  box-shadow:
-    0 0 12px rgba(100, 80, 200, 0.6),
-    0 0 24px rgba(136, 100, 220, 0.3);
 }
 #hdr {
   display: flex;
@@ -143,7 +74,7 @@ body.jin-mode #jin-snow-overlay {
   font-family: "Cinzel Decorative", serif;
   font-size: 16px;
   padding: 10px 16px;
-  border: 1px solid rgba(155, 177, 211, 0.24);
+  border: 1px solid rgba(191, 175, 109, 0.24);
   border-radius: 4px;
   color: var(--gold);
   background: rgba(255, 255, 255, 0.03);
@@ -152,8 +83,43 @@ body.jin-mode #jin-snow-overlay {
     border-color 0.22s;
 }
 .hb:hover {
-  background: rgba(155, 177, 211, 0.12);
-  border-color: rgba(155, 177, 211, 0.45);
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(191, 175, 109, 0.45);
+}
+.sec-nav {
+  display: flex;
+  gap: 12px;
+  padding: 12px 20px;
+  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.sec-link {
+  font-family: "Cinzel Decorative", serif;
+  font-size: 12px;
+  padding: 8px 12px;
+  border-radius: 3px;
+  color: var(--gold);
+  text-decoration: none;
+  transition:
+    background 0.22s,
+    color 0.22s;
+  border: 1px solid transparent;
+}
+.sec-link:hover:not(.soon) {
+  background: rgba(191, 175, 109, 0.08);
+}
+.sec-link.active {
+  background: rgba(191, 175, 109, 0.15);
+  border-color: rgba(191, 175, 109, 0.3);
+}
+.sec-link.soon {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 .wrap {
   max-width: 1040px;
@@ -177,32 +143,6 @@ body.jin-mode #jin-snow-overlay {
     rgba(255, 255, 255, 0.02),
     rgba(0, 0, 0, 0.18)
   );
-  position: relative;
-  width: 100%;
-  aspect-ratio: 3/4;
-}
-.image {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-size: cover;
-  background-position: center;
-  transition: opacity 0.5s ease;
-}
-.default {
-  background-image: url("../img/Sima Yi/Sima Yi 1.png");
-}
-.hover {
-  background-image: url("../img/Sima Yi/Sima Yi 2.png");
-  opacity: 0;
-}
-.hero-media:hover .default {
-  opacity: 0;
-}
-.hero-media:hover .hover {
-  opacity: 1;
 }
 .hero-copy {
   padding: 18px 0 0;
@@ -315,6 +255,7 @@ body.jin-mode #jin-snow-overlay {
   );
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 18px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.18);
 }
 .epilogue h2 {
   font-family: "Noto Serif SC", serif;
@@ -328,42 +269,6 @@ body.jin-mode #jin-snow-overlay {
   line-height: 1.9;
   color: var(--muted);
 }
-.sec-nav {
-  display: flex;
-  gap: 12px;
-  padding: 12px 20px;
-  background: rgba(255, 255, 255, 0.02);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  flex-wrap: wrap;
-  justify-content: center;
-}
-.sec-link {
-  font-family: "Cinzel Decorative", serif;
-  font-size: 12px;
-  padding: 8px 12px;
-  border-radius: 3px;
-  color: var(--gold);
-  text-decoration: none;
-  transition:
-    background 0.22s,
-    color 0.22s;
-  border: 1px solid transparent;
-  scroll-behavior: smooth;
-}
-.sec-link:hover:not(.soon) {
-  background: rgba(217, 183, 106, 0.08);
-}
-.sec-link.active {
-  background: rgba(217, 183, 106, 0.15);
-  border-color: rgba(217, 183, 106, 0.3);
-}
-.sec-link.soon {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
 @media (max-width: 900px) {
   #hdr {
     flex-direction: column;
@@ -372,42 +277,6 @@ body.jin-mode #jin-snow-overlay {
   .hero {
     grid-template-columns: 1fr;
   }
-}
-.sec-nav {
-  display: flex;
-  gap: 12px;
-  padding: 12px 20px;
-  background: rgba(255, 255, 255, 0.02);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  flex-wrap: wrap;
-  justify-content: center;
-}
-.sec-link {
-  font-family: "Cinzel Decorative", serif;
-  font-size: 12px;
-  padding: 8px 12px;
-  border-radius: 3px;
-  color: var(--gold);
-  text-decoration: none;
-  transition:
-    background 0.22s,
-    color 0.22s;
-  border: 1px solid transparent;
-  scroll-behavior: smooth;
-}
-.sec-link:hover:not(.soon) {
-  background: rgba(217, 183, 106, 0.08);
-}
-.sec-link.active {
-  background: rgba(217, 183, 106, 0.15);
-  border-color: rgba(217, 183, 106, 0.3);
-}
-.sec-link.soon {
-  opacity: 0.45;
-  cursor: not-allowed;
 }
 @media (max-width: 640px) {
   .wrap {

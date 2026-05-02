@@ -19,7 +19,9 @@
       "Bash(curl -s http://localhost:8000/Portal%20ROTK/assets/css/main.css)",
       "Bash(pkill *)",
       "Bash(mkdir -p \"C:/Users/usuario/Desktop/Portal ROTK/assets/img/Dian Wei\")",
-      "Bash(cp \"C:/Users/usuario/Downloads/Dian Wei.png\" \"C:/Users/usuario/Desktop/Portal ROTK/assets/img/Dian Wei/\")"
+      "Bash(cp \"C:/Users/usuario/Downloads/Dian Wei.png\" \"C:/Users/usuario/Desktop/Portal ROTK/assets/img/Dian Wei/\")",
+      "Bash(node -e ' *)",
+      "Read(//tmp/**)"
     ]
   },
   "enabledPlugins": {
