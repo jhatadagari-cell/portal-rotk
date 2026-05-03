@@ -1582,8 +1582,32 @@ const CHARS = [
       ["Período", "?–200 d.C."],
       ["Muerte", "Ejecutado por Yuan Shao"],
     ],
+    detailHref: "assets/Periods/tian-feng.html",
     eras: ["dong-zhuo", "guerras-senores"],
     eraRank: { "guerras-senores": 1, "dong-zhuo": 2 },
+  },
+
+  {
+    zh: "許攸",
+    en: "Xu You",
+    zi: "Ziyuan 子遠",
+    ico: "🎯",
+    fc: "#8b6914",
+    fcbg: "rgba(139,105,20,.12)",
+    rank: 2,
+    ttl: "El Consejero del Cambio",
+    bio: "El estratega de Yuan Shao cuyo plan para Guandu habría destruido a Cao Cao, pero fue rechazado por el orgullo de su señor. Tras la derrota, se unió a Cao Cao, donde fue valorado por lo que Yuan Shao nunca comprendió. Su tragedia no fue la derrota, sino servir a un hombre demasiado ciego para verlo.",
+    tags: ["Yuan Shao 袁紹", "Estratega", "?–210 d.C."],
+    fac: "Yuan Shao 袁紹",
+    stats: [
+      ["Facción", "Yuan Shao 袁紹 → Wei 魏"],
+      ["Plan rechazado", "Guandu 200 d.C."],
+      ["Período", "?–210 d.C."],
+      ["Legado", "La victoria que no fue"],
+    ],
+    detailHref: "assets/Periods/xu-you.html",
+    eras: ["guerras-senores"],
+    eraRank: { "guerras-senores": 1 },
   },
 
   {
