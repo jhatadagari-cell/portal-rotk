@@ -853,3 +853,24 @@ footer{border-top:1px solid var(--border);background:rgba(4,2,0,.97);padding:cla
   border-color:var(--fc,var(--gold));
   color:var(--parch)
 }
+
+/* ── Batallas ── */
+.battle-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:16px}
+.bccard{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:20px 22px;display:flex;flex-direction:column;gap:10px;transition:border-color .22s,background .22s;position:relative;overflow:hidden}
+.bccard::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:.3}
+.bccard:not(.bccard--soon):hover{background:rgba(255,255,255,.05);border-color:rgba(201,168,76,.3)}
+.bccard--soon{opacity:.5;cursor:default}
+.bccard-top{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.bccard-year{font-family:'Cinzel Decorative',serif;font-size:11px;letter-spacing:.18em;color:var(--gold);opacity:.8}
+.bccard-result{display:inline-flex;font-family:'Cinzel Decorative',serif;font-size:9px;letter-spacing:.15em;text-transform:uppercase;padding:3px 9px;border-radius:2px;border:1px solid;flex-shrink:0}
+.bccard-result.victoria{color:#7dba80;border-color:#7dba80;background:rgba(125,186,128,.08)}
+.bccard-result.derrota{color:#d47070;border-color:#d47070;background:rgba(212,112,112,.08)}
+.bccard-result.pirrica{color:var(--gold);border-color:var(--gold);background:rgba(201,168,76,.07)}
+.bccard-result.soon{color:var(--parch2);border-color:rgba(255,255,255,.2);background:transparent;opacity:.5}
+.bccard-zh{font-family:'Noto Serif SC',serif;font-size:20px;color:var(--parch);margin:0}
+.bccard-en{font-family:'Cinzel Decorative',serif;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--parch2);opacity:.65}
+.bccard-era{font-family:'IM Fell English',serif;font-style:italic;font-size:14px;color:var(--parch2);opacity:.55}
+.bccard-desc{font-family:'IM Fell English',serif;font-size:15px;line-height:1.75;color:var(--parch2);opacity:.75;margin:0;flex:1}
+.bccard-link{font-family:'Cinzel Decorative',serif;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);opacity:.8;margin-top:4px;display:inline-flex;align-items:center;gap:5px}
+.bccard-link:hover{opacity:1}
+@media(max-width:640px){.battle-grid{grid-template-columns:1fr}}

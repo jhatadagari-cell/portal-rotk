@@ -21,7 +21,8 @@
       "Bash(mkdir -p \"C:/Users/usuario/Desktop/Portal ROTK/assets/img/Dian Wei\")",
       "Bash(cp \"C:/Users/usuario/Downloads/Dian Wei.png\" \"C:/Users/usuario/Desktop/Portal ROTK/assets/img/Dian Wei/\")",
       "Bash(node -e ' *)",
-      "Read(//tmp/**)"
+      "Read(//tmp/**)",
+      "Bash(python3 *)"
     ]
   },
   "enabledPlugins": {

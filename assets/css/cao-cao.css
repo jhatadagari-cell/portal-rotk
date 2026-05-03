@@ -210,6 +210,37 @@ a {
   color: var(--muted);
   margin: 0;
 }
+.section-divider {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 36px 0 32px;
+  opacity: 0.45;
+}
+.section-divider span:first-child {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(to right, transparent, var(--gold));
+}
+.section-divider span:last-child {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(to left, transparent, var(--gold));
+}
+.divider-ornament {
+  font-size: 9px;
+  color: var(--gold);
+  flex-shrink: 0;
+}
+.intro-eyebrow {
+  font-family: "Cinzel Decorative", serif;
+  font-size: 10px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--gold);
+  opacity: 0.65;
+  margin: 0 0 14px;
+}
 .intro {
   margin-bottom: 42px;
   padding: 22px 24px;
@@ -514,7 +545,9 @@ a {
   border-radius: 50%;
   overflow: hidden;
   border: 3px solid var(--gold);
-  box-shadow: 0 0 0 8px rgba(155, 177, 211, .12), 0 0 40px rgba(155, 177, 211, .32);
+  box-shadow:
+    0 0 0 8px rgba(155, 177, 211, 0.12),
+    0 0 40px rgba(155, 177, 211, 0.32);
   flex-shrink: 0;
 }
 .rel-hub-bubble img {
@@ -523,29 +556,35 @@ a {
   object-fit: cover;
   object-position: top center;
   display: block;
-  transform: scale(1.35);
+  transform: scale(1.7);
   transform-origin: top center;
 }
 .rel-hub-label {
   font-family: "Cinzel Decorative", serif;
   font-size: 11px;
-  letter-spacing: .22em;
+  letter-spacing: 0.22em;
   text-transform: uppercase;
   color: var(--gold);
-  opacity: .75;
+  opacity: 0.75;
 }
 .rel-panel {
   margin: 0 0 36px;
   padding: 20px 22px 20px 22px;
-  background: rgba(30, 90, 191, .06);
-  border: 1px solid rgba(155, 177, 211, .2);
+  background: rgba(30, 90, 191, 0.06);
+  border: 1px solid rgba(155, 177, 211, 0.2);
   border-radius: 14px;
   position: relative;
-  animation: panelIn .28s ease;
+  animation: panelIn 0.28s ease;
 }
 @keyframes panelIn {
-  from { opacity: 0; transform: translateY(-6px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 .rel-panel-close {
   position: absolute;
@@ -556,17 +595,19 @@ a {
   color: var(--muted);
   font-size: 15px;
   cursor: pointer;
-  opacity: .55;
-  transition: opacity .15s;
+  opacity: 0.55;
+  transition: opacity 0.15s;
   padding: 4px 6px;
   line-height: 1;
 }
-.rel-panel-close:hover { opacity: 1; }
+.rel-panel-close:hover {
+  opacity: 1;
+}
 .rel-panel-badge {
   display: inline-flex;
   font-family: "Cinzel Decorative", serif;
   font-size: 10px;
-  letter-spacing: .18em;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
   padding: 3px 9px;
   border-radius: 2px;
@@ -592,13 +633,13 @@ a {
 .rel-orbit-label {
   font-family: "Cinzel Decorative", serif;
   font-size: 13px;
-  letter-spacing: .22em;
+  letter-spacing: 0.22em;
   text-transform: uppercase;
   color: var(--gold);
-  opacity: .85;
+  opacity: 0.85;
   margin: 0 0 20px;
   padding-bottom: 12px;
-  border-bottom: 1px solid rgba(155, 177, 211, .14);
+  border-bottom: 1px solid rgba(155, 177, 211, 0.14);
   font-weight: 700;
   text-align: center;
 }
@@ -620,8 +661,11 @@ a {
 .rel-bubble-img {
   border-radius: 50%;
   overflow: hidden;
-  border: 2px solid rgba(155, 177, 211, .22);
-  transition: transform .22s ease, border-color .22s, box-shadow .22s;
+  border: 2px solid rgba(155, 177, 211, 0.22);
+  transition:
+    transform 0.22s ease,
+    border-color 0.22s,
+    box-shadow 0.22s;
   flex-shrink: 0;
 }
 .rel-bubble-img img {
@@ -630,25 +674,29 @@ a {
   height: 100%;
   object-fit: cover;
   object-position: top center;
-  transform: scale(1.4);
+  transform: scale(1.8);
   transform-origin: top center;
 }
 .rel-bubble:hover .rel-bubble-img {
   transform: scale(1.08);
   border-color: var(--gold);
-  box-shadow: 0 0 0 4px rgba(155, 177, 211, .16), 0 0 18px rgba(155, 177, 211, .2);
+  box-shadow:
+    0 0 0 4px rgba(155, 177, 211, 0.16),
+    0 0 18px rgba(155, 177, 211, 0.2);
 }
 .rel-bubble.active .rel-bubble-img {
   transform: scale(1.12);
   border-color: var(--gold);
-  box-shadow: 0 0 0 5px rgba(155, 177, 211, .26), 0 0 26px rgba(155, 177, 211, .3);
+  box-shadow:
+    0 0 0 5px rgba(155, 177, 211, 0.26),
+    0 0 26px rgba(155, 177, 211, 0.3);
 }
 .rel-bubble-name {
   font-family: "Noto Serif SC", serif;
   font-size: 14px;
   color: var(--muted);
   text-align: center;
-  transition: color .22s;
+  transition: color 0.22s;
   max-width: 110px;
   line-height: 1.3;
 }
@@ -656,11 +704,20 @@ a {
 .rel-bubble.active .rel-bubble-name {
   color: var(--text);
 }
-.rel-bubbles--lg .rel-bubble-img { width: 155px; height: 155px; }
-.rel-bubbles--lg .rel-bubble-name { font-size: 15px; max-width: 150px; }
-.rel-bubbles--md .rel-bubble-img { width: 115px; height: 115px; }
+.rel-bubbles--lg .rel-bubble-img {
+  width: 155px;
+  height: 155px;
+}
+.rel-bubbles--lg .rel-bubble-name {
+  font-size: 15px;
+  max-width: 150px;
+}
+.rel-bubbles--md .rel-bubble-img {
+  width: 115px;
+  height: 115px;
+}
 .rel-bubble-img--placeholder {
-  background: rgba(155, 177, 211, .07);
+  background: rgba(155, 177, 211, 0.07);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -669,14 +726,14 @@ a {
   font-family: "Cinzel Decorative", serif;
   font-size: 15px;
   color: var(--gold);
-  opacity: .45;
+  opacity: 0.45;
 }
 /* ── Era Slider ── */
 .era-slider-wrap {
   margin-bottom: 32px;
   padding: 20px 22px 16px;
-  background: rgba(30, 90, 191, .05);
-  border: 1px solid rgba(155, 177, 211, .14);
+  background: rgba(30, 90, 191, 0.05);
+  border: 1px solid rgba(155, 177, 211, 0.14);
   border-radius: 14px;
 }
 .era-slider-header {
@@ -693,9 +750,9 @@ a {
 .era-slider-years {
   font-family: "Cinzel Decorative", serif;
   font-size: 12px;
-  letter-spacing: .18em;
+  letter-spacing: 0.18em;
   color: var(--gold);
-  opacity: .75;
+  opacity: 0.75;
 }
 .era-range {
   width: 100%;
@@ -708,19 +765,61 @@ a {
   justify-content: space-between;
   font-family: "Cinzel Decorative", serif;
   font-size: 9px;
-  letter-spacing: .1em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--muted);
-  opacity: .55;
+  opacity: 0.55;
 }
-.rel-bubble {
-  transition: opacity 0.35s ease, transform 0.35s ease;
+@keyframes bubbleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.75);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.rel-bubble.bubble-entering {
+  animation: bubbleIn 0.32s ease forwards;
 }
 .rel-bubble.era-hidden {
-  opacity: 0;
-  transform: scale(0.75);
   pointer-events: none;
 }
 .rel-orbit-section.era-empty {
   display: none;
 }
+/* ── Tab Batallas (personaje) ── */
+.char-battles{display:flex;flex-direction:column;gap:16px}
+.char-battle-card{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:20px 22px;position:relative;overflow:hidden;transition:border-color .22s}
+.char-battle-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:.3}
+.char-battle-card:hover{border-color:rgba(155,177,211,.3)}
+.char-battle-top{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:10px}
+.char-battle-year{font-family:'Cinzel Decorative',serif;font-size:11px;letter-spacing:.18em;color:var(--gold);opacity:.8}
+.char-battle-result{display:inline-flex;font-family:'Cinzel Decorative',serif;font-size:9px;letter-spacing:.15em;text-transform:uppercase;padding:3px 9px;border-radius:2px;border:1px solid}
+.char-battle-result.victoria{color:#7dba80;border-color:#7dba80;background:rgba(125,186,128,.08)}
+.char-battle-result.derrota{color:#d47070;border-color:#d47070;background:rgba(212,112,112,.08)}
+.char-battle-result.pirrica{color:var(--gold);border-color:var(--gold);background:rgba(155,177,211,.07)}
+.char-battle-name{font-family:'Noto Serif SC',serif;font-size:22px;color:var(--text);margin:0 0 4px}
+.char-battle-en{font-family:'Cinzel Decorative',serif;font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);opacity:.6;margin-bottom:12px}
+.char-battle-role{display:inline-flex;font-family:'Cinzel Decorative',serif;font-size:9px;letter-spacing:.16em;text-transform:uppercase;padding:3px 9px;border-radius:2px;border:1px solid rgba(155,177,211,.25);color:var(--gold);background:rgba(155,177,211,.06);margin-bottom:12px}
+.char-battle-flavor{font-family:'IM Fell English',serif;font-size:17px;line-height:1.85;color:var(--muted);margin:0 0 14px}
+.char-battle-link{font-family:'Cinzel Decorative',serif;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold);opacity:.75;display:inline-flex;align-items:center;gap:5px}
+.char-battle-link:hover{opacity:1}
+.char-battle-result.indecisa{color:#9ab0c8;border-color:#9ab0c8;background:rgba(154,176,200,.08)}
+.char-battle-result.huida{color:#c8a060;border-color:#c8a060;background:rgba(200,160,96,.08)}
+.char-battle-result.retirada{color:#b09080;border-color:#b09080;background:rgba(176,144,128,.08)}
+/* ── Slider de años ── */
+.year-slider-wrap{margin-bottom:32px;padding:20px 22px 14px;background:rgba(30,90,191,.05);border:1px solid rgba(155,177,211,.14);border-radius:14px}
+.year-slider-header{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:14px}
+.year-era-label{font-family:'Noto Serif SC',serif;font-size:20px;color:var(--text)}
+.year-display{font-family:'Cinzel Decorative',serif;font-size:13px;letter-spacing:.18em;color:var(--gold);opacity:.85}
+.year-tick-strip{display:flex;justify-content:space-between;align-items:flex-start;padding:0 10px;height:10px;margin-top:4px}
+.year-tick-strip span{width:1px;background:rgba(155,177,211,.2);height:5px;flex-shrink:0}
+.year-tick-strip span.ytick-major{height:9px;background:rgba(155,177,211,.45)}
+.year-tick-labels{display:flex;justify-content:space-between;font-family:'Cinzel Decorative',serif;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);opacity:.5;margin-top:2px}
+.char-battle-vs{display:flex;align-items:center;justify-content:center;gap:12px;padding:11px 0;margin:10px 0 14px;border-top:1px solid rgba(155,177,211,.12);border-bottom:1px solid rgba(155,177,211,.12);flex-wrap:wrap}
+.cbv-a{font-family:'Cinzel Decorative',serif;font-size:12px;letter-spacing:.15em;text-transform:uppercase;color:var(--gold);font-weight:700}
+.cbv-sep{font-family:'Cinzel Decorative',serif;font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:var(--muted);opacity:.35;padding:0 2px}
+.cbv-b{font-family:'Cinzel Decorative',serif;font-size:12px;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);opacity:.8}
+.year-battles-empty{font-family:'IM Fell English',serif;font-style:italic;font-size:17px;color:var(--muted);opacity:.45;text-align:center;padding:40px 0}

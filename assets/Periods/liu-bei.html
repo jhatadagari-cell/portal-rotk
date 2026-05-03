@@ -22,6 +22,7 @@
 <nav class="sec-nav">
   <a href="#" data-page="el-personaje" class="sec-link active">El Personaje</a>
   <a href="#" data-page="relaciones" class="sec-link">Relaciones Clave</a>
+  <a href="#" data-page="batallas" class="sec-link">Batallas</a>
 </nav>
 
 <main class="wrap wrap-pager">
@@ -144,213 +145,312 @@
 
     <div class="wrap-page" data-page="relaciones">
 
-  <div class="rel-featured">
-    <h2 class="rel-label">Primer Círculo</h2>
-    <div class="rel-grid">
-      <div class="rel-card">
-        <div class="rel-badge" style="color:#49804a;border-color:#49804a">Hermano Jurado</div>
-        <div class="rel-name">Guan Yu · 关羽</div>
-        <p class="rel-desc">El general invicto cuyo juramento bajo el melocotonero fue la piedra angular de la leyenda de Liu Bei. Su lealtad nunca vaciló, ni siquiera ante la muerte.</p>
+      <!-- Slider temporal -->
+      <div class="era-slider-wrap">
+        <div class="era-slider-header">
+          <span class="era-slider-name">Turbantes Amarillos</span>
+          <span class="era-slider-years">184 – 189 d.C.</span>
+        </div>
+        <input type="range" id="era-range" class="era-range" min="0" max="4" step="1" value="0" list="era-ticks" />
+        <datalist id="era-ticks">
+          <option value="0">Turbantes Amarillos</option>
+          <option value="1">Era Dong Zhuo</option>
+          <option value="2">Guerras de los Señores</option>
+          <option value="3">Chibi</option>
+          <option value="4">Los Tres Reinos</option>
+        </datalist>
+        <div class="era-tick-labels">
+          <span>Turbantes</span>
+          <span>Dong Zhuo</span>
+          <span>Guerras</span>
+          <span>Chibi</span>
+          <span>Tres Reinos</span>
+        </div>
       </div>
-      <div class="rel-card">
-        <div class="rel-badge" style="color:#49804a;border-color:#49804a">Hermano Jurado</div>
-        <div class="rel-name">Zhang Fei · 张飞</div>
-        <p class="rel-desc">El rugido del sur. Feroz en batalla pero leal hasta el sacrificio, fue la ferocidad emocional que equilibraba la templanza de Liu Bei.</p>
+
+      <!-- Hub central -->
+      <div class="rel-hub">
+        <div class="rel-hub-bubble">
+          <img src="../img/Liu%20Bei/Liu%20Bei.png" alt="Liu Bei" />
+        </div>
+        <span class="rel-hub-label">刘备 · Liu Bei</span>
       </div>
-      <div class="rel-card">
-        <div class="rel-badge" style="color:#d9b76a;border-color:#d9b76a">Estratega Principal</div>
-        <div class="rel-name">Zhuge Liang · 诸葛亮</div>
-        <p class="rel-desc">El genio que convirtió un sueño en reino. Zhuge Liang no solo planificó la expansión de Shu, sino que legitimó el reclamo de Liu Bei.</p>
+
+      <!-- Panel de información -->
+      <div class="rel-panel" id="rel-panel" hidden>
+        <button class="rel-panel-close" aria-label="Cerrar">✕</button>
+        <div class="rel-panel-badge"></div>
+        <div class="rel-panel-name"></div>
+        <p class="rel-panel-desc"></p>
       </div>
+
+      <!-- El Juramento del Melocotonero -->
+      <div class="rel-orbit-section">
+        <h3 class="rel-orbit-label">El Juramento del Melocotonero</h3>
+        <div class="rel-bubbles rel-bubbles--lg">
+          <div class="rel-bubble"
+               data-eras="turbantes dong-zhuo guerras-senores chibi tres-reinos"
+               data-badge="Hermano Jurado"
+               data-badge-color="#d9b76a"
+               data-name="Guan Yu · 关羽"
+               data-desc="El primero de los hermanos del Melocotonero. Siguió a Liu Bei durante cuarenta años sin vacilar ni cuando Cao Cao lo tentó con honores y riquezas. Gobernó Jingzhou como mano derecha de Liu Bei, perdió la provincia por subestimar a Wu, y murió capturado en 219 d.C. Su muerte fue el golpe del que Shu Han nunca se recuperó.">
+            <div class="rel-bubble-img">
+              <img src="../img/Guan%20Yu/Guan%20Yu.png" alt="Guan Yu" />
+            </div>
+            <span class="rel-bubble-name">Guan Yu</span>
+          </div>
+          <div class="rel-bubble"
+               data-eras="turbantes dong-zhuo guerras-senores chibi tres-reinos"
+               data-badge="Hermano Jurado"
+               data-badge-color="#d9b76a"
+               data-name="Zhang Fei · 张飞"
+               data-desc="El rugido del Juramento. Zhang Fei detuvo a todo el ejército de Cao Cao en Changban con cuatro palabras y la lanza en ristre. Feroz, impulsivo, capaz de actos de una grandeza inesperada, fue el fuego que equilibraba la paciencia de Liu Bei. Murió asesinado por sus propios oficiales en 221 d.C., días antes de partir a la campaña que Liu Bei lanzó para vengar a Guan Yu.">
+            <div class="rel-bubble-img">
+              <img src="../img/Zhang%20Fei/Zhang%20Fei.png" alt="Zhang Fei" />
+            </div>
+            <span class="rel-bubble-name">Zhang Fei</span>
+          </div>
+          <div class="rel-bubble"
+               data-eras="guerras-senores chibi tres-reinos"
+               data-badge="El Primer Ministro"
+               data-badge-color="#d9b76a"
+               data-name="Zhuge Liang · 诸葛亮"
+               data-desc="No estuvo en el jardín del melocotonero, pero su lugar en el círculo más íntimo de Liu Bei es indiscutible. Llegó después que los hermanos, pero ningún otro personaje —ni Guan Yu, ni Zhang Fei— tuvo sobre Liu Bei la misma influencia total: estratega, canciller, conciencia moral y ejecutor de su sueño. En su lecho de muerte, Liu Bei le confió el reino y a su propio hijo con las palabras más cargadas del Romance: «Si Liu Shan puede ser ayudado, ayúdalo; si no puede, tómalo tú».">
+            <div class="rel-bubble-img">
+              <img src="../img/Zhuge%20Liang/Zhuge%20Liang.png" alt="Zhuge Liang" />
+            </div>
+            <span class="rel-bubble-name">Zhuge Liang</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Generales de Confianza -->
+      <div class="rel-orbit-section">
+        <h3 class="rel-orbit-label">Generales de Confianza</h3>
+        <div class="rel-bubbles rel-bubbles--md">
+          <div class="rel-bubble"
+               data-eras="guerras-senores chibi tres-reinos"
+               data-badge="El Guardián"
+               data-badge-color="#49804a"
+               data-name="Zhao Yun · 赵云"
+               data-desc="El general que cruzó el campo de batalla de Changban con el bebé Liu Shan en brazos, rodeado por el ejército de Cao Cao, y salió al otro lado. Zhao Yun no buscaba la gloria: la gloria lo encontraba a él. Fue el único de los Cinco Tigres que Liu Bei nunca perdió en vida, y el que más veces lo salvó sin pedirlo.">
+            <div class="rel-bubble-img">
+              <img src="../img/Zhao%20Yun/Zhao%20Yun.png" alt="Zhao Yun" />
+            </div>
+            <span class="rel-bubble-name">Zhao Yun</span>
+          </div>
+          <div class="rel-bubble"
+               data-eras="guerras-senores chibi"
+               data-badge="El Fénix Truncado"
+               data-badge-color="#49804a"
+               data-name="Pang Tong · 庞统"
+               data-desc="El «Fénix Joven», par intelectual de Zhuge Liang, llegó al servicio de Liu Bei después de ser rechazado por Wu y por Cao Cao por su fealdad. Diseñó la estrategia para tomar Yizhou pero murió bajo una lluvia de flechas en la Colina del Fénix Caído antes de ver terminada la obra. Con él Liu Bei perdió la mitad de su genio estratégico de un solo golpe.">
+            <div class="rel-bubble-img">
+              <img src="../img/Pang%20Tong/Pang%20Tong.png" alt="Pang Tong" />
+            </div>
+            <span class="rel-bubble-name">Pang Tong</span>
+          </div>
+          <div class="rel-bubble"
+               data-eras="chibi tres-reinos"
+               data-badge="El Tigre del Noroeste"
+               data-badge-color="#49804a"
+               data-name="Ma Chao · 马超"
+               data-desc="El señor de la guerra que había hecho temblar al propio Cao Cao en el Vado de Tong se unió a Liu Bei cuando su clan fue destruido. Su nombre aterrorizaba los territorios del noroeste; su sola presencia al frente de las tropas de Shu hacía que las ciudades fronterizas abrieran las puertas. Era el ariete que Shu necesitaba para las campañas del norte.">
+            <div class="rel-bubble-img">
+              <img src="../img/Ma%20Chao/Ma%20Chao.png" alt="Ma Chao" />
+            </div>
+            <span class="rel-bubble-name">Ma Chao</span>
+          </div>
+          <div class="rel-bubble"
+               data-eras="chibi tres-reinos"
+               data-badge="El Arquero Veterano"
+               data-badge-color="#49804a"
+               data-name="Huang Zhong · 黄忠"
+               data-desc="El más anciano de los Cinco Tigres y el más subestimado. Capturado en Changsha y perdonado por Liu Bei, se convirtió en uno de sus generales más fiables. Su victoria en el Monte Dingjun —donde mató a Xiahou Yuan de un solo golpe— fue una de las grandes victorias de Shu en los años de Hanzhong. La edad nunca le quitó la puntería.">
+            <div class="rel-bubble-img">
+              <img src="../img/Huang%20Zhong/Huang%20Zhong.png" alt="Huang Zhong" />
+            </div>
+            <span class="rel-bubble-name">Huang Zhong</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Consejeros y Estrategas -->
+      <div class="rel-orbit-section">
+        <h3 class="rel-orbit-label">Consejeros y Estrategas</h3>
+        <div class="rel-bubbles rel-bubbles--md">
+          <div class="rel-bubble"
+               data-eras="guerras-senores"
+               data-badge="El Primer Consejero"
+               data-badge-color="#d9b76a"
+               data-name="Xu Shu · 徐庶"
+               data-desc="Antes de Zhuge Liang, estuvo Xu Shu. Llegó al campamento de Liu Bei en Xinye alrededor de 206 d.C. y en pocas semanas transformó su pequeño ejército. Fue él quien señaló a Liu Bei el camino hacia Longzhong y le dijo que allí vivía un hombre superior a él en todo. Cuando Cao Cao lo arrebató con una trampa, prometió no dar ni un consejo útil al enemigo. Cumplió su palabra.">
+            <div class="rel-bubble-img rel-bubble-img--placeholder">
+              <span>庶</span>
+            </div>
+            <span class="rel-bubble-name">Xu Shu</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Señores y Patrones -->
+      <div class="rel-orbit-section">
+        <h3 class="rel-orbit-label">Señores y Patrones</h3>
+        <div class="rel-bubbles rel-bubbles--md">
+          <div class="rel-bubble"
+               data-eras="turbantes dong-zhuo"
+               data-badge="Primer Patrón"
+               data-badge-color="#c9a84c"
+               data-name="Gongsun Zan · 公孙瓒"
+               data-desc="El señor de Youzhou que acogió a Liu Bei en los primeros años inciertos. Habían estudiado bajo el mismo maestro, lo que convirtió su relación en algo más cercano que la mera lealtad feudal. Liu Bei sirvió bajo sus estandartes mientras aprendía qué significaba mandar. Cuando Gongsun Zan fue destruido por Yuan Shao, Liu Bei ya se había marchado a buscar su propio destino.">
+            <div class="rel-bubble-img">
+              <img src="../img/Gongsun%20Zan/Gongsun%20Zan.png" alt="Gongsun Zan" />
+            </div>
+            <span class="rel-bubble-name">Gongsun Zan</span>
+          </div>
+          <div class="rel-bubble"
+               data-eras="dong-zhuo guerras-senores"
+               data-badge="El Que Cedió Xuzhou"
+               data-badge-color="#c9a84c"
+               data-name="Tao Qian · 陶谦"
+               data-desc="El gobernador de Xuzhou que, acosado por las campañas de venganza de Cao Cao, pidió ayuda a Liu Bei y luego le ofreció el territorio dos veces antes de morir. Liu Bei lo rechazó por cortesía; la tercera oferta llegó en el lecho de muerte. Xuzhou fue el primer territorio real que Liu Bei tuvo, y lo perdió casi de inmediato frente a Lü Bu.">
+            <div class="rel-bubble-img">
+              <img src="../img/Tao%20Qian/Tao%20Qian.png" alt="Tao Qian" />
+            </div>
+            <span class="rel-bubble-name">Tao Qian</span>
+          </div>
+          <div class="rel-bubble"
+               data-eras="guerras-senores chibi"
+               data-badge="El Refugio de Jingzhou"
+               data-badge-color="#c9a84c"
+               data-name="Liu Biao · 刘表"
+               data-desc="El gobernador de Jingzhou que abrió sus puertas a Liu Bei cuando huyó de Cao Cao y le asignó Xinye como base. Era un señor capaz pero paralizado por la indecisión sobre su herencia. Murió justo antes de Chibi y su hijo Liu Cong capituló ante Cao Cao sin consultar a Liu Bei, que tuvo que huir de nuevo con toda su gente.">
+            <div class="rel-bubble-img rel-bubble-img--placeholder">
+              <span>表</span>
+            </div>
+            <span class="rel-bubble-name">Liu Biao</span>
+          </div>
+          <div class="rel-bubble"
+               data-eras="guerras-senores"
+               data-badge="Refugio Decepcionante"
+               data-badge-color="#8b6914"
+               data-name="Yuan Shao · 袁绍"
+               data-desc="Después de perder Xuzhou ante Cao Cao, Liu Bei buscó refugio con el señor más poderoso del norte. Yuan Shao lo recibió con honores pero demostró ser incapaz de aprovechar sus ventajas. Liu Bei vio su derrota en Guandu desde dentro y comprendió que el norte estaba perdido. Se marchó en cuanto pudo, sin haber encontrado el hogar que buscaba.">
+            <div class="rel-bubble-img">
+              <img src="../img/Yuan%20Shao/Yuan%20Shao.png" alt="Yuan Shao" />
+            </div>
+            <span class="rel-bubble-name">Yuan Shao</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Rivales y Antagonistas -->
+      <div class="rel-orbit-section">
+        <h3 class="rel-orbit-label">Rivales y Antagonistas</h3>
+        <div class="rel-bubbles rel-bubbles--md">
+          <div class="rel-bubble"
+               data-eras="dong-zhuo guerras-senores chibi tres-reinos"
+               data-badge="El Gran Rival"
+               data-badge-color="#1e5abf"
+               data-name="Cao Cao · 曹操"
+               data-desc="El único hombre que Liu Bei temió y respetó en igual medida. Lo persiguió durante décadas: desde Xuzhou hasta Changban, desde Chibi hasta Hanzhong. En cada derrota Liu Bei sobrevivió lo justo para seguir siendo el espejo moral que su rival necesitaba. «Entre los héroes del mundo, solo tú y yo», le dijo Cao Cao una vez. Liu Bei lo supo y huyó antes de que la frase terminara mal.">
+            <div class="rel-bubble-img">
+              <img src="../img/Cao%20Cao/Cao%20Cao.png" alt="Cao Cao" />
+            </div>
+            <span class="rel-bubble-name">Cao Cao</span>
+          </div>
+          <div class="rel-bubble"
+               data-eras="tres-reinos"
+               data-badge="El Error de Yiling"
+               data-badge-color="#bf2020"
+               data-name="Sun Quan · 孙权"
+               data-desc="Cuando Lü Meng atacó Jingzhou y mandó ejecutar a Guan Yu, rompió la alianza que había sostenido el equilibrio durante una década. Liu Bei respondió con la campaña de Yiling, el peor error estratégico de su vida: ochocientos li de campamento en un bosque que Lu Xun incendió. Sun Quan no era su enemigo natural, pero un instante de codicia territorial lo convirtió en el autor de su caída.">
+            <div class="rel-bubble-img">
+              <img src="../img/Sun%20Quan/Sun%20Quan.png" alt="Sun Quan" />
+            </div>
+            <span class="rel-bubble-name">Sun Quan</span>
+          </div>
+          <div class="rel-bubble"
+               data-eras="tres-reinos"
+               data-badge="El Fuego de Yiling"
+               data-badge-color="#bf2020"
+               data-name="Lu Xun · 陆逊"
+               data-desc="El joven general de Wu que en 222 d.C. dejó que Liu Bei avanzara ochocientos li a lo largo del Yangtsé, acampara en el bosque, y esperó el verano. Luego incendió el bosque. La campaña de Yiling, lanzada para vengar a Guan Yu, terminó en el mayor desastre militar de Liu Bei. Murió en Baidicheng menos de un año después, sin haber regresado a Chengdu.">
+            <div class="rel-bubble-img">
+              <img src="../img/Lu%20Xun/Lu%20Xun.png" alt="Lu Xun" />
+            </div>
+            <span class="rel-bubble-name">Lu Xun</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- La Alianza del Sur -->
+      <div class="rel-orbit-section">
+        <h3 class="rel-orbit-label">La Alianza del Sur</h3>
+        <div class="rel-bubbles rel-bubbles--md">
+          <div class="rel-bubble"
+               data-eras="chibi"
+               data-badge="El Aliado de Chibi"
+               data-badge-color="#d9b76a"
+               data-name="Sun Quan · 孙权"
+               data-desc="En el otoño de 208 d.C., cuando Cao Cao avanzó con el mayor ejército visto hasta entonces, la única opción de Liu Bei era la alianza con Sun Quan. Zhuge Liang cruzó el río para negociar; Sun Quan eligió la guerra. La flota de Cao Cao ardió en Chibi y los tres reinos se hicieron inevitables. Fue la mejor decisión que ambos tomaron juntos, y la última.">
+            <div class="rel-bubble-img">
+              <img src="../img/Sun%20Quan/Sun%20Quan.png" alt="Sun Quan" />
+            </div>
+            <span class="rel-bubble-name">Sun Quan</span>
+          </div>
+          <div class="rel-bubble"
+               data-eras="chibi tres-reinos"
+               data-badge="Esposa de Alianza"
+               data-badge-color="#bf2020"
+               data-name="Sun Shangxiang · 孙尚香"
+               data-desc="La hermana de Sun Quan que Liu Bei desposó en 209 d.C. como sello de la alianza entre Shu y Wu. Era guerrera por temperamento: llegó con un cortejo armado de doncellas que ponía nervioso al propio Liu Bei. El matrimonio fue político desde el inicio; regresó a Wu cuando la alianza se rompió, y casi se llevó al joven Liu Shan consigo antes de ser interceptada por Zhao Yun.">
+            <div class="rel-bubble-img">
+              <img src="../img/Sun%20Shangxiang/Sun%20Shangxiang.png" alt="Sun Shangxiang" />
+            </div>
+            <span class="rel-bubble-name">Sun Shangxiang</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Familia -->
+      <div class="rel-orbit-section">
+        <h3 class="rel-orbit-label">Familia</h3>
+        <div class="rel-bubbles rel-bubbles--md">
+          <div class="rel-bubble"
+               data-eras="chibi tres-reinos"
+               data-badge="El Heredero"
+               data-badge-color="#d9b76a"
+               data-name="Liu Shan · 刘禅"
+               data-desc="El hijo al que Liu Bei confió un reino que no podía sostener. En el lecho de muerte en Baidicheng le dijo a Zhuge Liang: «Si Liu Shan puede ser ayudado, ayúdalo; si no puede, tómalo tú». No era retórica cortesana: era la confesión de un padre que conocía las limitaciones de su hijo y aun así confiaba en él porque era lo único que podía hacer.">
+            <div class="rel-bubble-img">
+              <img src="../img/Liu%20Shan/Liu%20Shan.png" alt="Liu Shan" />
+            </div>
+            <span class="rel-bubble-name">Liu Shan</span>
+          </div>
+        </div>
+      </div>
+
     </div>
-  </div>
 
-  <div class="rel-accordion-controls">
-    <button class="rel-btn rel-btn--expand">Expandir Todo</button>
-    <button class="rel-btn rel-btn--collapse">Colapsar Todo</button>
-  </div>
-
-  <div class="rel-accordion">
-
-    <div class="rel-group" data-type="consejeros">
-      <button class="rel-group-toggle">
-        <span class="rel-group-title">Consejeros y Estrategas</span>
-        <span class="rel-group-count">2</span>
-        <span class="rel-group-chevron">▾</span>
-      </button>
-      <div class="rel-group-body" hidden>
-        <div class="rel-grid">
-          <div class="rel-card">
-            <div class="rel-badge" style="color:#d9b76a;border-color:#d9b76a">Consejero</div>
-            <div class="rel-name">Xu Shu · 徐庶</div>
-            <p class="rel-desc">El consejero que llegó primero. Su lealtad fue absoluta hasta que fue llevado a servir a Cao Cao, momento en que guardó silencio para proteger a Liu Bei.</p>
-          </div>
-          <div class="rel-card">
-            <div class="rel-badge" style="color:#d9b76a;border-color:#d9b76a">Consejero</div>
-            <div class="rel-name">Pang Tong · 庞统</div>
-            <p class="rel-desc">El consejero que llegó tarde pero cambió el curso. Su estrategia para tomar Yiling mostró un lado diferente de Shu.</p>
-          </div>
+    <!-- ── Batallas ── -->
+    <div class="wrap-page" data-page="batallas">
+      <div class="char-battles" id="char-battles-liu">
+        <div class="char-battle-card"
+             data-battle="si-shui-hu-lao"
+             data-role="Combatiente · Triple Duelo"
+             data-flavor="Liu Bei rara vez desenfundaba en combate directo. En Hu Lao Gate fue la excepción: cuando sus hermanos llevaban ochenta asaltos sin doblegar a Lü Bu, sacó sus espadas gemelas y cerró el cerco por el flanco derecho. No fue una victoria —Lü Bu se retiró sin ser derrotado—, pero fue la primera vez que el hombre invencible dio un paso atrás. Nadie que estuviera allí lo olvidó.">
         </div>
       </div>
     </div>
 
-    <div class="rel-group" data-type="rivales">
-      <button class="rel-group-toggle">
-        <span class="rel-group-title">Rivales y Antagonistas</span>
-        <span class="rel-group-count">2</span>
-        <span class="rel-group-chevron">▾</span>
-      </button>
-      <div class="rel-group-body" hidden>
-        <div class="rel-grid">
-          <div class="rel-card">
-            <div class="rel-badge" style="color:#1e5abf;border-color:#1e5abf">Gran Rival</div>
-            <div class="rel-name">Cao Cao · 曹操</div>
-            <p class="rel-desc">El adversario que nunca fue completamente vencido en batalla pero sí en visión. Su derrota fue política, no militar.</p>
-          </div>
-          <div class="rel-card">
-            <div class="rel-badge" style="color:#bf2020;border-color:#bf2020">Aliado Rival</div>
-            <div class="rel-name">Sun Quan · 孙权</div>
-            <p class="rel-desc">El señor de Wu cuya alianza en Chibi fue el punto de inflexión. Un hermano rival, no vasallo ni patrón.</p>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="rel-group" data-type="familia">
-      <button class="rel-group-toggle">
-        <span class="rel-group-title">Familia y Herederos</span>
-        <span class="rel-group-count">3</span>
-        <span class="rel-group-chevron">▾</span>
-      </button>
-      <div class="rel-group-body" hidden>
-        <div class="rel-grid">
-          <div class="rel-card">
-            <div class="rel-badge" style="color:#c060a0;border-color:#c060a0">Padre</div>
-            <div class="rel-name">Liu Hong · 刘弘</div>
-            <p class="rel-desc">El padre de Liu Bei, fallecido en los años tempranos de su vida. Aunque su influencia directa fue limitada, su linaje y legado fueron fundamentales para la identidad de Liu Bei como heredero de la dinastía Han.</p>
-          </div>
-          <div class="rel-card">
-            <div class="rel-badge" style="color:#c060a0;border-color:#c060a0">Hijo y Heredero</div>
-            <div class="rel-name">Liu Shan · 刘禅</div>
-            <p class="rel-desc">El Adepto, hijo y heredero de Liu Bei. Aunque carecía del genio de su padre, fue quien heredó el trono de Shu Han y perpetuó el legado. Su reinado es el continuación de la visión de Liu Bei.</p>
-          </div>
-          <div class="rel-card">
-            <div class="rel-badge" style="color:#c060a0;border-color:#c060a0">Esposa</div>
-            <div class="rel-name">Lady Mi · 糜氏</div>
-            <p class="rel-desc">Una de las esposas principales de Liu Bei, hermana de Mi Fang. Madre de Liu Shan. Fue su compañera en los años de errancias, simbolizando los vínculos dinásticos que sostenían el reino.</p>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="rel-group" data-type="generales">
-      <button class="rel-group-toggle">
-        <span class="rel-group-title">Generales y Oficiales</span>
-        <span class="rel-group-count">3</span>
-        <span class="rel-group-chevron">▾</span>
-      </button>
-      <div class="rel-group-body" hidden>
-        <div class="rel-grid">
-          <div class="rel-card">
-            <div class="rel-badge" style="color:#49804a;border-color:#49804a">General</div>
-            <div class="rel-name">Zhao Yun · 赵云</div>
-            <p class="rel-desc">El tigre del sur. Su lealtad a Liu Bei fue inquebrantable, protegiendo incluso al hijo heredero en medio del caos de la corte de Chengdu.</p>
-          </div>
-          <div class="rel-card">
-            <div class="rel-badge" style="color:#49804a;border-color:#49804a">General</div>
-            <div class="rel-name">Liao Hua · 廖化</div>
-            <p class="rel-desc">El soldado que envejeció en servicio de Shu. Su lealtad fue constante, pasando de ser capturado a ser uno de los pilares del reino.</p>
-          </div>
-          <div class="rel-card">
-            <div class="rel-badge" style="color:#49804a;border-color:#49804a">General</div>
-            <div class="rel-name">Ma Dai · 马岱</div>
-            <p class="rel-desc">El general leal y confiable. Sobrino de Ma Teng y hermano de Ma Chao. Un ejecutor de órdenes difíciles, símbolo de la disciplina militar de Shu Han.</p>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="rel-group" data-type="patrones">
-      <button class="rel-group-toggle">
-        <span class="rel-group-title">Patrones y Mentores</span>
-        <span class="rel-group-count">5</span>
-        <span class="rel-group-chevron">▾</span>
-      </button>
-      <div class="rel-group-body" hidden>
-        <div class="rel-grid">
-          <div class="rel-card">
-            <div class="rel-badge" style="color:#a9a9a9;border-color:#a9a9a9">Maestro</div>
-            <div class="rel-name">Lu Zhi · 卢植</div>
-            <p class="rel-desc">El maestro confuciano que vio en Liu Bei la chispa del futuro. Le enseñó estrategia militar y filosofía de gobernar con virtud.</p>
-          </div>
-          <div class="rel-card">
-            <div class="rel-badge" style="color:#a9a9a9;border-color:#a9a9a9">Primer Patrón</div>
-            <div class="rel-name">Gongsun Zan · 公孙瓒</div>
-            <p class="rel-desc">El señor de Youzhou que reconoció el potencial en el joven Liu Bei. Fue el trampolín que llevó a Liu Bei al destino.</p>
-          </div>
-          <div class="rel-card">
-            <div class="rel-badge" style="color:#a9a9a9;border-color:#a9a9a9">Patrón</div>
-            <div class="rel-name">Tao Qian · 陶谦</div>
-            <p class="rel-desc">El señor de Xu que reconoció la virtud en Liu Bei y le ofreció su territorio. Su gesto generoso permitió a Liu Bei tener una base territorial propia. Cuando murió, pidió que Liu Bei lo sucediera como símbolo de confianza.</p>
-          </div>
-          <div class="rel-card">
-            <div class="rel-badge" style="color:#a9a9a9;border-color:#a9a9a9">Patrón</div>
-            <div class="rel-name">Liu Biao · 刘表</div>
-            <p class="rel-desc">El señor de Jingzhou que acogió a Liu Bei cuando más lo necesitaba. Su apoyo permitió a Liu Bei consolidar fuerzas para el futuro.</p>
-          </div>
-          <div class="rel-card">
-            <div class="rel-badge" style="color:#8b6914;border-color:#8b6914">Patrón Decepcionante</div>
-            <div class="rel-name">Yuan Shao · 袁绍</div>
-            <p class="rel-desc">El señor más poderoso del norte en quien Liu Bei depositó esperanzas. Su indecisión y arrogancia lo llevaron a la derrota en Guandu, marcando el punto de quiebre donde Liu Bei comprendió que necesitaba su propio camino.</p>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="rel-group" data-type="alianzas">
-      <button class="rel-group-toggle">
-        <span class="rel-group-title">Alianzas Políticas</span>
-        <span class="rel-group-count">1</span>
-        <span class="rel-group-chevron">▾</span>
-      </button>
-      <div class="rel-group-body" hidden>
-        <div class="rel-grid">
-          <div class="rel-card">
-            <div class="rel-badge" style="color:#c060a0;border-color:#c060a0">Esposa Aliada</div>
-            <div class="rel-name">Sun Shangxiang · 孙尚香</div>
-            <p class="rel-desc">La hermana de Sun Ce y Sun Quan. Su matrimonio con Liu Bei fue un acto de alianza política que selló la unión entre Shu y Wu en tiempos de Chibi.</p>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="rel-group" data-type="legitimidad">
-      <button class="rel-group-toggle">
-        <span class="rel-group-title">Símbolo de Legitimidad</span>
-        <span class="rel-group-count">1</span>
-        <span class="rel-group-chevron">▾</span>
-      </button>
-      <div class="rel-group-body" hidden>
-        <div class="rel-grid">
-          <div class="rel-card">
-            <div class="rel-badge" style="color:#c9a84c;border-color:#c9a84c">Emperador Han</div>
-            <div class="rel-name">Liu Xie · 刘协</div>
-            <p class="rel-desc">El último emperador de la Dinastía Han. Liu Bei lo consideraba el símbolo viviente de la legitimidad Han y se presentaba como su protector. Su presencia fue el fundamento ideológico del reclamo de Liu Bei al trono: no conquistador, sino restaurador.</p>
-          </div>
-        </div>
-      </div>
-    </div>
-
-  </div>
-
-    </div>
   </div>
 </main>
 
   <script>
-  (function(){
-    const links = document.querySelectorAll('.sec-link[data-page]');
-    const pages = document.querySelectorAll('.wrap-page');
+  (function () {
+    const links  = document.querySelectorAll('.sec-link[data-page]');
+    const pages  = document.querySelectorAll('.wrap-page');
     const slider = document.querySelector('.wrap-pages');
 
     function goTo(pageId) {
@@ -359,46 +459,121 @@
       slider.style.transform = `translateX(-${idx * 100}%)`;
       links.forEach(l => l.classList.toggle('active', l.dataset.page === pageId));
     }
+    links.forEach(link => link.addEventListener('click', e => { e.preventDefault(); goTo(link.dataset.page); }));
 
-    links.forEach(link => {
-      link.addEventListener('click', e => {
-        e.preventDefault();
-        goTo(link.dataset.page);
-      });
-    });
+    const panel      = document.getElementById('rel-panel');
+    const panelBadge = panel.querySelector('.rel-panel-badge');
+    const panelName  = panel.querySelector('.rel-panel-name');
+    const panelDesc  = panel.querySelector('.rel-panel-desc');
 
-    // Acordeón de relaciones
-    function toggleGroup(btn, shouldOpen) {
-      const body = btn.nextElementSibling;
-      const group = btn.parentElement;
-      body.hidden = !shouldOpen;
-      group.classList.toggle('open', shouldOpen);
+    function showPanel(bubble) {
+      const { badge, badgeColor, name, desc } = bubble.dataset;
+      panelBadge.textContent = badge;
+      panelBadge.style.color = badgeColor;
+      panelBadge.style.borderColor = badgeColor;
+      panelName.textContent = name;
+      panelDesc.textContent = desc;
+      panel.hidden = false;
+      panel.style.animation = 'none';
+      panel.offsetHeight;
+      panel.style.animation = '';
+      panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 
-    document.querySelectorAll('.rel-group-toggle').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const body = btn.nextElementSibling;
-        const isHidden = body.hidden;
-        toggleGroup(btn, isHidden);
+    document.querySelectorAll('.rel-bubble').forEach(bubble => {
+      bubble.addEventListener('click', () => {
+        const wasActive = bubble.classList.contains('active');
+        document.querySelectorAll('.rel-bubble').forEach(b => b.classList.remove('active'));
+        if (wasActive) { panel.hidden = true; }
+        else { bubble.classList.add('active'); showPanel(bubble); }
       });
     });
 
-    // Botones de expandir/colapsar todo
-    document.querySelector('.rel-btn--expand')?.addEventListener('click', () => {
-      document.querySelectorAll('.rel-group-toggle').forEach(btn => {
-        toggleGroup(btn, true);
-      });
+    panel.querySelector('.rel-panel-close').addEventListener('click', () => {
+      panel.hidden = true;
+      document.querySelectorAll('.rel-bubble').forEach(b => b.classList.remove('active'));
     });
 
-    document.querySelector('.rel-btn--collapse')?.addEventListener('click', () => {
-      document.querySelectorAll('.rel-group-toggle').forEach(btn => {
-        toggleGroup(btn, false);
+    const ERAS = [
+      { id: 'turbantes',       name: 'Turbantes Amarillos',    years: '184 – 189 d.C.' },
+      { id: 'dong-zhuo',       name: 'Era Dong Zhuo',          years: '189 – 192 d.C.' },
+      { id: 'guerras-senores', name: 'Guerras de los Señores', years: '192 – 208 d.C.' },
+      { id: 'chibi',           name: 'Chibi',                  years: '208 – 221 d.C.' },
+      { id: 'tres-reinos',     name: 'Los Tres Reinos',        years: '221 – 223 d.C.' },
+    ];
+
+    function toCamel(str) {
+      return str.split('-').map(s => s[0].toUpperCase() + s.slice(1)).join('');
+    }
+
+    function applyEra(idx, instant) {
+      const era = ERAS[idx];
+      document.querySelector('.era-slider-name').textContent = era.name;
+      document.querySelector('.era-slider-years').textContent = era.years;
+
+      document.querySelectorAll('.rel-bubble').forEach(b => {
+        const eras    = (b.dataset.eras || '').split(' ');
+        const visible = eras.includes(era.id);
+        const key     = toCamel(era.id);
+        if (b.dataset['badge'      + key]) b.dataset.badge      = b.dataset['badge'      + key];
+        if (b.dataset['badgeColor' + key]) b.dataset.badgeColor = b.dataset['badgeColor' + key];
+        if (b.dataset['desc'       + key]) b.dataset.desc       = b.dataset['desc'       + key];
+
+        if (visible) {
+          if (b.style.display === 'none') {
+            b.classList.remove('era-hidden');
+            b.style.display = '';
+            b.offsetHeight;
+            if (!instant) {
+              b.classList.add('bubble-entering');
+              b.addEventListener('animationend', () => b.classList.remove('bubble-entering'), { once: true });
+            }
+          }
+        } else {
+          b.classList.add('era-hidden');
+          b.style.display = 'none';
+        }
       });
-    });
+
+      document.querySelectorAll('.rel-orbit-section').forEach(sec => {
+        const hasVisible = [...sec.querySelectorAll('.rel-bubble')].some(b => b.style.display !== 'none');
+        sec.classList.toggle('era-empty', !hasVisible);
+      });
+
+      const active = document.querySelector('.rel-bubble.active');
+      if (active && active.style.display === 'none') {
+        panel.hidden = true;
+        active.classList.remove('active');
+      }
+    }
+
+    document.getElementById('era-range').addEventListener('input', e => applyEra(+e.target.value));
+    applyEra(0, true);
   })();
   </script>
 
   <script src="../js/data.js"></script>
   <script src="../js/inline-links.js"></script>
+  <script>
+  (function () {
+    document.querySelectorAll('.char-battle-card[data-battle]').forEach(card => {
+      const b = BATTLES.find(x => x.id === card.dataset.battle);
+      if (!b) return;
+      const role = card.dataset.role || '';
+      const flavor = card.dataset.flavor || b.desc;
+      card.innerHTML = `
+        <div class="char-battle-top">
+          <span class="char-battle-year">${b.yearLabel} · ${b.era}</span>
+          <span class="char-battle-result ${b.result}">${b.resultLabel || b.result}</span>
+        </div>
+        <div class="char-battle-name">${b.zh}</div>
+        <div class="char-battle-en">${b.en}</div>
+        ${role ? `<span class="char-battle-role">${role}</span>` : ''}
+        <p class="char-battle-flavor">${flavor}</p>
+        ${b.detailHref ? `<a class="char-battle-link" href="../../${b.detailHref}">Ver batalla →</a>` : ''}
+      `;
+    });
+  })();
+  </script>
 </body>
 </html>

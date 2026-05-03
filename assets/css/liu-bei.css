@@ -72,3 +72,63 @@ a{text-decoration:none}
 .rel-group-body{padding:16px 18px 18px;border-top:1px solid rgba(255,255,255,.06)}
 @media(max-width:900px){#hdr{flex-direction:column;align-items:flex-start} .hero{grid-template-columns:1fr} .rel-grid{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}}
 @media(max-width:640px){.wrap{padding:22px 16px 48px} .wrap-pager{padding:22px 16px} .hbtns{width:100%;justify-content:flex-start} .hb{width:100%;text-align:center} .rel-grid{grid-template-columns:1fr}}
+/* ── Pager padding ── */
+.wrap-page{padding:30px 18px 60px}
+/* ── Hub central ── */
+.rel-hub{display:flex;flex-direction:column;align-items:center;gap:12px;margin-bottom:36px;padding-top:8px}
+.rel-hub-bubble{width:170px;height:170px;border-radius:50%;overflow:hidden;border:3px solid var(--gold);box-shadow:0 0 0 8px rgba(217,183,106,.12),0 0 40px rgba(217,183,106,.32);flex-shrink:0}
+.rel-hub-bubble img{width:100%;height:100%;object-fit:cover;object-position:top center;display:block;transform:scale(1.7);transform-origin:top center}
+.rel-hub-label{font-family:'Cinzel Decorative',serif;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--gold);opacity:.75}
+/* ── Panel de información ── */
+.rel-panel{margin:0 0 36px;padding:20px 22px;background:rgba(73,128,74,.06);border:1px solid rgba(217,183,106,.2);border-radius:14px;position:relative;animation:panelIn .28s ease}
+@keyframes panelIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+.rel-panel-close{position:absolute;top:10px;right:12px;background:none;border:none;color:var(--muted);font-size:15px;cursor:pointer;opacity:.55;transition:opacity .15s;padding:4px 6px;line-height:1}
+.rel-panel-close:hover{opacity:1}
+.rel-panel-badge{display:inline-flex;font-family:'Cinzel Decorative',serif;font-size:10px;letter-spacing:.18em;text-transform:uppercase;padding:3px 9px;border-radius:2px;border:1px solid;margin-bottom:8px}
+.rel-panel-name{font-family:'Noto Serif SC',serif;font-size:20px;color:var(--text);margin-bottom:8px}
+.rel-panel-desc{font-family:'IM Fell English',serif;font-size:17px;line-height:1.8;color:var(--muted);margin:0}
+/* ── Secciones y burbujas ── */
+.rel-orbit-section{margin-bottom:32px}
+.rel-orbit-label{font-family:'Cinzel Decorative',serif;font-size:13px;letter-spacing:.22em;text-transform:uppercase;color:var(--gold);opacity:.85;margin:0 0 20px;padding-bottom:12px;border-bottom:1px solid rgba(217,183,106,.14);font-weight:700;text-align:center}
+.rel-bubbles{display:flex;flex-wrap:wrap;gap:24px 28px;align-items:flex-start;justify-content:center}
+.rel-bubble{display:flex;flex-direction:column;align-items:center;gap:10px;cursor:pointer;user-select:none}
+.rel-bubble-img{border-radius:50%;overflow:hidden;border:2px solid rgba(217,183,106,.22);transition:transform .22s ease,border-color .22s,box-shadow .22s;flex-shrink:0}
+.rel-bubble-img img{display:block;width:100%;height:100%;object-fit:cover;object-position:top center;transform:scale(1.8);transform-origin:top center}
+.rel-bubble:hover .rel-bubble-img{transform:scale(1.08);border-color:var(--gold);box-shadow:0 0 0 4px rgba(217,183,106,.16),0 0 18px rgba(217,183,106,.2)}
+.rel-bubble.active .rel-bubble-img{transform:scale(1.12);border-color:var(--gold);box-shadow:0 0 0 5px rgba(217,183,106,.26),0 0 26px rgba(217,183,106,.3)}
+.rel-bubble-name{font-family:'Noto Serif SC',serif;font-size:14px;color:var(--muted);text-align:center;transition:color .22s;max-width:110px;line-height:1.3}
+.rel-bubble:hover .rel-bubble-name,.rel-bubble.active .rel-bubble-name{color:var(--text)}
+.rel-bubbles--lg .rel-bubble-img{width:155px;height:155px}
+.rel-bubbles--lg .rel-bubble-name{font-size:15px;max-width:150px}
+.rel-bubbles--md .rel-bubble-img{width:115px;height:115px}
+.rel-bubble-img--placeholder{background:rgba(217,183,106,.07);display:flex;align-items:center;justify-content:center}
+.rel-bubble-img--placeholder span{font-family:'Cinzel Decorative',serif;font-size:15px;color:var(--gold);opacity:.45}
+/* ── Era Slider ── */
+.era-slider-wrap{margin-bottom:32px;padding:20px 22px 16px;background:rgba(73,128,74,.05);border:1px solid rgba(217,183,106,.14);border-radius:14px}
+.era-slider-header{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:14px}
+.era-slider-name{font-family:'Noto Serif SC',serif;font-size:22px;color:var(--text)}
+.era-slider-years{font-family:'Cinzel Decorative',serif;font-size:12px;letter-spacing:.18em;color:var(--gold);opacity:.75}
+.era-range{width:100%;accent-color:var(--gold);cursor:pointer;margin-bottom:10px}
+.era-tick-labels{display:flex;justify-content:space-between;font-family:'Cinzel Decorative',serif;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);opacity:.55}
+/* ── Animación burbujas ── */
+@keyframes bubbleIn{from{opacity:0;transform:scale(0.75)}to{opacity:1;transform:scale(1)}}
+.rel-bubble.bubble-entering{animation:bubbleIn .32s ease forwards}
+.rel-bubble.era-hidden{pointer-events:none}
+/* ── Tab Batallas (personaje) ── */
+.char-battles{display:flex;flex-direction:column;gap:16px}
+.char-battle-card{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:20px 22px;position:relative;overflow:hidden;transition:border-color .22s}
+.char-battle-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:.3}
+.char-battle-card:hover{border-color:rgba(217,183,106,.3)}
+.char-battle-top{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:10px}
+.char-battle-year{font-family:'Cinzel Decorative',serif;font-size:11px;letter-spacing:.18em;color:var(--gold);opacity:.8}
+.char-battle-result{display:inline-flex;font-family:'Cinzel Decorative',serif;font-size:9px;letter-spacing:.15em;text-transform:uppercase;padding:3px 9px;border-radius:2px;border:1px solid}
+.char-battle-result.victoria{color:#7dba80;border-color:#7dba80;background:rgba(125,186,128,.08)}
+.char-battle-result.derrota{color:#d47070;border-color:#d47070;background:rgba(212,112,112,.08)}
+.char-battle-result.pirrica{color:var(--gold);border-color:var(--gold);background:rgba(217,183,106,.07)}
+.char-battle-name{font-family:'Noto Serif SC',serif;font-size:22px;color:var(--text);margin:0 0 4px}
+.char-battle-en{font-family:'Cinzel Decorative',serif;font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);opacity:.6;margin-bottom:12px}
+.char-battle-role{display:inline-flex;font-family:'Cinzel Decorative',serif;font-size:9px;letter-spacing:.16em;text-transform:uppercase;padding:3px 9px;border-radius:2px;border:1px solid rgba(217,183,106,.25);color:var(--gold);background:rgba(217,183,106,.06);margin-bottom:12px}
+.char-battle-flavor{font-family:'IM Fell English',serif;font-size:17px;line-height:1.85;color:var(--muted);margin:0 0 14px}
+.char-battle-link{font-family:'Cinzel Decorative',serif;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold);opacity:.75;display:inline-flex;align-items:center;gap:5px}
+.char-battle-link:hover{opacity:1}
+.rel-orbit-section.era-empty{display:none}

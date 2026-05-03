@@ -167,9 +167,9 @@ Para `[hero-cols]`:
 ### Reglas de contenido
 
 - Escribe **en español literario**, fluido y evocador, al estilo de las fichas de Cao Cao y Sun Jian.
-- Para cada era en el array `eras` del personaje, crea una `<section class="era-block">`. Alterna sin clase / con clase `alt` empezando **con `alt`** (la primera era tras "Relaciones Clave" va con `alt`).
+- Para cada era en el array `eras` del personaje, crea una `<section class="era-block">`. Alterna sin clase / con clase `alt` empezando **con `alt`** (la primera era lleva `alt` y el `id="eras"`).
 - Cada sección lleva exactamente **2 `<article class="era-card">`**, cada uno con un `<h3>` y un `<p>` (2-3 frases).
-- La sección "Relaciones Clave" lleva 2-4 cards, una por relación importante del personaje. Usa los nombres exactos de los personajes para que `inline-links.js` los enlace automáticamente.
+- **No crear sección "Relaciones Clave"** — eso lo gestiona la skill `/relaciones` de forma separada y más sofisticada.
 - El contenido se basa en el `bio` del personaje más el conocimiento del Romance de los Tres Reinos. Sé preciso históricamente.
 - Si `zi` está vacío, el `<h1 class="title">` muestra solo `[en] · [zh]`.
 - Si `zi` no está vacío, muestra `[en] · [zi]`.
@@ -201,7 +201,6 @@ Para `[hero-cols]`:
 
 <nav class="sec-nav">
   <a href="#presentacion" class="sec-link active">Presentación</a>
-  <a href="#relaciones" class="sec-link">Relaciones Clave</a>
   <a href="#eras" class="sec-link">Eras</a>
   <a href="#legado" class="sec-link soon">Legado · Próximamente</a>
 </nav>
@@ -227,20 +226,6 @@ Para `[hero-cols]`:
 
   <section class="intro">
     <p>[Párrafo general sobre el arco del personaje en la novela, 2-3 frases que sitúen al lector.]</p>
-  </section>
-
-  <section class="era-block" id="relaciones">
-    <h2 class="sec-title">Relaciones Clave</h2>
-    <div class="era-grid">
-      <article class="era-card">
-        <h3>[Nombre del personaje relacionado]</h3>
-        <p>[2-3 frases sobre esta relación y su importancia]</p>
-      </article>
-      <article class="era-card">
-        <h3>[Nombre del personaje relacionado]</h3>
-        <p>[2-3 frases sobre esta relación y su importancia]</p>
-      </article>
-    </div>
   </section>
 
   <!-- Primera era: siempre con "alt" y con id="eras" -->
