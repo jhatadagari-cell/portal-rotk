@@ -1202,28 +1202,6 @@ const CHARS = [
   },
 
   {
-    zh: "吕蒙",
-    en: "Lü Meng",
-    zi: "Ziming 子明",
-    ico: "🗺️",
-    fc: "#bf2020",
-    fcbg: "rgba(191,32,32,.12)",
-    rank: 2,
-    ttl: "El Traidor de Jingzhou",
-    bio: 'Comenzó como analfabeto hasta que Sun Quan lo instó a estudiar. "El Lü Meng de hace tres días ya no existe." Planeó la traición a Guan Yu y arrebató Jingzhou a Shu en 219 d.C. Guan Yu fue capturado y ejecutado. Lü Meng murió misteriosamente semanas después. ¿Castigo del cielo?',
-    tags: ["Wu 吳", "Jingzhou", "178–220 d.C."],
-    fac: "Wu 吳",
-    stats: [
-      ["Facción", "Wu 吳"],
-      ["Logro", "Toma de Jingzhou 219 d.C."],
-      ["Período", "178–220 d.C."],
-      ["Cita", '"Tres días antes era otro"'],
-    ],
-    eras: ["chibi", "tres-reinos"],
-    eraRank: { "tres-reinos": 1, chibi: 2 },
-  },
-
-  {
     zh: "程普",
     en: "Cheng Pu",
     zi: "Demou 德謀",
