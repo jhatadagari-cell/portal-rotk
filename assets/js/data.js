@@ -513,6 +513,29 @@ const CHARS = [
   },
 
   {
+    zh: "吕蒙",
+    en: "Lü Meng",
+    zi: "Ziming 子明",
+    ico: "⚔️",
+    fc: "#bf2020",
+    fcbg: "rgba(191,32,32,.12)",
+    rank: 2,
+    ttl: "El General Transformado",
+    bio: "De analfabeto a estratega bajo la tutela de Sun Quan. Su transformación fue su gloria y su maldición. Capturó Jingzhou y ejecutó a Guan Yu en 219 d.C., una traición que lo persiguió hasta su muerte misteriosa semanas después.",
+    tags: ["Wu 吳", "Jingzhou", "?–220 d.C."],
+    fac: "Wu 吳",
+    stats: [
+      ["Facción", "Wu 吳"],
+      ["Logro", "Captura de Jingzhou"],
+      ["Período", "?–220 d.C."],
+      ["Muerte", "Misterio sobrenatural"],
+    ],
+    detailHref: "assets/Periods/lu-meng.html",
+    eras: ["chibi", "tres-reinos"],
+    eraRank: { chibi: 2, "tres-reinos": 1 },
+  },
+
+  {
     zh: "马超",
     en: "Ma Chao",
     zi: "Mengqi 孟起",
