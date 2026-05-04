@@ -926,6 +926,7 @@ const CHARS = [
       ["Período", "~140–208 d.C."],
       ["Muerte", "Ejecutado por Cao Cao"],
     ],
+    detailHref: "assets/Periods/hua-tuo.html",
     eras: ["guerras-senores", "chibi"],
     eraRank: { "guerras-senores": 2, chibi: 2 },
   },
