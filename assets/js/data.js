@@ -2344,6 +2344,29 @@ const CHARS = [
     eras: ["chibi", "tres-reinos", "guerras-ocaso"],
     eraRank: { "tres-reinos": 2, "guerras-ocaso": 1 },
   },
+
+  {
+    zh: "甄宓",
+    en: "Zhen Ji",
+    zi: "Lingfu 令妃",
+    ico: "👑",
+    fc: "#1e5abf",
+    fcbg: "rgba(30,90,191,.12)",
+    rank: 2,
+    ttl: "La Emperatriz Trágica",
+    bio: "Célebre por su belleza incomparable y su inteligencia, fue emperatriz de Wei como esposa de Cao Pi. Nacida en el seno de una familia noble de Ye, su vida transcurrió en los palacios del poder durante la era más convulsa. Su destino, marcado por intriga política, la haría morir joven, víctima de la crueldad cortesana.",
+    tags: ["Wei 魏", "Emperatriz", "?–221 d.C."],
+    fac: "Wei 魏",
+    stats: [
+      ["Facción", "Wei 魏"],
+      ["Rango", "Emperatriz"],
+      ["Esposo", "Cao Pi 曹丕"],
+      ["Período", "?–221 d.C."],
+    ],
+    detailHref: "assets/Periods/zhen-ji.html",
+    eras: ["tres-reinos"],
+    eraRank: { "tres-reinos": 2 },
+  },
 ];
 
 const PERIODS = [
