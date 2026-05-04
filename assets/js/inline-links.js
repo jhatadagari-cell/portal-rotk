@@ -339,18 +339,18 @@ function getSelfName() {
 
 function buildKeywordMap(selfName) {
   const kmap = new Map();
-  const selfWords = selfName ? selfName.split(/\s+/) : [];
 
+  // Añadir todos los personajes menos el de la página actual
   CHARS.forEach((c, i) => {
-    if (c.en === selfName) return;
-    if (!kmap.has(c.en)) {
+    if (c.en !== selfName) {
       kmap.set(c.en, { type: "char", idx: i, fc: c.fc });
     }
   });
 
+  // Añadir todas las facciones
   FACTION_DATA.forEach((f) => {
     f.keywords.forEach((kw) => {
-      if (selfWords.includes(kw)) return;
+      if (kw === selfName) return;
       kmap.set(kw, { type: "faction", data: f, fc: f.fc });
     });
   });
@@ -459,6 +459,10 @@ function processTextNodes(kmap, sortedKeywords) {
         const parent = node.parentElement;
         if (!parent) return NodeFilter.FILTER_REJECT;
         if (parent.classList.contains("ilink")) return NodeFilter.FILTER_REJECT;
+        // Excluir h1 y blockquote.hero-quote
+        if (parent.tagName === "H1") return NodeFilter.FILTER_REJECT;
+        if (parent.closest("h1")) return NodeFilter.FILTER_REJECT;
+        if (parent.closest("blockquote.hero-quote")) return NodeFilter.FILTER_REJECT;
         return NodeFilter.FILTER_ACCEPT;
       },
     });
@@ -470,13 +474,11 @@ function processTextNodes(kmap, sortedKeywords) {
     textNodes.forEach((textNode) => {
       const text = textNode.nodeValue;
       pattern.lastIndex = 0;
-      if (!pattern.test(text)) return;
 
       const frag = document.createDocumentFragment();
       let lastIdx = 0;
       let match;
 
-      pattern.lastIndex = 0;
       while ((match = pattern.exec(text)) !== null) {
         const keyword = match[0];
         const startIdx = match.index;
@@ -488,6 +490,8 @@ function processTextNodes(kmap, sortedKeywords) {
         }
 
         const entry = kmap.get(keyword);
+        if (!entry) return;  // Saltar si no está en el mapa
+
         const span = document.createElement("span");
         span.className = "ilink";
         span.textContent = keyword;

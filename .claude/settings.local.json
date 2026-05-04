@@ -22,7 +22,11 @@
       "Bash(cp \"C:/Users/usuario/Downloads/Dian Wei.png\" \"C:/Users/usuario/Desktop/Portal ROTK/assets/img/Dian Wei/\")",
       "Bash(node -e ' *)",
       "Read(//tmp/**)",
-      "Bash(python3 *)"
+      "Bash(python3 *)",
+      "Bash(Copy-Item *)",
+      "PowerShell(New-Item *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)"
     ]
   },
   "enabledPlugins": {

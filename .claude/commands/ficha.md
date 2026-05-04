@@ -12,9 +12,17 @@ Si `$ARGUMENTS` está vacío, lee `assets/js/data.js`, encuentra todos los perso
 
 ---
 
-## Paso 1 — Localizar el personaje en data.js
+## Paso 1 — Localizar y Fact-check el personaje
 
 Busca en `assets/js/data.js` la entrada cuyo campo `en` coincida con `$ARGUMENTS` (búsqueda insensible a mayúsculas si hace falta). Si no hay coincidencia exacta en `en`, busca también en `zi`.
+
+**IMPORTANT — FACT-CHECK OBLIGATORIO:**
+- Verifica el `bio` contra el Romance de los Tres Reinos
+- Confirma que el `ttl` (título) es preciso y no dramatizado excesivamente
+- Valida las `eras` contra los eventos históricos del personaje
+- Si el `bio` contiene información dudosa, confusa, o potencialmente incorrecta, ADVIERTE al usuario antes de continuar
+- No inventes datos ni confundas personajes similares
+- Si hay datos incompletos o incorrectos, sugiere correcciones
 
 Extrae y anota estos campos:
 - `zh`, `en`, `zi`, `ttl`, `bio`, `fac`, `fc`, `fcbg`, `tags`, `stats`, `eras`
@@ -58,10 +66,11 @@ Si el personaje fue encontrado por `zi` y el directorio de imagen usa ese nombre
 
 ## Paso 3 — Verificar si existe imagen
 
-Comprueba si existe el archivo `assets/img/[en]/[en].png`.
-
-- **Con imagen:** el `<section class="hero">` usará `grid-template-columns:minmax(280px,1.1fr) 1fr` e incluirá el bloque `<div class="hero-media">`.
-- **Sin imagen:** el `<section class="hero">` usará `grid-template-columns:1fr` y no incluirá `hero-media`.
+1. Comprueba si existe el archivo `assets/img/[en]/[en].png`.
+2. Si no existe en el proyecto, busca en `C:\Users\usuario\Downloads` archivos con el nombre del personaje (cualquier imagen).
+3. Si existe imagen: el `<section class="hero">` usará `grid-template-columns:minmax(280px,1.1fr) 1fr` e incluirá el bloque `<div class="hero-media">`.
+4. Si no existe imagen en ningún lugar: usa un placeholder `<div class="hero-media-placeholder">` con el icono del personaje.
+5. Sin imagen: el `<section class="hero">` usa `grid-template-columns:1fr`.
 
 ---
 
@@ -87,6 +96,27 @@ Usa esta tabla. Para `[gold24]`, `[gold12]`, `[gold45]` extrae los 3 bytes hex d
 - `darkbg` = body bg pero ~30% más oscuro (ej. `#05080d` → `#04060b`)
 
 Para `[accent08]` y `[accent18]`: extrae los bytes RGB del `--accent` y usa `rgba(R,G,B,.08)` y `rgba(R,G,B,.18)`.
+
+---
+
+## Paso 4.5 — CSS para navegación de pestañas
+
+Añade al final del CSS (antes de los media queries):
+
+```css
+.wrap-pager{overflow:hidden}
+.wrap-pages{display:flex;transition:transform 0.35s ease;width:300%}
+.wrap-page{flex:0 0 calc(100% / 3)}
+.section-divider{display:flex;align-items:center;gap:12px;margin:24px 0;opacity:0.5}
+.section-divider span{flex:1;height:1px;background:rgba(255,255,255,.08)}
+.divider-ornament{font-size:16px;flex:0 0 auto}
+.intro-eyebrow{}
+.timeline{margin-bottom:42px}
+.tl-item{margin-bottom:34px}
+.tl-header{margin-bottom:18px;padding-bottom:12px;border-bottom:1px solid rgba(255,255,255,.08)}
+.tl-year{display:block;font-size:14px;color:var(--gold);margin-bottom:6px}
+.tl-name{font-family:'Noto Serif SC',serif;font-size:26px;color:var(--text);margin:0;padding:0}
+```
 
 ---
 
@@ -166,16 +196,19 @@ Para `[hero-cols]`:
 
 ### Reglas de contenido
 
-- Escribe **en español literario**, fluido y evocador, al estilo de las fichas de Cao Cao y Sun Jian.
+- Escribe **en español literario**, fluido y evocador, al estilo de las fichas de Cao Cao.
+- El contenido debe ser **directo y factual**, basado en el Romance de los Tres Reinos, sin excesivas filigranas.
+- Sí se puede añadir algo de romance a ciertos momentos si lo requieren (especialmente en blockquote hero-quote).
 - Para cada era en el array `eras` del personaje, crea una `<section class="era-block">`. Alterna sin clase / con clase `alt` empezando **con `alt`** (la primera era lleva `alt` y el `id="eras"`).
 - Cada sección lleva exactamente **2 `<article class="era-card">`**, cada uno con un `<h3>` y un `<p>` (2-3 frases).
-- **No crear sección "Relaciones Clave"** — eso lo gestiona la skill `/relaciones` de forma separada y más sofisticada.
 - El contenido se basa en el `bio` del personaje más el conocimiento del Romance de los Tres Reinos. Sé preciso históricamente.
 - Si `zi` está vacío, el `<h1 class="title">` muestra solo `[en] · [zh]`.
 - Si `zi` no está vacío, muestra `[en] · [zi]`.
-- La `hero-quote` debe ser una cita real o característica. Si no hay cita famosa, escribe una frase narrativa entre «guillemets».
+- La `hero-quote` debe ser una cita real o característica. Si no hay cita famosa, escribe una frase narrativa breve.
 
 ### Plantilla HTML
+
+Estructura con tres pestañas como Cao Cao (El Personaje, Relaciones Clave placeholder, Batallas placeholder):
 
 ```html
 <!DOCTYPE html>
@@ -200,69 +233,114 @@ Para `[hero-cols]`:
 </header>
 
 <nav class="sec-nav">
-  <a href="#presentacion" class="sec-link active">Presentación</a>
-  <a href="#eras" class="sec-link">Eras</a>
-  <a href="#legado" class="sec-link soon">Legado · Próximamente</a>
+  <a href="#" data-page="el-personaje" class="sec-link active">El Personaje</a>
+  <a href="#" data-page="relaciones" class="sec-link">Relaciones Clave</a>
+  <a href="#" data-page="batallas" class="sec-link">Batallas</a>
 </nav>
 
-<main class="wrap">
-  <section class="hero" id="presentacion">
-    <!-- Incluir solo si hay imagen -->
-    <div class="hero-media">
-      <img src="../img/[en]/[en].png" alt="[en]" />
-    </div>
-    <!-- /imagen -->
-    <div class="hero-copy">
-      <div class="eyebrow">Ficha completa</div>
-      <h1 class="title">[en] · [zi o zh]</h1>
-      <p class="subtitle">[frase corta y evocadora, 1-2 líneas]</p>
-      <blockquote class="hero-quote">
-        <span class="quote-mark">"</span>
-        <p class="lede">[cita o frase narrativa característica]</p>
-      </blockquote>
-      <p class="lede">[párrafo introductorio evocador, 2-3 frases]</p>
-    </div>
-  </section>
+<main class="wrap wrap-pager">
+  <div class="wrap-pages">
+    <!-- PÁGINA 1: El Personaje -->
+    <div class="wrap-page" data-page="el-personaje">
+      <section class="hero" id="el-personaje">
+        <!-- Incluir solo si hay imagen -->
+        <div class="hero-media">
+          <img src="../img/[en]/[en].png" alt="[en]" />
+        </div>
+        <!-- O si no hay imagen, usar placeholder -->
+        <div class="hero-media-placeholder">[ico]</div>
+        <!-- /imagen -->
+        <div class="hero-copy">
+          <div class="eyebrow">Ficha completa</div>
+          <h1 class="title">[en] · [zi o zh]</h1>
+          <p class="subtitle">[frase corta y evocadora, 1-2 líneas]</p>
+          <blockquote class="hero-quote">
+            <span class="quote-mark">"</span>
+            <p class="lede">[cita o frase narrativa característica]</p>
+          </blockquote>
+          <p class="lede">[párrafo introductorio evocador, 2-3 frases]</p>
+        </div>
+      </section>
 
-  <section class="intro">
-    <p>[Párrafo general sobre el arco del personaje en la novela, 2-3 frases que sitúen al lector.]</p>
-  </section>
+      <div class="section-divider">
+        <span></span>
+        <span class="divider-ornament">◆</span>
+        <span></span>
+      </div>
 
-  <!-- Primera era: siempre con "alt" y con id="eras" -->
-  <section class="era-block alt" id="eras">
-    <h2 class="sec-title">[nombre era en español]</h2>
-    <div class="era-grid">
-      <article class="era-card">
-        <h3>[Título del episodio]</h3>
-        <p>[2-3 frases sobre el personaje en esta era]</p>
-      </article>
-      <article class="era-card">
-        <h3>[Título del otro episodio]</h3>
-        <p>[2-3 frases sobre el personaje en esta era]</p>
-      </article>
+      <section class="intro">
+        <div class="intro-eyebrow"></div>
+        <p>[Párrafo general sobre el arco del personaje en la novela, 2-3 frases que sitúen al lector.]</p>
+      </section>
+
+      <!-- Primera era: siempre con "alt" y con id="eras" -->
+      <div class="timeline" id="eras">
+        <div class="tl-item">
+          <div class="tl-header">
+            <span class="tl-year">[año aprox]</span>
+            <h2 class="tl-name">[nombre era en español]</h2>
+          </div>
+          <div class="era-grid">
+            <article class="era-card">
+              <h3>[Título del episodio]</h3>
+              <p>[2-3 frases sobre el personaje en esta era]</p>
+            </article>
+            <article class="era-card">
+              <h3>[Título del otro episodio]</h3>
+              <p>[2-3 frases sobre el personaje en esta era]</p>
+            </article>
+          </div>
+        </div>
+        <!-- Más eras -->
+      </div>
+
+      <section class="epilogue" id="legado">
+        <h2>Epílogo</h2>
+        <p>[Párrafo final sobre el legado o la muerte del personaje. Cierre directo y factual.]</p>
+      </section>
     </div>
-  </section>
 
-  <!-- Eras siguientes: alternar sin alt / con alt -->
-  <section class="era-block">
-    <h2 class="sec-title">[nombre era en español]</h2>
-    <div class="era-grid">
-      <article class="era-card">
-        <h3>[Título del episodio]</h3>
-        <p>[2-3 frases sobre el personaje en esta era]</p>
-      </article>
-      <article class="era-card">
-        <h3>[Título del otro episodio]</h3>
-        <p>[2-3 frases sobre el personaje en esta era]</p>
-      </article>
+    <!-- PÁGINA 2: Relaciones Clave (placeholder vacío) -->
+    <div class="wrap-page" data-page="relaciones">
+      <div style="text-align:center;padding:60px 20px;color:var(--muted)">
+        <h2 style="font-family:'Noto Serif SC',serif;font-size:24px;margin-bottom:12px">Relaciones Clave</h2>
+        <p>Esta sección será completada próximamente con las relaciones más importantes de [en].</p>
+      </div>
     </div>
-  </section>
 
-  <section class="epilogue" id="legado">
-    <h2>Epílogo</h2>
-    <p>[Párrafo final sobre el legado o la muerte del personaje. Cierre literario.]</p>
-  </section>
+    <!-- PÁGINA 3: Batallas (placeholder vacío) -->
+    <div class="wrap-page" data-page="batallas">
+      <div style="text-align:center;padding:60px 20px;color:var(--muted)">
+        <h2 style="font-family:'Noto Serif SC',serif;font-size:24px;margin-bottom:12px">Batallas</h2>
+        <p>Esta sección será completada próximamente con los enfrentamientos principales de [en].</p>
+      </div>
+    </div>
+  </div>
 </main>
+
+<script>
+(function () {
+  const links = document.querySelectorAll(".sec-link[data-page]");
+  const pages = document.querySelectorAll(".wrap-page");
+  const slider = document.querySelector(".wrap-pages");
+
+  function goTo(pageId) {
+    const idx = [...pages].findIndex((p) => p.dataset.page === pageId);
+    if (idx < 0) return;
+    slider.style.transform = `translateX(-${idx * 100}%)`;
+    links.forEach((l) =>
+      l.classList.toggle("active", l.dataset.page === pageId),
+    );
+  }
+
+  links.forEach((link) => {
+    link.addEventListener("click", (e) => {
+      e.preventDefault();
+      goTo(link.dataset.page);
+    });
+  });
+})();
+</script>
 
   <script src="../js/data.js"></script>
   <script src="../js/inline-links.js"></script>
@@ -284,6 +362,8 @@ Edita solo la entrada del personaje. No toques ninguna otra línea.
 
 Informa de:
 1. Archivos creados: `assets/css/[slug].css` y `assets/Periods/[slug].html`
-2. Modificación en `assets/js/data.js`: campo `detailHref` añadido
-3. Si se incluyó imagen o no, y por qué
-4. Si quedan más personajes sin ficha, pregunta si continuar con el siguiente
+2. Modificación en `assets/js/data.js`: campo `detailHref` añadido (botón "Ver ficha completa" ahora habilitado en modal)
+3. Estructura: Ficha con tres pestañas (El Personaje completado, Relaciones Clave placeholder, Batallas placeholder)
+4. Si se incluyó imagen o cómo se resolvió (busca en Descargas, o usa placeholder)
+5. Contenido: Directo y factual, sin excesivas filigranas, pero con romance en momentos clave
+6. Si quedan más personajes sin ficha, pregunta si continuar con el siguiente

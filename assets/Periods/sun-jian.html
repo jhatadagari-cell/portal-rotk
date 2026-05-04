@@ -20,225 +20,266 @@
 </header>
 
 <nav class="sec-nav">
-  <a href="#presentacion" class="sec-link active">Presentación</a>
-  <a href="#relaciones" class="sec-link">Relaciones Clave</a>
-  <a href="#eras" class="sec-link">Eras</a>
-  <a href="#legado" class="sec-link soon">Legado · Próximamente</a>
+  <a href="#" data-page="el-personaje" class="sec-link active">El Personaje</a>
+  <a href="#" data-page="relaciones" class="sec-link">Relaciones Clave</a>
+  <a href="#" data-page="batallas" class="sec-link">Batallas</a>
 </nav>
 
-<main class="wrap">
-  <section class="hero" id="presentacion">
-    <div class="hero-media">
-      <img src="../img/Sun Jian/Sun Jian.png" alt="Sun Jian" />
-    </div>
-    <div class="hero-copy">
-      <div class="eyebrow">Ficha completa</div>
-      <h1 class="title">Sun Jian · Wentai 文臺</h1>
-      <p class="subtitle">El tigre del sur. Forjó su leyenda en el campo de batalla y encendió la chispa que haría nacer a Wu.</p>
-      <blockquote class="hero-quote">
-        <span class="quote-mark">“</span>
-        «Quien encuentra el sello imperial, halla la voz del cielo». El hombre que halló el símbolo del Han y lo llevó al sur.
-      </blockquote>
-      <p class="lede">Su presencia era una tormenta roja: áspera, rápida y decisiva. En el Romance, su nombre es el primer rugido del clan Sun y la promesa de un territorio reclamado por la espada.</p>
-    </div>
-  </section>
+<main class="wrap wrap-pager">
+  <div class="wrap-pages">
 
-  <section class="intro">
-    <p>Sun Jian no vivió para ver el reino que sus hijos construirían, pero su fuerza fue el cimiento. Esta ficha repasa los momentos en que el Tigre de Jiangdong se convirtió en el fundador espiritual de Wu.</p>
-  </section>
-
-  <!-- Relaciones Clave -->
-  <section id="relaciones">
-    <!-- Slider temporal -->
-    <div class="era-slider-wrap">
-      <div class="era-slider-header">
-        <span class="era-slider-name">Turbantes Amarillos</span>
-        <span class="era-slider-years">184 – 189 d.C.</span>
-      </div>
-      <input type="range" id="era-range" class="era-range" min="0" max="2" step="1" value="0" list="era-ticks" />
-      <datalist id="era-ticks">
-        <option value="0">Turbantes</option>
-        <option value="1">Dong Zhuo</option>
-        <option value="2">Guerras</option>
-      </datalist>
-      <div class="era-tick-labels">
-        <span>Turbantes</span>
-        <span>Dong Zhuo</span>
-        <span>Guerras</span>
-      </div>
-    </div>
-
-    <!-- Hub central -->
-    <div class="rel-hub">
-      <div class="rel-hub-bubble">
-        <img src="../img/Sun%20Jian/Sun%20Jian.png" alt="Sun Jian" />
-      </div>
-      <span class="rel-hub-label">Sun Jian · 孫堅</span>
-    </div>
-
-    <!-- Panel de información -->
-    <div class="rel-panel" id="rel-panel" hidden>
-      <button class="rel-panel-close" aria-label="Cerrar">✕</button>
-      <div class="rel-panel-badge"></div>
-      <div class="rel-panel-name"></div>
-      <p class="rel-panel-desc"></p>
-    </div>
-
-    <!-- Familia -->
-    <div class="rel-orbit-section">
-      <h3 class="rel-orbit-label">Familia</h3>
-      <div class="rel-bubbles rel-bubbles--lg">
-        <div class="rel-bubble" data-eras="turbantes dong-zhuo guerras-senores" data-badge="Esposa" data-badge-color="#c8a060" data-name="Lady Wu · 吳夫人" data-desc="La madre que parió al futuro reino. Tras la muerte de Sun Jian, fue ella quien sostuvo la fe en su visión y guió a Sun Ce en sus primeros años de conquista. Wu dependía de su determinación tanto como de la espada de su hijo.">
-          <div class="rel-bubble-img">
-            <img src="../img/Sun%20Jian/Sun%20Jian.png" alt="Lady Wu" />
-          </div>
-          <span class="rel-bubble-name">Lady Wu</span>
+    <!-- ═══════════════════════════════════════════════════════════════════════════ -->
+    <!-- PÁGINA 1: El Personaje -->
+    <!-- ═══════════════════════════════════════════════════════════════════════════ -->
+    <div class="wrap-page" data-page="el-personaje">
+      <section class="hero" id="presentacion">
+        <div class="hero-media">
+          <img src="../img/Sun%20Jian/Sun%20Jian.png" alt="Sun Jian" />
         </div>
-        <div class="rel-bubble" data-eras="turbantes dong-zhuo guerras-senores" data-badge="Hijo Mayor" data-badge-color="#d9b76a" data-name="Sun Ce · 孫策" data-desc="El pequeño conquistador que heredó la audacia de su padre. En cinco años completó lo que Sun Jian inició: la conquista de Jiangdong. Murió joven a los 26 años, dejando todo a Sun Quan. Sun Jian vio en él el futuro de Wu.">
-          <div class="rel-bubble-img">
-            <img src="../img/Sun%20Ce/Sun%20Ce.png" alt="Sun Ce" />
-          </div>
-          <span class="rel-bubble-name">Sun Ce</span>
+        <div class="hero-copy">
+          <div class="eyebrow">Ficha completa</div>
+          <h1 class="title">Sun Jian · Wentai 文臺</h1>
+          <p class="subtitle">El tigre del sur. Forjó su leyenda en el campo de batalla y encendió la chispa que haría nacer a Wu.</p>
+          <blockquote class="hero-quote">
+            <span class="quote-mark">"</span>
+            <p class="lede">«Quien encuentra el sello imperial, halla la voz del cielo». El hombre que halló el símbolo del Han y lo llevó al sur.</p>
+          </blockquote>
+          <p class="lede">Su presencia era una tormenta roja: áspera, rápida y decisiva. En el Romance, su nombre es el primer rugido del clan Sun y la promesa de un territorio reclamado por la espada.</p>
         </div>
-        <div class="rel-bubble" data-eras="dong-zhuo guerras-senores" data-badge="Hijo Menor" data-badge-color="#d9b76a" data-name="Sun Quan · 孫權" data-desc="El silencioso que se convertiría en el más longevo de los reyes. Sun Jian nunca pudo verlo crecer, pero su sangre y su herencia lo convertirían en el gobernador que mantendría a Wu unida durante 52 años. El legado de Sun Jian descansaba en sus hombros.">
-          <div class="rel-bubble-img">
-            <img src="../img/Sun%20Quan/Sun%20Quan.png" alt="Sun Quan" />
+      </section>
+
+      <div class="section-divider">
+        <span></span>
+        <span class="divider-ornament">◆</span>
+        <span></span>
+      </div>
+
+      <section class="intro">
+        <p>Sun Jian no vivió para ver el reino que sus hijos construirían, pero su fuerza fue el cimiento. Esta ficha repasa los momentos en que el Tigre de Jiangdong se convirtió en el fundador espiritual de Wu.</p>
+      </section>
+
+      <div class="timeline" id="eras">
+        <div class="tl-item">
+          <div class="tl-header">
+            <span class="tl-year">184 d.C.</span>
+            <h2 class="tl-name">Turbantes Amarillos</h2>
           </div>
-          <span class="rel-bubble-name">Sun Quan</span>
+          <div class="era-grid">
+            <article class="era-card">
+              <h3>El origen de un líder</h3>
+              <p>Surge como uno de los comandantes más sólidos entre los señores locales. Su nombre empieza a resonar cuando el norte se desangra y el sur aún busca su destino.</p>
+            </article>
+            <article class="era-card">
+              <h3>El primer gran golpe</h3>
+              <p>Enfrenta a los Turbantes Amarillos con valor crudo. Aunque el conflicto termina como preludio, su audacia lo marca como un general indispensable.</p>
+            </article>
+          </div>
         </div>
-        <div class="rel-bubble" data-eras="guerras-senores" data-badge="Hija" data-badge-color="#d9b76a" data-name="Sun Shangxiang · 孫尚香" data-desc="La princesa de Wu, nacida en el fuego de las guerras. Fue ofrecida en matrimonio político a Liu Bei, pero su corazón siempre perteneció a Wu. Su nombre resonaría en leyendas de amor y traición, siendo la hermana que los grandes generales de Shu nunca pudieron olvidar.">
-          <div class="rel-bubble-img">
-            <img src="../img/Sun%20Shangxiang/Sun%20Shangxiang.png" alt="Sun Shangxiang" />
+
+        <div class="tl-item">
+          <div class="tl-header">
+            <span class="tl-year">189 d.C.</span>
+            <h2 class="tl-name">Era Dong Zhuo</h2>
           </div>
-          <span class="rel-bubble-name">Sun Shangxiang</span>
+          <div class="era-grid">
+            <article class="era-card">
+              <h3>Victoria sobre el tirano</h3>
+              <p>Es el único señor en derrotar a Dong Zhuo en campo abierto. Ese triunfo vence el miedo y demuestra que el sur no es terreno de saqueo, sino de hierro.</p>
+            </article>
+            <article class="era-card">
+              <h3>Encuentro con el sello imperial</h3>
+              <p>En un pozo de Luoyang encuentra el Sello Imperial. El gesto une su destino al del linaje Han y le da a su causa una legitimidad que ninguna batalla podía comprar.</p>
+            </article>
+          </div>
+        </div>
+
+        <div class="tl-item">
+          <div class="tl-header">
+            <span class="tl-year">191 d.C.</span>
+            <h2 class="tl-name">Guerras de los Señores</h2>
+          </div>
+          <div class="era-grid">
+            <article class="era-card">
+              <h3>Campañas del sur</h3>
+              <p>Sus incursiones en Jiangdong y el dominio de las rutas fluviales establecen un poder regional firme, aún antes de que su hijo Sun Ce lo quiera expandir.</p>
+            </article>
+            <article class="era-card">
+              <h3>El liderazgo a través del ejemplo</h3>
+              <p>Su estilo no era de discursos, sino de acción. Los hombres de Wu lo siguen porque lo saben capaz de enfrentarse a cualquier ejército, incluso al de Dong Zhuo.</p>
+            </article>
+          </div>
         </div>
       </div>
+
+      <section class="epilogue" id="legado">
+        <h2>Epílogo</h2>
+        <p>Sun Jian es el fuego primigenio de Wu, breve pero intenso. Su valor y su descubrimiento del Sello Imperial le dieron al sur una historia propia, y su sombra se mantuvo firme en cada campaña de sus hijos.</p>
+      </section>
     </div>
 
-    <!-- Generales y Aliados -->
-    <div class="rel-orbit-section">
-      <h3 class="rel-orbit-label">Generales y Aliados</h3>
-      <div class="rel-bubbles rel-bubbles--md">
-        <div class="rel-bubble" data-eras="turbantes dong-zhuo guerras-senores" data-badge="General" data-badge-color="#a0d4a0" data-name="Huang Gai · 黃蓋" data-desc="El veterano de hierro que serviría a Wu con lealtad inquebrantable. En Chibi, años después de Sun Jian, se ofrecería voluntario para el plan del fuego. Su nombre quedó vinculado al triunfo de Sun Quan, pero comenzó bajo las órdenes de Sun Jian.">
-          <div class="rel-bubble-img">
-            <img src="../img/Huang%20Gai/Huang%20Gai.png" alt="Huang Gai" />
-          </div>
-          <span class="rel-bubble-name">Huang Gai</span>
+    <!-- ═══════════════════════════════════════════════════════════════════════════ -->
+    <!-- PÁGINA 2: Relaciones Clave -->
+    <!-- ═══════════════════════════════════════════════════════════════════════════ -->
+    <div class="wrap-page" data-page="relaciones">
+      <!-- Slider temporal -->
+      <div class="era-slider-wrap">
+        <div class="era-slider-header">
+          <span class="era-slider-name">Turbantes Amarillos</span>
+          <span class="era-slider-years">184 – 189 d.C.</span>
         </div>
-        <div class="rel-bubble" data-eras="turbantes dong-zhuo guerras-senores" data-badge="General" data-badge-color="#a0d4a0" data-name="Cheng Pu · 程普" data-desc="El general de confianza que fue el soporte táctico de Sun Jian. Su valor en batalla y su experiencia consolidaron el dominio del sur. Sirvió a Sun Jian, a Sun Ce y a Sun Quan: fue la continuidad que Wu necesitaba tras la muerte de su fundador.">
-          <div class="rel-bubble-img">
-            <img src="../img/Cheng%20Pu/Cheng%20Pu.png" alt="Cheng Pu" />
-          </div>
-          <span class="rel-bubble-name">Cheng Pu</span>
+        <input type="range" id="era-range" class="era-range" min="0" max="2" step="1" value="0" list="era-ticks" />
+        <datalist id="era-ticks">
+          <option value="0">Turbantes</option>
+          <option value="1">Dong Zhuo</option>
+          <option value="2">Guerras</option>
+        </datalist>
+        <div class="era-tick-labels">
+          <span>Turbantes</span>
+          <span>Dong Zhuo</span>
+          <span>Guerras</span>
         </div>
-        <div class="rel-bubble" data-eras="dong-zhuo guerras-senores" data-badge="Aliado Influyente" data-badge-color="#b9c2a5" data-name="Liu Biao · 劉表" data-desc="El señor de Jing Province que actuó como interlocutor entre Sun Jian y el poder central. Su territorio fue un corredor estratégico vital. Aunque nunca fueron rivales mortales, sus intereses no siempre coincidían en el complejo tablero político del sur.">
-          <div class="rel-bubble-img rel-bubble-img--placeholder">
-            <span>表</span>
+      </div>
+
+      <!-- Hub central -->
+      <div class="rel-hub">
+        <div class="rel-hub-bubble">
+          <img src="../img/Sun%20Jian/Sun%20Jian.png" alt="Sun Jian" />
+        </div>
+        <span class="rel-hub-label">Sun Jian · 孫堅</span>
+      </div>
+
+      <!-- Panel de información -->
+      <div class="rel-panel" id="rel-panel" hidden>
+        <button class="rel-panel-close" aria-label="Cerrar">✕</button>
+        <div class="rel-panel-badge"></div>
+        <div class="rel-panel-name"></div>
+        <p class="rel-panel-desc"></p>
+      </div>
+
+      <!-- Familia -->
+      <div class="rel-orbit-section">
+        <h3 class="rel-orbit-label">Familia</h3>
+        <div class="rel-bubbles rel-bubbles--lg">
+          <div class="rel-bubble" data-eras="turbantes dong-zhuo guerras-senores" data-badge="Esposa" data-badge-color="#c8a060" data-name="Lady Wu · 吳夫人" data-desc="La madre que parió al futuro reino. Tras la muerte de Sun Jian, fue ella quien sostuvo la fe en su visión y guió a Sun Ce en sus primeros años de conquista. Wu dependía de su determinación tanto como de la espada de su hijo.">
+            <div class="rel-bubble-img rel-bubble-img--placeholder">
+              <span>吳</span>
+            </div>
+            <span class="rel-bubble-name">Lady Wu</span>
           </div>
-          <span class="rel-bubble-name">Liu Biao</span>
+          <div class="rel-bubble" data-eras="turbantes dong-zhuo guerras-senores" data-badge="Hijo Mayor" data-badge-color="#d9b76a" data-name="Sun Ce · 孫策" data-desc="El pequeño conquistador que heredó la audacia de su padre. En cinco años completó lo que Sun Jian inició: la conquista de Jiangdong. Murió joven a los 26 años, dejando todo a Sun Quan. Sun Jian vio en él el futuro de Wu.">
+            <div class="rel-bubble-img">
+              <img src="../img/Sun%20Ce/Sun%20Ce.png" alt="Sun Ce" />
+            </div>
+            <span class="rel-bubble-name">Sun Ce</span>
+          </div>
+          <div class="rel-bubble" data-eras="dong-zhuo guerras-senores" data-badge="Hijo Menor" data-badge-color="#d9b76a" data-name="Sun Quan · 孫權" data-desc="El silencioso que se convertiría en el más longevo de los reyes. Sun Jian nunca pudo verlo crecer, pero su sangre y su herencia lo convertirían en el gobernador que mantendría a Wu unida durante 52 años. El legado de Sun Jian descansaba en sus hombros.">
+            <div class="rel-bubble-img">
+              <img src="../img/Sun%20Quan/Sun%20Quan.png" alt="Sun Quan" />
+            </div>
+            <span class="rel-bubble-name">Sun Quan</span>
+          </div>
+          <div class="rel-bubble" data-eras="guerras-senores" data-badge="Hija" data-badge-color="#d9b76a" data-name="Sun Shangxiang · 孫尚香" data-desc="La princesa de Wu, nacida en el fuego de las guerras. Fue ofrecida en matrimonio político a Liu Bei, pero su corazón siempre perteneció a Wu. Su nombre resonaría en leyendas de amor y traición, siendo la hermana que los grandes generales de Shu nunca pudieron olvidar.">
+            <div class="rel-bubble-img">
+              <img src="../img/Sun%20Shangxiang/Sun%20Shangxiang.png" alt="Sun Shangxiang" />
+            </div>
+            <span class="rel-bubble-name">Sun Shangxiang</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Generales y Aliados -->
+      <div class="rel-orbit-section">
+        <h3 class="rel-orbit-label">Generales y Aliados</h3>
+        <div class="rel-bubbles rel-bubbles--md">
+          <div class="rel-bubble" data-eras="turbantes dong-zhuo guerras-senores" data-badge="General" data-badge-color="#a0d4a0" data-name="Huang Gai · 黃蓋" data-desc="El veterano de hierro que serviría a Wu con lealtad inquebrantable. En Chibi, años después de Sun Jian, se ofrecería voluntario para el plan del fuego. Su nombre quedó vinculado al triunfo de Sun Quan, pero comenzó bajo las órdenes de Sun Jian.">
+            <div class="rel-bubble-img">
+              <img src="../img/Huang%20Gai/Huang%20Gai.png" alt="Huang Gai" />
+            </div>
+            <span class="rel-bubble-name">Huang Gai</span>
+          </div>
+          <div class="rel-bubble" data-eras="turbantes dong-zhuo guerras-senores" data-badge="General" data-badge-color="#a0d4a0" data-name="Cheng Pu · 程普" data-desc="El general de confianza que fue el soporte táctico de Sun Jian. Su valor en batalla y su experiencia consolidaron el dominio del sur. Sirvió a Sun Jian, a Sun Ce y a Sun Quan: fue la continuidad que Wu necesitaba tras la muerte de su fundador.">
+            <div class="rel-bubble-img">
+              <img src="../img/Cheng%20Pu/Cheng%20Pu.png" alt="Cheng Pu" />
+            </div>
+            <span class="rel-bubble-name">Cheng Pu</span>
+          </div>
+          <div class="rel-bubble" data-eras="dong-zhuo guerras-senores" data-badge="Aliado Influyente" data-badge-color="#b9c2a5" data-name="Liu Biao · 劉表" data-desc="El señor de Jing Province que actuó como interlocutor entre Sun Jian y el poder central. Su territorio fue un corredor estratégico vital. Aunque nunca fueron rivales mortales, sus intereses no siempre coincidían en el complejo tablero político del sur.">
+            <div class="rel-bubble-img rel-bubble-img--placeholder">
+              <span>表</span>
+            </div>
+            <span class="rel-bubble-name">Liu Biao</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Rivales -->
+      <div class="rel-orbit-section">
+        <h3 class="rel-orbit-label">Rivales y Antagonistas</h3>
+        <div class="rel-bubbles rel-bubbles--md">
+          <div class="rel-bubble" data-eras="dong-zhuo guerras-senores" data-badge="Gran Tirano" data-badge-color="#bf2020" data-name="Dong Zhuo · 董卓" data-desc="El tirano que gobernaba el caos. Sun Jian fue el único señor que se atrevió a enfrentarlo en batalla abierta y vencerlo. Esa victoria hizo que Sun Jian fuera temido, pero también marcó el objetivo en su espalda. Años después, la venganza llegaría desde otras manos.">
+            <div class="rel-bubble-img">
+              <img src="../img/Dong%20Zhuo/Dong%20Zhuo.png" alt="Dong Zhuo" />
+            </div>
+            <span class="rel-bubble-name">Dong Zhuo</span>
+          </div>
+          <div class="rel-bubble" data-eras="guerras-senores" data-badge="Enemigo Mortal" data-badge-color="#bf2020" data-name="Huang Zu · 黃祖" data-desc="El señor que cobró la deuda con Sun Jian en emboscada. Su nombre será sinónimo de la traición que mató al Tigre de Jiangdong. La venganza de Sun Ce por la muerte de su padre fue uno de los actos más despiadados de su campaña de conquista.">
+            <div class="rel-bubble-img rel-bubble-img--placeholder">
+              <span>祖</span>
+            </div>
+            <span class="rel-bubble-name">Huang Zu</span>
+          </div>
+          <div class="rel-bubble" data-eras="guerras-senores" data-badge="Rival Ambicioso" data-badge-color="#8b6914" data-name="Yuan Shu · 袁術" data-desc="El señor del este cuya ambición lo hizo proclamarse Emperador sin legitimidad. Sus conflictos con Sun Jian por el dominio del sur fueron frecuentes y acalorados. Yuan Shu vería en Sun Jian a un rival que nunca pudo derrotar, y en sus hijos, una amenaza permanente.">
+            <div class="rel-bubble-img">
+              <img src="../img/Yuan%20Shu/Yuan%20Shu.png" alt="Yuan Shu" />
+            </div>
+            <span class="rel-bubble-name">Yuan Shu</span>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- Rivales -->
-    <div class="rel-orbit-section">
-      <h3 class="rel-orbit-label">Rivales y Antagonistas</h3>
-      <div class="rel-bubbles rel-bubbles--md">
-        <div class="rel-bubble" data-eras="dong-zhuo guerras-senores" data-badge="Gran Tirano" data-badge-color="#bf2020" data-name="Dong Zhuo · 董卓" data-desc="El tirano que gobernaba el caos. Sun Jian fue el único señor que se atrevió a enfrentarlo en batalla abierta y vencerlo. Esa victoria hizo que Sun Jian fuera temido, pero también marcó el objetivo en su espalda. Años después, la venganza llegaría desde otras manos.">
-          <div class="rel-bubble-img">
-            <img src="../img/Dong%20Zhuo/Dong%20Zhuo.png" alt="Dong Zhuo" />
-          </div>
-          <span class="rel-bubble-name">Dong Zhuo</span>
+    <!-- ═══════════════════════════════════════════════════════════════════════════ -->
+    <!-- PÁGINA 3: Batallas -->
+    <!-- ═══════════════════════════════════════════════════════════════════════════ -->
+    <div class="wrap-page" data-page="batallas">
+      <div class="year-slider-wrap">
+        <div class="year-slider-header">
+          <span class="year-era-label" id="year-era-label">Turbantes Amarillos</span>
+          <span class="year-display" id="year-display">184 d.C.</span>
         </div>
-        <div class="rel-bubble" data-eras="guerras-senores" data-badge="Enemigo Mortal" data-badge-color="#bf2020" data-name="Huang Zu · 黃祖" data-desc="El señor que cobró la deuda con Sun Jian en emboscada. Su nombre será sinónimo de la traición que mató al Tigre de Jiangdong. La venganza de Sun Ce por la muerte de su padre fue uno de los actos más despiadados de su campaña de conquista.">
-          <div class="rel-bubble-img rel-bubble-img--placeholder">
-            <span>祖</span>
-          </div>
-          <span class="rel-bubble-name">Huang Zu</span>
-        </div>
-        <div class="rel-bubble" data-eras="guerras-senores" data-badge="Rival Ambicioso" data-badge-color="#8b6914" data-name="Yuan Shu · 袁術" data-desc="El señor del este cuya ambición lo hizo proclamarse Emperador sin legitimidad. Sus conflictos con Sun Jian por el dominio del sur fueron frecuentes y acalorados. Yuan Shu vería en Sun Jian a un rival que nunca pudo derrotar, y en sus hijos, una amenaza permanente.">
-          <div class="rel-bubble-img">
-            <img src="../img/Yuan%20Shu/Yuan%20Shu.png" alt="Yuan Shu" />
-          </div>
-          <span class="rel-bubble-name">Yuan Shu</span>
+        <input type="range" id="year-range" class="era-range" min="184" max="191" step="1" value="184">
+        <div class="year-tick-strip" id="year-tick-strip"></div>
+        <div class="year-tick-labels">
+          <span>184</span><span>187</span><span>190</span><span>191</span>
         </div>
       </div>
+      <div class="char-battles" id="year-battles-list"></div>
     </div>
-  </section>
 
-  <section class="era-block">
-    <h2 class="sec-title">Turbantes Amarillos</h2>
-    <div class="era-grid">
-      <article class="era-card">
-        <h3>El origen de un líder</h3>
-        <p>Surge como uno de los comandantes más sólidos entre los señores locales. Su nombre empieza a resonar cuando el norte se desangra y el sur aún busca su destino.</p>
-      </article>
-      <article class="era-card">
-        <h3>El primer gran golpe</h3>
-        <p>Enfrenta a los Turbantes Amarillos con valor crudo. Aunque el conflicto termina como preludio, su audacia lo marca como un general indispensable.</p>
-      </article>
-    </div>
-  </section>
-
-  <section class="era-block alt" id="eras">
-    <h2 class="sec-title">Dong Zhuo</h2>
-    <div class="era-grid">
-      <article class="era-card">
-        <h3>Victoria sobre el tirano</h3>
-        <p>Es el único señor en derrotar a Dong Zhuo en campo abierto. Ese triunfo vence el miedo y demuestra que el sur no es terreno de saqueo, sino de hierro.</p>
-      </article>
-      <article class="era-card">
-        <h3>Encuentro con el sello imperial</h3>
-        <p>En un pozo de Luoyang encuentra el Sello Imperial. El gesto une su destino al del linaje Han y le da a su causa una legitimidad que ninguna batalla podía comprar.</p>
-      </article>
-    </div>
-  </section>
-
-  <section class="era-block">
-    <h2 class="sec-title">Guerras de los Señores</h2>
-    <div class="era-grid">
-      <article class="era-card">
-        <h3>Campañas del sur</h3>
-        <p>Sus incursiones en Jiangdong y el dominio de las rutas fluviales establecen un poder regional firme, aún antes de que su hijo Sun Ce lo quiera expandir.</p>
-      </article>
-      <article class="era-card">
-        <h3>El liderazgo a través del ejemplo</h3>
-        <p>Su estilo no era de discursos, sino de acción. Los hombres de Wu lo siguen porque lo saben capaz de enfrentarse a cualquier ejército, incluso al de Dong Zhuo.</p>
-      </article>
-    </div>
-  </section>
-
-  <section class="era-block alt">
-    <h2 class="sec-title">El legado de Wu</h2>
-    <div class="era-grid">
-      <article class="era-card">
-        <h3>La emboscada fatal</h3>
-        <p>Muere joven en una emboscada de Huang Zu. Su caída es un golpe temprano, pero no detiene la marea: su sangre y su estrategia ya habían prendido la llama de Wu.</p>
-      </article>
-      <article class="era-card">
-        <h3>Padre de un reino</h3>
-        <p>Aunque no llega a gobernar Wu, su nombre es el primer faro que guía a Sun Ce y Sun Quan. Él es el origen del clan que se convertirá en uno de los tres reinos.</p>
-      </article>
-    </div>
-  </section>
-
-  <section class="epilogue" id="legado">
-    <h2>Epílogo</h2>
-    <p>Sun Jian es el fuego primigenio de Wu, breve pero intenso. Su valor y su descubrimiento del Sello Imperial le dieron al sur una historia propia, y su sombra se mantuvo firme en cada campaña de sus hijos.</p>
-  </section>
+  </div>
+</main>
 
   <script>
     (function () {
-      const ERAS = [
-        { id: "turbantes", name: "Turbantes Amarillos", years: "184 – 189 d.C." },
-        { id: "dong-zhuo", name: "Era Dong Zhuo", years: "189 – 192 d.C." },
-        { id: "guerras-senores", name: "Guerras de los Señores", years: "192 – 200 d.C." },
-      ];
+      const links  = document.querySelectorAll('.sec-link[data-page]');
+      const pages  = document.querySelectorAll('.wrap-page');
+      const slider = document.querySelector('.wrap-pages');
 
-      const panel = document.getElementById("rel-panel");
-      const panelBadge = panel.querySelector(".rel-panel-badge");
-      const panelName = panel.querySelector(".rel-panel-name");
-      const panelDesc = panel.querySelector(".rel-panel-desc");
+      function goTo(pageId) {
+        const idx = [...pages].findIndex(p => p.dataset.page === pageId);
+        if (idx < 0) return;
+        slider.style.transform = `translateX(-${idx * 100}%)`;
+        links.forEach(l => l.classList.toggle('active', l.dataset.page === pageId));
+      }
+
+      links.forEach(link => {
+        link.addEventListener('click', e => { e.preventDefault(); goTo(link.dataset.page); });
+      });
+
+      const panel = document.getElementById('rel-panel');
+      const panelBadge = panel.querySelector('.rel-panel-badge');
+      const panelName = panel.querySelector('.rel-panel-name');
+      const panelDesc = panel.querySelector('.rel-panel-desc');
 
       function showPanel(bubble) {
         const { badge, badgeColor, name, desc } = bubble.dataset;
@@ -248,80 +289,155 @@
         panelName.textContent = name;
         panelDesc.textContent = desc;
         panel.hidden = false;
-        panel.style.animation = "none";
+        panel.style.animation = 'none';
         panel.offsetHeight;
-        panel.style.animation = "";
-        panel.scrollIntoView({ behavior: "smooth", block: "center" });
+        panel.style.animation = '';
+        panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
 
-      document.querySelectorAll(".rel-bubble").forEach((bubble) => {
-        bubble.addEventListener("click", () => {
-          const wasActive = bubble.classList.contains("active");
-          document.querySelectorAll(".rel-bubble").forEach((b) => b.classList.remove("active"));
+      document.querySelectorAll('.rel-bubble').forEach(bubble => {
+        bubble.addEventListener('click', () => {
+          const wasActive = bubble.classList.contains('active');
+          document.querySelectorAll('.rel-bubble').forEach(b => b.classList.remove('active'));
           if (wasActive) {
             panel.hidden = true;
           } else {
-            bubble.classList.add("active");
+            bubble.classList.add('active');
             showPanel(bubble);
           }
         });
       });
 
-      panel.querySelector(".rel-panel-close").addEventListener("click", () => {
+      panel.querySelector('.rel-panel-close').addEventListener('click', () => {
         panel.hidden = true;
-        document.querySelectorAll(".rel-bubble").forEach((b) => b.classList.remove("active"));
+        document.querySelectorAll('.rel-bubble').forEach(b => b.classList.remove('active'));
       });
 
+      const ERAS = [
+        { id: 'turbantes', name: 'Turbantes Amarillos', years: '184 – 189 d.C.' },
+        { id: 'dong-zhuo', name: 'Era Dong Zhuo', years: '189 – 191 d.C.' },
+        { id: 'guerras-senores', name: 'Guerras de los Señores', years: '191 – 200 d.C.' },
+      ];
+
       function toCamel(str) {
-        return str.split("-").map((s) => s[0].toUpperCase() + s.slice(1)).join("");
+        return str.split('-').map(s => s[0].toUpperCase() + s.slice(1)).join('');
       }
 
       function applyEra(idx, instant) {
         const era = ERAS[idx];
-        document.querySelector(".era-slider-name").textContent = era.name;
-        document.querySelector(".era-slider-years").textContent = era.years;
+        document.querySelector('.era-slider-name').textContent = era.name;
+        document.querySelector('.era-slider-years').textContent = era.years;
 
-        document.querySelectorAll(".rel-bubble").forEach((b) => {
-          const eras = (b.dataset.eras || "").split(" ");
+        document.querySelectorAll('.rel-bubble').forEach(b => {
+          const eras = (b.dataset.eras || '').split(' ');
           const visible = eras.includes(era.id);
           const key = toCamel(era.id);
-          if (b.dataset["badge" + key]) b.dataset.badge = b.dataset["badge" + key];
-          if (b.dataset["badgeColor" + key]) b.dataset.badgeColor = b.dataset["badgeColor" + key];
-          if (b.dataset["desc" + key]) b.dataset.desc = b.dataset["desc" + key];
+          if (b.dataset['badge' + key]) b.dataset.badge = b.dataset['badge' + key];
+          if (b.dataset['badgeColor' + key]) b.dataset.badgeColor = b.dataset['badgeColor' + key];
+          if (b.dataset['desc' + key]) b.dataset.desc = b.dataset['desc' + key];
 
           if (visible) {
-            if (b.style.display === "none") {
-              b.classList.remove("era-hidden");
-              b.style.display = "";
+            if (b.style.display === 'none') {
+              b.classList.remove('era-hidden');
+              b.style.display = '';
               b.offsetHeight;
               if (!instant) {
-                b.classList.add("bubble-entering");
-                b.addEventListener("animationend", () => b.classList.remove("bubble-entering"), { once: true });
+                b.classList.add('bubble-entering');
+                b.addEventListener('animationend', () => b.classList.remove('bubble-entering'), { once: true });
               }
             }
           } else {
-            b.classList.add("era-hidden");
-            b.style.display = "none";
+            b.classList.add('era-hidden');
+            b.style.display = 'none';
           }
         });
 
-        document.querySelectorAll(".rel-orbit-section").forEach((sec) => {
-          const hasVisible = [...sec.querySelectorAll(".rel-bubble")].some((b) => b.style.display !== "none");
-          sec.classList.toggle("era-empty", !hasVisible);
+        document.querySelectorAll('.rel-orbit-section').forEach(sec => {
+          const hasVisible = [...sec.querySelectorAll('.rel-bubble')].some(b => b.style.display !== 'none');
+          sec.classList.toggle('era-empty', !hasVisible);
         });
 
-        const active = document.querySelector(".rel-bubble.active");
-        if (active && active.style.display === "none") {
+        const active = document.querySelector('.rel-bubble.active');
+        if (active && active.style.display === 'none') {
           panel.hidden = true;
-          active.classList.remove("active");
+          active.classList.remove('active');
         }
       }
 
-      document.getElementById("era-range").addEventListener("input", (e) => applyEra(+e.target.value));
+      document.getElementById('era-range').addEventListener('input', e => applyEra(+e.target.value));
       applyEra(0, true);
     })();
+
+    (function () {
+      const ERAS_MAP = [
+        { from: 184, to: 189, label: 'Turbantes Amarillos' },
+        { from: 189, to: 191, label: 'Era Dong Zhuo' },
+        { from: 191, to: 200, label: 'Guerras de los Señores' },
+      ];
+
+      const SUN_BATTLES = [
+        { y1: 184, y2: 184, zh: '黃巾之亂', en: 'Levantamiento de los Turbantes', result: 'victoria', label: 'Victoria',
+          a: 'Fuerzas de Sun Jian', b: 'Turbantes Amarillos',
+          desc: 'Sun Jian se destaca como comandante militar durante la rebelión de los Turbantes Amarillos. Su valor y estrategia son reconocidos, marcando el inicio de su ascenso como figura militar prominente en el sur.' },
+        { y1: 190, y2: 190, zh: '汜水關戰役', en: 'Batalla de Si Shui Gate', result: 'victoria', label: 'Victoria',
+          a: 'Coalición de Señores', b: 'Fuerzas de Dong Zhuo',
+          desc: 'Sun Jian participa en la Gran Coalición contra Dong Zhuo. Aunque la coalición se disuelve pronto, Sun Jian se destaca por su valor y es el único señor que derrota a Dong Zhuo en batalla abierta, ganando fama y temor.' },
+        { y1: 190, y2: 190, zh: '洛陽玉璽', en: 'Encuentro con el Sello Imperial', result: 'victoria', label: 'Victoria',
+          a: 'Sun Jian', b: 'Búsqueda del Sello',
+          desc: 'En los escombros de Luoyang, Sun Jian descubre el Sello Imperial en un pozo. Este hallazgo le da una legitimidad sin precedentes y une su destino al del linaje Han. El sello se convierte en símbolo de su autoridad y el futuro de Wu.' },
+        { y1: 191, y2: 191, zh: '黃祖伏擊', en: 'Emboscada de Huang Zu', result: 'derrota', label: 'Derrota - Muerte',
+          a: 'Sun Jian', b: 'Huang Zu',
+          desc: 'En una emboscada tendida por Huang Zu, Sun Jian es asesinado. Su muerte marca el fin de una era de guerras victoriosas y deja el futuro de Wu en manos de su familia. Aunque muere joven, su legado perduraría a través de Sun Ce y Sun Quan.' },
+      ];
+
+      function getEra(year) {
+        const e = ERAS_MAP.find(e => year >= e.from && year < e.to);
+        return e ? e.label : 'Guerras de los Señores';
+      }
+
+      const yearRange  = document.getElementById('year-range');
+      const yearLabel  = document.getElementById('year-display');
+      const eraLabel   = document.getElementById('year-era-label');
+      const battleList = document.getElementById('year-battles-list');
+
+      function renderYear(year) {
+        yearLabel.textContent = year + ' d.C.';
+        eraLabel.textContent  = getEra(year);
+        const matches = SUN_BATTLES.filter(b => year >= b.y1 && year <= b.y2);
+        if (!matches.length) {
+          battleList.innerHTML = '<div class="year-battles-empty">Sin enfrentamientos registrados este año</div>';
+          return;
+        }
+        battleList.innerHTML = matches.map(b => `
+          <div class="char-battle-card">
+            <div class="char-battle-top">
+              <span class="char-battle-year">${b.y1 === b.y2 ? b.y1 : b.y1 + '–' + b.y2} d.C.</span>
+              <span class="char-battle-result ${b.result}">Resultado: ${b.label}</span>
+            </div>
+            <div class="char-battle-vs">
+              <span class="cbv-a">${b.a}</span>
+              <span class="cbv-sep">VS</span>
+              <span class="cbv-b">${b.b}</span>
+            </div>
+            <div class="char-battle-name">${b.zh}</div>
+            <div class="char-battle-en">${b.en}</div>
+            <p class="char-battle-flavor">${b.desc}</p>
+          </div>
+        `).join('');
+      }
+
+      const MAJOR_TICKS = [184, 187, 190, 191];
+      const tickStrip = document.getElementById('year-tick-strip');
+      for (let y = 184; y <= 191; y++) {
+        const t = document.createElement('span');
+        if (MAJOR_TICKS.includes(y)) t.className = 'ytick-major';
+        tickStrip.appendChild(t);
+      }
+
+      yearRange.addEventListener('input', e => renderYear(+e.target.value));
+      renderYear(184);
+    })();
   </script>
-</main>
 
   <script src="../js/data.js"></script>
   <script src="../js/inline-links.js"></script>

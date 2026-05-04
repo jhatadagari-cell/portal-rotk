@@ -136,7 +136,7 @@ function renderCharacters(filterEraId = null) {
     .filter(({ c }) => charMatchesFactions(c));
 
   const maxRank = filterEraId ? 2 : 1;
-  const shown = showAllChars ? pool : pool.filter(({ c }) => effectiveRank(c, filterEraId) <= maxRank);
+  const shown = showAllChars || filterText ? pool : pool.filter(({ c }) => effectiveRank(c, filterEraId) <= maxRank);
 
   if (!shown.length) {
     cgrid.innerHTML = `<div class="sec-dsc" style="max-width:none;text-align:left">No hay personajes destacados para esta era en la vista actual.</div>`;
