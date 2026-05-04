@@ -45,7 +45,7 @@ a{text-decoration:none}
 .wrap-page{flex:0 0 calc(100% / 3)}
 .section-divider{display:flex;align-items:center;gap:12px;margin:24px 0;opacity:0.5}
 .section-divider span{flex:1;height:1px;background:rgba(255,255,255,.08)}
-.divider-ornament{font-size:16px;flex:0 0 auto}
+.divider-ornament{font-size:9px;color:var(--gold);flex:0 0 auto}
 .intro-eyebrow{}
 .timeline{margin-bottom:42px}
 .tl-item{margin-bottom:34px}
