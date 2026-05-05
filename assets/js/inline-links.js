@@ -1,7 +1,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
 // Portal ROTK — Sistema de Inline Links Centralizado
 // Detecta keywords (nombres de personajes y facciones) en las fichas y las
-// hace clicables. Opens popup cards con bio, stats, link a ficha completa.
+// hace clicables. Opens popup cards con bio, stats, link a Ficha.
 // ═══════════════════════════════════════════════════════════════════════════
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -375,7 +375,7 @@ function buildCharData(c) {
     bio: c.bio,
     stats: c.stats,
     href,
-    btnLabel: `Ver ficha completa · ${c.en}`,
+    btnLabel: `Ver Ficha · ${c.en}`,
   };
 }
 

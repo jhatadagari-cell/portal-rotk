@@ -512,7 +512,7 @@ function buildKmSoon(fid) {
   return `<div class="km-soon">
     <div class="km-soon-zh">${kd.zh}</div>
     <div class="km-soon-title">${kd.en} · ${kd.zh}</div>
-    <p class="km-soon-sub">La ficha completa de este reino —incluyendo su mapa territorial interactivo y línea temporal año a año— está siendo preparada con el mismo nivel de detalle que Wei.</p>
+    <p class="km-soon-sub">La Ficha de este reino —incluyendo su mapa territorial interactivo y línea temporal año a año— está siendo preparada con el mismo nivel de detalle que Wei.</p>
     <div class="km-soon-badge">Próximamente</div>
   </div>`;
 }

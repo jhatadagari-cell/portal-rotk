@@ -414,7 +414,7 @@ function openChar(i) {
     <div class="cmod-badge" style="border-color:${c.fc};background:${c.fcbg};color:${c.fc}">${c.fac}</div>
     <div class="cmod-bio">${c.bio}</div>
     <div class="cmod-stats">${c.stats.map(s=>`<div class="cmod-stat"><div class="cmod-sl">${s[0]}</div><div class="cmod-sv">${s[1]}</div></div>`).join('')}</div>
-    ${c.detailHref ? `<a class="cmod-detail-btn" href="${c.detailHref}">Ver ficha completa · ${c.en}</a>` : `<button class="cmod-detail-btn" disabled>Ver ficha completa · Próximamente</button>`}
+    ${c.detailHref ? `<a class="cmod-detail-btn" href="${c.detailHref}">Ver Ficha · ${c.en}</a>` : `<button class="cmod-detail-btn" disabled>Ver Ficha · Próximamente</button>`}
   `;
   document.getElementById('cmod').classList.add('open');
 }

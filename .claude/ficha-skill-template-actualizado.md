@@ -10,7 +10,7 @@ Reemplaza el template HTML en el Paso 6 de tu skill `/ficha` con este:
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>[en] · Ficha Completa</title>
+<title>[en] · Ficha</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700;900&family=Cinzel+Decorative:wght@400;700&family=IM+Fell+English:ital@0;1&family=Noto+Sans+SC:wght@300;400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../css/[slug].css">
 </head>
@@ -41,7 +41,7 @@ Reemplaza el template HTML en el Paso 6 de tu skill `/ficha` con este:
     </div>
     <!-- /imagen -->
     <div class="hero-copy">
-      <div class="eyebrow">Ficha completa</div>
+      <div class="eyebrow">Ficha</div>
       <h1 class="title">[en] · [zi o zh]</h1>
       <p class="subtitle">[frase corta y evocadora, 1-2 líneas]</p>
       <blockquote class="hero-quote">

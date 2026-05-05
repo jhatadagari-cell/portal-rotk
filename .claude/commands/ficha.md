@@ -1,6 +1,6 @@
-# Skill: Ficha Completa de Personaje · Portal ROTK
+# Skill: Ficha de Personaje · Portal ROTK
 
-Crea la ficha completa de un personaje del Portal ROTK: HTML, CSS y actualización de data.js.
+Crea la Ficha de un personaje del Portal ROTK: HTML, CSS y actualización de data.js.
 
 **Personaje solicitado:** $ARGUMENTS
 
@@ -216,7 +216,7 @@ Estructura con tres pestañas como Cao Cao (El Personaje, Relaciones Clave place
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>[en] · Ficha Completa</title>
+<title>[en] · Ficha</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700;900&family=Cinzel+Decorative:wght@400;700&family=IM+Fell+English:ital@0;1&family=Noto+Sans+SC:wght@300;400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../css/[slug].css">
 </head>
@@ -251,7 +251,7 @@ Estructura con tres pestañas como Cao Cao (El Personaje, Relaciones Clave place
         <div class="hero-media-placeholder">[ico]</div>
         <!-- /imagen -->
         <div class="hero-copy">
-          <div class="eyebrow">Ficha completa</div>
+          <div class="eyebrow">Ficha</div>
           <h1 class="title">[en] · [zi o zh]</h1>
           <p class="subtitle">[frase corta y evocadora, 1-2 líneas]</p>
           <blockquote class="hero-quote">
@@ -362,7 +362,7 @@ Edita solo la entrada del personaje. No toques ninguna otra línea.
 
 Informa de:
 1. Archivos creados: `assets/css/[slug].css` y `assets/Periods/[slug].html`
-2. Modificación en `assets/js/data.js`: campo `detailHref` añadido (botón "Ver ficha completa" ahora habilitado en modal)
+2. Modificación en `assets/js/data.js`: campo `detailHref` añadido (botón "Ver Ficha" ahora habilitado en modal)
 3. Estructura: Ficha con tres pestañas (El Personaje completado, Relaciones Clave placeholder, Batallas placeholder)
 4. Si se incluyó imagen o cómo se resolvió (busca en Descargas, o usa placeholder)
 5. Contenido: Directo y factual, sin excesivas filigranas, pero con romance en momentos clave
