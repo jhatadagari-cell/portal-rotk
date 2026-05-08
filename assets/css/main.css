@@ -537,6 +537,7 @@ footer{border-top:1px solid var(--border);background:rgba(4,2,0,.97);padding:cla
 .foot-links a{font-family:'Noto Sans SC',sans-serif;font-size:14px;color:var(--parch2);opacity:.42;text-decoration:none;transition:opacity .18s}
 .foot-links a:hover{opacity:1;color:var(--gold)}
 .foot-copy{font-family:'Noto Sans SC',sans-serif;font-size:13px;color:var(--parch2);opacity:.28;text-align:right;line-height:1.6}
+.foot-author{display:block;font-family:'Cinzel Decorative',serif;font-size:11px;letter-spacing:.22em;color:var(--gold);opacity:.88;margin-top:7px}
 
 /* ── ENHANCED FACTION CARDS ── */
 .fcard{cursor:pointer}
