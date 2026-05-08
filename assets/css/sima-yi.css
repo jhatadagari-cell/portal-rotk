@@ -33,6 +33,10 @@ body.jin-mode #jin-snow-overlay{opacity:1}
 .image{position:absolute;top:0;left:0;width:100%;height:100%;background-size:cover;background-position:center;transition:opacity .5s ease}
 .default{background-image:url('../img/Sima Yi/Sima Yi 1.png')}
 .hover{background-image:url('../img/Sima Yi/Sima Yi 2.png');opacity:0}
+@supports (background-image: url("x.webp")){
+  .default{background-image:url('../img/Sima Yi/Sima Yi 1.webp')}
+  .hover{background-image:url('../img/Sima Yi/Sima Yi 2.webp')}
+}
 .hero-media:hover .default{opacity:0}
 .hero-media:hover .hover{opacity:1}
 .hero-copy{padding:18px 0 0}
