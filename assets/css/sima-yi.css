@@ -31,12 +31,8 @@ body.jin-mode #jin-snow-overlay{opacity:1}
 .hero{display:grid;grid-template-columns:minmax(280px,1.1fr) 1fr;gap:24px;align-items:start;margin-bottom:36px}
 .hero-media{border:1px solid var(--border);border-radius:18px;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,.35);background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(0,0,0,.18));position:relative;width:100%;aspect-ratio:2/3}
 .image{position:absolute;top:0;left:0;width:100%;height:100%;background-size:cover;background-position:center;transition:opacity .5s ease}
-.default{background-image:url('../img/Sima Yi/Sima Yi 1.png')}
-.hover{background-image:url('../img/Sima Yi/Sima Yi 2.png');opacity:0}
-@supports (background-image: url("x.webp")){
-  .default{background-image:url('../img/Sima Yi/Sima Yi 1.webp')}
-  .hover{background-image:url('../img/Sima Yi/Sima Yi 2.webp')}
-}
+.default{background-image:url('../img/Sima Yi/Sima Yi 1.webp')}
+.hover{background-image:url('../img/Sima Yi/Sima Yi 2.webp');opacity:0}
 .hero-media:hover .default{opacity:0}
 .hero-media:hover .hover{opacity:1}
 .hero-copy{padding:18px 0 0}
