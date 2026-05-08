@@ -37,7 +37,19 @@
       "Bash(xargs -I{} basename {})",
       "Bash(sort -t: -k3 -n)",
       "Bash(awk '{match\\($0, /en: \"\\([^\"]+\\)\"/, e\\); match\\($0, /rank: \\([0-9]+\\)/, r\\); if\\(e[1] && r[1]\\) print r[1], \"—\", e[1]}')",
-      "Bash(awk -F: '{print $NF}')"
+      "Bash(awk -F: '{print $NF}')",
+      "Bash(xargs -I {} basename {})",
+      "Bash(sips --help)",
+      "Bash(brew list *)",
+      "Bash(sips *)",
+      "Bash(/opt/homebrew/bin/brew list *)",
+      "Bash(xargs du -sh)",
+      "Bash(sw_vers *)",
+      "Bash(npx --version)",
+      "Bash(/usr/bin/python3 *)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(git checkout *)"
     ]
   },
   "enabledPlugins": {
