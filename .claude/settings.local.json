@@ -33,7 +33,11 @@
       "Bash(cp \"C:\\\\Users\\\\usuario\\\\Downloads\\\\Ding Feng.png\" \"C:\\\\Users\\\\usuario\\\\Desktop\\\\Portal ROTK\\\\assets\\\\img\\\\Ding Feng\\\\Ding Feng.png\")",
       "Bash(mkdir -p \"C:\\\\Users\\\\usuario\\\\Desktop\\\\Portal ROTK\\\\assets\\\\img\\\\Guo Huai\")",
       "Bash(cp \"C:\\\\Users\\\\usuario\\\\Downloads\\\\Guo Huai.png\" \"C:\\\\Users\\\\usuario\\\\Desktop\\\\Portal ROTK\\\\assets\\\\img\\\\Guo Huai\\\\Guo Huai.png\")",
-      "Bash(mkdir -p \"C:\\\\Users\\\\usuario\\\\Desktop\\\\Portal ROTK\\\\assets\\\\img\\\\Huangfu Song\")"
+      "Bash(mkdir -p \"C:\\\\Users\\\\usuario\\\\Desktop\\\\Portal ROTK\\\\assets\\\\img\\\\Huangfu Song\")",
+      "Bash(xargs -I{} basename {})",
+      "Bash(sort -t: -k3 -n)",
+      "Bash(awk '{match\\($0, /en: \"\\([^\"]+\\)\"/, e\\); match\\($0, /rank: \\([0-9]+\\)/, r\\); if\\(e[1] && r[1]\\) print r[1], \"—\", e[1]}')",
+      "Bash(awk -F: '{print $NF}')"
     ]
   },
   "enabledPlugins": {

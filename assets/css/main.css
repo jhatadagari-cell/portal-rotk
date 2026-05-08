@@ -7,8 +7,8 @@
   --nav-h:58px;
 }
 *{margin:0;padding:0;box-sizing:border-box}
-html{scroll-behavior:smooth}
-body{background:var(--ink);color:var(--parch);font-family:'IM Fell English',Georgia,serif;overflow-x:hidden}
+html{scroll-behavior:smooth;overflow-x:hidden;overscroll-behavior-x:none}
+body{background:var(--ink);color:var(--parch);font-family:'IM Fell English',Georgia,serif;overflow-x:hidden;overscroll-behavior-x:none}
 ::-webkit-scrollbar{width:5px}
 ::-webkit-scrollbar-track{background:var(--ink)}
 ::-webkit-scrollbar-thumb{background:var(--goldf);border-radius:3px}
@@ -19,7 +19,7 @@ body{background:var(--ink);color:var(--parch);font-family:'IM Fell English',Geor
   background:rgba(5,2,0,.97);backdrop-filter:blur(8px);
   border-bottom:1px solid var(--border);
   display:flex;align-items:center;justify-content:space-between;
-  padding:0 clamp(16px,4vw,64px);gap:16px
+  padding:0 max(clamp(16px,4vw,64px),calc((100vw - 1380px) / 2));gap:16px
 }
 .nav-brand{display:flex;align-items:baseline;gap:10px;text-decoration:none;flex-shrink:0}
 .nav-zh{font-family:'Noto Serif SC',serif;font-size:24px;font-weight:900;color:var(--red);letter-spacing:.12em;text-shadow:0 0 20px rgba(139,26,26,.4)}
@@ -96,7 +96,7 @@ body{background:var(--ink);color:var(--parch);font-family:'IM Fell English',Geor
 .stat-l{font-family:'Cinzel Decorative',serif;font-size:16px;color:var(--parch2);opacity:.5;letter-spacing:.15em;margin-top:4px;text-transform:uppercase}
 
 /* ── SECTION BASE ── */
-.sec{padding:clamp(52px,7vw,88px) clamp(16px,5vw,72px)}
+.sec{padding:clamp(52px,7vw,88px) max(clamp(16px,5vw,72px),calc((100vw - 1380px) / 2))}
 .sec-alt{background:rgba(255,255,255,.014)}
 .sec-hd{text-align:center;margin-bottom:clamp(28px,4vw,50px)}
 .sec-lbl{font-family:'Cinzel Decorative',serif;font-size:14px;color:var(--gold);letter-spacing:.26em;text-transform:uppercase;opacity:.68;margin-bottom:8px}
@@ -230,7 +230,7 @@ body{background:var(--ink);color:var(--parch);font-family:'IM Fell English',Geor
 
 /* ── PERIOD CAROUSEL ── */
 .per-wrap{
-  margin:0 calc(-1 * clamp(16px,5vw,72px));position:relative;
+  margin:0 calc(-1 * max(clamp(16px,5vw,72px),calc((100vw - 1380px) / 2)));position:relative;
   -webkit-mask-image:linear-gradient(to right,transparent 0,black 2%,black 98%,transparent 100%);
   mask-image:linear-gradient(to right,transparent 0,black 2%,black 98%,transparent 100%);
 }
@@ -257,7 +257,7 @@ body{background:var(--ink);color:var(--parch);font-family:'IM Fell English',Geor
 .per-grid{
   display:flex;gap:22px;overflow-x:auto;overflow-y:hidden;
   scroll-snap-type:x proximity;
-  padding:6px clamp(16px,5vw,72px) 22px;align-items:flex-start;
+  padding:6px max(clamp(16px,5vw,72px),calc((100vw - 1380px) / 2)) 22px;align-items:flex-start;
 }
 .per-grid::-webkit-scrollbar{height:6px}
 .per-grid::-webkit-scrollbar-thumb{background:var(--goldf);border-radius:4px}
@@ -325,7 +325,7 @@ body{background:var(--ink);color:var(--parch);font-family:'IM Fell English',Geor
 
 /* ── MAP CTA ── */
 #map-cta{
-  padding:clamp(52px,7vw,84px) clamp(16px,5vw,72px);
+  padding:clamp(52px,7vw,84px) max(clamp(16px,5vw,72px),calc((100vw - 1380px) / 2));
   background:linear-gradient(135deg,rgba(139,26,26,.1) 0%,rgba(11,6,0,.5) 40%,rgba(30,90,191,.08) 65%,rgba(30,138,46,.07) 100%);
   border-top:1px solid var(--border);border-bottom:1px solid var(--border);
   text-align:center;position:relative;overflow:hidden
@@ -529,7 +529,7 @@ body.lubu-shaking{animation:lubu-shake .98s ease-in-out}
 }
 
 /* ── FOOTER ── */
-footer{border-top:1px solid var(--border);background:rgba(4,2,0,.97);padding:clamp(26px,4vw,40px) clamp(16px,5vw,72px);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:18px}
+footer{border-top:1px solid var(--border);background:rgba(4,2,0,.97);padding:clamp(26px,4vw,40px) max(clamp(16px,5vw,72px),calc((100vw - 1380px) / 2));display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:18px}
 .foot-brand{display:flex;flex-direction:column;gap:3px}
 .foot-zh{font-family:'Noto Serif SC',serif;font-size:20px;font-weight:900;color:var(--red);letter-spacing:.1em}
 .foot-en{font-family:'Cinzel Decorative',serif;font-size:16px;color:var(--gold);opacity:.45;letter-spacing:.16em}
@@ -874,3 +874,12 @@ footer{border-top:1px solid var(--border);background:rgba(4,2,0,.97);padding:cla
 .bccard-link{font-family:'Cinzel Decorative',serif;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);opacity:.8;margin-top:4px;display:inline-flex;align-items:center;gap:5px}
 .bccard-link:hover{opacity:1}
 @media(max-width:640px){.battle-grid{grid-template-columns:1fr}}
+
+/* ── Widescreen: cards del período crecen para llenar mejor el carousel ── */
+@media(min-width:1500px){
+  .pcard-wrap{flex:0 0 clamp(200px,11vw,260px)}
+}
+/* ── Móvil: menú desplegable con el mismo padding del nav ── */
+@media(max-width:680px){
+  .nav-links a{padding:13px max(clamp(16px,4vw,64px),calc((100vw - 1380px) / 2))}
+}

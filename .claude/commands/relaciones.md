@@ -11,7 +11,7 @@ Añade o construye la página de Relaciones Clave de un personaje. Puede usarse 
 
 ## Arquitectura del sistema
 
-La página de relaciones de Cao Cao (el modelo a seguir) funciona con un sistema de **dos páginas** dentro del mismo HTML, navegadas por un slider CSS (`translateX`). La segunda página es la de relaciones. Este documento describe cómo construir esa segunda página.
+La página de relaciones de Cao Cao (el modelo a seguir) funciona con un sistema de **tres pestañas** dentro del mismo HTML, navegadas por un slider CSS (`translateX`): `el-personaje`, `relaciones` y `batallas`. Este documento describe cómo construir la segunda pestaña (relaciones).
 
 ---
 
@@ -73,7 +73,7 @@ Si un personaje cambia de sección entre eras (ej. Yuan Shao: aliado → rival),
 
 ---
 
-## Paso 2 — Convertir la ficha a sistema de dos páginas
+## Paso 2 — Convertir la ficha a sistema de tres pestañas
 
 Si el HTML actual tiene estructura de una página (`.wrap` simple), hay que convertirlo a pager.
 
@@ -96,15 +96,23 @@ Si el HTML actual tiene estructura de una página (`.wrap` simple), hay que conv
     <div class="wrap-page" data-page="relaciones">
       <!-- slider de eras + hub + panel + secciones de burbujas -->
     </div>
+    <div class="wrap-page" data-page="batallas">
+      <!-- placeholder hasta que se implemente la sección -->
+      <div style="text-align:center;padding:60px 20px;color:var(--muted)">
+        <h2 style="font-family:'Noto Serif SC',serif;font-size:24px;margin-bottom:12px">Batallas</h2>
+        <p>Esta sección será completada próximamente con los enfrentamientos principales de [Nombre].</p>
+      </div>
+    </div>
   </div>
 </main>
 ```
 
-**Nav superior** — cambiar de anchors `href="#..."` a botones de página:
+**Nav superior** — tres pestañas con `data-page`:
 ```html
 <nav class="sec-nav">
   <a href="#" data-page="el-personaje" class="sec-link active">El Personaje</a>
   <a href="#" data-page="relaciones" class="sec-link">Relaciones Clave</a>
+  <a href="#" data-page="batallas" class="sec-link">Batallas</a>
 </nav>
 ```
 
@@ -130,7 +138,7 @@ Si el HTML actual tiene estructura de una página (`.wrap` simple), hay que conv
 
 ## Paso 3 — Estructura HTML de la página de relaciones
 
-La segunda página (`data-page="relaciones"`) tiene esta estructura fija:
+La segunda pestaña (`data-page="relaciones"`) tiene esta estructura fija:
 
 ```html
 <div class="wrap-page" data-page="relaciones">
