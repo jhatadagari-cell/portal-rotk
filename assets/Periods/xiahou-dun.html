@@ -1,115 +1,211 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Xiahou Dun · Ficha</title>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700;900&family=Cinzel+Decorative:wght@400;700&family=IM+Fell+English:ital@0;1&family=Noto+Sans+SC:wght@300;400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../css/xiahou-dun.css">
-</head>
-<body>
-<header id="hdr">
-  <div>
-    <div class="hzh">夏侯惇 · Xiahou Dun</div>
-    <div class="hen">Wei 魏 · El Cíclope de Wei</div>
-  </div>
-  <nav class="hbtns">
-    <a class="hb" href="../../index.html#heroes">← Volver a Personajes</a>
-    <a class="hb" href="../../index.html">Inicio</a>
-  </nav>
-</header>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Xiahou Dun · Ficha</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700;900&family=Cinzel+Decorative:wght@400;700&family=IM+Fell+English:ital@0;1&family=Noto+Sans+SC:wght@300;400;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="../css/xiahou-dun.css" />
+  </head>
+  <body>
+    <header id="hdr">
+      <div>
+        <div class="hzh">夏侯惇 · Xiahou Dun</div>
+        <div class="hen">Wei 魏 · El Cíclope de Wei</div>
+      </div>
+      <nav class="hbtns">
+        <a class="hb" href="../../index.html#heroes">← Volver a Personajes</a>
+        <a class="hb" href="../../index.html">Inicio</a>
+      </nav>
+    </header>
 
-<nav class="sec-nav">
-  <a href="#presentacion" class="sec-link active">Presentación</a>
-  <a href="#relaciones" class="sec-link">Relaciones Clave</a>
-  <a href="#eras" class="sec-link">Eras</a>
-  <a href="#legado" class="sec-link soon">Legado · Próximamente</a>
-</nav>
+    <nav class="sec-nav">
+      <a href="#" data-page="el-personaje" class="sec-link active">El Personaje</a>
+      <a href="#" data-page="relaciones" class="sec-link">Relaciones Clave</a>
+      <a href="#" data-page="batallas" class="sec-link">Batallas</a>
+    </nav>
 
-<main class="wrap">
-  <section class="hero" id="presentacion">
-    <div class="hero-media">
-      <img src="../img/Xiahou Dun/Xiahou Dun.png" alt="Xiahou Dun" />
-    </div>
-    <div class="hero-copy">
-      <div class="eyebrow">Ficha</div>
-      <h1 class="title">Xiahou Dun · Yuanrang</h1>
-      <p class="subtitle">El primo de hierro. Treinta años junto a Cao Cao, inseparable hasta la muerte.</p>
-      <blockquote class="hero-quote">
-        <span class="quote-mark">"</span>
-        Cuando Xiahou Dun perdió su ojo en batalla y lo vio caer al suelo, no dudó: lo recogió y se lo devoró, exclamando: "Esencia de mis padres, carne de mi cuerpo, no lo abandono." Tal era su lealtad a la vida que Cao Cao le había dado.
-      </blockquote>
-      <p class="lede">Xiahou Dun fue la encarnación viva de la lealtad absoluta. Primo de Cao Cao, lo acompañó durante treinta años sin apartarse de su lado. Fue el único general que compartía tienda con su señor, durmiendo bajo el mismo techo. Perdió su ojo izquierdo en batalla, pero eso no fue el final de su historia: fue apenas un acto más en una vida consagrada completamente a Cao Cao. Su cuerpo fue herida, pero su voluntad fue inquebrantable.</p>
-    </div>
-  </section>
+    <main class="wrap wrap-pager">
+      <div class="wrap-pages">
 
-  <section class="intro">
-    <p>Xiahou Dun representa la lealtad sin cuestionamiento, la devoción que trasciende el interés propio. Fue más que un general de Cao Cao: fue su mano derecha, su sombra, el hombre que dormía bajo la misma tienda porque su vigilancia era la vigilancia misma de su señor. Su vida no fue de conquistas gloriosas sino de presencia constante, de protección silenciosa durante treinta años.</p>
-  </section>
+        <!-- PÁGINA 1: El Personaje -->
+        <div class="wrap-page" data-page="el-personaje">
+          <section class="hero" id="el-personaje">
+            <div class="hero-media">
+              <img src="../img/Xiahou Dun/Xiahou Dun.png" alt="Xiahou Dun" />
+            </div>
+            <div class="hero-copy">
+              <div class="eyebrow">Ficha</div>
+              <h1 class="title">Xiahou Dun · Yuanrang 元让</h1>
+              <p class="subtitle">
+                Primo de Cao Cao. Primer seguidor y único general autorizado a entrar en su tienda sin anunciarse. Perdió el ojo izquierdo en batalla ante un subordinado de Lü Bu y se lo tragó para no mancillar el cuerpo que sus padres le dieron.
+              </p>
+              <blockquote class="hero-quote">
+                <span class="quote-mark">"</span>
+                <p class="lede">
+                  Cuando Cao Xing le arrancó el ojo de una flecha, Xiahou Dun lo recogió del suelo, se lo metió en la boca y exclamó: «Esencia de mis padres, carne de mi cuerpo —no puedo abandonarlo». Volvió al combate antes de que la herida se enfriara.
+                </p>
+              </blockquote>
+              <p class="lede">
+                Xiahou Dun fue el pilar más antiguo del proyecto de Cao Cao. Su valor no estaba en la brillantez táctica —sufrió varias derrotas contra Lü Bu— sino en la presencia constante: treinta años de servicio sin dudas, sin deserción, sin demandas de gloria. Fue el único hombre a quien Cao Cao trató públicamente como su igual entre los generales.
+              </p>
+            </div>
+          </section>
 
-  <section class="era-block">
-    <h2 class="sec-title">Era de Dong Zhuo</h2>
-    <div class="era-grid">
-      <article class="era-card">
-        <h3>El Guardián Nascente</h3>
-        <p>Xiahou Dun comenzó su servicio a Cao Cao en los años turbulentos de Dong Zhuo. Era joven, pero su lealtad era ya absoluta. Mientras muchos generales miraban sus propios intereses, Xiahou Dun estaba donde Cao Cao lo necesitaba. Su primo lo reconoció de inmediato como un hombre diferente: alguien cuya fidelidad no podía ser corrompida.</p>
-      </article>
-      <article class="era-card">
-        <h3>La Tienda Compartida</h3>
-        <p>Algo inusual comenzó en estos años: Xiahou Dun se convirtió en el único general que dormía bajo la misma tienda que Cao Cao. No era una cuestión de rango sino de confianza. Su primo lo quería cerca no solo durante el día sino durante la noche, cuando los hombres son más vulnerables. Era la prueba viva de una lealtad sin igual.</p>
-      </article>
-    </div>
-  </section>
+          <div class="section-divider">
+            <span></span>
+            <span class="divider-ornament">◆</span>
+            <span></span>
+          </div>
 
-  <section class="era-block alt" id="eras">
-    <h2 class="sec-title">Guerras de los Señores</h2>
-    <div class="era-grid">
-      <article class="era-card">
-        <h3>La Mano Armada</h3>
-        <p>En las Guerras de los Señores, Xiahou Dun fue el brazo ejecutor de Cao Cao. Mientras otros generales comandaban ejércitos en busca de gloria, él comandaba los suyos en busca de la victoria de su primo. Era el general que nunca cuestionaba, nunca dudaba. Su rol era simple: ser donde era necesario y ganar donde era enviado.</p>
-      </article>
-      <article class="era-card">
-        <h3>El Precio de la Lealtad</h3>
-        <p>En batalla, Xiahou Dun sufrió una herida que cambió su cuerpo pero no su espíritu: perdió su ojo izquierdo. El relato que quedó de ese momento reveló su verdadera naturaleza. Recogió su ojo del suelo y se lo comió, exclamando: "Esencia de mis padres, carne de mi cuerpo, no lo abandono." Era su forma de decir que nada podía separarlo de Cao Cao.</p>
-      </article>
-    </div>
-  </section>
+          <section class="intro">
+            <div class="intro-eyebrow"></div>
+            <p>
+              Xiahou Dun se incorporó al ejército de Cao Cao desde el comienzo mismo, en 189 d.C. Era primo del Canciller por la línea familiar Xiahou-Cao y respondió cuando Cao Cao convocó a sus primeras tropas en Chenliu. A diferencia de su primo Xiahou Yuan, que se destacó en campañas rápidas en el noroeste, Xiahou Dun fue el hombre de confianza en el centro, gobernando territorios clave mientras Cao Cao marchaba al frente. Murió en 220 d.C., el mismo año en que Cao Pi fundó oficialmente la dinastía Wei.
+            </p>
+          </section>
 
-  <section class="era-block">
-    <h2 class="sec-title">Chibi</h2>
-    <div class="era-grid">
-      <article class="era-card">
-        <h3>El Guardián en la Derrota</h3>
-        <p>En Chibi, Xiahou Dun cumplió su función incluso en medio de la derrota. Mientras la batalla se perdía, su rol permanecía: proteger a Cao Cao, estar donde su primo lo necesitaba. No era su responsabilidad ganar o perder la batalla. Su responsabilidad era que Cao Cao permaneciera vivo. Y en eso, nunca falló.</p>
-      </article>
-      <article class="era-card">
-        <h3>La Retirada Segura</h3>
-        <p>Después de Chibi, durante la retirada caótica, Xiahou Dun fue el último escudo de Cao Cao. Mientras otros generales se salvaban a sí mismos, él cubría la retirada de su primo. Era lo único que importaba: que Cao Cao llegara a salvo. Su lealtad no era de palabras sino de acción constante.</p>
-      </article>
-    </div>
-  </section>
+          <div class="timeline" id="eras">
+            <div class="tl-item">
+              <div class="tl-header">
+                <span class="tl-year">189 d.C.</span>
+                <h2 class="tl-name">El Primer Seguidor</h2>
+              </div>
+              <div class="era-grid">
+                <article class="era-card">
+                  <h3>Chenliu y el Ejército Inicial</h3>
+                  <p>
+                    Cuando Cao Cao huyó de Luoyang tras el fallido atentado a Dong Zhuo y comenzó a reclutar en su provincia natal, Xiahou Dun fue de los primeros en responder. Él y Cao Hong formaron el núcleo del primer ejército que Cao Cao reunió en Chenliu. Era un ejército pequeño —unos pocos miles de hombres— pero fue la base sobre la que Cao Cao construyó todo lo que vino después. Xiahou Dun se convirtió desde entonces en el hombre de confianza en la retaguardia cuando Cao Cao avanzaba.
+                  </p>
+                </article>
+                <article class="era-card">
+                  <h3>La Tienda Abierta</h3>
+                  <p>
+                    El privilegio más revelador que Cao Cao otorgó a Xiahou Dun no fue un título sino una costumbre: podía entrar en su tienda de campaña sin pedir permiso ni anunciarse. Ningún otro general tenía ese acceso. Cao Cao le confiaba provincias enteras para gobernar cuando él estaba en campaña —Chenliu, Chen Province— y nunca cuestionó sus decisiones administrativas. Era la extensión del mismo hombre cuando no podía estar en dos lugares a la vez.
+                  </p>
+                </article>
+              </div>
+            </div>
 
-  <section class="era-block alt">
-    <h2 class="sec-title">Los Tres Reinos</h2>
-    <div class="era-grid">
-      <article class="era-card">
-        <h3>El Pilar de Wei</h3>
-        <p>Durante los años de los Tres Reinos establecidos, Xiahou Dun fue uno de los pilares sobre los que Wei se sostenía. Su reputación era tal que su sola presencia inspiraba confianza a los soldados de Wei. Fue el general que sostuvo Hefei contra los ataques de Wu durante años, una fortaleza viva en la frontera sur.</p>
-      </article>
-      <article class="era-card">
-        <h3>La Lealtad Hasta el Final</h3>
-        <p>Xiahou Dun murió en el 220 d.C., poco después que Cao Cao. Treinta años de servicio, treinta años de tienda compartida, treinta años de lealtad sin cuestionamiento. Su muerte fue el final de una era, la desaparición de un hombre cuya vida había sido completamente dedicada a ser la sombra de su primo.</p>
-      </article>
-    </div>
-  </section>
+            <div class="tl-item">
+              <div class="tl-header">
+                <span class="tl-year">194 d.C.</span>
+                <h2 class="tl-name">Guerras contra Lü Bu</h2>
+              </div>
+              <div class="era-grid">
+                <article class="era-card">
+                  <h3>El Ojo de Cao Xing</h3>
+                  <p>
+                    En las guerras contra Lü Bu por el control de Yan Province, Xiahou Dun se enfrentó al subordinado Cao Xing en combate singular. Cao Xing le disparó una flecha que le atravesó el ojo izquierdo. Según el Romance, Xiahou Dun se arrancó la flecha con el ojo todavía adherido, lo recogió y se lo tragó, declarando que no podía abandonar la «esencia de sus padres». Luego mató a Cao Xing. El episodio fue real en su resultado —perdió el ojo— aunque la tradición posterior lo dramatizó. Desde entonces fue conocido en Wei como el Cíclope, y los enemigos lo reconocían a distancia.
+                  </p>
+                </article>
+                <article class="era-card">
+                  <h3>Las Derrotas y el Valor Real</h3>
+                  <p>
+                    Xiahou Dun no fue el mejor táctico de Wei. Sufrió derrotas notables contra las fuerzas de Lü Bu en varias escaramuzas, y no tiene victorias decisivas atribuibles solo a él en el Romance. Su valor era otro: la consistencia. Mientras otros generales brillaban y fallaban, Xiahou Dun estaba siempre ahí —gobernando provincias, reclutando tropas, organizando la retaguardia. Cao Cao podía marchar al sur sabiendo que el norte estaba en sus manos.
+                  </p>
+                </article>
+              </div>
+            </div>
 
-  <section class="epilogue" id="legado">
-    <h2>Epílogo</h2>
-    <p>Xiahou Dun murió en el 220 d.C., solo años después de Cao Cao. Su vida fue una dedicación casi religiosa a un solo propósito: servir a su primo. No fue un estratega brillante ni un conquistador ambicioso. Fue algo más raro: un hombre cuya lealtad fue tan pura que se convirtió en leyenda. Perdió su ojo en batalla y lo comió sin dudar, porque su cuerpo pertenecía a Cao Cao. Compartió tienda porque su presencia era la protección misma de su señor. Treinta años junto al mismo hombre, sin vacilación, sin resentimiento, sin buscar más que servir. En un Romance lleno de ambiciones y traiciones, Xiahou Dun fue el hombre cuya ambición fue simple: que Cao Cao viviera y triunfara. Eso fue suficiente.</p>
-  </section>
-</main>
+            <div class="tl-item">
+              <div class="tl-header">
+                <span class="tl-year">208 d.C.</span>
+                <h2 class="tl-name">Chibi</h2>
+              </div>
+              <div class="era-grid">
+                <article class="era-card">
+                  <h3>La Campaña del Sur</h3>
+                  <p>
+                    Xiahou Dun participó en la gran expedición hacia el sur de 208 d.C. que terminó en la derrota de Chibi. El Romance lo coloca en el ejército de Cao Cao sin un papel central en la batalla —la táctica fue principalmente obra de los consejeros y de la marina— pero sí en la posterior retirada. Cuando el ejército de Wei se reorganizó al norte del Yangtsé, Xiahou Dun continuó su función de siempre: gobernador de territorios clave, organizador de la retaguardia.
+                  </p>
+                </article>
+                <article class="era-card">
+                  <h3>El Incidente de Bo Wang</h3>
+                  <p>
+                    Antes de Chibi, en 202 d.C., Xiahou Dun sufrió una emboscada notoria de Zhuge Liang en Bo Wang Po. Liu Bei y Zhuge Liang, entonces recién aliados, prepararon una trampa con fuego: Xiahou Dun persiguió a las fuerzas de Liu Bei y cayó en el campo incendiado, perdiendo parte de su ejército. La derrota fue real, aunque el Romance le añade color dramático para destacar el primer golpe de Zhuge Liang. Cao Cao no le reprochó el error.
+                  </p>
+                </article>
+              </div>
+            </div>
 
-  <script src="../js/data.js"></script>
-  <script src="../js/inline-links.js"></script>
-</body>
+            <div class="tl-item">
+              <div class="tl-header">
+                <span class="tl-year">215–220 d.C.</span>
+                <h2 class="tl-name">Los Tres Reinos</h2>
+              </div>
+              <div class="era-grid">
+                <article class="era-card">
+                  <h3>El General Favorito</h3>
+                  <p>
+                    En los últimos años de la vida de Cao Cao, Xiahou Dun recibió el título de General de la Vanguardia (前将军), uno de los más altos rangos militares de Wei. Más significativo que el título fue el gesto: Cao Cao empezó a llevar a Xiahou Dun en su propio carro durante los desplazamientos. Ningún otro general recibió ese trato. Era el reconocimiento tácito de treinta años de lealtad sin condiciones y sin ambición personal que pudiera amenazarlo.
+                  </p>
+                </article>
+                <article class="era-card">
+                  <h3>El Último Año</h3>
+                  <p>
+                    Xiahou Dun murió en 220 d.C., pocas semanas después de que Cao Pi asumiera el poder heredado de Cao Cao y apenas meses antes de la proclamación formal de la dinastía Wei. No vivió para ver el estado que había ayudado a construir recibir nombre oficial. Cao Pi lo honró con el título póstumo de Marqués Zhong (忠侯 — «el Leal»). Era el único título que resumía toda su carrera.
+                  </p>
+                </article>
+              </div>
+            </div>
+          </div>
+
+          <section class="epilogue" id="legado">
+            <h2>Epílogo</h2>
+            <p>
+              Xiahou Dun murió en 220 d.C. sin haber fundado una línea de victorias decisivas ni escrito tratados estratégicos. Su contribución a Wei fue de otro tipo: fue el hombre que estaba siempre, que nunca flaqueó, que gobernó lo que Cao Cao le entregó con la misma seriedad con que lo habría hecho el propio Canciller. En un período definido por la traición y la ambición, esa constancia era extraordinaria. La anécdota del ojo tragado es quizás exagerada por la tradición oral, pero el hecho subyacente es verificado: perdió el ojo en combate y siguió luchando. Era el tipo de hombre que Wei necesitaba en la retaguardia para que sus generales brillantes pudieran arriesgar en el frente.
+            </p>
+          </section>
+        </div>
+
+        <!-- PÁGINA 2: Relaciones Clave -->
+        <div class="wrap-page" data-page="relaciones">
+          <div style="text-align:center;padding:60px 20px;color:var(--muted)">
+            <h2 style="font-family:'Noto Serif SC',serif;font-size:24px;margin-bottom:12px">Relaciones Clave</h2>
+            <p>Esta sección será completada próximamente con las relaciones más importantes de Xiahou Dun.</p>
+          </div>
+        </div>
+
+        <!-- PÁGINA 3: Batallas -->
+        <div class="wrap-page" data-page="batallas">
+          <div style="text-align:center;padding:60px 20px;color:var(--muted)">
+            <h2 style="font-family:'Noto Serif SC',serif;font-size:24px;margin-bottom:12px">Batallas</h2>
+            <p>Esta sección será completada próximamente con los enfrentamientos principales de Xiahou Dun.</p>
+          </div>
+        </div>
+
+      </div>
+    </main>
+
+    <script>
+    (function () {
+      const links = document.querySelectorAll(".sec-link[data-page]");
+      const pages = document.querySelectorAll(".wrap-page");
+      const slider = document.querySelector(".wrap-pages");
+
+      function goTo(pageId) {
+        const idx = [...pages].findIndex((p) => p.dataset.page === pageId);
+        if (idx < 0) return;
+        slider.style.transform = `translateX(-${idx * 100}%)`;
+        links.forEach((l) =>
+          l.classList.toggle("active", l.dataset.page === pageId),
+        );
+      }
+
+      links.forEach((link) => {
+        link.addEventListener("click", (e) => {
+          e.preventDefault();
+          goTo(link.dataset.page);
+        });
+      });
+    })();
+    </script>
+
+    <script src="../js/data.js"></script>
+    <script src="../js/inline-links.js"></script>
+  </body>
 </html>

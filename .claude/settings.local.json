@@ -27,7 +27,13 @@
       "PowerShell(New-Item *)",
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
-      "PowerShell(Get-ChildItem \"C:\\\\Users\\\\usuario\\\\Downloads\" -Recurse | Where-Object { $_.Extension -match \"\\\\.\\(png|jpg|jpeg|webp|gif\\)$\" } | Select-Object FullName,Name)"
+      "PowerShell(Get-ChildItem \"C:\\\\Users\\\\usuario\\\\Downloads\" -Recurse | Where-Object { $_.Extension -match \"\\\\.\\(png|jpg|jpeg|webp|gif\\)$\" } | Select-Object FullName,Name)",
+      "PowerShell(Get-ChildItem \"C:\\\\Users\\\\usuario\\\\Downloads\" | Where-Object { $_.Name -match \"Guo Huai|Pang De|Ding Feng|Sima Lang|Huangfu Song|GuoHuai|PangDe|DingFeng|SimaLang|HuangfuSong\" })",
+      "Bash(mkdir -p \"C:\\\\Users\\\\usuario\\\\Desktop\\\\Portal ROTK\\\\assets\\\\img\\\\Ding Feng\")",
+      "Bash(cp \"C:\\\\Users\\\\usuario\\\\Downloads\\\\Ding Feng.png\" \"C:\\\\Users\\\\usuario\\\\Desktop\\\\Portal ROTK\\\\assets\\\\img\\\\Ding Feng\\\\Ding Feng.png\")",
+      "Bash(mkdir -p \"C:\\\\Users\\\\usuario\\\\Desktop\\\\Portal ROTK\\\\assets\\\\img\\\\Guo Huai\")",
+      "Bash(cp \"C:\\\\Users\\\\usuario\\\\Downloads\\\\Guo Huai.png\" \"C:\\\\Users\\\\usuario\\\\Desktop\\\\Portal ROTK\\\\assets\\\\img\\\\Guo Huai\\\\Guo Huai.png\")",
+      "Bash(mkdir -p \"C:\\\\Users\\\\usuario\\\\Desktop\\\\Portal ROTK\\\\assets\\\\img\\\\Huangfu Song\")"
     ]
   },
   "enabledPlugins": {
