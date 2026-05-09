@@ -50,7 +50,9 @@
       "Bash(git commit *)",
       "Bash(git push *)",
       "Bash(git checkout *)",
-      "PowerShell(Get-ChildItem \"C:\\\\Users\\\\usuario\\\\Downloads\" | Where-Object { $_.Name -match \"xu.huang|xu_huang|xuhuang|Xu.Huang\" } | Select-Object Name)"
+      "PowerShell(Get-ChildItem \"C:\\\\Users\\\\usuario\\\\Downloads\" | Where-Object { $_.Name -match \"xu.huang|xu_huang|xuhuang|Xu.Huang\" } | Select-Object Name)",
+      "Bash(git pull *)",
+      "Bash(git stash *)"
     ]
   },
   "enabledPlugins": {

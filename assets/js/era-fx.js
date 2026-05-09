@@ -471,3 +471,366 @@ if (_simaCard) {
   _simaCard.addEventListener('click', startBlizzardGust);
 }
 
+// ── HAN TARDÍO — 金尘 Polvo dorado ──
+
+const dustOverlay = document.createElement('div');
+dustOverlay.id = 'dust-overlay';
+document.body.appendChild(dustOverlay);
+
+let _dustTimer = null;
+const _dustCols = ['hsla(40,65%,68%,.68)','hsla(38,60%,62%,.55)','hsla(42,70%,72%,.62)','hsla(36,55%,58%,.48)'];
+const _dustAnis = ['dust-rise-a','dust-rise-b','dust-rise-c'];
+
+function _spawnDust() {
+  const m = document.createElement('div');
+  m.className = 'dust-mote';
+  const sz = (3 + Math.random() * 5).toFixed(1);
+  m.style.cssText = [
+    `width:${sz}px`, `height:${sz}px`,
+    `left:${(Math.random()*100).toFixed(1)}%`, `bottom:-8px`,
+    `background:${_dustCols[Math.random()*_dustCols.length|0]}`,
+    `--dx1:${((Math.random()-.5)*60).toFixed(1)}px`,
+    `--dx2:${((Math.random()-.5)*80).toFixed(1)}px`,
+    `animation:${_dustAnis[Math.random()*3|0]} ${(10+Math.random()*8).toFixed(1)}s ${(Math.random()*3).toFixed(1)}s ease-in-out forwards`
+  ].join(';');
+  dustOverlay.appendChild(m);
+  m.addEventListener('animationend', () => m.remove());
+}
+
+function startDust() {
+  if (activeEra && activeEra !== 'han-tardio') return;
+  if (_dustTimer) return;
+  document.body.classList.add('dust-on');
+  for (let i = 0; i < 22; i++) setTimeout(_spawnDust, i * 80);
+  _dustTimer = setInterval(_spawnDust, 560);
+}
+function stopDust() {
+  if (activeEra === 'han-tardio') return;
+  document.body.classList.remove('dust-on');
+  clearInterval(_dustTimer); _dustTimer = null;
+}
+
+const _hanCard = document.querySelector('.pcard[data-pid="han-tardio"]');
+if (_hanCard) {
+  _hanCard.addEventListener('mouseenter', startDust);
+  _hanCard.addEventListener('mouseleave', stopDust);
+}
+
+// ── JIN — 太平 Linternas de paz ──
+
+const peaceOverlay = document.createElement('div');
+peaceOverlay.id = 'peace-overlay';
+document.body.appendChild(peaceOverlay);
+
+let _peaceTimer = null;
+const _peaceCols = [
+  ['rgba(255,255,240,.82)','rgba(255,255,225,.28)'],
+  ['rgba(200,245,235,.72)','rgba(180,235,220,.22)'],
+  ['rgba(220,252,246,.68)','rgba(200,240,232,.20)']
+];
+
+function _spawnLantern() {
+  const pl = document.createElement('div');
+  pl.className = 'peace-light';
+  const sz = (6 + Math.random() * 9).toFixed(1);
+  const ci = Math.random() * _peaceCols.length | 0;
+  pl.style.cssText = [
+    `width:${sz}px`, `height:${sz}px`,
+    `left:${(Math.random()*100).toFixed(1)}%`, `bottom:-12px`,
+    `background:${_peaceCols[ci][0]}`,
+    `box-shadow:0 0 ${(parseFloat(sz)*2.4).toFixed(0)}px ${_peaceCols[ci][1]}`,
+    `--lx1:${((Math.random()-.5)*55).toFixed(1)}px`,
+    `--lx2:${((Math.random()-.5)*75).toFixed(1)}px`,
+    `animation:lantern-rise ${(8+Math.random()*6).toFixed(1)}s ${(Math.random()*2).toFixed(1)}s ease-in-out forwards`
+  ].join(';');
+  peaceOverlay.appendChild(pl);
+  pl.addEventListener('animationend', () => pl.remove());
+}
+
+function startPeace() {
+  if (activeEra && activeEra !== 'jin') return;
+  if (_peaceTimer) return;
+  document.body.classList.add('peace-on');
+  for (let i = 0; i < 20; i++) setTimeout(_spawnLantern, i * 110);
+  _peaceTimer = setInterval(_spawnLantern, 680);
+}
+function stopPeace() {
+  if (activeEra === 'jin') return;
+  document.body.classList.remove('peace-on');
+  clearInterval(_peaceTimer); _peaceTimer = null;
+}
+
+const _jinCard = document.querySelector('.pcard[data-pid="jin"]');
+if (_jinCard) {
+  _jinCard.addEventListener('mouseenter', startPeace);
+  _jinCard.addEventListener('mouseleave', stopPeace);
+}
+
+// ── GUERRAS SEÑORES — 落叶 Hojas de otoño ──
+
+const leavesOverlay = document.createElement('div');
+leavesOverlay.id = 'leaves-overlay';
+document.body.appendChild(leavesOverlay);
+
+let _leavesTimer = null;
+const _leafCols = ['hsla(15,65%,34%,.82)','hsla(22,68%,40%,.78)','hsla(10,58%,28%,.88)','hsla(32,62%,46%,.72)','hsla(8,50%,32%,.8)'];
+const _leafAnis  = ['leaf-a','leaf-b','leaf-c'];
+
+function _spawnLeaf() {
+  const lf = document.createElement('div');
+  lf.className = 'autumn-leaf';
+  const sz = (8 + Math.random() * 10).toFixed(1);
+  lf.style.cssText = [
+    `width:${sz}px`, `height:${(parseFloat(sz)*.8).toFixed(1)}px`,
+    `left:${(Math.random()*105).toFixed(1)}%`, `top:-16px`,
+    `background:${_leafCols[Math.random()*_leafCols.length|0]}`,
+    `animation:${_leafAnis[Math.random()*3|0]} ${(4.5+Math.random()*4).toFixed(1)}s ${(Math.random()*1.2).toFixed(1)}s linear forwards`
+  ].join(';');
+  leavesOverlay.appendChild(lf);
+  lf.addEventListener('animationend', () => lf.remove());
+}
+
+function startLeaves() {
+  if (activeEra && activeEra !== 'guerras-senores') return;
+  if (_leavesTimer) return;
+  document.body.classList.add('leaves-on');
+  for (let i = 0; i < 26; i++) setTimeout(_spawnLeaf, i * 65);
+  _leavesTimer = setInterval(_spawnLeaf, 300);
+}
+function stopLeaves() {
+  if (activeEra === 'guerras-senores') return;
+  document.body.classList.remove('leaves-on');
+  clearInterval(_leavesTimer); _leavesTimer = null;
+}
+
+const _guerrasCard = document.querySelector('.pcard[data-pid="guerras-senores"]');
+if (_guerrasCard) {
+  _guerrasCard.addEventListener('mouseenter', startLeaves);
+  _guerrasCard.addEventListener('mouseleave', stopLeaves);
+}
+
+// ── DONG ZHUO — 焚城 Brasas en llamas ──
+
+const cinderOverlay = document.createElement('div');
+cinderOverlay.id = 'cinder-overlay';
+document.body.appendChild(cinderOverlay);
+
+let _cinderTimer = null;
+const _cinderBright = ['rgba(255,90,10,.88)','rgba(255,140,30,.78)','rgba(220,55,5,.72)'];
+const _cinderAsh    = ['rgba(55,18,4,.58)','rgba(80,25,6,.46)'];
+const _cinderAnis   = ['cinder-a','cinder-b','cinder-c'];
+
+function _spawnCinder() {
+  const el = document.createElement('div');
+  el.className = 'cinder';
+  const isSpark = Math.random() > 0.35;
+  const sz = (isSpark ? 2+Math.random()*2.5 : 4+Math.random()*5).toFixed(1);
+  const cols = isSpark ? _cinderBright : _cinderAsh;
+  el.style.cssText = [
+    `width:${sz}px`, `height:${sz}px`,
+    `left:${(Math.random()*105).toFixed(1)}%`, `top:-8px`,
+    `background:${cols[Math.random()*cols.length|0]}`,
+    `animation:${_cinderAnis[Math.random()*3|0]} ${(2.5+Math.random()*3.5).toFixed(1)}s ${(Math.random()*.8).toFixed(1)}s linear forwards`
+  ].join(';');
+  cinderOverlay.appendChild(el);
+  el.addEventListener('animationend', () => el.remove());
+}
+
+function startCinder() {
+  if (activeEra && activeEra !== 'dong-zhuo') return;
+  if (_cinderTimer) return;
+  document.body.classList.add('cinder-on');
+  for (let i = 0; i < 34; i++) setTimeout(_spawnCinder, i * 45);
+  _cinderTimer = setInterval(_spawnCinder, 210);
+}
+function stopCinder() {
+  if (activeEra === 'dong-zhuo') return;
+  document.body.classList.remove('cinder-on');
+  clearInterval(_cinderTimer); _cinderTimer = null;
+}
+
+const _dongCard = document.querySelector('.pcard[data-pid="dong-zhuo"]');
+if (_dongCard) {
+  _dongCard.addEventListener('mouseenter', startCinder);
+  _dongCard.addEventListener('mouseleave', stopCinder);
+}
+
+// ── GUERRAS OCASO — 暮雨 Lluvia crepuscular ──
+
+const duskOverlay = document.createElement('div');
+duskOverlay.id = 'dusk-overlay';
+document.body.appendChild(duskOverlay);
+
+let _duskTimer = null;
+const _duskCols = ['rgba(200,158,96,.62)','rgba(185,145,80,.52)','rgba(215,170,108,.58)'];
+
+function _spawnDrop() {
+  const dr = document.createElement('div');
+  dr.className = 'rain-drop';
+  dr.style.cssText = [
+    `height:${(12+Math.random()*12).toFixed(1)}px`,
+    `left:${(Math.random()*104).toFixed(1)}%`, `top:-26px`,
+    `background:${_duskCols[Math.random()*_duskCols.length|0]}`,
+    `--rdx:${(55+Math.random()*30).toFixed(1)}px`,
+    `animation:dusk-rain ${(.7+Math.random()*.45).toFixed(2)}s ${(Math.random()*.4).toFixed(2)}s linear forwards`
+  ].join(';');
+  duskOverlay.appendChild(dr);
+  dr.addEventListener('animationend', () => dr.remove());
+}
+
+function startDuskRain() {
+  if (activeEra && activeEra !== 'guerras-ocaso') return;
+  if (_duskTimer) return;
+  document.body.classList.add('dusk-rain-on');
+  for (let i = 0; i < 55; i++) setTimeout(_spawnDrop, i * 20);
+  _duskTimer = setInterval(_spawnDrop, 72);
+}
+function stopDuskRain() {
+  if (activeEra === 'guerras-ocaso') return;
+  document.body.classList.remove('dusk-rain-on');
+  clearInterval(_duskTimer); _duskTimer = null;
+}
+
+const _ocasoCard = document.querySelector('.pcard[data-pid="guerras-ocaso"]');
+if (_ocasoCard) {
+  _ocasoCard.addEventListener('mouseenter', startDuskRain);
+  _ocasoCard.addEventListener('mouseleave', stopDuskRain);
+}
+
+// ── OCHO PRÍNCIPES — 乱雨 Tormenta de caos ──
+
+const chaosOverlay = document.createElement('div');
+chaosOverlay.id = 'chaos-overlay';
+document.body.appendChild(chaosOverlay);
+
+let _chaosRainTimer = null;
+let _lightningTimer = null;
+const _chaosCols = ['rgba(175,185,198,.58)','rgba(155,165,178,.48)','rgba(190,198,210,.52)'];
+
+function _spawnChaosRain() {
+  const dr = document.createElement('div');
+  dr.className = 'chaos-drop';
+  dr.style.cssText = [
+    `height:${(16+Math.random()*14).toFixed(1)}px`,
+    `left:${(Math.random()*108).toFixed(1)}%`, `top:-32px`,
+    `background:${_chaosCols[Math.random()*_chaosCols.length|0]}`,
+    `--rdx:${(105+Math.random()*55).toFixed(1)}px`,
+    `animation:chaos-rain ${(.3+Math.random()*.32).toFixed(2)}s ${(Math.random()*.15).toFixed(2)}s linear forwards`
+  ].join(';');
+  chaosOverlay.appendChild(dr);
+  dr.addEventListener('animationend', () => dr.remove());
+}
+
+function _triggerLightning() {
+  document.body.classList.remove('lightning-flash');
+  void document.body.offsetHeight; // reflow para reiniciar la animación
+  document.body.classList.add('lightning-flash');
+  document.body.addEventListener('animationend', () => document.body.classList.remove('lightning-flash'), { once: true });
+}
+
+function _scheduleLightning() {
+  _lightningTimer = setTimeout(function() {
+    if (activeEra === 'ocho-principes') { _triggerLightning(); _scheduleLightning(); }
+  }, 8000 + Math.random() * 14000);
+}
+
+function startChaos() {
+  if (activeEra && activeEra !== 'ocho-principes') return;
+  if (_chaosRainTimer) return;
+  document.body.classList.add('chaos-on');
+  for (let i = 0; i < 90; i++) setTimeout(_spawnChaosRain, i * 10);
+  _chaosRainTimer = setInterval(_spawnChaosRain, 38);
+  _scheduleLightning();
+}
+function stopChaos() {
+  if (activeEra === 'ocho-principes') return;
+  document.body.classList.remove('chaos-on');
+  clearInterval(_chaosRainTimer); _chaosRainTimer = null;
+  clearTimeout(_lightningTimer);  _lightningTimer = null;
+}
+
+const _ochoCard = document.querySelector('.pcard[data-pid="ocho-principes"]');
+if (_ochoCard) {
+  _ochoCard.addEventListener('mouseenter', startChaos);
+  _ochoCard.addEventListener('mouseleave', stopChaos);
+}
+
+// ── TRES REINOS — 战尘 Polvo de guerra ──
+
+const wardustOverlay = document.createElement('div');
+wardustOverlay.id = 'wardust-overlay';
+document.body.appendChild(wardustOverlay);
+
+let _wdTimer = null;
+let _wdBurstX = 15; // posición del "batallón" actual en %
+const _wdPuffCols = ['rgba(175,145,92,.28)','rgba(160,130,78,.22)','rgba(192,162,105,.26)','rgba(145,118,72,.20)'];
+const _wdGrainCols = ['rgba(182,150,95,.72)','rgba(162,132,80,.62)','rgba(198,165,102,.68)'];
+const _wdPuffAnis = ['wd-puff-a','wd-puff-b','wd-puff-c'];
+
+function _spawnWdPuff(x, sz) {
+  const p = document.createElement('div');
+  p.className = 'wd-puff';
+  const s = sz || (55 + Math.random() * 80);
+  const blur = (8 + Math.random() * 12).toFixed(1);
+  p.style.cssText = [
+    `width:${s.toFixed(0)}px`, `height:${(s * .82).toFixed(0)}px`,
+    `left:${x.toFixed(1)}%`, `bottom:${(-s * .28).toFixed(0)}px`,
+    `background:${_wdPuffCols[Math.random() * _wdPuffCols.length | 0]}`,
+    `--blur:${blur}px`,
+    `--px:${((Math.random() - .38) * 75).toFixed(1)}px`,
+    `--px2:${((Math.random() - .38) * 105).toFixed(1)}px`,
+    `animation:${_wdPuffAnis[Math.random() * 3 | 0]} ${(4.5 + Math.random() * 5).toFixed(1)}s ${(Math.random() * .5).toFixed(2)}s ease-out forwards`
+  ].join(';');
+  wardustOverlay.appendChild(p);
+  p.addEventListener('animationend', () => p.remove());
+}
+
+function _spawnWdGrain(x) {
+  const g = document.createElement('div');
+  g.className = 'wd-grain';
+  const sz = (2.5 + Math.random() * 4.5).toFixed(1);
+  g.style.cssText = [
+    `width:${sz}px`, `height:${sz}px`,
+    `left:${(x + (Math.random() - .5) * 9).toFixed(1)}%`, `bottom:${(Math.random() * 6).toFixed(1)}px`,
+    `background:${_wdGrainCols[Math.random() * _wdGrainCols.length | 0]}`,
+    `--bx:${((Math.random() - .5) * 65).toFixed(1)}px`,
+    `--bx2:${((Math.random() - .5) * 88).toFixed(1)}px`,
+    `animation:wd-grain ${(2.8 + Math.random() * 3.2).toFixed(1)}s ${(Math.random() * .25).toFixed(2)}s ease-out forwards`
+  ].join(';');
+  wardustOverlay.appendChild(g);
+  g.addEventListener('animationend', () => g.remove());
+}
+
+function _wdBurst() {
+  // Ráfaga de polvo: simula varios caballos pasando por _wdBurstX
+  const x = _wdBurstX;
+  for (let i = 0; i < 5; i++) {
+    setTimeout(() => _spawnWdPuff(x + (Math.random() - .5) * 20, 50 + Math.random() * 60), i * 110);
+    setTimeout(() => _spawnWdGrain(x + (Math.random() - .5) * 12), i * 75);
+  }
+  _wdBurstX = (_wdBurstX + 14 + Math.random() * 16) % 98;
+}
+
+function startWarDust() {
+  if (activeEra && activeEra !== 'tres-reinos') return;
+  if (_wdTimer) return;
+  document.body.classList.add('wardust-on');
+  // Cobertura inicial por toda la pantalla
+  for (let i = 0; i < 10; i++) {
+    setTimeout(() => _spawnWdPuff(8 + Math.random() * 84, 65 + Math.random() * 75), i * 180);
+    if (i < 6) setTimeout(() => _spawnWdGrain(8 + Math.random() * 84), i * 130);
+  }
+  _wdTimer = setInterval(_wdBurst, 1300);
+}
+function stopWarDust() {
+  if (activeEra === 'tres-reinos') return;
+  document.body.classList.remove('wardust-on');
+  clearInterval(_wdTimer); _wdTimer = null;
+}
+
+const _tresCard = document.querySelector('.pcard[data-pid="tres-reinos"]');
+if (_tresCard) {
+  _tresCard.addEventListener('mouseenter', startWarDust);
+  _tresCard.addEventListener('mouseleave', stopWarDust);
+}
+

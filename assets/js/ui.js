@@ -69,6 +69,10 @@ const eraState       = document.getElementById('era-state');
 const eraReset       = document.getElementById('era-reset');
 const heroesTitle    = document.getElementById('heroes-title');
 const factionsTitle  = document.getElementById('factions-title');
+const eraBookmark     = document.getElementById('era-bookmark');
+const eraBookmarkZh   = document.getElementById('era-bookmark-zh');
+const eraBookmarkName = document.getElementById('era-bookmark-name');
+document.getElementById('era-bookmark-close').addEventListener('click', () => setActiveEra(null));
 
 // ── Character grid ──
 const RANK_LABELS = { 1:'Figuras Clave Del Periodo', 2:'Otros Importantes', 3:'Otros Actores' };
@@ -305,13 +309,24 @@ function setActiveEra(eraId) {
     card.classList.toggle('active', card.dataset.pid === eraId);
   });
   eraState.textContent = era ? `Era activa: ${era.n} · ${era.y}` : 'Era activa: Todas';
+  eraBookmark.classList.toggle('visible', !!era);
+  eraBookmark.style.setProperty('--bm-c', era ? era.c : '');
+  eraBookmarkZh.textContent = era ? era.zh : '';
+  eraBookmarkName.textContent = era ? era.n : '';
   heroesTitle.textContent = era ? `Personajes clave · ${era.n}` : 'Los Grandes Protagonistas';
   factionsTitle.textContent = era ? `Reinos intervinientes · ${era.zh}` : '三國鼎立';
   renderCharacters(eraId);
   renderFactions(eraId);
-  if (eraId === 'turbantes') startBlossom(); else stopBlossom();
-  if (eraId === 'chibi') startFire(); else stopFire();
-  if (eraId === 'sima') startBlizzard(); else stopBlizzard();
+  if (eraId === 'turbantes')      startBlossom();    else stopBlossom();
+  if (eraId === 'chibi')          startFire();       else stopFire();
+  if (eraId === 'sima')           startBlizzard();   else stopBlizzard();
+  if (eraId === 'han-tardio')     startDust();       else stopDust();
+  if (eraId === 'jin')            startPeace();      else stopPeace();
+  if (eraId === 'guerras-senores') startLeaves();    else stopLeaves();
+  if (eraId === 'dong-zhuo')      startCinder();     else stopCinder();
+  if (eraId === 'guerras-ocaso')  startDuskRain();   else stopDuskRain();
+  if (eraId === 'ocho-principes') startChaos();      else stopChaos();
+  if (eraId === 'tres-reinos')    startWarDust();    else stopWarDust();
 }
 
 pgrid.addEventListener('click', e => {
@@ -447,4 +462,16 @@ document.querySelectorAll('.ccard,.fcard,.pcard-wrap').forEach((el,i) => {
   el.style.transform = 'translateY(18px)';
   el.style.transition = `opacity 0.45s ${i*0.04}s ease, transform 0.45s ${i*0.04}s ease, box-shadow 0.18s, border-color 0.18s`;
   obs.observe(el);
+});
+
+// ── Back to top ──
+const _btt = document.getElementById('back-top');
+const _pv  = document.getElementById('corner-vignette');
+window.addEventListener('scroll', () => {
+  const show = scrollY > 400;
+  _btt.classList.toggle('visible', show);
+  _pv.classList.toggle('visible', show);
+}, { passive: true });
+_btt.addEventListener('click', () => {
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 });
