@@ -43,6 +43,64 @@ body{background:var(--ink);color:var(--parch);font-family:'IM Fell English',Geor
   .hamburger{display:flex}
 }
 
+/* ── ERA BOOKMARK — estandarte vertical de era activa ── */
+#era-bookmark{
+  position:fixed;top:0;left:24px;z-index:190;
+  padding-top:var(--nav-h);
+  pointer-events:none;opacity:0;
+  transform:translateY(calc(var(--nav-h) - 100%));
+  transition:opacity .22s ease,transform .42s cubic-bezier(.34,1.12,.64,1)
+}
+#era-bookmark.visible{opacity:1;transform:translateY(0);pointer-events:auto}
+.bm-body{
+  display:flex;flex-direction:column;align-items:center;
+  width:56px;padding:14px 6px 18px;
+  background:linear-gradient(175deg,rgba(16,6,0,.99) 0%,rgba(8,2,0,.99) 100%);
+  border-left:2px solid var(--gold);
+  border-right:1px solid rgba(201,168,76,.3);
+  border-bottom:1px solid rgba(201,168,76,.3);
+  border-top:none;position:relative;
+  box-shadow:3px 8px 24px rgba(0,0,0,.65)
+}
+/* Punta de flecha — capa borde */
+.bm-body::before{
+  content:'';position:absolute;
+  bottom:-20px;left:50%;transform:translateX(-50%);
+  width:0;height:0;
+  border-left:29px solid transparent;
+  border-right:29px solid transparent;
+  border-top:20px solid rgba(201,168,76,.3)
+}
+/* Punta de flecha — capa relleno */
+.bm-body::after{
+  content:'';position:absolute;
+  bottom:-18px;left:50%;transform:translateX(-50%);
+  width:0;height:0;
+  border-left:27px solid transparent;
+  border-right:27px solid transparent;
+  border-top:18px solid rgba(8,2,0,.99)
+}
+#era-bookmark-zh{
+  font-family:'Noto Serif SC',serif;font-size:18px;font-weight:900;
+  color:var(--bm-c,var(--gold));letter-spacing:.06em;
+  writing-mode:vertical-rl;text-orientation:upright;line-height:1.1;
+  text-shadow:0 0 18px color-mix(in srgb,var(--bm-c,var(--gold)) 55%,transparent)
+}
+.bm-sep{
+  width:30px;height:1px;
+  background:rgba(201,168,76,.25);
+  margin:11px 0 4px;flex-shrink:0
+}
+#era-bookmark-name{display:none}
+#era-bookmark-close{
+  background:none;border:none;cursor:pointer;
+  color:var(--gold);font-size:14px;line-height:1;
+  padding:0;opacity:.6;margin-top:8px;
+  text-shadow:0 0 10px rgba(201,168,76,.4);
+  transition:opacity .15s,text-shadow .15s;flex-shrink:0
+}
+#era-bookmark-close:hover{opacity:1;text-shadow:0 0 18px rgba(201,168,76,.85)}
+
 /* ── HERO ── */
 #hero{
   min-height:92vh;display:flex;align-items:center;justify-content:center;
@@ -76,7 +134,7 @@ body{background:var(--ink);color:var(--parch);font-family:'IM Fell English',Geor
 .btn-sec:hover{border-color:var(--gold);background:rgba(201,168,76,.06);transform:translateY(-2px)}
 .hero-scroll{position:absolute;bottom:26px;left:50%;transform:translateX(-50%);font-family:'Noto Sans SC',sans-serif;font-size:13px;color:var(--gold);opacity:.32;letter-spacing:.2em;text-transform:uppercase;display:flex;flex-direction:column;align-items:center;gap:5px;animation:bounce 2.4s ease-in-out infinite;text-decoration:none;transition:all .2s}
 .hero-scroll:hover{opacity:.65;color:var(--parch2);text-shadow:0 0 16px rgba(201,168,76,.22)}
-@keyframes bounce{0%,100%{transform:translateX(-50%) translateY(0)}55%{transform:translateX(-50%) translateY(7px)}}
+@keyframes bounce{0%,100%{transform:translateY(0)}55%{transform:translateX(-50%) translateY(7px)}}
 .hero-scroll::after{content:'↓';font-size:13px}
 @keyframes fadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
 
@@ -116,7 +174,7 @@ body{background:var(--ink);color:var(--parch);font-family:'IM Fell English',Geor
   white-space:nowrap;
 }
 .char-rank-sep:first-child{margin-top:0}
-.char-rank-sep::before,.char-rank-sep::after{content:'';flex:1;height:1px;background:rgba(201,168,76,.18)}
+.char-rank-sep::before,.char-rank-sep::after{content:'';flex:1;height:1px;background:rgba(201,168,76,.35)}
 
 /* Sub-grids */
 .char-rank-grid{display:grid;gap:13px;align-items:stretch;grid-auto-rows:1fr}
@@ -143,7 +201,7 @@ body{background:var(--ink);color:var(--parch);font-family:'IM Fell English',Geor
 .ccard-bio{font-family:'Noto Sans SC',sans-serif;font-size:14px;color:var(--parch2);line-height:1.55;opacity:.74;flex:1;min-height:0;max-height:6.6em;overflow:hidden;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;text-overflow:ellipsis;transition:max-height .22s ease}
 .ccard:hover .ccard-bio{max-height:30em}
 .ccard-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:9px}
-.ccard-tag{font-family:'Noto Sans SC',sans-serif;font-size:16px;color:var(--fc,var(--gold));border:1px solid var(--fc,var(--goldf));padding:2px 6px;border-radius:2px;opacity:.78}
+.ccard-tag{font-family:'Noto Sans SC',sans-serif;font-size:11px;color:var(--fc,var(--gold));border:1px solid var(--fc,var(--goldf));padding:2px 6px;border-radius:2px;opacity:.78}
 .ccard-btn{display:block;margin-top:13px;text-align:center;font-family:'Cinzel Decorative',serif;font-size:16px;color:var(--fc,var(--gold));border:1px solid var(--fc,var(--goldf));padding:7px 10px;border-radius:2px;letter-spacing:.12em;text-transform:uppercase;transition:all .18s;background:transparent;cursor:pointer;width:100%}
 .ccard-btn:hover{background:rgba(255,255,255,.04);border-color:var(--fc,var(--gold))}
 
@@ -446,6 +504,169 @@ body.blizzard-on #blizzard-overlay{opacity:1}
 }
 .farrow{position:fixed;pointer-events:none;display:flex;align-items:center;z-index:100;will-change:transform,opacity}
 
+/* ── HAN TARDIO — Polvo dorado ── */
+#dust-overlay{position:fixed;inset:0;pointer-events:none;z-index:97;overflow:hidden;opacity:0;transition:opacity .9s ease}
+body.dust-on #dust-overlay{opacity:1}
+.dust-mote{position:absolute;border-radius:50%;pointer-events:none;will-change:transform,opacity}
+@keyframes dust-rise-a{
+  0%{transform:translateY(0) translateX(0);opacity:0}
+  12%{opacity:1}
+  50%{transform:translateY(-32vh) translateX(var(--dx1,20px))}
+  88%{opacity:.72}
+  100%{transform:translateY(-68vh) translateX(var(--dx2,10px));opacity:0}
+}
+@keyframes dust-rise-b{
+  0%{transform:translateY(0) translateX(var(--dx1,-15px));opacity:0}
+  15%{opacity:.9}
+  55%{transform:translateY(-35vh) translateX(var(--dx2,18px))}
+  85%{opacity:.62}
+  100%{transform:translateY(-70vh) translateX(var(--dx1,-10px));opacity:0}
+}
+@keyframes dust-rise-c{
+  0%{transform:translateY(0);opacity:0}
+  10%{opacity:.95}
+  45%{transform:translateY(-28vh) translateX(var(--dx2,25px))}
+  82%{opacity:.68}
+  100%{transform:translateY(-65vh) translateX(var(--dx1,-5px));opacity:0}
+}
+
+/* ── JIN — Linternas de paz ── */
+#peace-overlay{position:fixed;inset:0;pointer-events:none;z-index:97;overflow:hidden;opacity:0;transition:opacity .9s ease}
+body.peace-on #peace-overlay{opacity:1}
+.peace-light{position:absolute;border-radius:50%;pointer-events:none;will-change:transform,opacity}
+@keyframes lantern-rise{
+  0%{transform:translateY(0) translateX(0);opacity:0}
+  10%{opacity:1}
+  45%{transform:translateY(-38vh) translateX(var(--lx1,20px))}
+  88%{opacity:.6}
+  100%{transform:translateY(-85vh) translateX(var(--lx2,-15px));opacity:0}
+}
+
+/* ── GUERRAS SEÑORES — Hojas de otoño ── */
+#leaves-overlay{position:fixed;inset:0;pointer-events:none;z-index:97;overflow:hidden;opacity:0;transition:opacity .8s ease}
+body.leaves-on #leaves-overlay{opacity:1}
+.autumn-leaf{position:absolute;border-radius:50% 30% 50% 30%;pointer-events:none;will-change:transform,opacity}
+@keyframes leaf-a{
+  0%{transform:translateY(0) translateX(0) rotateZ(0);opacity:0}
+  8%{opacity:.92}
+  30%{transform:translateY(30vh) translateX(45px) rotateZ(110deg)}
+  65%{transform:translateY(65vh) translateX(-18px) rotateZ(260deg)}
+  90%{opacity:.7}
+  100%{transform:translateY(110vh) translateX(55px) rotateZ(420deg);opacity:0}
+}
+@keyframes leaf-b{
+  0%{transform:translateY(0) translateX(0) rotateZ(25deg);opacity:0}
+  10%{opacity:.86}
+  35%{transform:translateY(33vh) translateX(-52px) rotateZ(105deg)}
+  68%{transform:translateY(67vh) translateX(28px) rotateZ(240deg)}
+  88%{opacity:.6}
+  100%{transform:translateY(110vh) translateX(-38px) rotateZ(360deg);opacity:0}
+}
+@keyframes leaf-c{
+  0%{transform:translateY(0) translateX(18px) rotateZ(-12deg);opacity:0}
+  12%{opacity:.8}
+  42%{transform:translateY(40vh) translateX(-26px) rotateZ(85deg)}
+  75%{transform:translateY(73vh) translateX(52px) rotateZ(205deg)}
+  87%{opacity:.55}
+  100%{transform:translateY(110vh) translateX(15px) rotateZ(320deg);opacity:0}
+}
+
+/* ── DONG ZHUO — Brasas y ceniza ── */
+#cinder-overlay{position:fixed;inset:0;pointer-events:none;z-index:97;overflow:hidden;opacity:0;transition:opacity .6s ease}
+body.cinder-on #cinder-overlay{opacity:1}
+.cinder{position:absolute;border-radius:50%;pointer-events:none;will-change:transform,opacity}
+@keyframes cinder-a{
+  0%{transform:translateY(0) rotateZ(0);opacity:0}
+  6%{opacity:1}
+  32%{transform:translateY(35vh) translateX(22px) rotateZ(95deg)}
+  68%{transform:translateY(70vh) translateX(-14px) rotateZ(195deg)}
+  92%{opacity:.85}
+  100%{transform:translateY(112vh) translateX(30px) rotateZ(275deg);opacity:0}
+}
+@keyframes cinder-b{
+  0%{transform:translateY(0) translateX(-8px) rotateZ(28deg);opacity:0}
+  8%{opacity:.92}
+  38%{transform:translateY(40vh) translateX(-28px) rotateZ(118deg)}
+  78%{transform:translateY(78vh) translateX(18px) rotateZ(248deg)}
+  91%{opacity:.7}
+  100%{transform:translateY(112vh) translateX(-18px) rotateZ(305deg);opacity:0}
+}
+@keyframes cinder-c{
+  0%{transform:translateY(0) translateX(12px) rotateZ(-18deg);opacity:0}
+  7%{opacity:.88}
+  48%{transform:translateY(48vh) translateX(-36px) rotateZ(138deg)}
+  84%{opacity:.65}
+  100%{transform:translateY(112vh) translateX(22px) rotateZ(255deg);opacity:0}
+}
+
+/* ── GUERRAS OCASO — Lluvia crepuscular ── */
+#dusk-overlay{position:fixed;inset:0;pointer-events:none;z-index:97;overflow:hidden;opacity:0;transition:opacity .7s ease}
+body.dusk-rain-on #dusk-overlay{opacity:1}
+.rain-drop{position:absolute;width:1px;border-radius:1px;pointer-events:none;will-change:transform}
+@keyframes dusk-rain{
+  0%{transform:translate(0,0);opacity:0}
+  4%{opacity:1}
+  96%{opacity:.9}
+  100%{transform:translate(var(--rdx,60px),108vh);opacity:0}
+}
+
+/* ── OCHO PRÍNCIPES — Tormenta de caos ── */
+#chaos-overlay{position:fixed;inset:0;pointer-events:none;z-index:97;overflow:hidden;opacity:0;transition:opacity .5s ease}
+body.chaos-on #chaos-overlay{opacity:1}
+.chaos-drop{position:absolute;width:1px;border-radius:1px;pointer-events:none;will-change:transform}
+@keyframes chaos-rain{
+  0%{transform:translate(0,0);opacity:0}
+  3%{opacity:1}
+  97%{opacity:.85}
+  100%{transform:translate(var(--rdx,120px),112vh);opacity:0}
+}
+@keyframes lightning-flash{
+  0%,100%{opacity:0}
+  8%{opacity:1}
+  18%{opacity:.06}
+  26%{opacity:.78}
+  42%{opacity:0}
+}
+body.lightning-flash::after{
+  content:'';position:fixed;inset:0;z-index:96;pointer-events:none;
+  background:rgba(215,225,255,.07);
+  animation:lightning-flash .26s ease-out forwards
+}
+
+/* ── TRES REINOS — Polvo de guerra ── */
+#wardust-overlay{position:fixed;inset:0;pointer-events:none;z-index:97;overflow:hidden;opacity:0;transition:opacity 1s ease}
+body.wardust-on #wardust-overlay{opacity:1}
+.wd-puff{position:absolute;border-radius:50%;pointer-events:none;will-change:transform,opacity;filter:blur(var(--blur,12px))}
+.wd-grain{position:absolute;border-radius:50%;pointer-events:none;will-change:transform,opacity}
+@keyframes wd-puff-a{
+  0%  {transform:translateY(0) translateX(0) scale(.22);opacity:0}
+  10% {opacity:.72}
+  52% {transform:translateY(-26vh) translateX(var(--px,30px)) scale(1.5);opacity:.55}
+  86% {opacity:.18}
+  100%{transform:translateY(-56vh) translateX(var(--px2,60px)) scale(2.3);opacity:0}
+}
+@keyframes wd-puff-b{
+  0%  {transform:translateY(0) translateX(var(--px,-20px)) scale(.18);opacity:0}
+  12% {opacity:.65}
+  48% {transform:translateY(-20vh) translateX(var(--px2,-45px)) scale(1.2);opacity:.48}
+  83% {opacity:.14}
+  100%{transform:translateY(-46vh) translateX(var(--px,-35px)) scale(1.9);opacity:0}
+}
+@keyframes wd-puff-c{
+  0%  {transform:translateY(0) scale(.16);opacity:0}
+  8%  {opacity:.78}
+  44% {transform:translateY(-18vh) translateX(var(--px,38px)) scale(1.1);opacity:.6}
+  80% {opacity:.2}
+  100%{transform:translateY(-42vh) translateX(var(--px2,70px)) scale(1.75);opacity:0}
+}
+@keyframes wd-grain{
+  0%  {transform:translateY(0) translateX(0);opacity:0}
+  6%  {opacity:.92}
+  48% {transform:translateY(-30vh) translateX(var(--bx,22px));opacity:.72}
+  88% {opacity:.28}
+  100%{transform:translateY(-56vh) translateX(var(--bx2,40px));opacity:0}
+}
+
 /* ── LÜ BU EASTER EGG ── */
 @keyframes lubu-shake{
   0%,100%{transform:translate(0,0) rotate(0)}
@@ -528,16 +749,56 @@ body.lubu-shaking{animation:lubu-shake .98s ease-in-out}
   position:relative;z-index:3;margin-top:clamp(2px,1vh,10px)
 }
 
+/* ── BACK TO TOP ── */
+#corner-vignette{
+  position:fixed;bottom:0;right:0;
+  width:320px;height:320px;
+  background:radial-gradient(circle at 100% 100%,
+    rgba(52,22,3,.97) 0%,
+    rgba(36,15,2,.82) 22%,
+    rgba(22,9,1,.55)  42%,
+    rgba(14,6,0,.25)  60%,
+    transparent       72%
+  );
+  pointer-events:none;z-index:179;
+  opacity:0;transition:opacity .36s ease
+}
+#corner-vignette.visible{opacity:1}
+#back-top{
+  position:fixed;bottom:26px;right:28px;
+  transform:translateY(10px);
+  z-index:180;
+  padding:10px;
+  background:none;border:none;
+  color:var(--gold);line-height:1;
+  cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  opacity:0;pointer-events:none;
+  transition:opacity .32s ease,transform .32s ease
+}
+#back-top span{
+  font-size:26px;
+  display:inline-block;
+  text-shadow:0 0 18px rgba(201,168,76,.55);
+  transition:transform .22s ease,text-shadow .22s ease
+}
+#back-top::before,#back-top::after{content:none}
+#back-top.visible{opacity:1;pointer-events:auto;transform:translateY(0)}
+#back-top:hover span{
+  transform:translateY(-5px);
+  text-shadow:0 0 26px rgba(201,168,76,.95),0 0 54px rgba(201,168,76,.35)
+}
+
 /* ── FOOTER ── */
-footer{border-top:1px solid var(--border);background:rgba(4,2,0,.97);padding:clamp(26px,4vw,40px) max(clamp(16px,5vw,72px),calc((100vw - 1380px) / 2));display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:18px}
-.foot-brand{display:flex;flex-direction:column;gap:3px}
+footer{position:relative;background:rgba(4,2,0,.97);padding:clamp(28px,4vw,44px) max(clamp(16px,5vw,72px),calc((100vw - 1380px) / 2))}
+footer::before{content:'';display:block;position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent 0%,rgba(201,168,76,.35) 20%,rgba(201,168,76,.65) 50%,rgba(201,168,76,.35) 80%,transparent 100%)}
+.foot-body{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:20px}
+.foot-brand{display:flex;flex-direction:column;gap:5px}
 .foot-zh{font-family:'Noto Serif SC',serif;font-size:20px;font-weight:900;color:var(--red);letter-spacing:.1em}
-.foot-en{font-family:'Cinzel Decorative',serif;font-size:16px;color:var(--gold);opacity:.45;letter-spacing:.16em}
-.foot-links{display:flex;gap:18px;flex-wrap:wrap}
-.foot-links a{font-family:'Noto Sans SC',sans-serif;font-size:14px;color:var(--parch2);opacity:.42;text-decoration:none;transition:opacity .18s}
-.foot-links a:hover{opacity:1;color:var(--gold)}
-.foot-copy{font-family:'Noto Sans SC',sans-serif;font-size:13px;color:var(--parch2);opacity:.28;text-align:right;line-height:1.6}
-.foot-author{display:block;font-family:'Cinzel Decorative',serif;font-size:11px;letter-spacing:.22em;color:var(--gold);opacity:.88;margin-top:7px}
+.foot-en{font-family:'Cinzel Decorative',serif;font-size:11px;color:var(--gold);opacity:.38;letter-spacing:.16em}
+.foot-credit{display:flex;flex-direction:column;align-items:flex-end;gap:7px}
+.foot-copy{font-family:'Noto Sans SC',sans-serif;font-size:11px;color:var(--parch2);opacity:.25;text-align:right;letter-spacing:.04em}
+.foot-author{font-family:'Cinzel Decorative',serif;font-size:9px;letter-spacing:.32em;color:var(--parch2);text-shadow:0 0 10px rgba(201,168,76,.75),0 0 24px rgba(201,168,76,.38);opacity:1;text-align:right}
 
 /* ── ENHANCED FACTION CARDS ── */
 .fcard{cursor:pointer}
@@ -850,9 +1111,10 @@ footer{border-top:1px solid var(--border);background:rgba(4,2,0,.97);padding:cla
   border-color:var(--fc,var(--gold))
 }
 .fac-filter-btn.active{
-  background:rgba(201,168,76,.15);
+  background:rgba(201,168,76,.25);
   border-color:var(--fc,var(--gold));
-  color:var(--parch)
+  color:var(--parch);
+  box-shadow:0 0 0 1px var(--fc,var(--gold))
 }
 
 /* ── Batallas ── */

@@ -9,6 +9,16 @@
 </head>
 <body>
 
+<!-- Era filter bookmark — visible only when an era is active -->
+<div id="era-bookmark">
+  <div class="bm-body">
+    <span id="era-bookmark-zh"></span>
+    <span class="bm-sep"></span>
+    <span id="era-bookmark-name"></span>
+    <button id="era-bookmark-close" type="button" aria-label="Quitar filtro de era">✕</button>
+  </div>
+</div>
+
 <nav id="nav">
   <a class="nav-brand" href="#">
     <span class="nav-zh">三國演義</span>
@@ -170,19 +180,16 @@
 </section>
 
 <footer>
-  <div class="foot-brand">
-    <span class="foot-zh">三國演義</span>
-    <span class="foot-en">Romance de los Tres Reinos · Portal de Fandom</span>
+  <div class="foot-body">
+    <div class="foot-brand">
+      <span class="foot-zh">三國演義</span>
+      <span class="foot-en">Romance de los Tres Reinos · Portal de Fandom</span>
+    </div>
+<div class="foot-credit">
+      <span class="foot-copy">Portal no oficial · Contenido educativo</span>
+      <span class="foot-author">Alejandro Peyró</span>
+    </div>
   </div>
-  <div class="foot-links">
-    <a href="#heroes">Personajes</a>
-    <a href="#factions">Reinos</a>
-    <a href="#periods">Eras</a>
-    <a href="assets/batallas.html">Batallas</a>
-    <a href="assets/mapa.html">Mapa</a>
-    <a href="#faq">FAQ</a>
-  </div>
-  <div class="foot-copy">Portal de Fandom no oficial · Contenido educativo y de divulgación<span class="foot-author">Alejandro Peyró Cebrián</span></div>
 </footer>
 
 <div id="lubu-overlay">
@@ -208,6 +215,9 @@
     <div class="km-body" id="km-body"></div>
   </div>
 </div>
+
+<div id="corner-vignette"></div>
+<button id="back-top" aria-label="Volver arriba"><span>↑</span></button>
 
 <script src="assets/js/data.js"></script>
 <script src="assets/js/ui.js"></script>

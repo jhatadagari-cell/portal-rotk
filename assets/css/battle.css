@@ -26,12 +26,21 @@ a{text-decoration:none}
 .result-badge.pirrica{color:var(--gold);border-color:var(--gold);background:rgba(201,168,76,.08)}
 .result-badge.indecisa{color:#9ab0c8;border-color:#9ab0c8;background:rgba(154,176,200,.08)}
 
-.battle-vs{display:grid;grid-template-columns:1fr auto 1fr;gap:16px;align-items:center;margin:24px 0 32px}
+.battle-vs{display:grid;grid-template-columns:1fr auto 1fr;gap:16px;align-items:center;margin:24px 0 20px}
 .faction-side{padding:18px 20px;border-radius:14px;border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.03)}
+.faction-side--rebel{border-color:rgba(212,112,112,.22);background:rgba(212,112,112,.05)}
+.faction-side--imperial{border-color:rgba(125,186,128,.2);background:rgba(125,186,128,.04)}
 .faction-side-label{font-family:'Cinzel Decorative',serif;font-size:9px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted);opacity:.7;margin:0 0 6px}
 .faction-side-name{font-family:'Noto Serif SC',serif;font-size:19px;color:var(--text);margin:0 0 4px}
 .faction-side-leader{font-family:'IM Fell English',serif;font-style:italic;font-size:16px;color:var(--muted)}
 .vs-label{font-family:'Cinzel Decorative',serif;font-size:18px;font-weight:700;color:var(--gold);text-align:center;opacity:.7}
+
+/* ── Barra de datos rápidos ── */
+.battle-stats{display:flex;gap:0;margin:0 0 32px;border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,.07)}
+.battle-stat{flex:1;padding:14px 18px;background:rgba(255,255,255,.025);text-align:center;border-right:1px solid rgba(255,255,255,.06)}
+.battle-stat:last-child{border-right:none}
+.battle-stat-val{font-family:'Noto Serif SC',serif;font-size:15px;color:var(--text);display:block;margin-bottom:4px}
+.battle-stat-lbl{font-family:'Cinzel Decorative',serif;font-size:8px;letter-spacing:.22em;text-transform:uppercase;color:var(--gold);opacity:.55}
 
 /* ── Panel intro ── */
 .battle-intro-panel{margin-bottom:36px;padding:22px 24px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:14px}
@@ -40,7 +49,7 @@ a{text-decoration:none}
 /* ── Nota histórica ── */
 .battle-nota{margin-bottom:36px;padding:16px 20px;background:rgba(201,168,76,.04);border:1px solid rgba(201,168,76,.14);border-radius:12px}
 .battle-nota-label{font-family:'Cinzel Decorative',serif;font-size:9px;letter-spacing:.24em;text-transform:uppercase;color:var(--gold);opacity:.6;margin:0 0 8px}
-.battle-nota p{margin:0;font-family:'IM Fell English',serif;font-style:italic;font-size:16px;line-height:1.8;color:var(--muted)}
+.battle-nota p{margin:0;font-family:'IM Fell English',serif;font-style:italic;font-size:18px;line-height:1.85;color:var(--muted)}
 
 /* ── Actos ── */
 .battle-act{margin-bottom:52px}
@@ -53,6 +62,7 @@ a{text-decoration:none}
 .battle-events::before{content:'';position:absolute;left:9px;top:10px;bottom:60px;width:2px;background:linear-gradient(180deg,var(--gold) 0%,rgba(201,168,76,.05) 100%)}
 .battle-event{position:relative;margin-bottom:36px}
 .battle-event::before{content:'';position:absolute;left:-45px;top:3px;width:18px;height:18px;border-radius:50%;border:2px solid var(--gold);background:var(--bg);box-shadow:0 0 0 3px rgba(201,168,76,.1),0 0 12px rgba(201,168,76,.15)}
+.event-year{display:inline-block;font-family:'Cinzel Decorative',serif;font-size:8px;letter-spacing:.18em;color:var(--gold);opacity:.7;background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.18);border-radius:20px;padding:2px 9px;margin-bottom:7px}
 .event-label{font-family:'Noto Serif SC',serif;font-size:19px;color:var(--text);margin:0 0 8px}
 .event-desc{font-family:'IM Fell English',serif;font-size:18px;line-height:1.85;color:var(--muted);margin:0}
 
@@ -64,13 +74,21 @@ a{text-decoration:none}
 .figure-bubbles{display:flex;flex-wrap:wrap;gap:20px 24px}
 .figure-bubble{display:flex;flex-direction:column;align-items:center;gap:7px;text-decoration:none}
 .figure-bubble-img{width:100px;height:100px;border-radius:50%;overflow:hidden;border:2px solid rgba(201,168,76,.2);transition:transform .22s,border-color .22s,box-shadow .22s;flex-shrink:0}
-.figure-bubble-img img{display:block;width:100%;height:100%;object-fit:cover;object-position:top center;transform:scale(1.8);transform-origin:top center}
+.figure-bubble-img img{display:block;width:100%;height:100%;object-fit:cover;object-position:top center;transform:scale(1.5);transform-origin:top center}
 .figure-bubble:hover .figure-bubble-img{transform:scale(1.06);border-color:var(--gold);box-shadow:0 0 0 3px rgba(201,168,76,.15),0 0 14px rgba(201,168,76,.18)}
 .figure-bubble-img--placeholder{background:rgba(201,168,76,.07);display:flex;align-items:center;justify-content:center}
 .figure-bubble-img--placeholder span{font-family:'Cinzel Decorative',serif;font-size:13px;color:var(--gold);opacity:.4}
 .figure-bubble-name{font-family:'Noto Serif SC',serif;font-size:13px;color:var(--muted);text-align:center;transition:color .22s;max-width:100px;line-height:1.3}
 .figure-bubble:hover .figure-bubble-name{color:var(--text)}
 .figure-bubble-role{font-family:'Cinzel Decorative',serif;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);opacity:.6;text-align:center;max-width:108px;line-height:1.4}
+
+/* ── Footer de batalla ── */
+.battle-footer{text-align:center;padding:36px 0 8px;border-top:1px solid rgba(255,255,255,.06);margin-top:8px}
+.battle-footer a{font-family:'Cinzel Decorative',serif;font-size:11px;letter-spacing:.22em;color:var(--gold);opacity:.55;transition:opacity .2s}
+.battle-footer a:hover{opacity:1}
+
+/* ── Sección próximamente ── */
+.sec-link.soon{opacity:.35;cursor:not-allowed;pointer-events:none}
 
 /* ── Separador ── */
 .section-divider{display:flex;align-items:center;gap:14px;margin:40px 0 36px;opacity:.35}
