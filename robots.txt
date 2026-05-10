@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://jhatadagari-cell.github.io/portal-rotk/sitemap.xml

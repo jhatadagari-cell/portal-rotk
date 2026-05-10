@@ -110,8 +110,42 @@
 </footer>`.trim();
   }
 
+  // ── Meta tags compartidos ───────────────────────────────────────────
+  // Inyectamos solo lo que Google y los browsers procesan post-render:
+  //   favicon, theme-color, canonical.
+  // Los og:* / twitter:* van hardcodeados en cada <head> (los crawlers
+  // sociales no ejecutan JS).
+  function ensureMeta(selector, build) {
+    if (document.head.querySelector(selector)) return;
+    const el = build();
+    document.head.appendChild(el);
+  }
+  function injectMeta() {
+    ensureMeta('link[rel="icon"]', () => {
+      const l = document.createElement('link');
+      l.rel = 'icon'; l.type = 'image/svg+xml';
+      l.href = href('assets/img/favicon.svg');
+      return l;
+    });
+    ensureMeta('meta[name="theme-color"]', () => {
+      const m = document.createElement('meta');
+      m.name = 'theme-color'; m.content = '#0b0600';
+      return m;
+    });
+    ensureMeta('link[rel="canonical"]', () => {
+      const l = document.createElement('link');
+      l.rel = 'canonical';
+      // location.href ya es absoluto; le quitamos hash/query para canónica limpia.
+      const u = new URL(location.href);
+      u.hash = ''; u.search = '';
+      l.href = u.toString();
+      return l;
+    });
+  }
+
   // ── Inyección ────────────────────────────────────────────────────────
   function mount() {
+    injectMeta();
     const navMount = document.getElementById('chrome-nav');
     if (navMount) navMount.outerHTML = navHTML();
     const footMount = document.getElementById('chrome-footer');

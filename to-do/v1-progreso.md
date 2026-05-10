@@ -46,10 +46,17 @@
 - Eras: han-tardio, turbantes, dong-zhuo, guerras-senores, consolidacion-norte, chibi, guerras-ocaso, tres-reinos, ascenso-sima, unificacion-jin.
 - 800-1500 palabras de prosa narrativa cada una.
 
-### C6 — Meta/favicon/OG/sitemap · pendiente
-- Pensar si chrome.js inyecta los meta tags por `data-page-*` attrs, o si cada página los hardcodea (mejor para SEO).
-- Diseñar favicon (sello "三" o carácter chino estilizado).
-- og-default por tipo: ficha, batalla, era, reino.
+### C6 — Meta/favicon/OG/sitemap · **HECHO**
+- [x] **Decisión cerrada**: dominio canónico = `https://jhatadagari-cell.github.io/portal-rotk/` (GH-Pages por defecto). Si después se compra dominio propio, hay que reescribir `SITE` en `to-do/v1-inject-og.py` y `v1-build-sitemap.py` y re-ejecutar.
+- [x] **Decisión cerrada**: SEO híbrido. Crawlers sociales (Twitter/Facebook/Slack/Discord) NO ejecutan JS, así que `og:*` y `twitter:*` van **hardcodeados** en cada `<head>`. Lo que sí inyecta chrome.js: `<link rel="icon">`, `<meta theme-color>`, `<link rel="canonical">` (Google los lee post-render).
+- [x] Creado `assets/img/favicon.svg` — sello rojo (#8b1a1a) con borde gold y 三 dibujado como tres trazos rectangulares en parch (#f0ddb0). Geometría pura, escala perfecta a cualquier tamaño, no depende de fonts.
+- [x] Creado `assets/img/og-default.svg` y `og-default.png` (1200×630) — composición tipográfica con 三國演義 gold gigante, "Romance de los Tres Reinos" en parch, marca de agua 魏蜀吳 sutil al fondo, borde sello, tag "PORTAL DE FANDOM" arriba y "Ocaso del Han · Guerra de los señores · Trípode de tres reinos" abajo. PNG generado con `System.Drawing` + Microsoft YaHei.
+- [x] Extendido `chrome.js` con `injectMeta()` que añade favicon SVG, theme-color (#0b0600) y canonical (location.href sin hash/query). Idempotente: solo inyecta si el tag no existe ya.
+- [x] Creado `to-do/v1-inject-og.py` — recorre 5 páginas top + 89 fichas + 18 batallas (112 archivos), inserta bloque `<!-- v1-og:start -->...<!-- v1-og:end -->` con og:site_name, og:type (website/article), og:title, og:description, og:url (absoluta), og:image, og:image:width/height, twitter:card=summary_large_image, twitter:title/description/image. Aplicado: 112/112 actualizados. Idempotente (regex sustituye el bloque sentinela). Si una página ya tiene `<meta name="description">` (acerca, 404), respeta la existente y no la duplica.
+- [x] Creado `to-do/v1-build-sitemap.py` — tokeniza `assets/js/data.js` respetando strings, extrae los objetos `{...}` raíz de CHARS y BATTLES con `v1: true` y `detailHref`, emite `sitemap.xml` con 73 URLs absolutas (4 top + 54 fichas + 15 batallas). Las 7 fichas pendientes de C3 no entran porque ni tienen archivo ni `detailHref` en data.js — al rellenarlas en C3, basta re-correr el script.
+- [x] Creado `robots.txt` (raíz) con `Allow: /` y `Sitemap:` apuntando a la URL absoluta. La 404 lleva ya `<meta name="robots" content="noindex">` desde C7.
+- [x] Smoke test: 11/11 endpoints HTTP 200 (index, acerca, 404, batallas, mapa, ficha cao-cao, batalla chibi, sitemap.xml, robots.txt, favicon.svg, og-default.png). Verificado que los `og:*` aparecen en el HTML inicial de cao-cao (no inyectados por JS, los crawlers sí los verán).
+- **Nota técnica pendiente**: `404.html` usa paths absolutos `/assets/...` pensados para custom domain. En GH-Pages project pages la URL real es `/portal-rotk/assets/...`. Cuando se publique en GH-Pages habrá que decidir: (a) reescribir 404 a `/portal-rotk/`, (b) configurar redirect en `index.html` que detecte path roto, o (c) comprar dominio (resolvería el problema de raíz). No bloquea v1, pero la 404 actual no funcionará bien en GH-Pages hasta resolverlo.
 
 ### C7 — Página 404 · **HECHO**
 - [x] `404.html` creada con personalidad: tipografía dramática, citas del Romance ("亂" de fondo, "El cielo amarillo reemplazará al cielo azul"), botones a inicio/mapa/acerca.
@@ -74,14 +81,14 @@
 
 ## Próximo paso al retomar
 
-**Estado al cierre de esta sesión** (2026-05-10): **C1, C2 y C7 hechos**. CNAME `threekingdoms.wiki` borrado (era de otra web ajena). Chrome compartido ya en index, acerca, 404, batallas.html, mapa.html, las 89 fichas y las 18 batallas individuales. Vars en chrome.css scopeadas a `#nav, footer` para preservar el theming cromático de cada ficha.
+**Estado al cierre de esta sesión** (2026-05-10): **C1, C2, C6 y C7 hechos**. SEO híbrido completo: favicon SVG, OG/Twitter hardcodeados en 112 páginas, sitemap.xml con 73 URLs, robots.txt. Pendiente nota técnica: la 404 con paths absolutos `/` no funcionará en GH-Pages project pages (`/portal-rotk/...`). No bloquea v1.
 
 **Por hacer en orden**:
 
-1. **C6** (meta tags + favicon + OG + sitemap.xml + robots.txt). Diseñar favicon (sello "三" o carácter chino estilizado). Pensar si chrome.js inyecta los meta tags por `data-page-*` attrs, o si cada página los hardcodea (mejor para SEO).
-2. **C3** (escribir las 7 fichas vacías: Wang Yun, Sima Yan, Chen Gong, Li Ru, Xun You, Yang Hu, Sun Hao) y nivelar relaciones (Zhuge Liang prioridad). Usar la skill `/ficha`.
-3. **C4** (nivelar 8 batallas: wan, changban, tong-pass, jiangling, dingjunshan, mai-cheng, jieting, wuzhang). Usar la skill `/batalla`.
-4. **C5** (10 páginas de Era con prosa narrativa, 800-1500 palabras cada una). Reusar `inline-links.js` para keywords clicables.
-5. **C8** (auditoría de enlaces + responsive en todo) e **I1–I4** al final.
+1. **C3** (escribir las 7 fichas vacías: Wang Yun, Sima Yan, Chen Gong, Li Ru, Xun You, Yang Hu, Sun Hao) y nivelar relaciones (Zhuge Liang prioridad). Usar la skill `/ficha`. **Después de añadirlas**: re-correr `python to-do/v1-inject-og.py --apply` y `python to-do/v1-build-sitemap.py` para que las 7 nuevas entren en OG y sitemap.
+2. **C4** (nivelar 8 batallas: wan, changban, tong-pass, jiangling, dingjunshan, mai-cheng, jieting, wuzhang). Usar la skill `/batalla`.
+3. **C5** (10 páginas de Era con prosa narrativa, 800-1500 palabras cada una). Reusar `inline-links.js` para keywords clicables. Después: re-correr `v1-inject-og.py` y `v1-build-sitemap.py` (el sitemap script aún no lista eras — habrá que añadirlas a `targets`).
+4. **C8** (auditoría de enlaces + responsive en todo) e **I1–I4** al final.
+5. **Resolver paths absolutos de 404** (custom domain o reescribir a `/portal-rotk/`).
 
 **Recordatorio operativo**: el plan completo está en `~/.claude/plans/tengo-que-ir-pensando-adaptive-shamir.md`. Las decisiones cerradas están al inicio.

@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <title>Portal ROTK — Romance de los Tres Reinos</title>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0b0600"/>
+      <stop offset="1" stop-color="#140a00"/>
+    </linearGradient>
+    <radialGradient id="halo" cx="0.5" cy="0.5" r="0.7">
+      <stop offset="0" stop-color="#c9a84c" stop-opacity="0.10"/>
+      <stop offset="1" stop-color="#c9a84c" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect width="1200" height="630" fill="url(#halo)"/>
+
+  <!-- Marca de agua: 魏 蜀 吳 fantasma -->
+  <g opacity="0.06" font-family="'Noto Serif SC','Songti SC','SimSun',serif" font-weight="900" fill="#c9a84c" text-anchor="middle">
+    <text x="180"  y="430" font-size="380">魏</text>
+    <text x="600"  y="450" font-size="380">蜀</text>
+    <text x="1020" y="430" font-size="380">吳</text>
+  </g>
+
+  <!-- Borde sello -->
+  <rect x="40" y="40" width="1120" height="550" fill="none" stroke="#c9a84c" stroke-opacity="0.35" stroke-width="1.5"/>
+  <rect x="50" y="50" width="1100" height="530" fill="none" stroke="#c9a84c" stroke-opacity="0.18" stroke-width="0.8"/>
+
+  <!-- Tag superior -->
+  <text x="600" y="155" font-family="'Cinzel Decorative','Cinzel',serif" font-size="22" letter-spacing="8" fill="#c9a84c" fill-opacity="0.75" text-anchor="middle">PORTAL DE FANDOM</text>
+
+  <!-- Título chino gigante -->
+  <text x="600" y="340" font-family="'Noto Serif SC','Songti SC','SimSun',serif" font-weight="900" font-size="180" letter-spacing="20" fill="#c9a84c" text-anchor="middle">三國演義</text>
+
+  <!-- Subtítulo -->
+  <text x="600" y="420" font-family="'Cinzel Decorative','Cinzel',serif" font-weight="700" font-size="44" letter-spacing="6" fill="#f0ddb0" text-anchor="middle">Romance de los Tres Reinos</text>
+
+  <!-- Años -->
+  <text x="600" y="475" font-family="'IM Fell English',Georgia,serif" font-style="italic" font-size="28" fill="#d4b870" fill-opacity="0.85" text-anchor="middle">168 — 316 d.C.</text>
+
+  <!-- Línea + nota inferior -->
+  <line x1="500" y1="525" x2="700" y2="525" stroke="#c9a84c" stroke-opacity="0.4" stroke-width="1"/>
+  <text x="600" y="560" font-family="'IM Fell English',Georgia,serif" font-size="20" fill="#f0ddb0" fill-opacity="0.7" text-anchor="middle">Ocaso del Han · Guerra de los señores · Trípode de tres reinos</text>
+</svg>

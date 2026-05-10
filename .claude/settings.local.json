@@ -76,7 +76,12 @@
       "Bash(cd to-do*)",
       "PowerShell(cd \"C:\\\\Users\\\\usuario\\\\Desktop\\\\Portal ROTK*)",
       "PowerShell(Set-Location \"C:\\\\Users\\\\usuario\\\\Desktop\\\\Portal ROTK*)",
-      "Bash(grep *)"
+      "Bash(grep *)",
+      "PowerShell(Get-ChildItem \"C:\\\\Users\\\\usuario\\\\Desktop\\\\Portal ROTK\" -Force -Name; \"---\"; Get-ChildItem \"C:\\\\Users\\\\usuario\\\\Desktop\\\\Portal ROTK\\\\assets\\\\img\" -Name | Where-Object { $_ -match 'favicon|icon|og-|robots|sitemap' })",
+      "PowerShell(python \"C:\\\\Users\\\\usuario\\\\Desktop\\\\Portal ROTK\\\\to-do\\\\v1-inject-og.py\" 2>&1 | Select-Object -First 30)",
+      "PowerShell(python \"C:\\\\Users\\\\usuario\\\\Desktop\\\\Portal ROTK\\\\to-do\\\\v1-inject-og.py\" 2>&1 | Select-Object -Last 5)",
+      "PowerShell(python \"C:\\\\Users\\\\usuario\\\\Desktop\\\\Portal ROTK\\\\to-do\\\\v1-inject-og.py\" --apply 2>&1 | Select-Object -Last 3)",
+      "PowerShell(python \"C:\\\\Users\\\\usuario\\\\Desktop\\\\Portal ROTK\\\\to-do\\\\v1-build-sitemap.py\")"
     ]
   },
   "enabledPlugins": {
