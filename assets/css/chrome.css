@@ -6,13 +6,20 @@
  * declara sus propias variables y no depende de main.css.
  */
 
+/* Vars que no chocan con los CSS de ficha individuales. */
 :root{
   --ink:#0b0600;
   --parch:#f0ddb0;--parch2:#d4b870;
-  --gold:#c9a84c;--goldf:rgba(201,168,76,.25);
+  --goldf:rgba(201,168,76,.25);
   --red:#8b1a1a;
-  --border:rgba(201,168,76,.2);
   --nav-h:58px;
+}
+/* --gold y --border las redefinen las CSS de cada ficha con valores propios
+   (theming cromático por personaje). Las scopeamos a chrome para que no
+   pisen el tema de la ficha cuando chrome.css se carga después. */
+#nav, footer{
+  --gold:#c9a84c;
+  --border:rgba(201,168,76,.2);
 }
 
 /* ── NAV ───────────────────────────────────────────────────────────── */
