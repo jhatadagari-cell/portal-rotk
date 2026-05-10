@@ -1,13 +1,16 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-page-section="mapa">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>三國演義 · Romance de los Tres Reinos</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700;900&family=Cinzel+Decorative:wght@400;700&family=IM+Fell+English:ital@0;1&family=Noto+Sans+SC:wght@300;400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/chrome.css">
 <link rel="stylesheet" href="css/mapa.css">
 </head>
 <body>
+
+<div id="chrome-nav"></div>
 
 <header id="hdr">
   <div class="hbrand">
@@ -19,7 +22,6 @@
     <button class="hb on" id="bc2" onclick="tog('c')">城 Ciudades</button>
     <button class="hb on" id="bp" onclick="tog('p')">将 Personajes</button>
     <button class="hb" id="bfull" onclick="togFull()" title="Mapa a ancho completo">⛶ Full</button>
-    <a class="hb hb-link" href="../index.html">← Inicio</a>
   </div>
 </header>
 
@@ -1158,5 +1160,7 @@ initTL();
 render();
 setTimeout(()=>selP('p1'),280);
 </script>
+
+<script src="../assets/js/chrome.js"></script>
 </body>
 </html>

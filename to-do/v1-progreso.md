@@ -24,11 +24,13 @@
 - [x] Creado `acerca.html` con: alcance, fuentes (Luo Guanzhong; Chen Shou *Sanguozhi*; Pei Songzhi; *Historical Atlas of China*), política fan-content educativo no comercial, autoría Alejandro Peyró 2025, convenciones (pinyin, zì, fechas), agradecimientos, cita de cierre.
 - [x] El nav perdió "FAQ" y ganó "Acerca de" (FAQ sigue accesible por scroll en index).
 - [x] Smoke test: index, acerca, 404, chrome.js, batallas, mapa → todos HTTP 200.
-- [ ] **Próxima sesión**: migrar `assets/batallas.html` al chrome (sustituir `#hdr` por mount, cargar main.css o extraer chrome.css).
-- [ ] **Próxima sesión**: migrar `assets/mapa.html` al chrome.
-- [ ] **Próxima sesión**: migrar las 89 fichas (`assets/Periods/*.html`) al chrome — usar script masivo con regex (todas tienen estructura `<header id="hdr">…</header>` similar).
-- [ ] **Próxima sesión**: migrar batallas individuales (`assets/Battles/*.html`).
-- [ ] **Decisión pendiente**: ¿extraer los selectores de `#nav`/`<footer>` a un `chrome.css` aislado o cargar main.css en todas las páginas? La opción aislada es más limpia.
+- [x] **Decisión cerrada**: opción B — `chrome.css` aislado (60 líneas) cargado por cada página interna. main.css sigue conteniendo las reglas (duplicación pendiente de limpiar).
+- [x] Creado `assets/css/chrome.css` — self-contained: declara su propio `:root` con vars (--ink, --parch, --gold, --nav-h:58px), reglas del #nav, footer, hamburger y media query ≤680px.
+- [x] Migrado `assets/batallas.html` al chrome: añadido `<link>` a chrome.css, sustituido `<header id="hdr">` por `<div id="chrome-nav">`, añadido footer + `<script src="../assets/js/chrome.js">` al final. `data-page-section="batallas"`.
+- [x] Migrado `assets/mapa.html` al chrome (apilado): chrome encima, `#hdr` del mapa debajo conservando los toggles (州 城 将 ⛶ Full) pero quitando el botón `← Inicio` (redundante). Ajustes en `mapa.css`: `#hdr top:var(--nav-h)`, `#mwrap top:calc(var(--nav-h) + var(--hdr-h))`, `#backbtn top:calc(var(--nav-h) + 78px)`. Sin `chrome-footer` (el mapa es fullscreen-locked, body overflow:hidden).
+- [ ] **Próxima sesión**: migrar las 89 fichas (`assets/Periods/*.html`) al chrome — script masivo con regex (todas tienen `<header id="hdr">…</header>` similar). Añadir `<link rel="stylesheet" href="../css/chrome.css">` y `<script src="../../assets/js/chrome.js">` (subdir extra).
+- [ ] **Próxima sesión**: migrar batallas individuales (`assets/Battles/*.html`) — mismo enfoque, idénticas profundidades.
+- [ ] **Pendiente de limpieza**: las reglas del chrome (#nav, .nav-*, footer, .foot-*, hamburger, @media ≤680px) están duplicadas en `main.css` (líneas 17-47, 796-804, 1149-1151) y en `chrome.css`. Cuando todas las páginas carguen chrome.css, retirar las reglas de main.css. Riesgo bajo si el index también añade `<link>` a chrome.css.
 
 ### C3 — Completar fichas núcleo · pendiente
 - 7 fichas con archivo vacío (Wang Yun, Sima Yan, Chen Gong, Li Ru, Xun You, Yang Hu, Sun Hao) son la primera prioridad: usar `/ficha`.
@@ -54,6 +56,8 @@
 - [x] `<meta name="robots" content="noindex">` para que Google no la indexe.
 - [x] **Paths absolutos** en CSS, JS y botones — necesario porque la 404 puede dispararse desde cualquier URL inexistente. Si fueran relativos, el browser los resolvería contra el path roto.
 - [x] `chrome.js` actualizado: si su `<script src>` empieza con `/`, fija `UP="/"` y los enlaces del nav/footer inyectados también son absolutos.
+- [x] **Reescrito** para alinear el estilo visual con el `index.html` (jerarquía hero: número 404 grande en Cinzel + 迷路了 en Noto Serif SC + subtítulo italic + descripción + 2 botones). Eliminados elementos que recordaban a threekingdoms.wiki: 亂 gigante de fondo, cita "El cielo amarillo…" con borduras, botón Acerca redundante.
+- [x] Variables CSS y body inline dentro del propio 404.html — garantiza el look oscuro aunque `main.css` no cargue (al abrir desde file:// la ruta absoluta `/assets/css/main.css` no resuelve).
 
 ### C8 — Auditoría enlaces + responsive · pendiente
 ### I1 — 3 páginas de Reino · pendiente
@@ -70,19 +74,22 @@
 
 ## Próximo paso al retomar
 
-**Estado al cierre de esta sesión**: C1 hecho, C7 hecho, C2 a medias (solo index migrado).
+**Estado al cierre de esta sesión** (2026-05-10): C1 hecho, C7 hecho, C2 al 60% (chrome.css creado, index/batallas/mapa migrados, faltan 89 fichas + 18 batallas individuales). CNAME `threekingdoms.wiki` borrado (era de otra web ajena).
 
 **Por hacer en orden**:
 
-1. **Decidir sobre los estilos del chrome** en páginas internas:
-   - Opción A (rápida): cargar `assets/css/main.css` también en batallas/mapa/fichas (puede chocar con sus CSS específicos).
-   - Opción B (limpia): crear `assets/css/chrome.css` con SOLO los selectores `#nav`, `.nav-*`, `<footer>`, `.foot-*`, hamburger, responsive ≤680px. Cargarlo en todas las páginas.
-2. **Migrar `assets/batallas.html`** al chrome (sustituir `<header id="hdr">…</header>` por mount, ajustar sec-nav si es necesario).
-3. **Migrar `assets/mapa.html`** al chrome (idem). El mapa tiene además su propia barra de controles — verificar que el nav arriba no choca con el header del mapa.
-4. **Migrar las 89 fichas + 18 batallas individuales** con un script masivo. Detectar `<header id="hdr">…</header>` y reemplazar por mount + script tag al final del body.
-5. Después: **C6** (meta tags + favicon + OG + sitemap.xml + robots.txt). Definir favicon antes de tocar fichas masivamente.
-6. Después: **C3** (escribir las 7 fichas vacías + nivelar relaciones) y **C4** (nivelar 8 batallas).
-7. Después: **C5** (10 páginas de Era con prosa).
-8. **I1**, **I2**, **I3**, **I4** y **C8** al final.
+1. **Migrar las 89 fichas + 18 batallas individuales** con un script masivo (Node o Python). Para cada `assets/Periods/*.html`:
+   - Reemplazar `<header id="hdr">…</header>` por `<div id="chrome-nav"></div>`.
+   - Antes de `</head>`: añadir `<link rel="stylesheet" href="../css/chrome.css">` (1 nivel de subida desde `Periods/`).
+   - Antes de `</body>`: añadir `<div id="chrome-footer"></div>` (si la página lo soporta) + `<script src="../../assets/js/chrome.js"></script>` (2 niveles de subida desde `Periods/`).
+   - Añadir `data-page-section="personajes"` al `<html>`.
+   - Para `assets/Battles/*.html`: idéntico pero con `data-page-section="batallas"`.
+   - Idempotente: si la página ya tiene `<div id="chrome-nav">`, saltarla.
+2. Una vez todas migradas, **limpiar duplicación**: retirar reglas del chrome de `main.css` y añadir `<link>` a chrome.css en `index.html`, `acerca.html`, `404.html`.
+3. Después: **C6** (meta tags + favicon + OG + sitemap.xml + robots.txt). Definir favicon antes de tocar fichas masivamente — espera, ya se han tocado, definirlo igual aquí.
+4. Después: **C3** (escribir las 7 fichas vacías: Wang Yun, Sima Yan, Chen Gong, Li Ru, Xun You, Yang Hu, Sun Hao) y nivelar relaciones (Zhuge Liang prioridad).
+5. Después: **C4** (nivelar 8 batallas: wan, changban, tong-pass, jiangling, dingjunshan, mai-cheng, jieting, wuzhang).
+6. Después: **C5** (10 páginas de Era con prosa).
+7. **I1**, **I2**, **I3**, **I4** y **C8** al final.
 
 **Recordatorio operativo**: el plan completo está en `~/.claude/plans/tengo-que-ir-pensando-adaptive-shamir.md`. Las decisiones cerradas están al inicio.
