@@ -13,38 +13,13 @@ body{background:var(--ink);color:var(--parch);font-family:'IM Fell English',Geor
 ::-webkit-scrollbar-track{background:var(--ink)}
 ::-webkit-scrollbar-thumb{background:var(--goldf);border-radius:3px}
 
-/* ── NAV ── */
-#nav{
-  position:sticky;top:0;z-index:200;height:var(--nav-h);
-  background:rgba(5,2,0,.97);backdrop-filter:blur(8px);
-  border-bottom:1px solid var(--border);
-  display:flex;align-items:center;justify-content:space-between;
-  padding:0 max(clamp(16px,4vw,64px),calc((100vw - 1380px) / 2));gap:16px
-}
-.nav-brand{display:flex;align-items:baseline;gap:10px;text-decoration:none;flex-shrink:0}
-.nav-zh{font-family:'Noto Serif SC',serif;font-size:24px;font-weight:900;color:var(--red);letter-spacing:.12em;text-shadow:0 0 20px rgba(139,26,26,.4)}
-.nav-en{font-family:'Cinzel Decorative',serif;font-size:16px;color:var(--gold);opacity:.6;letter-spacing:.16em}
-.nav-links{display:flex;gap:22px;list-style:none}
-.nav-links a{font-family:'Noto Sans SC',sans-serif;font-size:14px;color:var(--parch2);text-decoration:none;letter-spacing:.07em;opacity:.72;transition:all .18s}
-.nav-links a:hover{opacity:1;color:var(--gold)}
-.nav-links a.on{opacity:1;color:var(--gold);font-weight:700}
-.foot-link{font-family:'Cinzel Decorative',serif;font-size:11px;color:var(--gold);opacity:.7;text-decoration:none;letter-spacing:.14em;transition:opacity .18s}
-.foot-link:hover{opacity:1}
-.nav-cta{font-family:'Cinzel Decorative',serif;font-size:16px;color:var(--ink);background:var(--gold);padding:7px 17px;border-radius:2px;text-decoration:none;letter-spacing:.13em;transition:all .18s;white-space:nowrap;flex-shrink:0}
-.nav-cta:hover{background:var(--parch2)}
-.hamburger{display:none;background:none;border:none;cursor:pointer;flex-direction:column;gap:5px;padding:4px}
-.hamburger span{display:block;width:20px;height:2px;background:var(--gold);border-radius:1px;transition:all .2s}
+/* Nav, footer, hamburger y su responsive viven en chrome.css. */
+
 .sec-nav{display:flex;gap:12px;padding:12px 20px;background:rgba(255,255,255,.02);border-bottom:1px solid rgba(255,255,255,.08);position:sticky;top:0;z-index:100;flex-wrap:wrap;justify-content:center}
 .sec-link{font-family:'Cinzel Decorative',serif;font-size:12px;padding:8px 12px;border-radius:3px;color:var(--gold);text-decoration:none;transition:background .22s,color .22s;border:1px solid transparent;scroll-behavior:smooth}
 .sec-link:hover:not(.soon){background:rgba(217,183,106,.08)}
 .sec-link.active{background:rgba(217,183,106,.15);border-color:rgba(217,183,106,.3)}
 .sec-link.soon{opacity:.45;cursor:not-allowed}
-@media(max-width:680px){
-  .nav-links{display:none;position:absolute;top:var(--nav-h);left:0;right:0;background:rgba(5,2,0,.99);flex-direction:column;gap:0;border-bottom:1px solid var(--border)}
-  .nav-links.open{display:flex}
-  .nav-links a{padding:13px clamp(16px,4vw,64px);border-bottom:1px solid rgba(201,168,76,.07)}
-  .hamburger{display:flex}
-}
 
 /* ── ERA BOOKMARK — estandarte vertical de era activa ── */
 #era-bookmark{
@@ -792,16 +767,7 @@ body.lubu-shaking{animation:lubu-shake .98s ease-in-out}
   text-shadow:0 0 26px rgba(201,168,76,.95),0 0 54px rgba(201,168,76,.35)
 }
 
-/* ── FOOTER ── */
-footer{position:relative;background:rgba(4,2,0,.97);padding:clamp(28px,4vw,44px) max(clamp(16px,5vw,72px),calc((100vw - 1380px) / 2))}
-footer::before{content:'';display:block;position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent 0%,rgba(201,168,76,.35) 20%,rgba(201,168,76,.65) 50%,rgba(201,168,76,.35) 80%,transparent 100%)}
-.foot-body{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:20px}
-.foot-brand{display:flex;flex-direction:column;gap:5px}
-.foot-zh{font-family:'Noto Serif SC',serif;font-size:20px;font-weight:900;color:var(--red);letter-spacing:.1em}
-.foot-en{font-family:'Cinzel Decorative',serif;font-size:11px;color:var(--gold);opacity:.38;letter-spacing:.16em}
-.foot-credit{display:flex;flex-direction:column;align-items:flex-end;gap:7px}
-.foot-copy{font-family:'Noto Sans SC',sans-serif;font-size:11px;color:var(--parch2);opacity:.25;text-align:right;letter-spacing:.04em}
-.foot-author{font-family:'Cinzel Decorative',serif;font-size:9px;letter-spacing:.32em;color:var(--parch2);text-shadow:0 0 10px rgba(201,168,76,.75),0 0 24px rgba(201,168,76,.38);opacity:1;text-align:right}
+/* Footer en chrome.css. */
 
 /* ── ENHANCED FACTION CARDS ── */
 .fcard{cursor:pointer}
@@ -1144,8 +1110,4 @@ footer::before{content:'';display:block;position:absolute;top:0;left:0;right:0;h
 /* ── Widescreen: cards del período crecen para llenar mejor el carousel ── */
 @media(min-width:1500px){
   .pcard-wrap{flex:0 0 clamp(200px,11vw,260px)}
-}
-/* ── Móvil: menú desplegable con el mismo padding del nav ── */
-@media(max-width:680px){
-  .nav-links a{padding:13px max(clamp(16px,4vw,64px),calc((100vw - 1380px) / 2))}
 }
