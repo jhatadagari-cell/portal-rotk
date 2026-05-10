@@ -70,7 +70,7 @@
   const BADGE = { victoria: 'Victoria', pirrica: 'Victoria Pírrica', indecisa: 'Indecisa' };
   const list = document.getElementById('battles-list');
 
-  BATTLES.forEach(b => {
+  BATTLES.filter(b => b.v1).forEach(b => {
     const soon = !b.detailHref;
     const isPirrica = b.result === 'pirrica';
     const badgeClass = soon ? 'soon' : (b.result || 'victoria');

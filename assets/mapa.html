@@ -9,47 +9,57 @@
 </head>
 <body>
 
-<div id="hdr">
-  <div style="display:flex;align-items:center">
+<header id="hdr">
+  <div class="hbrand">
     <span class="hzh">三國演義</span>
-    <span class="hen">ROMANCE DE LOS TRES REINOS · 168–316 d.C.</span>
+    <span class="hen">ROMANCE · 168–316 d.C.</span>
   </div>
   <div class="hbtns">
     <button class="hb on" id="bn" onclick="tog('n')">州 Nombres</button>
     <button class="hb on" id="bc2" onclick="tog('c')">城 Ciudades</button>
     <button class="hb on" id="bp" onclick="tog('p')">将 Personajes</button>
+    <button class="hb" id="bfull" onclick="togFull()" title="Mapa a ancho completo">⛶ Full</button>
     <a class="hb hb-link" href="../index.html">← Inicio</a>
   </div>
-</div>
+</header>
 
-<div id="bc">
-  <span class="bci on" onclick="goL0()">🗺 China Han</span>
-</div>
-
-<div id="main">
+<main id="mwrap">
+  <aside id="legend">
+    <div id="lhdr">
+      <div id="ltitle">FACCIONES</div>
+      <div id="lyrs">— Selecciona un período —</div>
+    </div>
+    <div id="lbody"></div>
+  </aside>
   <div id="mpanel">
-    <button id="backbtn" onclick="goL0()">← Volver</button>
-    <div id="map-container">
-      <!-- El mapa base SVG se inyecta aquí -->
-      <div id="map-base" style="position:relative;width:100%;height:100%;display:flex;align-items:center;justify-content:center"></div>
+    <div id="bc">
+      <span class="bci on" onclick="goL0()">🗺 China Han</span>
+      <span id="bcsub"></span>
     </div>
-  </div>
-  <div id="ipanel">
-    <div id="ihdr">
-      <div id="izh">三國演義</div>
-      <div id="iname">Romance de los Tres Reinos</div>
-      <div id="iyrs">Selecciona un periodo</div>
-    </div>
-    <div id="ibody">
-      <div class="wbox">
-        <span class="wico">⚔</span>
-        <div class="wtxt">Elige un periodo<br>en la línea temporal<br><br>Clic en una región<br>para hacer zoom</div>
+    <div id="map-scroll">
+      <div id="map-stage">
+        <div id="map-base"></div>
       </div>
     </div>
+    <button id="backbtn" onclick="goL0()">← Volver al mapa</button>
   </div>
-</div>
+  <aside id="drawer">
+    <button id="dx" onclick="closeDrawer()" title="Cerrar (Esc)">✕</button>
+    <div id="dhdr">
+      <div id="dzh">三國演義</div>
+      <div id="dname">Romance de los Tres Reinos</div>
+      <div id="dyrs">Selecciona un periodo</div>
+    </div>
+    <div id="dbody">
+      <div class="wbox">
+        <span class="wico">⚔</span>
+        <div class="wtxt">Elige un periodo<br>en la línea temporal<br><br>Haz clic en una región<br>para verla en detalle</div>
+      </div>
+    </div>
+  </aside>
+</main>
 
-<div id="tl"><div id="tlsc"><div class="tlr"></div></div></div>
+<footer id="tl"><div id="tlsc"></div></footer>
 
 <div id="cmod" onclick="if(event.target===this)this.classList.remove('open')">
   <div class="cmbox">
@@ -67,17 +77,26 @@
 //  sobre la forma geográfica de China
 // ══════════════════════════════════════════════════════════════
 
-// Cada Zhou tiene: path SVG real + centroide + ciudades + desc
-// ViewBox del mapa base: 0 0 800 750
-// Calibración: aproximadamente
-//   x: 73°E=20px, 135°E=780px → 1°lon = (780-20)/62 = 12.26px
-//   y: 53°N=20px, 18°N=730px  → 1°lat = (730-20)/35 = 20.29px
-// lon→x: (lon-73)*12.26 + 20
-// lat→y: (53-lat)*20.29 + 20
+// Calibración para la imagen acuarela Map.webp (3840×3024, aspecto 1.27).
+// Iteración 3 — microajuste: tras 2 screenshots con Chengdu/Jianye sesgados al
+// oeste, desplazamos el rango longitudinal 1° hacia el oeste manteniendo el
+// span (28°). Esto desplaza TODOS los pines ~29 viewBox-px al este uniforme.
+//   longitud: 99°E (oeste) → 127°E (este)  → 28°
+//   latitud:  44°N (norte) → 17°N (sur)    → 27°
+// ViewBox SVG: 800×630 (aspecto 1.27, idéntico a la imagen)
+// Anclas para sanidad (post-iter3):
+//   Chengdu  104.1°E 30.6°N → ~ x=146,  y=312  (más adentro de cuenca Sichuan)
+//   Chang'an 108.9°E 34.3°N → ~ x=283,  y=226
+//   Luoyang  112.5°E 34.7°N → ~ x=386,  y=217
+//   Jianye   118.8°E 32.1°N → ~ x=566,  y=278  (más cerca del delta Yangtzé)
 
-function lx(lon){ return ((lon-73)*12.26+20).toFixed(1) }
-function ly(lat){ return ((53-lat)*20.29+20).toFixed(1) }
+function lx(lon){ return ((lon-99)*28.57).toFixed(1) }   // 800/28 = 28.57 px/°lon
+function ly(lat){ return ((44-lat)*23.33).toFixed(1) }   // 630/27 = 23.33 px/°lat
 function lxy(lon,lat){ return lx(lon)+','+ly(lat) }
+
+// Helper: rectángulo geográfico de (a,b)=(lonW,latS) a (c,d)=(lonE,latN)
+// Útil para definir hit-areas de zhou que cubren el área donde sus ciudades viven.
+function rect(a,b,c,d){return `M ${lxy(a,d)} L ${lxy(c,d)} L ${lxy(c,b)} L ${lxy(a,b)} Z`}
 
 // Contorno exterior de China Han — trazado a mano sobre geografía real
 // 80+ puntos clave del perímetro histórico Han
@@ -106,103 +125,94 @@ const OUTER = `
   L ${lxy(130,44)} L ${lxy(131,43)}
   Z`.trim();
 
-// Regiones Zhou — paths reales sobre la geografía
+// Regiones Zhou — rectángulos geográficos basados en las ciudades de cada
+// zhou + margen para cubrir el área pintada. Iteración: simplificación tras
+// que los polígonos estilizados anteriores no encajaban con las divisiones
+// del Map.webp. Cada zhou está acotada por (lonW, latS, lonE, latN).
+//
+// CONTIENE las ciudades de la zhou:
+//   liangzhou(99,34→108,42): wuwei(102.6,37.9) tianshui(105.7,34.6)
+//   bingzhou(109,35→114,42): jinyang(112.5,37.9)
+//   jizhou(113,35→117,38):   ye(114.4,36.3) handan(114.5,36.6)
+//   youzhou(114,38→122,43):  zhuo(115.6,39.5) ji(116.4,40)
+//   qingzhou(117,34→122,38): linzi(118.3,36.9)
+//   yanzhou(114,33→117,36):  puyang(115,35.7) dingtao(115.6,35.1)
+//   sizhou(107,33→114,36):   luoyang(112.5,34.7) changan2(108.9,34.3)
+//   xuzhou(116,31→122,36):   xiapi(118,34) pengcheng(117.2,34.3)
+//   yuzhou(110,30→116,35):   xu(113.8,34) guandu(114,34.5)
+//   yangzhou(115,26→124,33): jianye(118.8,32.1) hefei(117.3,31.9)
+//   jingzhou(108,26→115,33): jiangling(112.2,30.3) chibi(113.9,29.7) xiangyang(112.1,32)
+//   yizhou(99,25→110,33):    chengdu(104.1,30.6) jiange(105.5,32.3) baidicheng(109,31)
+//   hanzhong(105,32→109,35): hanzhong_c(107,33.1) wuzhang(107.8,34.1)
+//   jiaozhi(104,18→117,26):  panyu(113.3,23.1)
 const ZHOU = [
-{id:'liangzhou',zh:'凉州',en:'Liangzhou',lon:97,lat:37,
- path:`M ${lxy(96,40)} L ${lxy(98,40)} L ${lxy(100,40)} L ${lxy(102,40)}
-   L ${lxy(104,38)} L ${lxy(104,36)} L ${lxy(103,35)} L ${lxy(102,34)}
-   L ${lxy(100,34)} L ${lxy(98,34)} L ${lxy(97,34)} L ${lxy(96,35)}
-   L ${lxy(95,36)} L ${lxy(95,38)} L ${lxy(96,39)} Z`,
+{id:'liangzhou',zh:'凉州',en:'Liangzhou',lon:103.5,lat:38,
+ path:rect(99,34,108,42),
  desc:'Liangzhou — Gansu. Tierra de caballería y vientos esteparios. Patria de Dong Zhuo. Puerta de la Ruta de la Seda.',
  cities:['wuwei','tianshui']},
 
-{id:'bingzhou',zh:'并州',en:'Bingzhou',lon:112,lat:38,
- path:`M ${lxy(110,40)} L ${lxy(112,40)} L ${lxy(114,40)} L ${lxy(114,38)}
-   L ${lxy(114,36)} L ${lxy(113,35)} L ${lxy(111,35)} L ${lxy(110,35)}
-   L ${lxy(109,36)} L ${lxy(109,37)} L ${lxy(109,38)} L ${lxy(110,39)} Z`,
+{id:'bingzhou',zh:'并州',en:'Bingzhou',lon:111.5,lat:38.5,
+ path:rect(109,35,114,42),
  desc:'Bingzhou — Shanxi. Tierra montañosa al oeste del Taihang. Corredor entre la estepa del norte y el corazón Han.',
  cities:['jinyang']},
 
-{id:'jizhou',zh:'冀州',en:'Jizhou',lon:115.5,lat:38,
- path:`M ${lxy(114,40)} L ${lxy(116,40)} L ${lxy(118,40)} L ${lxy(120,39)}
-   L ${lxy(120,37)} L ${lxy(118,36)} L ${lxy(116,36)} L ${lxy(114,36)}
-   L ${lxy(114,38)} Z`,
+{id:'jizhou',zh:'冀州',en:'Jizhou',lon:115,lat:36.5,
+ path:rect(113,35,117,38),
  desc:'Jizhou — Hebei central y sur. La Zhou más rica y poblada. Base de Yuan Shao y Cao Cao. Capital: Ye (邺).',
  cities:['ye','handan']},
 
-{id:'youzhou',zh:'幽州',en:'Youzhou',lon:117,lat:41,
- path:`M ${lxy(114,43)} L ${lxy(116,43)} L ${lxy(118,43)} L ${lxy(120,42)}
-   L ${lxy(123,42)} L ${lxy(126,42)} L ${lxy(127,41)} L ${lxy(126,40)}
-   L ${lxy(123,40)} L ${lxy(120,40)} L ${lxy(118,40)} L ${lxy(116,40)}
-   L ${lxy(114,40)} Z`,
+{id:'youzhou',zh:'幽州',en:'Youzhou',lon:118,lat:40.5,
+ path:rect(114,38,122,43),
  desc:'Youzhou — Hebei norte y Beijing. Frontera septentrional del Han. Liu Bei nació en Zhuo.',
  cities:['zhuo','ji']},
 
-{id:'qingzhou',zh:'青州',en:'Qingzhou',lon:119.5,lat:36.5,
- path:`M ${lxy(118,38)} L ${lxy(120,38)} L ${lxy(122,38)} L ${lxy(122,37)}
-   L ${lxy(121,35)} L ${lxy(120,35)} L ${lxy(118,35)} L ${lxy(117,36)}
-   L ${lxy(117,37)} Z`,
+{id:'qingzhou',zh:'青州',en:'Qingzhou',lon:119.5,lat:36,
+ path:rect(117,34,122,38),
  desc:'Qingzhou — Shandong. Provincia costera. Escenario de batallas de los Turbantes Amarillos.',
  cities:['linzi']},
 
-{id:'yanzhou',zh:'兗州',en:'Yanzhou',lon:115.5,lat:35.5,
- path:`M ${lxy(114,37)} L ${lxy(116,37)} L ${lxy(118,37)} L ${lxy(118,35)}
-   L ${lxy(116,35)} L ${lxy(114,35)} L ${lxy(113,36)} Z`,
+{id:'yanzhou',zh:'兗州',en:'Yanzhou',lon:115.5,lat:34.5,
+ path:rect(114,33,117,36),
  desc:'Yanzhou — Shandong occidental. Base militar de Cao Cao.',
  cities:['puyang','dingtao']},
 
-{id:'sizhou',zh:'司州',en:'Sizhou',lon:111.5,lat:34.5,
- path:`M ${lxy(109,36)} L ${lxy(111,36)} L ${lxy(113,36)} L ${lxy(114,35)}
-   L ${lxy(113,34)} L ${lxy(111,34)} L ${lxy(110,34)} L ${lxy(109,34)}
-   L ${lxy(108,35)} Z`,
+{id:'sizhou',zh:'司州',en:'Sizhou',lon:110.5,lat:34.5,
+ path:rect(107,33,114,36),
  desc:'Sizhou — Capital imperial Luoyang. Sede del Hijo del Cielo, quemada por Dong Zhuo en 190 d.C.',
  cities:['luoyang','changan2']},
 
-{id:'xuzhou',zh:'徐州',en:'Xuzhou',lon:117.5,lat:34,
- path:`M ${lxy(116,36)} L ${lxy(118,36)} L ${lxy(120,36)} L ${lxy(120,34)}
-   L ${lxy(119,33)} L ${lxy(117,33)} L ${lxy(116,34)} Z`,
+{id:'xuzhou',zh:'徐州',en:'Xuzhou',lon:119,lat:33.5,
+ path:rect(116,31,122,36),
  desc:'Xuzhou — Jiangsu norte. Liu Bei la gobernó brevemente. Aquí cayó Lü Bu (199 d.C.).',
  cities:['xiapi','pengcheng']},
 
-{id:'yuzhou',zh:'豫州',en:'Yuzhou',lon:113.5,lat:33.5,
- path:`M ${lxy(110,35)} L ${lxy(113,35)} L ${lxy(114,35)} L ${lxy(116,35)}
-   L ${lxy(116,33)} L ${lxy(114,32)} L ${lxy(112,32)} L ${lxy(110,33)} Z`,
+{id:'yuzhou',zh:'豫州',en:'Yuzhou',lon:113,lat:32.5,
+ path:rect(110,30,116,35),
  desc:'Yuzhou — Henan central. Corazón agrícola. Capital de Cao Cao en Xu (许都). Escenario de Guandu.',
  cities:['xu','guandu']},
 
-{id:'yangzhou',zh:'扬州',en:'Yangzhou',lon:118.5,lat:30.5,
- path:`M ${lxy(116,33)} L ${lxy(118,33)} L ${lxy(120,33)} L ${lxy(122,32)}
-   L ${lxy(122,30)} L ${lxy(121,29)} L ${lxy(120,29)} L ${lxy(118,29)}
-   L ${lxy(116,29)} L ${lxy(115,30)} L ${lxy(115,32)} Z`,
+{id:'yangzhou',zh:'扬州',en:'Yangzhou',lon:119.5,lat:29.5,
+ path:rect(115,26,124,33),
  desc:'Yangzhou — Jiangsu, Anhui y Zhejiang. Capital de Wu: Jianye (建业), la futura Nanjing.',
  cities:['jianye','hefei']},
 
-{id:'jingzhou',zh:'荆州',en:'Jingzhou',lon:112,lat:30,
- path:`M ${lxy(108,33)} L ${lxy(110,33)} L ${lxy(112,33)} L ${lxy(114,33)}
-   L ${lxy(116,32)} L ${lxy(116,30)} L ${lxy(114,28)} L ${lxy(112,28)}
-   L ${lxy(110,28)} L ${lxy(108,30)} Z`,
+{id:'jingzhou',zh:'荆州',en:'Jingzhou',lon:111.5,lat:29.5,
+ path:rect(108,26,115,33),
  desc:'Jingzhou — Hubei y Hunan. La Zhou más disputada. Escenario de la Batalla de Chibi (208 d.C.).',
  cities:['jiangling','chibi','xiangyang']},
 
-{id:'yizhou',zh:'益州',en:'Yizhou',lon:104,lat:29,
- path:`M ${lxy(98,33)} L ${lxy(100,33)} L ${lxy(102,33)} L ${lxy(104,33)}
-   L ${lxy(106,33)} L ${lxy(108,33)} L ${lxy(108,30)} L ${lxy(106,28)}
-   L ${lxy(104,26)} L ${lxy(102,24)} L ${lxy(100,23)} L ${lxy(99,23)}
-   L ${lxy(98,24)} L ${lxy(97,25)} L ${lxy(97,29)} L ${lxy(98,31)} Z`,
+{id:'yizhou',zh:'益州',en:'Yizhou',lon:104.5,lat:29,
+ path:rect(99,25,110,33),
  desc:'Yizhou — Sichuan, Yunnan y Guizhou. Gran bastión de Shu Han. Capital: Chengdu (成都).',
  cities:['chengdu','jiange','baidicheng']},
 
-{id:'hanzhong',zh:'汉中',en:'Hanzhong',lon:107,lat:33,
- path:`M ${lxy(104,34)} L ${lxy(106,34)} L ${lxy(108,34)} L ${lxy(108,33)}
-   L ${lxy(108,32)} L ${lxy(106,32)} L ${lxy(104,32)} L ${lxy(104,33)} Z`,
+{id:'hanzhong',zh:'汉中',en:'Hanzhong',lon:107,lat:33.5,
+ path:rect(105,32,109,35),
  desc:'Hanzhong — Sur de Shaanxi. Paso estratégico entre Wei y Shu. Base de las Expediciones del Norte.',
  cities:['hanzhong_c','wuzhang']},
 
-{id:'jiaozhi',zh:'交州',en:'Jiaozhi',lon:107,lat:22,
- path:`M ${lxy(104,26)} L ${lxy(106,26)} L ${lxy(108,26)} L ${lxy(110,24)}
-   L ${lxy(112,22)} L ${lxy(110,20)} L ${lxy(108,20)} L ${lxy(106,20)}
-   L ${lxy(104,20)} L ${lxy(102,20)} L ${lxy(100,21)} L ${lxy(100,22)}
-   L ${lxy(101,23)} L ${lxy(102,24)} Z`,
+{id:'jiaozhi',zh:'交州',en:'Jiaozhi',lon:110.5,lat:22,
+ path:rect(104,18,117,26),
  desc:'Jiaozhi — Vietnam norte y Guangdong. La Zhou más meridional. Controlada por Wu.',
  cities:['panyu']},
 ];
@@ -264,6 +274,37 @@ const RF={
   p7:{liangzhou:'sima',bingzhou:'sima',jizhou:'sima',youzhou:'sima',qingzhou:'sima',yanzhou:'sima',sizhou:'sima',xuzhou:'sima',yuzhou:'sima',yangzhou:'wu',jingzhou:'wu',yizhou:'sima',hanzhong:'sima',jiaozhi:'wu'},
   p8:{liangzhou:'jin',bingzhou:'jin',jizhou:'jin',youzhou:'jin',qingzhou:'jin',yanzhou:'jin',sizhou:'jin',xuzhou:'jin',yuzhou:'jin',yangzhou:'jin',jingzhou:'jin',yizhou:'jin',hanzhong:'jin',jiaozhi:'jin'},
   p9:{liangzhou:'neut',bingzhou:'neut',jizhou:'neut',youzhou:'neut',qingzhou:'neut',yanzhou:'neut',sizhou:'neut',xuzhou:'neut',yuzhou:'neut',yangzhou:'neut',jingzhou:'neut',yizhou:'neut',hanzhong:'neut',jiaozhi:'neut'},
+};
+
+// REGENTS: por era × región, quién gobierna ese territorio.
+// Solo p3 (Guerras de Señores ~200 d.C., en torno a Guandu) está poblada
+// como prueba de UI. El resto se rellenará incrementalmente.
+const REGENTS={
+  p0:{},
+  p1:{},
+  p2:{},
+  p3:{ // ~200 d.C., Guerras de los Señores (snapshot Guandu)
+    liangzhou:'Ma Teng 馬騰 · con Han Sui 韓遂',
+    bingzhou:'Gao Gan 高幹 (sobrino de Yuan Shao)',
+    jizhou:'Yuan Shao 袁紹',
+    youzhou:'Yuan Shao 袁紹 (tras vencer a Gongsun Zan)',
+    qingzhou:'Yuan Tan 袁譚 (hijo mayor de Yuan Shao)',
+    yanzhou:'Cao Cao 曹操',
+    sizhou:'Cao Cao 曹操 (custodia al Emp. Xian en Xu)',
+    xuzhou:'Cao Cao 曹操 (tras ejecutar a Lü Bu en 199)',
+    yuzhou:'Cao Cao 曹操',
+    yangzhou:'Sun Quan 孫權 (tras la muerte de Sun Ce)',
+    jingzhou:'Liu Biao 劉表',
+    yizhou:'Liu Zhang 劉璋',
+    hanzhong:'Zhang Lu 張魯 (estado teocrático)',
+    jiaozhi:'Shi Xie 士燮',
+  },
+  p4:{},
+  p5:{},
+  p6:{},
+  p7:{},
+  p8:{},
+  p9:{},
 };
 
 const PERIODS=[
@@ -354,34 +395,35 @@ const PERIODS=[
 // ══════════════════════════════════════════════════════════════
 //  ESTADO Y RENDER
 // ══════════════════════════════════════════════════════════════
-let P=null, level=0, selZ=null;
-let showN=true,showC=true,showPP=true;
+// WATERCOLOR=true → la imagen acuarela es el fondo de #mpanel.
+//   El SVG omite el terreno procedural (mar, tierra, ríos, montañas, lagos,
+//   brújula, cartucho de título). Las regiones zhou se dibujan con baja
+//   opacidad como tinte de facción. Los pines/labels se ocultan por defecto
+//   porque su calibración geográfica no coincide con la imagen aún.
+const WATERCOLOR=true;
 
-const VW=800, VH=750;
+let P=null, level=0, selZ=null;
+let showN=true, showC=true, showPP=true;
+let highlightFac=null; // facción resaltada desde la leyenda izquierda
+
+const VW=800, VH=630;  // Aspecto 1.27 = mismo que Map.webp (3840×3024)
+
+// ViewBox actual (animado). buildSVG lo lee. animateZoom lo interpola.
+let currentVB = [0, 0, VW, VH];
+let zoomRAF = null;
 
 function buildSVG(){
   const rf=P?RF[P.id]:{};
   const focusZ = level===1 ? ZHOU.find(z=>z.id===selZ) : null;
 
-  // ViewBox: zoom a zhou o mapa completo
-  let vx=0,vy=0,vw=VW,vh=VH;
-  if(focusZ){
-    // Bbox de la zhou seleccionada con margen
-    const coords=[];
-    focusZ.path.replace(/[\d.]+,[\d.]+/g,m=>{coords.push(m.split(',').map(Number));});
-    if(coords.length){
-      const xs=coords.map(c=>c[0]), ys=coords.map(c=>c[1]);
-      const margin=60;
-      vx=Math.max(0,Math.min(...xs)-margin);
-      vy=Math.max(0,Math.min(...ys)-margin);
-      vw=Math.min(VW,Math.max(...xs)+margin)-vx;
-      vh=Math.min(VH,Math.max(...ys)+margin)-vy;
-    }
-  }
+  // viewBox = currentVB (cámara). animateVB la interpola al target en cada
+  // cambio de estado. Aquí solo emitimos el frame de partida para que el
+  // contenido nuevo aparezca alineado con la posición actual de la cámara.
+  const [vx,vy,vw,vh] = currentVB;
 
   let s=`<svg viewBox="${vx} ${vy} ${vw} ${vh}" xmlns="http://www.w3.org/2000/svg"
     preserveAspectRatio="xMidYMid meet"
-    style="width:100%;height:100%;display:block;max-height:calc(100vh - 162px)">
+    style="width:100%;height:100%;display:block">
   <defs>
     <filter id="gl"><feGaussianBlur stdDeviation="2.5" result="b"/>
       <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
@@ -418,13 +460,24 @@ function buildSVG(){
     </linearGradient>
   </defs>
 
-  <!-- ══ FONDO MAR ══ -->
+  `;
+
+  // ══ IMAGEN ACUARELA (modo WATERCOLOR) ══
+  // Embebida en el SVG → al cambiar viewBox para el zoom-a-zhou,
+  // se recorta junto a los pines manteniendo alineación perfecta.
+  if(WATERCOLOR){
+    s+=`\n  <image href="img/Mapa/Map.webp" x="0" y="0" width="${VW}" height="${VH}"
+      preserveAspectRatio="xMidYMid meet" style="pointer-events:none"/>`;
+  }
+
+  if(!WATERCOLOR){
+    // ══ FONDO MAR (procedural) ══
+    s+=`
   <rect width="${VW}" height="${VH}" fill="url(#sea-g)"/>
   <rect width="${VW}" height="${VH}" fill="url(#sea-wave)"/>`;
 
-  // Etiquetas mar (solo en nivel 0)
-  if(!focusZ){
-    s+=`
+    if(!focusZ){
+      s+=`
   <text x="720" y="380" text-anchor="middle" font-family="IM Fell English"
     font-style="italic" font-size="16" fill="rgba(100,160,220,.25)"
     transform="rotate(-8,720,380)">東 海</text>
@@ -432,120 +485,134 @@ function buildSVG(){
     font-style="italic" font-size="14" fill="rgba(100,160,220,.2)">南 海</text>
   <text x="75" y="180" text-anchor="middle" font-family="IM Fell English"
     font-style="italic" font-size="12" fill="rgba(100,160,220,.15)">西 域</text>`;
+    }
+
+    // ══ TIERRA BASE (procedural) ══
+    s+=`\n  <path d="${OUTER}" fill="url(#land-g)" stroke="#8a6020" stroke-width="1.8"
+      filter="url(#sh)"/>
+    <path d="${OUTER}" fill="url(#land-tex)"/>`;
   }
 
-  // ══ TIERRA BASE ══
-  s+=`\n  <path d="${OUTER}" fill="url(#land-g)" stroke="#8a6020" stroke-width="1.8"
-    filter="url(#sh)"/>
-  <path d="${OUTER}" fill="url(#land-tex)"/>`;
-
-  // ══ ZHOU COLOREADAS ══
+  // ══ ZHOU: hit-areas (siempre) + tinte (solo modo procedural) ══
   s+=`\n  <g id="g-zhou">`;
   ZHOU.forEach(z=>{
     const fk=rf[z.id]||'neut';
     const f=FAC[fk]||FAC.neut;
     const isSelected=focusZ&&focusZ.id===z.id;
     const dimmed=focusZ&&!isSelected;
-    const op=dimmed?0.3:0.92;
-    s+=`\n    <path id="zp_${z.id}"
-      d="${z.path}"
-      fill="${f.fill}" stroke="${isSelected?f.c:'rgba(60,40,10,.5)'}"
-      stroke-width="${isSelected?2.2:0.9}" opacity="${op}"
-      ${focusZ?'':`class="zreg-hit" style="cursor:pointer"` }
-      ${!focusZ?`onclick="clickZ('${z.id}')" ` :''}
-      ${isSelected?'filter="url(#gll)"':''}
-    />`;
+    if(WATERCOLOR){
+      // Highlight de facción desde la leyenda izquierda (no aplica en zoom).
+      const isHL    = highlightFac && fk===highlightFac && !focusZ;
+      const isHLDim = highlightFac && fk!==highlightFac && !focusZ;
+      let fill='transparent', opa=1, stroke='transparent', sw=0;
+      if(isSelected){ fill=f.fill; opa=0.38; stroke=f.c; sw=2.5; }
+      else if(isHL){ fill=f.fill; opa=0.52; stroke=f.c; sw=1.8; }
+      else if(dimmed){ opa=0; }
+      else if(isHLDim){ opa=0.16; }
+      s+=`\n    <path id="zp_${z.id}"
+        d="${z.path}"
+        fill="${fill}" opacity="${opa}"
+        stroke="${stroke}" stroke-width="${sw}"
+        ${focusZ?'':`class="zreg-hit" style="cursor:pointer"`}
+        ${!focusZ?`onclick="clickZ('${z.id}')"`:''}
+      />`;
+    } else {
+      const op  = dimmed?0.3:0.92;
+      const stroke = isSelected?f.c:'rgba(60,40,10,.5)';
+      const sw = isSelected?2.2:0.9;
+      s+=`\n    <path id="zp_${z.id}"
+        d="${z.path}"
+        fill="${f.fill}" stroke="${stroke}"
+        stroke-width="${sw}" opacity="${op}"
+        ${focusZ?'':`class="zreg-hit" style="cursor:pointer"`}
+        ${!focusZ?`onclick="clickZ('${z.id}')"`:''}
+        ${isSelected?'filter="url(#gll)"':''}
+      />`;
+    }
   });
   s+=`\n  </g>`;
 
-  // ══ RÍOS ══
-  // Huang He — polilínea con los puntos reales
-  const hhPts=[[96,36],[98,36],[100,36],[102,36],[103,37],[104,37],[104,38],[103,38],
-    [105,38],[106,40],[107,40],[108,40],[109,40],[110,40],[111,40],[111,39],
-    [111,38],[110,37],[110,36],[111,35],[112,35],[113,35],[114,35],[115,35],
-    [116,35],[117,36],[118,36],[119,36],[120,37],[121,37]];
-  const yyPts=[[98,30],[100,28],[101,28],[102,28],[103,28],[104,29],[105,29],
-    [106,29],[107,29],[108,30],[109,30],[110,30],[111,29],[112,30],[113,30],
-    [114,30],[115,30],[116,30],[117,30],[118,31],[119,31],[120,32],[121,31]];
-  const weiPts=[[104,34],[106,34],[108,34],[109,34],[110,34]];
-  const hanPts=[[107,33],[108,32],[109,32],[110,31],[111,31],[112,30]];
+  if(!WATERCOLOR){
+    // ══ RÍOS (procedural) ══
+    const hhPts=[[96,36],[98,36],[100,36],[102,36],[103,37],[104,37],[104,38],[103,38],
+      [105,38],[106,40],[107,40],[108,40],[109,40],[110,40],[111,40],[111,39],
+      [111,38],[110,37],[110,36],[111,35],[112,35],[113,35],[114,35],[115,35],
+      [116,35],[117,36],[118,36],[119,36],[120,37],[121,37]];
+    const yyPts=[[98,30],[100,28],[101,28],[102,28],[103,28],[104,29],[105,29],
+      [106,29],[107,29],[108,30],[109,30],[110,30],[111,29],[112,30],[113,30],
+      [114,30],[115,30],[116,30],[117,30],[118,31],[119,31],[120,32],[121,31]];
+    const weiPts=[[104,34],[106,34],[108,34],[109,34],[110,34]];
+    const hanPts=[[107,33],[108,32],[109,32],[110,31],[111,31],[112,30]];
 
-  function rPts(arr){return arr.map(([lo,la])=>`${lx(lo)},${ly(la)}`).join(' ')}
+    const rPts=arr=>arr.map(([lo,la])=>`${lx(lo)},${ly(la)}`).join(' ');
 
-  s+=`
-  <!-- RÍO AMARILLO -->
-  <polyline id="hh" points="${rPts(hhPts)}"
-    fill="none" stroke="url(#riv-g)" stroke-width="4.5"
-    stroke-linecap="round" stroke-linejoin="round" opacity=".8"/>
-  <text font-family="IM Fell English" font-size="9" fill="rgba(80,140,210,.6)" font-style="italic">
-    <textPath href="#hh" startOffset="15%">黄河 · Río Amarillo</textPath></text>
+    s+=`
+    <polyline id="hh" points="${rPts(hhPts)}"
+      fill="none" stroke="url(#riv-g)" stroke-width="4.5"
+      stroke-linecap="round" stroke-linejoin="round" opacity=".8"/>
+    <text font-family="IM Fell English" font-size="9" fill="rgba(80,140,210,.6)" font-style="italic">
+      <textPath href="#hh" startOffset="15%">黄河 · Río Amarillo</textPath></text>
+    <polyline id="yy" points="${rPts(yyPts)}"
+      fill="none" stroke="url(#riv-g)" stroke-width="5.5"
+      stroke-linecap="round" stroke-linejoin="round" opacity=".78"/>
+    <text font-family="IM Fell English" font-size="9.5" fill="rgba(80,140,210,.6)" font-style="italic">
+      <textPath href="#yy" startOffset="10%">长江 · Yangtzé</textPath></text>
+    <polyline points="${rPts(weiPts)}"
+      fill="none" stroke="url(#riv-g)" stroke-width="2.5" opacity=".55"/>
+    <polyline points="${rPts(hanPts)}"
+      fill="none" stroke="url(#riv-g)" stroke-width="2.5" opacity=".5"/>
+    <ellipse cx="${lx(113.2)}" cy="${ly(29.4)}" rx="14" ry="8"
+      fill="#2a4a7a" opacity=".55" stroke="#4a8fc0" stroke-width="0.8"/>
+    <text x="${lx(113.2)}" y="${ly(29.0)}" text-anchor="middle"
+      font-family="Noto Serif SC" font-size="6.5" fill="rgba(100,160,210,.55)">洞庭湖</text>
+    <ellipse cx="${lx(116.5)}" cy="${ly(29.0)}" rx="8" ry="13"
+      fill="#2a4a7a" opacity=".48" stroke="#4a8fc0" stroke-width="0.8"/>
+    <text x="${lx(116.5)}" y="${ly(28.5)}" text-anchor="middle"
+      font-family="Noto Serif SC" font-size="6" fill="rgba(100,160,210,.5)">鄱陽</text>`;
 
-  <!-- YANGTZÉ -->
-  <polyline id="yy" points="${rPts(yyPts)}"
-    fill="none" stroke="url(#riv-g)" stroke-width="5.5"
-    stroke-linecap="round" stroke-linejoin="round" opacity=".78"/>
-  <text font-family="IM Fell English" font-size="9.5" fill="rgba(80,140,210,.6)" font-style="italic">
-    <textPath href="#yy" startOffset="10%">长江 · Yangtzé</textPath></text>
-
-  <!-- Río Wei -->
-  <polyline points="${rPts(weiPts)}"
-    fill="none" stroke="url(#riv-g)" stroke-width="2.5" opacity=".55"/>
-  <!-- Río Han -->
-  <polyline points="${rPts(hanPts)}"
-    fill="none" stroke="url(#riv-g)" stroke-width="2.5" opacity=".5"/>`;
-
-  // Lagos
-  s+=`
-  <ellipse cx="${lx(113.2)}" cy="${ly(29.4)}" rx="14" ry="8"
-    fill="#2a4a7a" opacity=".55" stroke="#4a8fc0" stroke-width="0.8"/>
-  <text x="${lx(113.2)}" y="${ly(29.0)}" text-anchor="middle"
-    font-family="Noto Serif SC" font-size="6.5" fill="rgba(100,160,210,.55)">洞庭湖</text>
-  <ellipse cx="${lx(116.5)}" cy="${ly(29.0)}" rx="8" ry="13"
-    fill="#2a4a7a" opacity=".48" stroke="#4a8fc0" stroke-width="0.8"/>
-  <text x="${lx(116.5)}" y="${ly(28.5)}" text-anchor="middle"
-    font-family="Noto Serif SC" font-size="6" fill="rgba(100,160,210,.5)">鄱陽</text>`;
-
-  // ══ MONTAÑAS — símbolos en posición correcta ══
-  const mtns=[
-    // Qinling
-    [104.2,33.5],[106,33.5],[108,33.5],[110,33.5],
-    // Taihang
-    [113,36],[113,37],[113,38],[113,39],
-    // Daxue (oeste Sichuan)
-    [101,30],[101,31],[101,32],
-  ];
-  s+=`\n  <g opacity=".52">`;
-  mtns.forEach(([lo,la])=>{
-    const mx=lx(lo), my=ly(la);
-    s+=`<path d="M${mx-7},${+my+5} L${mx},${+my-6} L${+mx+7},${+my+5}" fill="rgba(180,140,80,.2)" stroke="#8a6030" stroke-width="1.1"/>
-    <path d="M${mx-4},${+my+5} L${+mx+2},${+my} L${+mx+6},${+my+5}" fill="none" stroke="#8a6030" stroke-width=".75"/>`;
-  });
-  s+=`\n  </g>`;
-
-  // ══ BORDE DIVISORIO ENTRE ZHOU (líneas internas) ══
-  if(!focusZ){
-    s+=`\n  <g opacity=".35" stroke="#7a5520" stroke-width="0.7" fill="none" stroke-dasharray="4,3">`;
-    ZHOU.forEach(z=>{
-      s+=`<path d="${z.path}"/>`;
+    // ══ MONTAÑAS (procedural) ══
+    const mtns=[
+      [104.2,33.5],[106,33.5],[108,33.5],[110,33.5],
+      [113,36],[113,37],[113,38],[113,39],
+      [101,30],[101,31],[101,32],
+    ];
+    s+=`\n  <g opacity=".52">`;
+    mtns.forEach(([lo,la])=>{
+      const mx=lx(lo), my=ly(la);
+      s+=`<path d="M${mx-7},${+my+5} L${mx},${+my-6} L${+mx+7},${+my+5}" fill="rgba(180,140,80,.2)" stroke="#8a6030" stroke-width="1.1"/>
+      <path d="M${mx-4},${+my+5} L${+mx+2},${+my} L${+mx+6},${+my+5}" fill="none" stroke="#8a6030" stroke-width=".75"/>`;
     });
     s+=`\n  </g>`;
+
+    // ══ BORDE DIVISORIO ENTRE ZHOU (procedural) ══
+    if(!focusZ){
+      s+=`\n  <g opacity=".35" stroke="#7a5520" stroke-width="0.7" fill="none" stroke-dasharray="4,3">`;
+      ZHOU.forEach(z=>{ s+=`<path d="${z.path}"/>`; });
+      s+=`\n  </g>`;
+    }
   }
 
-  // ══ NOMBRES DE ZHOU ══
+  // ══ NOMBRES DE ZHOU (color = facción que controla la región en esta era) ══
   if(showN){
     s+=`\n  <g id="g-names">`;
     ZHOU.forEach(z=>{
       const nx=lx(z.lon), ny=ly(z.lat);
       const isF=focusZ&&focusZ.id===z.id;
       const dim=focusZ&&!isF;
-      const op=dim?0.2:isF?1:0.8;
-      const sz=isF?22:14;
+      const op=dim?0.25:1;
+      const sz=isF?15:10;
+      const fk=rf[z.id]||'neut';
+      const f=FAC[fk]||FAC.neut;
+      // Color del nombre = color de la facción. Inglés primario, chino subtítulo.
       s+=`<text x="${nx}" y="${ny}" text-anchor="middle"
-        font-family="Noto Serif SC,serif" font-size="${sz}" font-weight="700"
-        fill="rgba(20,10,0,${op})" pointer-events="none">${z.zh}</text>
+        font-family="Noto Sans SC,sans-serif" font-size="${sz}" font-weight="700"
+        fill="${f.c}" opacity="${op}" pointer-events="none"
+        stroke="rgba(255,250,235,.92)" stroke-width="2.4" paint-order="stroke fill"
+        style="letter-spacing:.04em">${z.en}</text>
       <text x="${nx}" y="${+ny+sz*0.95}" text-anchor="middle"
-        font-family="Noto Sans SC,sans-serif" font-size="${isF?10:7.5}"
-        fill="rgba(20,10,0,${op*0.65})" pointer-events="none">${z.en}</text>`;
+        font-family="Noto Serif SC,serif" font-size="${isF?9:6.5}" font-weight="500"
+        fill="${f.c}" opacity="${op*0.7}" pointer-events="none"
+        stroke="rgba(255,250,235,.88)" stroke-width="1.6" paint-order="stroke fill">${z.zh}</text>`;
     });
     s+=`\n  </g>`;
   }
@@ -559,19 +626,20 @@ function buildSVG(){
 
     citiesToShow.forEach(({k,c})=>{
       const cx=lx(c.lon), cy=ly(c.lat);
-      const r=c.cap?(focusZ?9:6.5):(focusZ?6.5:4.5);
+      const r=c.cap?(focusZ?9:6.5):(focusZ?7:4.5);
       const col=c.cap?'#f0d050':'#c8a840';
-      const sw=c.cap?1.8:1;
-      const fs=c.cap?(focusZ?11:9):(focusZ?9:7.5);
+      const sw=c.cap?1.6:1;
+      const fs=c.cap?(focusZ?11:8.5):(focusZ?9:7);
       s+=`\n    <g class="city-pin" onclick="clickCity(event,'${k}')">
-        <circle cx="${cx}" cy="${cy}" r="${r}" fill="${col}" opacity=".9"
-          stroke="${c.cap?'#8a5800':'#7a4800'}" stroke-width="${sw}"
-          ${c.cap?'filter="url(#gl)"':''}/>
+        <circle cx="${cx}" cy="${cy}" r="${r}" fill="${col}" opacity=".95"
+          stroke="${c.cap?'#5a3000':'#4a2800'}" stroke-width="${sw+0.4}"/>
         ${c.cap?`<polygon points="${cx},${+cy-r-5} ${+cx+3.5},${+cy-r} ${cx},${+cy-r+2.5} ${+cx-3.5},${+cy-r}"
-          fill="#c0392b" opacity=".85"/>`:``}
-        <text x="${+cx+r+3}" y="${+cy+4}" font-family="Noto Serif SC,serif"
-          font-size="${fs}" fill="${c.cap?'#f0d070':'rgba(230,200,140,.82)'}"
-          font-weight="${c.cap?'700':'400'}" pointer-events="none">${c.zh}${c.cap?' ★':''}</text>
+          fill="#c0392b" opacity=".95" stroke="rgba(0,0,0,.4)" stroke-width="0.5"/>`:``}
+        <text x="${+cx+r+3}" y="${+cy+4}" font-family="Noto Sans SC,sans-serif"
+          font-size="${fs}" fill="${c.cap?'#7a4800':'#5a3800'}"
+          font-weight="${c.cap?'700':'600'}" pointer-events="none"
+          stroke="rgba(255,250,235,.92)" stroke-width="${c.cap?2.2:1.8}" paint-order="stroke fill"
+          style="letter-spacing:.02em">${c.en}${c.cap?' ★':''}</text>
       </g>`;
     });
     s+=`\n  </g>`;
@@ -598,7 +666,9 @@ function buildSVG(){
       const fs=focusZ?10:8;
       const f=FAC[ch.f]||FAC.neut;
       const idx=P.chars.indexOf(ch);
-      s+=`\n    <g class="char-pin" onclick="clickChar(event,${idx})">
+      const dimByFac = highlightFac && ch.f!==highlightFac && !focusZ;
+      const pinOp = dimByFac ? 0.22 : 1;
+      s+=`\n    <g class="char-pin" opacity="${pinOp}" onclick="clickChar(event,${idx})">
         <circle cx="${px}" cy="${py}" r="${r}" fill="${f.c}" fill-opacity=".22"
           stroke="${f.c}" stroke-width="${focusZ?2.2:1.8}"/>
         <circle cx="${px}" cy="${py}" r="${ir}" fill="${f.c}" fill-opacity=".92"/>
@@ -615,45 +685,44 @@ function buildSVG(){
     s+=`\n  </g>`;
   }
 
-  // ══ DECORACIÓN ══
-  // Título cartográfico
-  s+=`
-  <rect x="${vx+10}" y="${vy+10}" width="178" height="60" rx="2"
-    fill="rgba(5,2,0,.84)" stroke="rgba(201,168,76,.4)" stroke-width="1"/>
-  <text x="${vx+99}" y="${vy+34}" text-anchor="middle" font-family="Noto Serif SC,serif"
-    font-size="19" font-weight="900" fill="#c9a84c" filter="url(#gl)">三國演義</text>
-  <text x="${vx+99}" y="${vy+50}" text-anchor="middle" font-family="Cinzel Decorative,serif"
-    font-size="8" fill="rgba(201,168,76,.68)" letter-spacing="1">ROMANCE DE LOS TRES REINOS</text>
-  <text x="${vx+99}" y="${vy+63}" text-anchor="middle" font-family="IM Fell English,serif"
-    font-size="8.5" fill="rgba(201,168,76,.48)" font-style="italic">168–316 d.C.</text>`;
+  if(!WATERCOLOR){
+    // ══ DECORACIÓN: cartucho + brújula + leyenda (procedural) ══
+    s+=`
+    <rect x="${vx+10}" y="${vy+10}" width="178" height="60" rx="2"
+      fill="rgba(5,2,0,.84)" stroke="rgba(201,168,76,.4)" stroke-width="1"/>
+    <text x="${vx+99}" y="${vy+34}" text-anchor="middle" font-family="Noto Serif SC,serif"
+      font-size="19" font-weight="900" fill="#c9a84c" filter="url(#gl)">三國演義</text>
+    <text x="${vx+99}" y="${vy+50}" text-anchor="middle" font-family="Cinzel Decorative,serif"
+      font-size="8" fill="rgba(201,168,76,.68)" letter-spacing="1">ROMANCE DE LOS TRES REINOS</text>
+    <text x="${vx+99}" y="${vy+63}" text-anchor="middle" font-family="IM Fell English,serif"
+      font-size="8.5" fill="rgba(201,168,76,.48)" font-style="italic">168–316 d.C.</text>`;
 
-  // Brújula
-  const bx=vx+vw-40, by=vy+40;
-  s+=`
-  <g transform="translate(${bx},${by})">
-    <circle r="26" fill="rgba(5,2,0,.88)" stroke="rgba(201,168,76,.42)" stroke-width="1.4"/>
-    <circle r="19" fill="none" stroke="rgba(201,168,76,.18)" stroke-width=".7"/>
-    <text y="-13" text-anchor="middle" fill="rgba(201,168,76,.8)" font-size="10" font-family="Noto Serif SC">北</text>
-    <text y="19" text-anchor="middle" fill="rgba(201,168,76,.65)" font-size="9" font-family="Noto Serif SC">南</text>
-    <text x="15" y="4" text-anchor="middle" fill="rgba(201,168,76,.65)" font-size="9" font-family="Noto Serif SC">东</text>
-    <text x="-15" y="4" text-anchor="middle" fill="rgba(201,168,76,.65)" font-size="9" font-family="Noto Serif SC">西</text>
-    <polygon points="0,-19 3.5,0 0,19 -3.5,0" fill="#c0392b" opacity=".85"/>
-    <polygon points="0,-19 3.5,0 0,0 -3.5,0" fill="rgba(255,255,255,.55)"/>
-    <circle r="3.5" fill="#c9a84c"/>
-  </g>`;
+    const bx=vx+vw-40, by=vy+40;
+    s+=`
+    <g transform="translate(${bx},${by})">
+      <circle r="26" fill="rgba(5,2,0,.88)" stroke="rgba(201,168,76,.42)" stroke-width="1.4"/>
+      <circle r="19" fill="none" stroke="rgba(201,168,76,.18)" stroke-width=".7"/>
+      <text y="-13" text-anchor="middle" fill="rgba(201,168,76,.8)" font-size="10" font-family="Noto Serif SC">北</text>
+      <text y="19" text-anchor="middle" fill="rgba(201,168,76,.65)" font-size="9" font-family="Noto Serif SC">南</text>
+      <text x="15" y="4" text-anchor="middle" fill="rgba(201,168,76,.65)" font-size="9" font-family="Noto Serif SC">东</text>
+      <text x="-15" y="4" text-anchor="middle" fill="rgba(201,168,76,.65)" font-size="9" font-family="Noto Serif SC">西</text>
+      <polygon points="0,-19 3.5,0 0,19 -3.5,0" fill="#c0392b" opacity=".85"/>
+      <polygon points="0,-19 3.5,0 0,0 -3.5,0" fill="rgba(255,255,255,.55)"/>
+      <circle r="3.5" fill="#c9a84c"/>
+    </g>`;
 
-  // Leyenda factiones
-  if(P){
-    const fks=[...new Set(Object.values(RF[P.id]))].slice(0,6);
-    s+=`\n  <g>`;
-    fks.forEach((fk,i)=>{
-      const f=FAC[fk]; if(!f)return;
-      const lbx=vx+12, lby=vy+vh-14-i*16;
-      s+=`<circle cx="${lbx+6}" cy="${lby}" r="5" fill="${f.c}" opacity=".85"/>
-      <text x="${lbx+15}" y="${lby+4}" font-family="Noto Sans SC,sans-serif"
-        font-size="9.5" fill="rgba(201,168,76,.72)">${f.n}</text>`;
-    });
-    s+=`\n  </g>`;
+    if(P){
+      const fks=[...new Set(Object.values(RF[P.id]))].slice(0,6);
+      s+=`\n  <g>`;
+      fks.forEach((fk,i)=>{
+        const f=FAC[fk]; if(!f)return;
+        const lbx=vx+12, lby=vy+vh-14-i*16;
+        s+=`<circle cx="${lbx+6}" cy="${lby}" r="5" fill="${f.c}" opacity=".85"/>
+        <text x="${lbx+15}" y="${lby+4}" font-family="Noto Sans SC,sans-serif"
+          font-size="9.5" fill="rgba(201,168,76,.72)">${f.n}</text>`;
+      });
+      s+=`\n  </g>`;
+    }
   }
 
   s+=`\n</svg>`;
@@ -702,6 +771,61 @@ function attachTooltips(){
 function render(){
   document.getElementById('map-base').innerHTML=buildSVG();
   attachTooltips();
+  animateVB(computeTargetVB());
+}
+
+// ══════════════════════════════════════════════════════════════
+//  ANIMACIÓN VIEWBOX — zoom suave entre estados
+// ══════════════════════════════════════════════════════════════
+// Calcula el viewBox de destino según level/selZ. Si hay zhou enfocada,
+// devuelve su bbox geográfica con margen; si no, el mapa completo.
+function computeTargetVB(){
+  if(level===1 && selZ){
+    const z = ZHOU.find(x=>x.id===selZ);
+    if(z){
+      const coords=[];
+      z.path.replace(/[\d.]+,[\d.]+/g, m=>{coords.push(m.split(',').map(Number));});
+      if(coords.length){
+        const xs=coords.map(c=>c[0]), ys=coords.map(c=>c[1]);
+        const margin=50;
+        const tx=Math.max(0,Math.min(...xs)-margin);
+        const ty=Math.max(0,Math.min(...ys)-margin);
+        const tw=Math.min(VW,Math.max(...xs)+margin)-tx;
+        const th=Math.min(VH,Math.max(...ys)+margin)-ty;
+        return [tx,ty,tw,th];
+      }
+    }
+  }
+  return [0,0,VW,VH];
+}
+
+function easeOutCubic(t){ return 1 - Math.pow(1-t, 3); }
+
+// Interpola currentVB → target en `dur` ms con rAF. Cancela animación previa.
+function animateVB(target, dur){
+  if(dur===undefined) dur = 540;
+  if(zoomRAF){ cancelAnimationFrame(zoomRAF); zoomRAF = null; }
+  const svg = document.querySelector('#map-base svg');
+  if(!svg) return;
+  // Si ya estamos prácticamente en el destino, fija sin animar.
+  const close = currentVB.every((v,i)=>Math.abs(v-target[i])<0.5);
+  if(close){
+    currentVB = target.slice();
+    svg.setAttribute('viewBox', currentVB.join(' '));
+    return;
+  }
+  const start = currentVB.slice();
+  const t0 = performance.now();
+  function step(now){
+    const e = Math.min(1, (now-t0)/dur);
+    const k = easeOutCubic(e);
+    currentVB = start.map((s,i)=> s + (target[i]-s)*k);
+    svg.setAttribute('viewBox', currentVB.map(v=>v.toFixed(2)).join(' '));
+    if(e<1){ zoomRAF = requestAnimationFrame(step); }
+    else { zoomRAF = null; currentVB = target.slice();
+      svg.setAttribute('viewBox', currentVB.join(' ')); }
+  }
+  zoomRAF = requestAnimationFrame(step);
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -709,9 +833,10 @@ function render(){
 // ══════════════════════════════════════════════════════════════
 function clickZ(id){
   selZ=id; level=1;
-  document.getElementById('backbtn').style.display='block';
+  document.getElementById('backbtn').classList.add('show');
   updateBC(); render();
   if(P) updateInfoZ(id);
+  openDrawer();
 }
 function clickCity(e,k){
   e.stopPropagation();
@@ -729,25 +854,34 @@ function clickChar(e,i){
 }
 function goL0(){
   level=0;selZ=null;
-  document.getElementById('backbtn').style.display='none';
+  document.getElementById('backbtn').classList.remove('show');
   updateBC();render();
   if(P)updateInfoP();
 }
 function updateBC(){
-  const bc=document.getElementById('bc');
-  let h=`<span class="bci ${level===0?'on':''}" onclick="goL0()">🗺 China Han</span>`;
+  const bcsub=document.getElementById('bcsub');
+  const bci=document.querySelector('#bc .bci');
   if(level===1&&selZ){
     const z=ZHOU.find(x=>x.id===selZ);
-    h+=`<span class="bcsep">›</span><span class="bci on">${z.zh} ${z.en}</span>`;
+    bci.classList.remove('on');
+    bcsub.innerHTML=`<span class="bcsep">›</span><span class="bci on">${z.zh} ${z.en}</span>`;
+  } else {
+    bci.classList.add('on');
+    bcsub.innerHTML='';
   }
-  bc.innerHTML=h;
 }
+
+// ══════════════════════════════════════════════════════════════
+//  DRAWER (panel deslizante)
+// ══════════════════════════════════════════════════════════════
+function openDrawer(){ document.getElementById('drawer').classList.add('open'); }
+function closeDrawer(){ document.getElementById('drawer').classList.remove('open'); }
 
 function updateInfoP(){
   if(!P)return;
-  document.getElementById('izh').textContent=P.zh;
-  document.getElementById('iname').textContent=P.n;
-  document.getElementById('iyrs').textContent=P.y+' d.C.';
+  document.getElementById('dzh').textContent=P.zh;
+  document.getElementById('dname').textContent=P.n;
+  document.getElementById('dyrs').textContent=P.y+' d.C.';
   let h=`<div class="idesc">${P.desc}</div>`;
   h+=`<div class="isect">⚔ Figuras del Periodo</div>`;
   P.chars.forEach((ch,i)=>{
@@ -757,11 +891,13 @@ function updateInfoP(){
       <div><div class="cnm">${ch.n}</div><div class="csb">${f.n}</div></div>
     </div>`;
   });
-  h+=`<div class="isect" style="margin-top:5px">📜 Eventos</div>`;
-  (P.events||[]).forEach(ev=>{
-    h+=`<div class="erow"><div class="eyr">${ev.y} d.C.</div><div class="etxt">${ev.t}</div></div>`;
-  });
-  document.getElementById('ibody').innerHTML=h;
+  if((P.events||[]).length){
+    h+=`<div class="isect" style="margin-top:8px">📜 Eventos</div>`;
+    P.events.forEach(ev=>{
+      h+=`<div class="erow"><div class="eyr">${ev.y} d.C.</div><div class="etxt">${ev.t}</div></div>`;
+    });
+  }
+  document.getElementById('dbody').innerHTML=h;
   document.querySelectorAll('.crow[data-ci]').forEach(r=>{
     r.addEventListener('click',()=>openModChar(P.chars[parseInt(r.dataset.ci)]));
   });
@@ -772,10 +908,36 @@ function updateInfoZ(zid){
   const z=ZHOU.find(x=>x.id===zid);
   const f=FAC[(RF[P.id]||{})[zid]||'neut']||FAC.neut;
   const zhc=P.chars.filter(ch=>ch.zhou===zid);
+  const reg=(typeof REGENTS!=='undefined' && REGENTS[P.id] && REGENTS[P.id][zid]) || null;
+
+  document.getElementById('dzh').textContent=z.zh;
+  document.getElementById('dname').textContent=z.en;
+  document.getElementById('dyrs').textContent=P.n+' · '+P.y+' d.C.';
+
   let h=`<div class="idesc">${z.desc}</div>`;
-  h+=`<div style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border:1px solid ${f.c};border-radius:2px;margin:3px 0;font-family:Noto Sans SC,sans-serif;font-size:9.5px;color:${f.c};background:${f.c}12">${f.s} · ${f.n}</div>`;
+  h+=`<div class="fbadge" style="border-color:${f.c};color:${f.c};background:${f.c}1c">${f.s} · ${f.n}</div>`;
+
+  // Línea de control faccional a través de los 10 períodos —
+  // permite leer de un vistazo cómo cambió el dueño de esta zhou.
+  h+=`<div class="isect">📜 Control a través del tiempo</div>`;
+  h+=`<div class="zft">`;
+  PERIODS.forEach(pp=>{
+    const fk=(RF[pp.id]||{})[zid]||'neut';
+    const ff=FAC[fk]||FAC.neut;
+    const cur=P&&pp.id===P.id;
+    h+=`<div class="zft-dot${cur?' on':''}" data-pid="${pp.id}"
+      style="--fc:${ff.c}"
+      title="${pp.n} · ${pp.y} d.C. — ${ff.n}">
+      <span class="zft-s">${ff.s}</span>
+      <span class="zft-yr">${pp.y.split('–')[0].replace('~','')}</span>
+    </div>`;
+  });
+  h+=`</div>`;
+
+  h+=`<div class="isect">👑 Regente</div>
+    <div class="regent">${reg||'<span class="dim">— sin datos para esta era —</span>'}</div>`;
   if(zhc.length){
-    h+=`<div class="isect" style="margin-top:5px">⚔ Figuras en ${z.zh}</div>`;
+    h+=`<div class="isect">⚔ Figuras en ${z.zh}</div>`;
     zhc.forEach(ch=>{
       const fc=FAC[ch.f]||FAC.neut;
       h+=`<div class="crow" style="--fc:${fc.c}" data-ci="${P.chars.indexOf(ch)}">
@@ -783,32 +945,89 @@ function updateInfoZ(zid){
         <div><div class="cnm">${ch.n}</div><div class="csb">${fc.n}</div></div>
       </div>`;
     });
-  } else {
-    h+=`<div class="isect" style="margin-top:5px">Ciudades de ${z.zh}</div>`;
+  }
+  if((z.cities||[]).length){
+    h+=`<div class="isect">🏯 Ciudades</div>`;
     (z.cities||[]).forEach(ck=>{
       const c=CITIES[ck]; if(!c)return;
-      h+=`<div style="padding:4px 6px;background:rgba(255,255,255,.02);border-radius:2px;
-        margin-bottom:3px;border-left:2px solid rgba(201,168,76,.25)">
-        <div style="font-family:Noto Serif SC,serif;font-size:11px;color:var(--parch)">${c.zh} <span style="opacity:.5;font-family:Noto Sans SC;font-size:9px">${c.en}</span></div>
-        <div style="font-family:Noto Sans SC,sans-serif;font-size:9px;color:var(--parch2);margin-top:1px;opacity:.7">${c.info.substring(0,70)}…</div>
+      h+=`<div class="cbox" onclick="clickCity(event,'${ck}')">
+        <div class="cbnm">${c.zh} <span class="cben">${c.en}</span>${c.cap?' <span class="cbstar">★</span>':''}</div>
+        <div class="cbinfo">${c.info}</div>
       </div>`;
     });
   }
-  document.getElementById('ibody').innerHTML=h;
+  document.getElementById('dbody').innerHTML=h;
   document.querySelectorAll('.crow[data-ci]').forEach(r=>{
     r.addEventListener('click',()=>openModChar(P.chars[parseInt(r.dataset.ci)]));
   });
+  // Click en un dot de la línea temporal: cambia el período manteniendo
+  // el zoom actual sobre esta zhou y refresca el panel de información.
+  document.querySelectorAll('.zft-dot').forEach(d=>{
+    d.addEventListener('click',()=>{
+      const pp=PERIODS.find(x=>x.id===d.dataset.pid); if(!pp)return;
+      P=pp;
+      document.querySelectorAll('.pc').forEach(c=>c.classList.remove('on'));
+      document.getElementById('pc-'+pp.id)?.classList.add('on');
+      render();
+      updateInfoZ(zid);
+    });
+  });
+}
+
+// ══════════════════════════════════════════════════════════════
+//  FICHAS — enlace al perfil del personaje (assets/Periods/*.html)
+// ══════════════════════════════════════════════════════════════
+// Set de slugs reales en disco. Si fichaSlug() devuelve algo que no
+// está aquí, el botón no se muestra para evitar 404.
+const FICHAS_AVAILABLE=new Set([
+  'cao-cao','cao-huan','cao-mao','cao-pi','cao-ren','cao-rui','cao-shuang','cao-zhi',
+  'cheng-pu','da-qiao','deng-ai','dian-wei','diao-chan','ding-feng','dong-zhuo','du-yu',
+  'fa-zheng','gan-ning','gongsun-zan','guan-ping','guan-yu','guo-huai','guo-jia','han-dang',
+  'he-jin','huangfu-song','huang-gai','huang-zhong','hua-tuo','hua-xiong','jia-chong',
+  'jiang-wei','jia-xu','lady-bian','lady-zhurong','li-dian','liu-bei','liu-shan','liu-xie',
+  'lu-bu','lu-kang','lu-meng','lu-su','lu-xun','lu-zhi','ma-chao','meng-huo','pang-de',
+  'pang-tong','sima-lang','sima-shi','sima-yi','sima-zhao','sun-ce','sun-jian','sun-quan',
+  'sun-shangxiang','taishi-ci','tao-qian','tian-feng','wei-yan','wen-chou','xiahou-dun',
+  'xiahou-yuan','xiao-qiao','xu-chu','xu-huang','xun-yu','xu-shu','xu-you','yan-liang',
+  'yuan-shao','yuan-shu','yue-jin','yu-jin','zhang-bao','zhang-fei','zhang-he','zhang-jiao',
+  'zhang-liang','zhang-liao','zhang-zhao','zhao-yun','zhen-ji','zhou-tai','zhou-yu',
+  'zhuge-liang','zhu-ran',
+]);
+
+// Mapeo manual de nombre → slug para casos donde el slugify automático falla
+// (romanizaciones alternativas, separación distinta, etc.).
+const FICHA_OVERRIDE={
+  'Zhang Jue':'zhang-jiao',     // 张角 — variante de romanización
+  'Diaochan':'diao-chan',       // archivo escrito con guión
+};
+
+// Convierte un nombre a su slug de archivo, devolviendo null si no hay ficha.
+function fichaSlug(name){
+  if(!name) return null;
+  if(name in FICHA_OVERRIDE) return FICHA_OVERRIDE[name];
+  // Strip combining diacritics (Lü→Lu) usando rango Unicode 0300–036F
+  const s = name
+    .normalize('NFD').replace(new RegExp('[\\u0300-\\u036f]','g'),'')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g,'-')
+    .replace(/^-+|-+$/g,'');
+  return FICHAS_AVAILABLE.has(s) ? s : null;
 }
 
 function openModChar(ch){
   const f=FAC[ch.f]||FAC.neut;
   const st=(ch.st||[]).map(([l,v])=>`<div class="cmsb"><div class="cmsl">${l}</div><div class="cmsv">${v}</div></div>`).join('');
+  const slug=fichaSlug(ch.n);
+  const fichaBtn = slug
+    ? `<a class="cmficha" href="Periods/${slug}.html">Ver Ficha Completa →</a>`
+    : '';
   document.getElementById('cminner').innerHTML=`
     <div class="cmnm">${ch.e} ${ch.n}</div>
     <div class="cmzi">${ch.zi||''}</div>
     <div class="cmbadge" style="color:${f.c};border-color:${f.c};background:${f.c}14">${f.s} · ${f.n}</div>
     <div class="cmbio">${ch.bio||''}</div>
-    ${st?`<div class="cmst">${st}</div>`:''}`;
+    ${st?`<div class="cmst">${st}</div>`:''}
+    ${fichaBtn}`;
   document.getElementById('cmod').classList.add('open');
 }
 
@@ -835,10 +1054,14 @@ function tog(t){
   render();
 }
 
+function togFull(){
+  document.body.classList.toggle('fullmap');
+  document.getElementById('bfull').classList.toggle('on');
+}
+
 function initTL(){
   const sc=document.getElementById('tlsc');
-  const rail=sc.querySelector('.tlr');
-  sc.innerHTML=''; sc.appendChild(rail);
+  sc.innerHTML='';
   PERIODS.forEach(pp=>{
     const el=document.createElement('div');
     el.className='pc'; el.id='pc-'+pp.id;
@@ -847,23 +1070,88 @@ function initTL(){
       <div class="pcstem"></div>
       <div class="pclbl">${pp.n}</div>
       <div class="pcyr">${pp.y} d.C.</div>`;
-    el.addEventListener('click',()=>selP(pp.id));
+    el.addEventListener('click',()=>selP(pp.id,{openPanel:true}));
     sc.appendChild(el);
   });
 }
 
-function selP(id){
+// ══════════════════════════════════════════════════════════════
+//  LEYENDA IZQUIERDA — facciones activas en el período
+// ══════════════════════════════════════════════════════════════
+// Cuenta territorios (de RF) y figuras (de P.chars) por facción y
+// renderiza una fila por cada una. Click resalta la facción en el mapa.
+function buildLegend(){
+  const lt=document.getElementById('ltitle');
+  const ly=document.getElementById('lyrs');
+  const lb=document.getElementById('lbody');
+  if(!lt||!lb)return;
+  if(!P){
+    lt.textContent='FACCIONES';
+    ly.textContent='— Selecciona un período —';
+    lb.innerHTML='<div class="lfempty">⚜<br>Sin era seleccionada</div>';
+    return;
+  }
+  const rf=RF[P.id]||{};
+  const counts={};
+  Object.values(rf).forEach(fk=>{
+    if(!counts[fk]) counts[fk]={ter:0,fig:0};
+    counts[fk].ter++;
+  });
+  P.chars.forEach(ch=>{
+    if(!counts[ch.f]) counts[ch.f]={ter:0,fig:0};
+    counts[ch.f].fig++;
+  });
+  const rows=Object.entries(counts)
+    .sort((a,b)=> (b[1].ter-a[1].ter) || (b[1].fig-a[1].fig));
+
+  lt.textContent='FACCIONES · '+P.zh;
+  ly.textContent=P.y+' d.C.';
+  let h='';
+  rows.forEach(([fk,c])=>{
+    const f=FAC[fk]||FAC.neut;
+    const tl=c.ter===1?'territorio':'territorios';
+    const fl=c.fig===1?'figura':'figuras';
+    const cls=highlightFac
+      ? (highlightFac===fk?'lfac act':'lfac dim')
+      : 'lfac';
+    h+=`<div class="${cls}" data-fk="${fk}" style="--fc:${f.c}">
+      <div class="lfsg">${f.s}</div>
+      <div class="lftxt">
+        <div class="lfn">${f.n}</div>
+        <div class="lfsub">${c.ter} ${tl} · ${c.fig} ${fl}</div>
+      </div>
+    </div>`;
+  });
+  lb.innerHTML=h;
+  lb.querySelectorAll('.lfac').forEach(el=>{
+    el.addEventListener('click',()=>{
+      const fk=el.dataset.fk;
+      highlightFac = (highlightFac===fk) ? null : fk;
+      render();
+      buildLegend();
+    });
+  });
+}
+
+function selP(id, opts){
   const pp=PERIODS.find(x=>x.id===id); if(!pp)return;
   P=pp;
+  highlightFac=null;
   document.querySelectorAll('.pc').forEach(c=>c.classList.remove('on'));
   document.getElementById('pc-'+id)?.classList.add('on');
   level=0;selZ=null;
-  document.getElementById('backbtn').style.display='none';
-  updateBC();render();updateInfoP();
+  updateBC();render();updateInfoP();buildLegend();
+  if(opts&&opts.openPanel) openDrawer();
 }
 
 document.addEventListener('keydown',e=>{
-  if(e.key==='Escape')document.getElementById('cmod').classList.remove('open');
+  if(e.key!=='Escape')return;
+  // Cascada de salida: modal → drawer abierto → zoom → nada
+  const cmod=document.getElementById('cmod');
+  if(cmod.classList.contains('open')){ cmod.classList.remove('open'); return; }
+  const drawer=document.getElementById('drawer');
+  if(drawer.classList.contains('open')){ closeDrawer(); return; }
+  if(level===1){ goL0(); return; }
 });
 
 initTL();

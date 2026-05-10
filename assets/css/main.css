@@ -27,6 +27,9 @@ body{background:var(--ink);color:var(--parch);font-family:'IM Fell English',Geor
 .nav-links{display:flex;gap:22px;list-style:none}
 .nav-links a{font-family:'Noto Sans SC',sans-serif;font-size:14px;color:var(--parch2);text-decoration:none;letter-spacing:.07em;opacity:.72;transition:all .18s}
 .nav-links a:hover{opacity:1;color:var(--gold)}
+.nav-links a.on{opacity:1;color:var(--gold);font-weight:700}
+.foot-link{font-family:'Cinzel Decorative',serif;font-size:11px;color:var(--gold);opacity:.7;text-decoration:none;letter-spacing:.14em;transition:opacity .18s}
+.foot-link:hover{opacity:1}
 .nav-cta{font-family:'Cinzel Decorative',serif;font-size:16px;color:var(--ink);background:var(--gold);padding:7px 17px;border-radius:2px;text-decoration:none;letter-spacing:.13em;transition:all .18s;white-space:nowrap;flex-shrink:0}
 .nav-cta:hover{background:var(--parch2)}
 .hamburger{display:none;background:none;border:none;cursor:pointer;flex-direction:column;gap:5px;padding:4px}

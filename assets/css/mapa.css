@@ -2,153 +2,350 @@
   --ink:#0b0600;--parch:#f0ddb0;--parch2:#d4b870;
   --gold:#c9a84c;--goldf:rgba(201,168,76,.25);--red:#8b1a1a;
   --border:rgba(201,168,76,.2);
+  --hdr-h:62px; --tl-h:178px;
+  --drawer-w:380px;
+  --legend-w:268px;
 }
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{width:100%;height:100%;overflow:hidden;background:var(--ink);
-  font-family:'IM Fell English',Georgia,serif;color:var(--parch)}
+  font-family:'IM Fell English',Georgia,serif;color:var(--parch);font-size:16px}
 
-#hdr{position:fixed;top:0;left:0;right:0;height:48px;z-index:300;
+/* ════════════════════════ HEADER ════════════════════════ */
+#hdr{position:fixed;top:0;left:0;right:0;height:var(--hdr-h);z-index:300;
   background:rgba(5,2,0,.97);border-bottom:1px solid var(--goldf);
-  display:flex;align-items:center;justify-content:space-between;padding:0 14px}
-.hzh{font-family:'Noto Serif SC',serif;font-size:24px;font-weight:900;
-  color:var(--red);letter-spacing:.2em;text-shadow:0 0 16px rgba(139,26,26,.5)}
-.hen{font-family:'Cinzel Decorative',serif;font-size:10px;color:var(--gold);
-  letter-spacing:.16em;opacity:.75;margin-left:10px}
-.hbtns{display:flex;gap:5px}
-.hb{font-family:'Noto Sans SC',sans-serif;font-size:10px;color:var(--parch2);
-  border:1px solid var(--border);background:none;padding:4px 10px;border-radius:2px;
-  cursor:pointer;transition:all .18s}
-.hb:hover,.hb.on{color:var(--gold);border-color:var(--gold);background:rgba(201,168,76,.06)}
+  display:flex;align-items:center;justify-content:space-between;padding:0 22px;gap:18px}
+.hbrand{display:flex;align-items:baseline;gap:14px;min-width:0}
+.hzh{font-family:'Noto Serif SC',serif;font-size:25px;font-weight:900;
+  color:var(--red);letter-spacing:.18em;text-shadow:0 0 16px rgba(139,26,26,.5);
+  white-space:nowrap}
+.hen{font-family:'Cinzel Decorative',serif;font-size:13px;color:var(--gold);
+  letter-spacing:.18em;opacity:.78;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hbtns{display:flex;gap:8px;flex-shrink:0}
+.hb{font-family:'Noto Sans SC',sans-serif;font-size:14px;color:var(--parch2);
+  border:1px solid var(--border);background:none;padding:9px 16px;border-radius:3px;
+  cursor:pointer;transition:all .18s;letter-spacing:.04em}
+.hb:hover,.hb.on{color:var(--gold);border-color:var(--gold);background:rgba(201,168,76,.08)}
 .hb-link{display:inline-flex;align-items:center;text-decoration:none}
 
-#bc{position:fixed;top:48px;left:0;right:0;height:26px;z-index:299;
-  background:rgba(4,2,0,.93);border-bottom:1px solid rgba(201,168,76,.1);
-  display:flex;align-items:center;padding:0 12px;gap:5px}
-.bci{font-family:'Noto Sans SC',sans-serif;font-size:10px;color:var(--parch2);
-  cursor:pointer;opacity:.62;transition:all .18s}
-.bci:hover{opacity:1;color:var(--gold)}
-.bci.on{color:var(--gold);opacity:1;cursor:default}
-.bcsep{color:var(--goldf);font-size:9px}
+/* ════════════════════════ MAIN ══════════════════════════ */
+#mwrap{position:fixed;top:var(--hdr-h);left:0;right:0;bottom:var(--tl-h);
+  display:flex;overflow:hidden}
 
-#main{position:fixed;top:74px;left:0;bottom:82px;right:0;display:flex}
+/* ── LEYENDA IZQUIERDA — facciones activas en el período actual ── */
+#legend{position:relative;width:var(--legend-w);flex-shrink:0;
+  background:linear-gradient(180deg,rgba(7,3,0,.985),rgba(10,5,0,.97));
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;
+  box-shadow:12px 0 40px rgba(0,0,0,.4);z-index:40}
+#lhdr{padding:18px 22px 14px;border-bottom:1px solid rgba(201,168,76,.14);flex-shrink:0}
+#ltitle{font-family:'Cinzel Decorative',serif;font-size:14px;color:var(--gold);
+  letter-spacing:.18em;text-transform:uppercase;font-weight:700}
+#lyrs{font-family:'IM Fell English',serif;font-style:italic;font-size:15px;
+  color:var(--parch2);opacity:.7;margin-top:4px}
+#lbody{flex:1;overflow-y:auto;padding:14px 16px 24px;
+  scrollbar-width:thin;scrollbar-color:var(--goldf) transparent}
+#lbody::-webkit-scrollbar{width:5px}
+#lbody::-webkit-scrollbar-thumb{background:var(--goldf);border-radius:3px}
 
-/* ── MAP ── */
-#mpanel{flex:1;position:relative;overflow:hidden;background:#101810}
+.lfac{display:flex;align-items:center;gap:11px;padding:10px 12px;margin-bottom:7px;
+  background:rgba(255,255,255,.02);border:1px solid rgba(201,168,76,.08);
+  border-left:3px solid var(--fc,var(--gold));border-radius:3px;
+  transition:all .18s;cursor:pointer}
+.lfac:hover{background:rgba(201,168,76,.07);transform:translateX(2px)}
+.lfac.dim{opacity:.35}
+.lfac.act{background:rgba(201,168,76,.1);border-color:var(--fc,var(--gold))}
+.lfsg{width:36px;height:36px;border-radius:50%;background:var(--fc,var(--gold));
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Noto Serif SC',serif;font-size:18px;font-weight:700;color:#fff8e8;
+  text-shadow:0 1px 2px rgba(0,0,0,.55);flex-shrink:0;
+  box-shadow:0 0 0 2px rgba(0,0,0,.45),0 0 9px var(--fc,var(--gold))}
+.lftxt{flex:1;min-width:0}
+.lfn{font-family:'Noto Serif SC',serif;font-size:15px;color:var(--parch);line-height:1.2;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lfsub{font-family:'Noto Sans SC',sans-serif;font-size:12px;color:var(--gold);
+  opacity:.7;margin-top:3px;letter-spacing:.02em}
+.lfempty{font-family:'Cinzel Decorative',serif;font-size:12px;color:var(--gold);
+  opacity:.5;text-align:center;padding:20px 12px;letter-spacing:.12em;line-height:1.6}
 
-/* El mapa base ocupa todo el panel */
-#map-container{position:absolute;inset:0;
+/* ── MAPA ── */
+#mpanel{flex:1;position:relative;overflow:hidden;background:#1a1410;min-width:0}
+
+/* Wrapper scrollable. En modo normal centra el stage y oculta overflow.
+   En modo full permite scroll vertical cuando el stage excede el alto. */
+#map-scroll{width:100%;height:100%;overflow:hidden;
   display:flex;align-items:center;justify-content:center}
 
-/* Imagen base del mapa */
-#map-img{position:absolute;top:0;left:0;width:100%;height:100%;
-  object-fit:contain;object-position:center;
-  image-rendering:crisp-edges}
+/* Stage con aspecto fijo igual a la imagen Map.webp (800/630 = 1.27).
+   Imagen y SVG dentro comparten dimensiones → alineación perfecta. */
+#map-stage{position:relative;aspect-ratio:800/630;
+  height:100%;max-width:100%;flex-shrink:0}
 
-/* Canvas SVG overlay — mismo tamaño que el panel */
-#map-overlay{position:absolute;top:0;left:0;width:100%;height:100%;
-  pointer-events:none}
-#map-overlay .interactive{pointer-events:all}
+#map-base{position:absolute;inset:0;pointer-events:auto}
+#map-base svg{width:100%;height:100%;display:block;
+  transition:none}
 
-#backbtn{position:absolute;top:10px;left:10px;z-index:20;display:none;
-  background:rgba(5,2,0,.92);border:1px solid var(--gold);color:var(--gold);
-  font-family:'Noto Sans SC',sans-serif;font-size:10px;padding:4px 10px;
-  border-radius:2px;cursor:pointer;transition:all .18s}
-#backbtn:hover{background:rgba(201,168,76,.1)}
+/* Botón "Volver al mapa" — visible solo cuando hay zoom (level=1) */
+#backbtn{position:fixed;top:78px;left:14px;z-index:200;display:none;
+  font-family:'Cinzel Decorative',serif;font-size:15px;
+  background:rgba(5,2,0,.9);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  border:1px solid var(--gold);color:var(--gold);
+  padding:10px 18px;border-radius:4px;cursor:pointer;
+  letter-spacing:.06em;transition:all .18s;
+  box-shadow:0 4px 16px rgba(0,0,0,.45)}
+#backbtn.show{display:block;animation:bbin .28s ease-out}
+#backbtn:hover{background:rgba(201,168,76,.15);transform:translateX(-2px)}
+@keyframes bbin{from{opacity:0;transform:translateX(-12px)}to{opacity:1;transform:translateX(0)}}
 
-/* ── INFO ── */
-#ipanel{width:282px;flex-shrink:0;border-left:1px solid var(--border);
-  display:flex;flex-direction:column;
-  background:linear-gradient(180deg,rgba(7,3,0,.98),rgba(10,5,0,.96))}
-#ihdr{padding:11px 13px 8px;border-bottom:1px solid rgba(201,168,76,.12);flex-shrink:0}
-#izh{font-family:'Noto Serif SC',serif;font-size:20px;font-weight:700;color:var(--gold)}
-#iname{font-family:'Cinzel Decorative',serif;font-size:9px;color:var(--gold);opacity:.58;letter-spacing:.13em;margin-top:1px}
-#iyrs{font-family:'IM Fell English',serif;font-style:italic;font-size:10.5px;color:var(--parch2);opacity:.62;margin-top:2px}
-#ibody{flex:1;overflow-y:auto;padding:9px 11px;
+/* MODO FULL — oculta timeline y header, mapa rellena ancho con scroll vertical */
+body.fullmap #tl{display:none}
+body.fullmap #mwrap{bottom:0}
+body.fullmap #map-scroll{overflow-y:auto;overflow-x:hidden;
+  display:block;align-items:initial;justify-content:initial;
   scrollbar-width:thin;scrollbar-color:var(--goldf) transparent}
-#ibody::-webkit-scrollbar{width:3px}
-#ibody::-webkit-scrollbar-thumb{background:var(--goldf)}
-.idesc{font-family:'IM Fell English',serif;font-size:11.5px;line-height:1.65;
-  color:var(--parch2);border-left:2px solid var(--red);padding-left:8px;margin-bottom:7px}
-.isect{font-family:'Cinzel Decorative',serif;font-size:8.5px;color:var(--gold);
-  letter-spacing:.17em;text-transform:uppercase;
-  border-bottom:1px solid rgba(201,168,76,.12);padding-bottom:4px;margin:7px 0 5px}
-.crow{display:flex;align-items:center;gap:6px;padding:5px 7px;
-  background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.05);
-  border-radius:2px;cursor:pointer;transition:all .15s;
-  border-left:2px solid var(--fc,var(--gold));margin-bottom:3px}
-.crow:hover{background:rgba(201,168,76,.06);transform:translateX(2px)}
-.cico{width:25px;height:25px;border-radius:50%;background:rgba(201,168,76,.1);
-  display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
-.cnm{font-family:'Noto Serif SC',serif;font-size:10.5px;color:var(--parch)}
-.csb{font-family:'Noto Sans SC',sans-serif;font-size:9px;color:var(--gold);opacity:.58}
-.erow{display:flex;gap:5px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.038)}
-.erow:last-child{border:none}
-.eyr{font-family:'Cinzel Decorative',serif;font-size:8px;color:var(--gold);
-  opacity:.62;white-space:nowrap;min-width:36px;padding-top:1px}
-.etxt{font-family:'Noto Sans SC',sans-serif;font-size:10px;color:var(--parch2);line-height:1.4}
-.wbox{display:flex;flex-direction:column;align-items:center;justify-content:center;
-  height:100%;gap:10px;opacity:.42;text-align:center;padding:14px}
-.wico{font-size:38px;animation:br 3s ease-in-out infinite}
-@keyframes br{0%,100%{opacity:.3;transform:scale(.97)}50%{opacity:.8;transform:scale(1.03)}}
-.wtxt{font-family:'Cinzel Decorative',serif;font-size:9.5px;color:var(--gold);letter-spacing:.14em;line-height:1.8}
+body.fullmap #map-scroll::-webkit-scrollbar{width:6px}
+body.fullmap #map-scroll::-webkit-scrollbar-thumb{background:var(--goldf);border-radius:3px}
+body.fullmap #map-stage{width:100%;max-width:none;height:auto;margin:0}
 
-/* TIMELINE */
-#tl{position:fixed;bottom:0;left:0;right:0;height:82px;z-index:300;
+/* Breadcrumb flotante sobre el mapa (top-left) */
+#bc{position:absolute;top:14px;left:14px;z-index:20;
+  background:rgba(5,2,0,.86);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+  border:1px solid var(--border);border-radius:4px;
+  padding:9px 16px;display:flex;align-items:center;gap:8px;
+  font-family:'Noto Sans SC',sans-serif;font-size:15px}
+.bci{cursor:pointer;color:var(--parch2);transition:color .18s}
+.bci:hover{color:var(--gold)}
+.bci.on{color:var(--gold)}
+.bci.on:not(:only-child){cursor:default}
+#bcsub{display:flex;align-items:center;gap:8px}
+.bcsep{color:var(--goldf);font-size:13px}
+
+/* ── DRAWER ── */
+#drawer{position:absolute;top:0;right:0;bottom:0;width:var(--drawer-w);
+  background:linear-gradient(180deg,rgba(7,3,0,.985),rgba(10,5,0,.97));
+  border-left:1px solid var(--border);
+  display:flex;flex-direction:column;
+  transform:translateX(100%);
+  transition:transform .32s cubic-bezier(0.4,0,0.2,1);
+  box-shadow:-12px 0 40px rgba(0,0,0,.4);
+  z-index:50}
+#drawer.open{transform:translateX(0)}
+
+#dx{position:absolute;top:10px;right:12px;
+  background:none;border:none;color:var(--gold);font-size:25px;
+  cursor:pointer;opacity:.55;transition:opacity .18s;z-index:2;
+  width:34px;height:34px;display:flex;align-items:center;justify-content:center;
+  border-radius:3px}
+#dx:hover{opacity:1;background:rgba(201,168,76,.08)}
+
+#dhdr{padding:18px 22px 14px 22px;border-bottom:1px solid rgba(201,168,76,.14);
+  flex-shrink:0;padding-right:48px}
+#dzh{font-family:'Noto Serif SC',serif;font-size:30px;font-weight:700;color:var(--gold);
+  line-height:1.15}
+#dname{font-family:'Cinzel Decorative',serif;font-size:13px;color:var(--gold);opacity:.62;
+  letter-spacing:.18em;margin-top:4px;text-transform:uppercase}
+#dyrs{font-family:'IM Fell English',serif;font-style:italic;font-size:15px;
+  color:var(--parch2);opacity:.7;margin-top:4px}
+
+#dbody{flex:1;overflow-y:auto;padding:16px 22px 24px 22px;
+  scrollbar-width:thin;scrollbar-color:var(--goldf) transparent}
+#dbody::-webkit-scrollbar{width:5px}
+#dbody::-webkit-scrollbar-thumb{background:var(--goldf);border-radius:3px}
+
+.idesc{font-family:'IM Fell English',serif;font-size:16px;line-height:1.65;
+  color:var(--parch2);border-left:3px solid var(--red);padding-left:12px;margin-bottom:14px}
+.fbadge{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;
+  border:1px solid;border-radius:3px;
+  font-family:'Noto Sans SC',sans-serif;font-size:14px;font-weight:600;
+  margin-bottom:6px;letter-spacing:.04em}
+.isect{font-family:'Cinzel Decorative',serif;font-size:13px;color:var(--gold);
+  letter-spacing:.18em;text-transform:uppercase;
+  border-bottom:1px solid rgba(201,168,76,.14);padding-bottom:6px;margin:18px 0 10px}
+.regent{font-family:'Noto Serif SC',serif;font-size:17px;color:var(--parch);
+  padding:9px 14px;background:rgba(201,168,76,.06);border-radius:3px;
+  border-left:2px solid var(--gold)}
+.regent .dim{color:var(--parch2);opacity:.5;font-style:italic;font-size:15px;
+  font-family:'IM Fell English',serif}
+
+/* Mini-línea temporal de control faccional dentro del drawer (zoom).
+   Un dot por período mostrando el sello de la facción dominante en esa era. */
+.zft{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:6px;padding:4px 0}
+.zft-dot{position:relative;width:38px;height:42px;border-radius:4px;
+  background:rgba(0,0,0,.35);border:1.5px solid var(--fc,var(--gold));
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  cursor:pointer;transition:all .2s ease;flex-shrink:0;
+  box-shadow:0 1px 3px rgba(0,0,0,.4)}
+.zft-dot:hover{transform:translateY(-2px);
+  background:rgba(0,0,0,.55);box-shadow:0 4px 10px var(--fc,var(--gold))}
+.zft-dot.on{background:var(--fc,var(--gold));
+  box-shadow:0 0 0 1.5px rgba(255,250,235,.85),0 4px 10px var(--fc,var(--gold))}
+.zft-dot.on .zft-s{color:#fff8e8;text-shadow:0 1px 2px rgba(0,0,0,.5)}
+.zft-dot.on .zft-yr{color:rgba(255,250,235,.78)}
+.zft-s{font-family:'Noto Serif SC',serif;font-size:16px;color:var(--fc,var(--gold));
+  font-weight:700;line-height:1}
+.zft-yr{font-family:'Cinzel Decorative',serif;font-size:9.5px;color:var(--gold);
+  opacity:.55;margin-top:2px;letter-spacing:.04em}
+
+.crow{display:flex;align-items:center;gap:10px;padding:9px 12px;
+  background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.05);
+  border-radius:3px;cursor:pointer;transition:all .15s;
+  border-left:3px solid var(--fc,var(--gold));margin-bottom:5px}
+.crow:hover{background:rgba(201,168,76,.07);transform:translateX(3px)}
+.cico{width:36px;height:36px;border-radius:50%;background:rgba(201,168,76,.12);
+  display:flex;align-items:center;justify-content:center;font-size:21px;flex-shrink:0}
+.cnm{font-family:'Noto Serif SC',serif;font-size:16px;color:var(--parch);line-height:1.2}
+.csb{font-family:'Noto Sans SC',sans-serif;font-size:13px;color:var(--gold);opacity:.62;
+  margin-top:2px}
+
+.cbox{padding:9px 13px;background:rgba(255,255,255,.025);border-radius:3px;
+  margin-bottom:6px;border-left:2px solid rgba(201,168,76,.32);cursor:pointer;
+  transition:all .15s}
+.cbox:hover{background:rgba(201,168,76,.07);border-left-color:var(--gold);
+  transform:translateX(3px)}
+.cbnm{font-family:'Noto Serif SC',serif;font-size:16px;color:var(--parch);line-height:1.25}
+.cben{font-family:'Noto Sans SC',sans-serif;font-size:14px;color:var(--parch2);opacity:.62}
+.cbstar{color:var(--red);font-size:14px}
+.cbinfo{font-family:'IM Fell English',serif;font-size:15px;color:var(--parch2);
+  margin-top:3px;opacity:.78;line-height:1.45}
+
+.erow{display:flex;gap:10px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.05)}
+.erow:last-child{border:none}
+.eyr{font-family:'Cinzel Decorative',serif;font-size:13px;color:var(--gold);
+  opacity:.7;white-space:nowrap;min-width:60px;padding-top:2px;letter-spacing:.04em}
+.etxt{font-family:'Noto Sans SC',sans-serif;font-size:15px;color:var(--parch2);line-height:1.45}
+
+.wbox{display:flex;flex-direction:column;align-items:center;justify-content:center;
+  height:100%;gap:14px;opacity:.5;text-align:center;padding:18px}
+.wico{font-size:55px;animation:br 3s ease-in-out infinite}
+@keyframes br{0%,100%{opacity:.3;transform:scale(.97)}50%{opacity:.85;transform:scale(1.03)}}
+.wtxt{font-family:'Cinzel Decorative',serif;font-size:13.5px;color:var(--gold);
+  letter-spacing:.16em;line-height:1.9}
+
+/* ════════════════════════ TIMELINE ══════════════════════ */
+#tl{position:fixed;bottom:0;left:0;right:0;height:var(--tl-h);z-index:300;
   background:linear-gradient(0deg,rgba(4,2,0,.99),rgba(7,3,0,.94));
   border-top:1px solid var(--border)}
-#tlsc{overflow-x:auto;height:100%;scrollbar-width:none;
-  display:flex;align-items:center;padding:0 18px;position:relative}
-#tlsc::-webkit-scrollbar{display:none}
-.tlr{position:absolute;top:38px;left:18px;right:18px;height:2px;
-  background:linear-gradient(90deg,transparent,var(--gold) 5%,var(--gold) 95%,transparent);
-  pointer-events:none}
-.pc{flex:0 0 auto;width:108px;display:flex;flex-direction:column;align-items:center;
-  cursor:pointer;padding:0 3px;transition:transform .18s}
+#tlsc{display:flex;justify-content:space-between;align-items:center;
+  height:100%;padding:0 36px;position:relative;gap:6px}
+
+/* Rail horizontal continuo a lo largo de la timeline (alineado con los dots) */
+#tlsc::before{content:"";position:absolute;top:calc(50% - 16px);left:36px;right:36px;
+  height:3px;
+  background:linear-gradient(90deg,
+    rgba(201,168,76,0) 0%,
+    var(--gold) 6%,var(--gold) 94%,
+    rgba(201,168,76,0) 100%);
+  opacity:.5;pointer-events:none;border-radius:3px;
+  box-shadow:0 0 8px rgba(201,168,76,.18)}
+
+.pc{flex:1 1 0;max-width:148px;display:flex;flex-direction:column;align-items:center;
+  cursor:pointer;padding:0 4px;transition:transform .22s;position:relative;z-index:2}
 .pc:hover{transform:translateY(-3px)}
-.pcico{width:29px;height:29px;border-radius:50%;display:flex;align-items:center;
-  justify-content:center;font-size:14px;border:2px solid;transition:all .2s}
-.pcdot{width:10px;height:10px;border-radius:50%;border:2px solid var(--gold);
-  background:var(--ink);position:relative;z-index:2;transition:all .2s;margin-top:17px}
-.pc.on .pcdot,.pc:hover .pcdot{background:var(--gold);box-shadow:0 0 8px var(--gold);transform:scale(1.5)}
-.pcstem{width:2px;height:11px;background:var(--gold);opacity:.28}
-.pclbl{font-family:'Noto Sans SC',sans-serif;font-size:8px;color:var(--parch2);
-  text-align:center;line-height:1.25;margin-top:3px;transition:color .18s}
+
+.pcico{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;
+  justify-content:center;font-size:21px;border:2px solid;background:var(--ink);
+  transition:all .22s}
+.pc:hover .pcico,.pc.on .pcico{box-shadow:0 0 14px currentColor}
+
+.pcdot{width:14px;height:14px;border-radius:50%;border:2px solid var(--gold);
+  background:var(--ink);position:relative;z-index:3;transition:all .22s;margin-top:14px}
+.pc.on .pcdot,.pc:hover .pcdot{background:var(--gold);
+  box-shadow:0 0 14px var(--gold);transform:scale(1.4)}
+
+.pcstem{width:2px;height:14px;background:var(--gold);opacity:.32}
+
+.pclbl{font-family:'Noto Sans SC',sans-serif;font-size:15px;color:var(--parch2);
+  text-align:center;line-height:1.25;margin-top:6px;transition:color .18s;
+  font-weight:400;letter-spacing:.02em}
 .pc.on .pclbl{color:var(--gold);font-weight:700}
-.pcyr{font-family:'Cinzel Decorative',serif;font-size:7px;color:var(--gold);opacity:.42;text-align:center;margin-top:1px}
 
-/* MODAL */
-#cmod{position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:500;
-  display:flex;align-items:center;justify-content:center;padding:14px;
-  opacity:0;pointer-events:none;transition:opacity .24s}
+.pcyr{font-family:'Cinzel Decorative',serif;font-size:13px;color:var(--gold);
+  opacity:.55;text-align:center;margin-top:3px;letter-spacing:.06em}
+.pc.on .pcyr{opacity:.95}
+
+/* ════════════════════════ MODAL CIUDAD/PERSONAJE ════════ */
+#cmod{position:fixed;inset:0;background:rgba(0,0,0,.86);z-index:500;
+  display:flex;align-items:center;justify-content:center;padding:18px;
+  opacity:0;pointer-events:none;transition:opacity .24s;
+  backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
 #cmod.open{opacity:1;pointer-events:all}
-.cmbox{background:#060300;border:1px solid var(--gold);border-radius:3px;
-  max-width:440px;width:100%;padding:18px;position:relative;
+.cmbox{background:#060300;border:1px solid var(--gold);border-radius:4px;
+  max-width:520px;width:100%;padding:26px;position:relative;
   transform:translateY(14px);transition:transform .24s;
-  box-shadow:0 0 40px rgba(139,26,26,.28)}
+  box-shadow:0 0 50px rgba(139,26,26,.32)}
 #cmod.open .cmbox{transform:translateY(0)}
-.cmx{position:absolute;top:8px;right:10px;background:none;border:none;
-  color:var(--gold);font-size:20px;cursor:pointer;opacity:.5}
-.cmx:hover{opacity:1}
-.cmnm{font-family:'Noto Serif SC',serif;font-size:22px;color:var(--gold);margin-bottom:2px}
-.cmzi{font-family:'IM Fell English',serif;font-style:italic;font-size:11.5px;color:var(--parch2);opacity:.72;margin-bottom:8px}
-.cmbadge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:2px;
-  font-family:'Noto Sans SC',sans-serif;font-size:9.5px;margin-bottom:9px;border:1px solid}
-.cmbio{font-family:'IM Fell English',serif;font-size:16px;line-height:1.7;
-  color:var(--parch2);border-top:1px solid rgba(201,168,76,.13);padding-top:9px}
-.cmst{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:9px}
-.cmsb{background:rgba(255,255,255,.025);border:1px solid rgba(201,168,76,.1);padding:5px 7px;border-radius:2px}
-.cmsl{font-size:7.5px;color:var(--gold);opacity:.52;font-family:'Noto Sans SC',sans-serif}
-.cmsv{font-size:10.5px;color:var(--parch);font-family:'Noto Serif SC',serif;margin-top:1px}
+.cmx{position:absolute;top:10px;right:14px;background:none;border:none;
+  color:var(--gold);font-size:28px;cursor:pointer;opacity:.55;
+  width:34px;height:34px;border-radius:3px;transition:all .15s}
+.cmx:hover{opacity:1;background:rgba(201,168,76,.08)}
+.cmnm{font-family:'Noto Serif SC',serif;font-size:30px;color:var(--gold);margin-bottom:4px}
+.cmzi{font-family:'IM Fell English',serif;font-style:italic;font-size:16px;
+  color:var(--parch2);opacity:.78;margin-bottom:10px}
+.cmbadge{display:inline-flex;align-items:center;gap:5px;padding:5px 13px;border-radius:3px;
+  font-family:'Noto Sans SC',sans-serif;font-size:14px;margin-bottom:12px;border:1px solid}
+.cmbio{font-family:'IM Fell English',serif;font-size:18px;line-height:1.7;
+  color:var(--parch2);border-top:1px solid rgba(201,168,76,.16);padding-top:12px}
+.cmst{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}
+.cmsb{background:rgba(255,255,255,.03);border:1px solid rgba(201,168,76,.12);
+  padding:9px 12px;border-radius:3px}
+.cmsl{font-size:12px;color:var(--gold);opacity:.6;font-family:'Noto Sans SC',sans-serif;
+  letter-spacing:.08em;text-transform:uppercase}
+.cmsv{font-size:15px;color:var(--parch);font-family:'Noto Serif SC',serif;margin-top:3px}
 
+/* Botón "Ver Ficha" — enlace al perfil completo del personaje.
+   Mismo estilo que .cmod-detail-btn del index (outline dorado sutil). */
+.cmficha{display:block;width:100%;margin-top:14px;padding:13px 18px;
+  font-family:'Cinzel Decorative',serif;font-size:15px;letter-spacing:.12em;
+  text-align:center;color:var(--gold);background:transparent;
+  border:1px solid rgba(201,168,76,.3);border-radius:2px;
+  text-decoration:none;cursor:pointer;transition:.22s}
+.cmficha:hover{background:rgba(201,168,76,.06);border-color:rgba(201,168,76,.5)}
+
+/* ════════════════════════ TOOLTIP ═══════════════════════ */
 #tip{position:fixed;background:rgba(5,2,0,.97);border:1px solid var(--gold);
-  padding:5px 9px;border-radius:2px;font-family:'Noto Sans SC',sans-serif;
-  font-size:10px;color:var(--parch);pointer-events:none;z-index:400;
-  display:none;max-width:195px;line-height:1.38}
+  padding:8px 13px;border-radius:3px;font-family:'Noto Sans SC',sans-serif;
+  font-size:14px;color:var(--parch);pointer-events:none;z-index:400;
+  display:none;max-width:260px;line-height:1.4;
+  box-shadow:0 4px 12px rgba(0,0,0,.4)}
 
-/* Marcadores sobre el mapa */
+/* ════════════════════════ SVG INTERACCIÓN ═══════════════ */
 .region-hit{cursor:pointer;fill:transparent;stroke:none}
-.region-hit:hover ~ .region-fill{opacity:.85!important}
-.char-pin{cursor:pointer;transition:transform .15s;transform-origin:center}
-.char-pin:hover{transform:scale(1.25)}
-.city-pin{cursor:pointer}
-.city-pin:hover circle{filter:brightness(1.4)}
+.zreg-hit{transition:fill .18s,stroke .18s}
+.zreg-hit:hover{fill:rgba(201,168,76,.12)!important;stroke:rgba(201,168,76,.55)!important;stroke-width:1.5!important}
+/* transform-box:fill-box hace que transform-origin:center se resuelva relativo
+   a la bounding box del propio elemento, no al origen 0,0 del viewBox.
+   Sin esto, scale() en un <g> SVG mueve el pin lejos del cursor → loop hover/leave. */
+.char-pin{cursor:pointer;transition:transform .15s;
+  transform-box:fill-box;transform-origin:center}
+.char-pin:hover{transform:scale(1.18)}
+.city-pin{cursor:pointer;transition:transform .15s;
+  transform-box:fill-box;transform-origin:center}
+.city-pin:hover{transform:scale(1.12)}
+.city-pin:hover circle{filter:brightness(1.3)}
+
+/* ════════════════════════ RESPONSIVO ════════════════════ */
+@media(max-width:1200px){
+  :root{--legend-w:230px}
+}
+@media(max-width:1100px){
+  #drawer{width:340px}
+  :root{--drawer-w:340px}
+}
+@media(max-width:1000px){
+  #legend{display:none}
+}
+@media(max-width:900px){
+  :root{--drawer-w:90vw; --tl-h:160px}
+  #drawer{width:90vw;max-width:380px}
+  .hbrand .hen{display:none}
+  #tlsc{overflow-x:auto;justify-content:flex-start;
+    scrollbar-width:none}
+  #tlsc::-webkit-scrollbar{display:none}
+  .pc{flex:0 0 118px}
+  #tlsc::before{display:none}
+}
+@media(max-width:640px){
+  #hdr{padding:0 12px}
+  .hbtns{gap:4px}
+  .hb{padding:7px 11px;font-size:13px}
+  .hzh{font-size:21px}
+}

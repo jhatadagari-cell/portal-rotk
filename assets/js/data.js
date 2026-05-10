@@ -2,6 +2,7 @@ const CHARS = [
   {
     zh: "曹操",
     en: "Cao Cao",
+    v1: true,
     zi: "Mengde 孟德",
     ico: "🦅",
     fc: "#1e5abf",
@@ -30,6 +31,7 @@ const CHARS = [
   {
     zh: "刘备",
     en: "Liu Bei",
+    v1: true,
     zi: "Xuande 玄德",
     ico: "🌿",
     fc: "#1e8a2e",
@@ -51,6 +53,7 @@ const CHARS = [
   {
     zh: "孙权",
     en: "Sun Quan",
+    v1: true,
     zi: "Zhongmou 仲謀",
     ico: "🟢",
     fc: "#bf2020",
@@ -78,6 +81,7 @@ const CHARS = [
   {
     zh: "诸葛亮",
     en: "Zhuge Liang",
+    v1: true,
     zi: "Kongming 孔明",
     ico: "🪄",
     fc: "#1e8a2e",
@@ -99,6 +103,7 @@ const CHARS = [
   {
     zh: "关羽",
     en: "Guan Yu",
+    v1: true,
     zi: "Yunchang 雲長",
     ico: "🐉",
     fc: "#1e8a2e",
@@ -120,6 +125,7 @@ const CHARS = [
   {
     zh: "吕布",
     en: "Lü Bu",
+    v1: true,
     img: "Lu Bu/Lu Bu",
     zi: "Fengxian 奉先",
     ico: "⚔️",
@@ -147,6 +153,7 @@ const CHARS = [
   {
     zh: "赵云",
     en: "Zhao Yun",
+    v1: true,
     zi: "Zilong 子龍",
     ico: "🌟",
     fc: "#1e8a2e",
@@ -172,6 +179,7 @@ const CHARS = [
   {
     zh: "周瑜",
     en: "Zhou Yu",
+    v1: true,
     zi: "Gongjin 公瑾",
     ico: "🎵",
     fc: "#bf2020",
@@ -193,6 +201,7 @@ const CHARS = [
   {
     zh: "司马懿",
     en: "Sima Yi",
+    v1: true,
     img: "Sima Yi/Sima Yi 1",
     zi: "Zhongda 仲達",
     ico: "🦊",
@@ -219,6 +228,7 @@ const CHARS = [
   {
     zh: "张飞",
     en: "Zhang Fei",
+    v1: true,
     zi: "Yide 翼德",
     ico: "⚡",
     fc: "#1e8a2e",
@@ -241,6 +251,7 @@ const CHARS = [
   {
     zh: "张角",
     en: "Zhang Jiao",
+    v1: true,
     zi: "Jue 角",
     ico: "🟡",
     fc: "#b87e10",
@@ -264,6 +275,7 @@ const CHARS = [
   {
     zh: "董卓",
     en: "Dong Zhuo",
+    v1: true,
     zi: "Zhongying 仲穎",
     ico: "👹",
     fc: "#9922cc",
@@ -287,6 +299,7 @@ const CHARS = [
   {
     zh: "貂蝉",
     en: "Diao Chan",
+    v1: true,
     img: "Diao Chan/Diao Chan 1",
     zi: "",
     ico: "🌺",
@@ -311,6 +324,7 @@ const CHARS = [
   {
     zh: "孙坚",
     en: "Sun Jian",
+    v1: true,
     zi: "Wentai 文臺",
     ico: "🐯",
     fc: "#bf2020",
@@ -334,6 +348,7 @@ const CHARS = [
   {
     zh: "袁绍",
     en: "Yuan Shao",
+    v1: true,
     zi: "Benchu 本初",
     ico: "👑",
     fc: "#8b6914",
@@ -380,6 +395,7 @@ const CHARS = [
   {
     zh: "孙策",
     en: "Sun Ce",
+    v1: true,
     zi: "Bofu 伯符",
     ico: "🦁",
     fc: "#bf2020",
@@ -403,6 +419,7 @@ const CHARS = [
   {
     zh: "荀彧",
     en: "Xun Yu",
+    v1: true,
     zi: "Wenruo 文若",
     ico: "📋",
     fc: "#1e5abf",
@@ -426,6 +443,7 @@ const CHARS = [
   {
     zh: "郭嘉",
     en: "Guo Jia",
+    v1: true,
     zi: "Fengxiao 奉孝",
     ico: "⭐",
     fc: "#1e5abf",
@@ -449,6 +467,7 @@ const CHARS = [
   {
     zh: "庞统",
     en: "Pang Tong",
+    v1: true,
     zi: "Shiyuan 士元",
     ico: "🦚",
     fc: "#1e8a2e",
@@ -472,6 +491,7 @@ const CHARS = [
   {
     zh: "黄盖",
     en: "Huang Gai",
+    v1: true,
     zi: "Gongfu 公覆",
     ico: "🔥",
     fc: "#bf2020",
@@ -495,6 +515,7 @@ const CHARS = [
   {
     zh: "张昭",
     en: "Zhang Zhao",
+    v1: true,
     zi: "Zibu 子布",
     ico: "📜",
     fc: "#bf2020",
@@ -518,6 +539,7 @@ const CHARS = [
   {
     zh: "鲁肃",
     en: "Lu Su",
+    v1: true,
     zi: "Zijing 子敬",
     ico: "🕊️",
     fc: "#bf2020",
@@ -541,6 +563,7 @@ const CHARS = [
   {
     zh: "吕蒙",
     en: "Lü Meng",
+    v1: true,
     zi: "Ziming 子明",
     ico: "⚔️",
     fc: "#bf2020",
@@ -564,6 +587,7 @@ const CHARS = [
   {
     zh: "马超",
     en: "Ma Chao",
+    v1: true,
     zi: "Mengqi 孟起",
     ico: "🐴",
     fc: "#1e8a2e",
@@ -587,6 +611,7 @@ const CHARS = [
   {
     zh: "黄忠",
     en: "Huang Zhong",
+    v1: true,
     zi: "Hansheng 漢升",
     ico: "🏹",
     fc: "#1e8a2e",
@@ -610,6 +635,7 @@ const CHARS = [
   {
     zh: "陆逊",
     en: "Lu Xun",
+    v1: true,
     zi: "Boyan 伯言",
     ico: "🌊",
     fc: "#bf2020",
@@ -633,6 +659,7 @@ const CHARS = [
   {
     zh: "张辽",
     en: "Zhang Liao",
+    v1: true,
     zi: "Wenyuan 文遠",
     ico: "🔱",
     fc: "#1e5abf",
@@ -660,6 +687,7 @@ const CHARS = [
   {
     zh: "夏侯惇",
     en: "Xiahou Dun",
+    v1: true,
     zi: "Yuanrang 元讓",
     ico: "👁️",
     fc: "#1e5abf",
@@ -683,6 +711,7 @@ const CHARS = [
   {
     zh: "魏延",
     en: "Wei Yan",
+    v1: true,
     zi: "Wenchang 文長",
     ico: "🌪️",
     fc: "#1e8a2e",
@@ -706,6 +735,7 @@ const CHARS = [
   {
     zh: "孟获",
     en: "Meng Huo",
+    v1: true,
     zi: "",
     ico: "🦁",
     fc: "#a06020",
@@ -775,6 +805,7 @@ const CHARS = [
   {
     zh: "姜维",
     en: "Jiang Wei",
+    v1: true,
     zi: "Boyue 伯約",
     ico: "🌀",
     fc: "#1e8a2e",
@@ -798,6 +829,7 @@ const CHARS = [
   {
     zh: "邓艾",
     en: "Deng Ai",
+    v1: true,
     zi: "Shizai 士載",
     ico: "🏔️",
     fc: "#1e5abf",
@@ -821,6 +853,7 @@ const CHARS = [
   {
     zh: "司马昭",
     en: "Sima Zhao",
+    v1: true,
     zi: "Zishang 子上",
     ico: "🕷️",
     fc: "#1e5abf",
@@ -939,6 +972,7 @@ const CHARS = [
   {
     zh: "曹丕",
     en: "Cao Pi",
+    v1: true,
     zi: "Zihuan 子桓",
     ico: "👑",
     fc: "#1e5abf",
@@ -962,6 +996,7 @@ const CHARS = [
   {
     zh: "曹叡",
     en: "Cao Rui",
+    v1: true,
     zi: "Yuanzhong 元仲",
     ico: "👑",
     fc: "#1e5abf",
@@ -1081,6 +1116,7 @@ const CHARS = [
   {
     zh: "皇甫嵩",
     en: "Huangfu Song",
+    v1: true,
     zi: "Yizhen 義真",
     ico: "🏅",
     fc: "#c9a84c",
@@ -1127,6 +1163,7 @@ const CHARS = [
   {
     zh: "王允",
     en: "Wang Yun",
+    v1: true,
     zi: "Zishi 子師",
     ico: "🏮",
     fc: "#c9a84c",
@@ -1149,6 +1186,7 @@ const CHARS = [
   {
     zh: "贾诩",
     en: "Jia Xu",
+    v1: true,
     zi: "Wenhe 文和",
     ico: "🐍",
     fc: "#1e5abf",
@@ -1217,6 +1255,7 @@ const CHARS = [
   {
     zh: "卞夫人",
     en: "Lady Bian",
+    v1: true,
     zi: "",
     ico: "👑",
     fc: "#1e5abf",
@@ -1476,6 +1515,7 @@ const CHARS = [
   {
     zh: "孙尚香",
     en: "Sun Shangxiang",
+    v1: true,
     zi: "",
     ico: "🌹",
     fc: "#bf2020",
@@ -1499,6 +1539,7 @@ const CHARS = [
   {
     zh: "大乔",
     en: "Da Qiao",
+    v1: true,
     zi: "",
     ico: "🌸",
     fc: "#bf2020",
@@ -1522,6 +1563,7 @@ const CHARS = [
   {
     zh: "小乔",
     en: "Xiao Qiao",
+    v1: true,
     zi: "",
     ico: "🌿",
     fc: "#bf2020",
@@ -1545,6 +1587,7 @@ const CHARS = [
   {
     zh: "刘禅",
     en: "Liu Shan",
+    v1: true,
     zi: "Gongsi 公嗣",
     ico: "🌾",
     fc: "#1e8a2e",
@@ -1590,6 +1633,7 @@ const CHARS = [
   {
     zh: "司马师",
     en: "Sima Shi",
+    v1: true,
     zi: "Ziyuan 子元",
     ico: "⚖️",
     fc: "#1e5abf",
@@ -1662,6 +1706,7 @@ const CHARS = [
   {
     zh: "司马炎",
     en: "Sima Yan",
+    v1: true,
     zi: "Anshi 安世",
     ico: "🏆",
     fc: "#c9a84c",
@@ -1685,6 +1730,7 @@ const CHARS = [
   {
     zh: "陈宫",
     en: "Chen Gong",
+    v1: true,
     zi: "Gongtai 公臺",
     ico: "🗣️",
     fc: "#c41e3a",
@@ -1752,6 +1798,7 @@ const CHARS = [
   {
     zh: "田丰",
     en: "Tian Feng",
+    v1: true,
     zi: "Yuanhao 元皓",
     ico: "🔮",
     fc: "#8b6914",
@@ -1775,6 +1822,7 @@ const CHARS = [
   {
     zh: "許攸",
     en: "Xu You",
+    v1: true,
     zi: "Ziyuan 子遠",
     ico: "🎯",
     fc: "#8b6914",
@@ -1867,6 +1915,7 @@ const CHARS = [
   {
     zh: "李儒",
     en: "Li Ru",
+    v1: true,
     zi: "Wenming 文明",
     ico: "🕯️",
     fc: "#9922cc",
@@ -1935,6 +1984,7 @@ const CHARS = [
   {
     zh: "漢獻帝",
     en: "Han Xiandi",
+    v1: true,
     zi: "Liu Xie 劉協",
     ico: "🏛️",
     fc: "#c9a84c",
@@ -2100,6 +2150,7 @@ const CHARS = [
   {
     zh: "荀攸",
     en: "Xun You",
+    v1: true,
     zi: "Gongda 公達",
     ico: "♟️",
     fc: "#1e5abf",
@@ -2325,6 +2376,7 @@ const CHARS = [
   {
     zh: "法正",
     en: "Fa Zheng",
+    v1: true,
     zi: "Xiaozhi 孝直",
     ico: "🧩",
     fc: "#1e8a2e",
@@ -2464,6 +2516,7 @@ const CHARS = [
   {
     zh: "羊祜",
     en: "Yang Hu",
+    v1: true,
     zi: "Shuyian 叔子",
     ico: "🌸",
     fc: "#8820b0",
@@ -2508,6 +2561,7 @@ const CHARS = [
   {
     zh: "孙皓",
     en: "Sun Hao",
+    v1: true,
     zi: "Yuanzong 元宗",
     ico: "💀",
     fc: "#bf2020",
@@ -2553,6 +2607,7 @@ const CHARS = [
   {
     zh: "甄宓",
     en: "Zhen Ji",
+    v1: true,
     zi: "Lingfu 令妃",
     ico: "👑",
     fc: "#1e5abf",
@@ -2577,6 +2632,7 @@ const CHARS = [
   {
     zh: "曹髦",
     en: "Cao Mao",
+    v1: true,
     zi: "Yanshi 彦士",
     ico: "⚔️",
     fc: "#1e5abf",
@@ -2600,6 +2656,7 @@ const CHARS = [
   {
     zh: "曹爽",
     en: "Cao Shuang",
+    v1: true,
     zi: "Zhaoba 昭伯",
     ico: "🏚️",
     fc: "#1e5abf",
@@ -2623,6 +2680,7 @@ const CHARS = [
   {
     zh: "贾充",
     en: "Jia Chong",
+    v1: true,
     zi: "Gonglü 公閭",
     ico: "🗡️",
     fc: "#1e5abf",
@@ -2646,6 +2704,7 @@ const CHARS = [
   {
     zh: "曹奂",
     en: "Cao Huan",
+    v1: true,
     zi: "Jingming 景明",
     ico: "🏛️",
     fc: "#1e5abf",
@@ -2669,6 +2728,7 @@ const CHARS = [
   {
     zh: "陆抗",
     en: "Lu Kang",
+    v1: true,
     zi: "Youxu 幼續",
     ico: "🛡️",
     fc: "#bf2020",
@@ -2692,6 +2752,7 @@ const CHARS = [
   {
     zh: "杜预",
     en: "Du Yu",
+    v1: true,
     zi: "Yuankai 元凱",
     ico: "📜",
     fc: "#8820b0",
@@ -2916,6 +2977,7 @@ const FAQS = [
 const BATTLES = [
   {
     id: "huang-jin",
+    v1: true,
     zh: "黄巾之乱",
     en: "Yellow Turban Rebellion",
     year: 184,
@@ -2931,6 +2993,7 @@ const BATTLES = [
   },
   {
     id: "si-shui-hu-lao",
+    v1: true,
     zh: "汜水关·虎牢关",
     en: "Si Shui & Hu Lao Gate",
     year: 190,
@@ -2946,6 +3009,7 @@ const BATTLES = [
   },
   {
     id: "wan",
+    v1: true,
     zh: "宛城之战",
     en: "Battle of Wan",
     year: 197,
@@ -2961,6 +3025,7 @@ const BATTLES = [
   },
   {
     id: "xiapi",
+    v1: true,
     zh: "下邳之战",
     en: "Battle of Xiapi",
     year: 198,
@@ -2976,6 +3041,7 @@ const BATTLES = [
   },
   {
     id: "guandu",
+    v1: true,
     zh: "官渡之战",
     en: "Battle of Guandu",
     year: 200,
@@ -3006,6 +3072,7 @@ const BATTLES = [
   },
   {
     id: "changban",
+    v1: true,
     zh: "长坂坡之战",
     en: "Battle of Changban",
     year: 208,
@@ -3021,6 +3088,7 @@ const BATTLES = [
   },
   {
     id: "chi-bi",
+    v1: true,
     zh: "赤壁之战",
     en: "Battle of Chibi",
     year: 208,
@@ -3036,6 +3104,7 @@ const BATTLES = [
   },
   {
     id: "jiangling",
+    v1: true,
     zh: "江陵之战",
     en: "Battle of Jiangling",
     year: 208,
@@ -3051,6 +3120,7 @@ const BATTLES = [
   },
   {
     id: "tong-pass",
+    v1: true,
     zh: "潼关之战",
     en: "Battle of Tong Pass",
     year: 211,
@@ -3081,6 +3151,7 @@ const BATTLES = [
   },
   {
     id: "hefei",
+    v1: true,
     zh: "合肥之战",
     en: "Battle of Hefei",
     year: 215,
@@ -3096,6 +3167,7 @@ const BATTLES = [
   },
   {
     id: "dingjunshan",
+    v1: true,
     zh: "定军山之战",
     en: "Battle of Dingjunshan",
     year: 219,
@@ -3126,6 +3198,7 @@ const BATTLES = [
   },
   {
     id: "mai-cheng",
+    v1: true,
     zh: "败走麦城",
     en: "Fall of Guan Yu",
     year: 219,
@@ -3141,6 +3214,7 @@ const BATTLES = [
   },
   {
     id: "yiling",
+    v1: true,
     zh: "夷陵之战",
     en: "Battle of Yiling",
     year: 221,
@@ -3156,6 +3230,7 @@ const BATTLES = [
   },
   {
     id: "jieting",
+    v1: true,
     zh: "街亭之战",
     en: "Battle of Jieting",
     year: 228,
@@ -3171,6 +3246,7 @@ const BATTLES = [
   },
   {
     id: "wuzhang",
+    v1: true,
     zh: "五丈原之战",
     en: "Wuzhang Plains",
     year: 234,
