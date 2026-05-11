@@ -12,6 +12,7 @@ a{text-decoration:none}
 .sec-link.soon{opacity:.45;cursor:not-allowed}
 .wrap{max-width:1040px;margin:0 auto;padding:30px 18px 60px}
 .hero{display:grid;grid-template-columns:minmax(220px,.85fr) 1fr;gap:24px;align-items:start;margin-bottom:36px}
+.hero-media{border:1px solid var(--border);border-radius:18px;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,.35);background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(0,0,0,.18))}
 .hero-media-placeholder{display:flex;align-items:center;justify-content:center;font-size:120px;border:1px solid var(--border);border-radius:18px;background:linear-gradient(180deg,rgba(207,166,111,.05),rgba(0,0,0,.25));aspect-ratio:3/4;color:var(--gold);text-shadow:0 6px 24px rgba(153,34,204,.22)}
 .hero-copy{padding:18px 0 0}
 .eyebrow{font-family:'Cinzel Decorative',serif;font-size:16px;letter-spacing:.28em;text-transform:uppercase;color:var(--gold);opacity:.85;margin-bottom:18px}
@@ -39,9 +40,10 @@ a{text-decoration:none}
 .wrap-pager{overflow:hidden;padding:0}
 .wrap-pages{display:flex;transition:transform 0.35s ease;will-change:transform;width:100%}
 .wrap-page{flex:0 0 100%;width:100%;box-sizing:border-box;padding:30px 18px 60px}
-.section-divider{display:flex;align-items:center;gap:12px;margin:24px 0;opacity:0.5}
-.section-divider span{flex:1;height:1px;background:rgba(255,255,255,.08)}
-.divider-ornament{font-size:16px;flex:0 0 auto}
+.section-divider{display:flex;align-items:center;gap:14px;margin:36px 0 32px;opacity:0.45}
+.section-divider span:first-child{flex:1;height:1px;background:linear-gradient(to right,transparent,var(--gold))}
+.section-divider span:last-child{flex:1;height:1px;background:linear-gradient(to left,transparent,var(--gold))}
+.divider-ornament{font-size:9px;color:var(--gold);flex-shrink:0}
 .hero-media-placeholder{display:flex;align-items:center;justify-content:center;font-size:96px;border:1px solid var(--border);border-radius:18px;min-height:220px;background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(0,0,0,.18))}
 .timeline{position:relative;padding-left:52px;margin-bottom:42px}
 .timeline::before{content:"";position:absolute;left:11px;top:13px;bottom:80px;width:2px;background:linear-gradient(180deg,var(--gold) 0%,rgba(255,255,255,.06) 100%)}
