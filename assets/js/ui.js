@@ -131,7 +131,7 @@ function renderCharacters(filterEraId = null) {
   cgrid.innerHTML = '';
   const basePool = CHARS
     .map((c, i) => ({ c, i }))
-    .filter(({ c }) => c.v1)  // núcleo v1.0: oculta fichas fuera del subset
+    .filter(({ c }) => c.tags && c.fc)  // excluir batallas; mostrar todos los personajes
     .filter(({ c }) => !filterEraId || (c.eras || []).includes(filterEraId));
 
   renderFactionFilters(basePool);

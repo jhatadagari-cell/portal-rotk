@@ -55,6 +55,63 @@ footer::before{content:'';display:block;position:absolute;top:0;left:0;right:0;h
 .foot-link:hover{opacity:1}
 .foot-author{font-family:'Cinzel Decorative',serif;font-size:9px;letter-spacing:.32em;color:var(--parch2);text-shadow:0 0 10px rgba(201,168,76,.75),0 0 24px rgba(201,168,76,.38);opacity:1;text-align:right}
 
+/* ── HERO MEDIA PLACEHOLDER ─────────────────────────────────────────── */
+.hero-media-placeholder{
+  position:relative;overflow:hidden;font-size:0; /* oculta emoji original */
+}
+.hero-media-placeholder::before{
+  content:attr(data-zh);
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  font-family:'Noto Serif SC',serif;font-size:clamp(120px,18vw,200px);font-weight:900;
+  color:var(--gold,#c9a84c);opacity:.07;
+  pointer-events:none;user-select:none;line-height:1;white-space:nowrap;
+}
+
+/* ── CHAR BANNER ────────────────────────────────────────────────────── */
+.char-banner{
+  text-align:center;
+  padding:14px max(clamp(16px,4vw,64px),calc((100vw - 1380px) / 2)) 12px;
+}
+.char-banner-rule{
+  display:flex;align-items:center;gap:14px;
+}
+.char-banner-rule span:first-child{
+  flex:1;height:1px;
+  background:linear-gradient(to right,transparent,var(--gold,#c9a84c));
+  opacity:.35;
+}
+.char-banner-rule span:last-child{
+  flex:1;height:1px;
+  background:linear-gradient(to left,transparent,var(--gold,#c9a84c));
+  opacity:.35;
+}
+.char-banner-gem{font-size:8px;color:var(--gold,#c9a84c);opacity:.6;flex-shrink:0}
+.char-banner-name{
+  font-family:'Noto Serif SC',serif;
+  font-size:clamp(18px,2.4vw,28px);font-weight:700;letter-spacing:.1em;
+  color:var(--text,#f2eee5);
+  margin:10px 0 5px;line-height:1.2;
+}
+.char-banner-role{
+  font-family:'Cinzel Decorative',serif;
+  font-size:clamp(10px,1.15vw,13px);letter-spacing:.28em;text-transform:uppercase;
+  color:var(--gold,#c9a84c);opacity:.85;
+  margin:0 0 10px;
+  position:relative;display:inline-block;
+}
+.char-banner-role::before,
+.char-banner-role::after{
+  content:'·';
+  display:inline-block;
+  margin:0 .55em;
+  opacity:.55;
+  font-size:.7em;
+  vertical-align:middle;
+  letter-spacing:0;
+}
+/* sec-nav sticks just below the chrome nav */
+.sec-nav{top:var(--nav-h,58px)}
+
 /* ── RESPONSIVE ────────────────────────────────────────────────────── */
 @media(max-width:680px){
   .nav-links{display:none;position:absolute;top:var(--nav-h);left:0;right:0;background:rgba(5,2,0,.99);flex-direction:column;gap:0;border-bottom:1px solid var(--border)}
