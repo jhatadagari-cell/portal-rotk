@@ -84,8 +84,8 @@
     <li><a href="${href('#heroes')}"${isOn('personajes')}>Personajes</a></li>
     <li><a href="${href('#factions')}"${isOn('reinos')}>Reinos</a></li>
     <li><a href="${href('assets/batallas.html')}"${isOn('batallas')}>Batallas</a></li>
+    <li><a href="${href('assets/mapa.html')}"${isOn('mapa')}>Mapa</a></li>
   </ul>
-  <a class="nav-cta" href="${href('assets/mapa.html')}"${ACTIVE==='mapa'?' aria-current="page"':''}>🗺 Mapa</a>
   <button class="hamburger" aria-label="Menú">
     <span></span><span></span><span></span>
   </button>

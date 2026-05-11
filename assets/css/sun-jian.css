@@ -122,3 +122,6 @@ a{text-decoration:none}
 .rel-bubble.bubble-entering{animation:bubbleIn .32s ease forwards}
 .rel-bubble.era-hidden{pointer-events:none}
 .rel-orbit-section.era-empty{display:none}
+/* ── responsive (fichas) ── */
+@media(max-width:900px){.hero-media{max-width:400px;margin:0 auto} .hero-copy{padding:0}}
+@media(max-width:640px){.hero-media{max-width:280px} .title{font-size:clamp(26px,8vw,36px)} .subtitle{font-size:18px} .lede{font-size:17px;line-height:1.7} .intro p{font-size:17px;line-height:1.75} .era-card h3{font-size:18px} .era-card p{font-size:16px;line-height:1.7} .epilogue p{font-size:17px;line-height:1.75} .timeline{padding-left:36px} .timeline::before{left:10px} .tl-item::before{left:-35px;width:18px;height:18px} .tl-header{flex-direction:column;gap:4px} .tl-name{font-size:18px} .tl-year{font-size:11px}}

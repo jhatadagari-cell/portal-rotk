@@ -28,7 +28,7 @@
       href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700;900&family=Cinzel+Decorative:wght@400;700&family=IM+Fell+English:ital@0;1&family=Noto+Sans+SC:wght@300;400;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="../css/xun-yu.css" />
+    <link rel="stylesheet" href="../css/xun-yu.css?v=2" />
 <link rel="stylesheet" href="../css/chrome.css?v=3">
   </head>
   <body>
@@ -68,7 +68,7 @@
                 </p>
               </blockquote>
               <p class="lede">
-                Cao Cao llamó a Xun Yu «mi Zhang Liang» el día que lo reclutó —comparándolo con el gran estratega de Liu Bang. Fue la valoración más exacta que hizo de cualquier hombre en su vida. Durante dos décadas Xun Yu fue el arquitecto civil del poder de Wei: recomendó a Guo Jia, diseñó la captura del Emperador, salvó a Cao Cao cuando estaba a punto de rendirse en Guandu. Murió porque nunca dejó de creer que todo aquello era para restaurar el Han.
+                Cao Cao llamó a Xun Yu «mi <span class="ilink" data-type="custom" data-key="zhang-liang-sabio" style="color:#c9a84c;cursor:pointer">Zhang Liang</span>» el día que lo reclutó —comparándolo con el gran estratega de Liu Bang. Fue la valoración más exacta que hizo de cualquier hombre en su vida. Durante dos décadas Xun Yu fue el arquitecto civil del poder de Wei: recomendó a Guo Jia, diseñó la captura del Emperador, salvó a Cao Cao cuando estaba a punto de rendirse en Guandu. Murió porque nunca dejó de creer que todo aquello era para restaurar el Han.
               </p>
             </div>
           </section>
@@ -154,7 +154,7 @@
           <section class="epilogue" id="legado">
             <h2>Epílogo</h2>
             <p>
-              Xun Yu murió en 212 d.C. siendo el consejero que más había hecho por el poder de Cao Cao y el único que se le opuso cuando ese poder fue más allá de lo que él consideraba legítimo. Su paradoja era perfecta: construyó el instrumento que lo destruyó. Cao Cao, que años antes lo llamó «su Zhang Liang», no habló mucho de él después. Cuando Cao Pi fundó la dinastía Wei en 220 d.C., le concedió el título póstumo de Marqués Jing (敬侯). Era el reconocimiento más frío posible de veinte años de servicio irrepetible. El Historia de los Tres Reinos de Chen Shou le dedica un elogio infrecuente: dice que era como el fragante iris —perfumado, de talante elevado— y que su muerte fue el fin del Han antes de que el Han terminara.
+              Xun Yu murió en 212 d.C. siendo el consejero que más había hecho por el poder de Cao Cao y el único que se le opuso cuando ese poder fue más allá de lo que él consideraba legítimo. Su paradoja era perfecta: construyó el instrumento que lo destruyó. Cao Cao, que años antes lo llamó «su <span class="ilink" data-type="custom" data-key="zhang-liang-sabio" style="color:#c9a84c;cursor:pointer">Zhang Liang</span>», no habló mucho de él después. Cuando Cao Pi fundó la dinastía Wei en 220 d.C., le concedió el título póstumo de Marqués Jing (敬侯). Era el reconocimiento más frío posible de veinte años de servicio irrepetible. El Historia de los Tres Reinos de Chen Shou le dedica un elogio infrecuente: dice que era como el fragante iris —perfumado, de talante elevado— y que su muerte fue el fin del Han antes de que el Han terminara.
             </p>
           </section>
         </div>
@@ -204,7 +204,35 @@
 
     <script src="../js/data.js"></script>
     <script src="../js/inline-links.js"></script>
-  
+    <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const ZHANG_LIANG_SABIO = {
+        fc: '#c9a84c',
+        fcbg: 'rgba(201,168,76,.12)',
+        ico: '📜',
+        zh: '張良',
+        en: 'Zhang Liang',
+        zi: 'Zi Fang · El Sabio del Han',
+        fac: 'Estratega · Fundación del Han',
+        bio: 'Zhang Liang (m. 189 a.C.) fue el principal estratega de Liu Bang, fundador de la Dinastía Han. Considerado uno de los «tres héroes de la fundación del Han» junto a Xiao He y Han Xin, su genio político y táctico fue decisivo en la derrota de Xiang Yu. Cao Cao usó su nombre como el mayor elogio posible para un consejero.',
+        stats: [
+          ['Época', '~250–189 a.C.'],
+          ['Señor', 'Liu Bang · Gaozu del Han'],
+          ['Rol', 'Estratega y consejero'],
+          ['Legado', 'Fundación de la Dinastía Han'],
+        ],
+        href: null,
+        btnLabel: 'Figura histórica · Sin ficha',
+      };
+
+      document.addEventListener('click', function (e) {
+        const span = e.target.closest('.ilink[data-key="zhang-liang-sabio"]');
+        if (!span) return;
+        openIlmod(ZHANG_LIANG_SABIO);
+      });
+    });
+    </script>
+
 <div id="chrome-footer"></div>
 <script src="../../assets/js/chrome.js"></script>
 </body>
