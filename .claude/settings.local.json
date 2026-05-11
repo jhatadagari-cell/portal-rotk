@@ -95,7 +95,8 @@
       "Bash(xargs sed -i '' 's/chrome\\\\.css?v=2/chrome.css?v=3/g')",
       "Bash(xargs -I{} grep -n \"@media\" {})",
       "Bash(xargs -I{} grep -n \"minmax\\(280px,1.1fr\\)\" {})",
-      "Bash(xargs -I{} grep \"\\\\.css\" {})"
+      "Bash(xargs -I{} grep \"\\\\.css\" {})",
+      "Bash(xargs sed -i '' 's/\\\\.css?v=2\"/.css?v=3\"/g')"
     ]
   },
   "enabledPlugins": {

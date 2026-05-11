@@ -76,3 +76,7 @@ a{text-decoration:none}
   .tl-name{font-size:18px}
   .tl-year{font-size:11px}
 }
+
+/* ── responsive extras ── */
+@media(max-width:900px){.rel-grid{grid-template-columns:1fr}}
+@media(max-width:640px){.hzh{font-size:20px} .sec-title{font-size:20px} .rel-panel-name{font-size:17px} .rel-panel-desc{font-size:15px} .rel-desc{font-size:15px} .rel-group-title{font-size:14px} .rel-hub-bubble{width:120px;height:120px} .rel-bubbles--lg .rel-bubble-img{width:110px;height:110px} .rel-bubbles--lg .rel-bubble-name{font-size:13px;max-width:110px} .rel-bubbles{gap:14px 16px} .char-battle-name{font-size:18px} .char-battle-flavor{font-size:15px} .era-slider-name{font-size:18px}}
