@@ -114,8 +114,10 @@ footer::before{content:'';display:block;position:absolute;top:0;left:0;right:0;h
 
 /* ── RESPONSIVE ────────────────────────────────────────────────────── */
 @media(max-width:680px){
+  html{overflow-x:hidden}
   .nav-links{display:none;position:absolute;top:var(--nav-h);left:0;right:0;background:rgba(5,2,0,.99);flex-direction:column;gap:0;border-bottom:1px solid var(--border)}
   .nav-links.open{display:flex}
   .nav-links a{padding:13px clamp(16px,4vw,64px);border-bottom:1px solid rgba(201,168,76,.07)}
   .hamburger{display:flex}
+  .nav-en{display:none}
 }
