@@ -82,7 +82,13 @@
       "PowerShell(python \"C:\\\\Users\\\\usuario\\\\Desktop\\\\Portal ROTK\\\\to-do\\\\v1-inject-og.py\" 2>&1 | Select-Object -Last 5)",
       "PowerShell(python \"C:\\\\Users\\\\usuario\\\\Desktop\\\\Portal ROTK\\\\to-do\\\\v1-inject-og.py\" --apply 2>&1 | Select-Object -Last 3)",
       "PowerShell(python \"C:\\\\Users\\\\usuario\\\\Desktop\\\\Portal ROTK\\\\to-do\\\\v1-build-sitemap.py\")",
-      "Bash('xun-you 2>/dev/null *)"
+      "Bash('xun-you 2>/dev/null *)",
+      "Bash(git -C /Users/alejandropeyrocebrian/Documents/rotk/portal-rotk stash pop)",
+      "Bash(git -C /Users/alejandropeyrocebrian/Documents/rotk/portal-rotk log --oneline -5)",
+      "Bash(git -C /Users/alejandropeyrocebrian/Documents/rotk/portal-rotk diff --stat HEAD~1 HEAD)",
+      "Bash(git -C /Users/alejandropeyrocebrian/Documents/rotk/portal-rotk checkout .claude/settings.local.json)",
+      "Bash(git -C /Users/alejandropeyrocebrian/Documents/rotk/portal-rotk show HEAD~1 --stat)",
+      "Bash(git -C /Users/alejandropeyrocebrian/Documents/rotk/portal-rotk commit -m ' *)"
     ]
   },
   "enabledPlugins": {
