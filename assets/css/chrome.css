@@ -118,4 +118,7 @@ footer::before{content:'';display:block;position:absolute;top:0;left:0;right:0;h
   .nav-links a{padding:13px clamp(16px,4vw,64px);border-bottom:1px solid rgba(201,168,76,.07)}
   .hamburger{display:flex}
   .nav-en{display:none}
+  .foot-body{flex-direction:column;gap:14px}
+  .foot-credit{align-items:flex-start}
+  .foot-copy,.foot-author{text-align:left}
 }

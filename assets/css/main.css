@@ -1115,3 +1115,25 @@ body.lubu-shaking{animation:lubu-shake .98s ease-in-out}
 /* ── responsive (fichas) ── */
 @media(max-width:900px){.hero-media{max-width:400px;margin:0 auto} .hero-copy{padding:0}}
 @media(max-width:640px){.hero-media{max-width:280px} .title{font-size:clamp(26px,8vw,36px)} .subtitle{font-size:18px} .lede{font-size:17px;line-height:1.7} .intro p{font-size:17px;line-height:1.75} .era-card h3{font-size:18px} .era-card p{font-size:16px;line-height:1.7} .epilogue p{font-size:17px;line-height:1.75} .timeline{padding-left:36px} .timeline::before{left:10px} .tl-item::before{left:-35px;width:18px;height:18px} .tl-header{flex-direction:column;gap:4px} .tl-name{font-size:18px} .tl-year{font-size:11px}}
+
+/* ── responsive (index) ── */
+@media(max-width:680px){
+  .sec-dsc{font-size:18px;line-height:1.65}
+  .stat-l{font-size:11px;letter-spacing:.05em}
+  .era-hint{display:none}
+  .fcard-desc{font-size:16px;line-height:1.6}
+  .fcard-en{font-size:15px}
+  .fcard-yrs{font-size:15px}
+  .map-chip{font-size:15px}
+  .faq-q{font-size:19px}
+  .faq-a{font-size:16px}
+  .cmod-box{padding:16px}
+  .cmod-stats{grid-template-columns:1fr}
+  .cmod-bio{font-size:17px}
+}
+@media(max-width:440px){
+  .char-rank-1{grid-template-columns:1fr}
+  .char-rank-2{grid-template-columns:repeat(2,1fr)}
+  .stat-item{min-width:80px}
+  .hero-btns .btn-pri,.hero-btns .btn-sec{width:100%;text-align:center}
+}
