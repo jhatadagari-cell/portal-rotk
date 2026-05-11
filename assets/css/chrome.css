@@ -110,6 +110,39 @@ footer::before{content:'';display:block;position:absolute;top:0;left:0;right:0;h
 /* sec-nav sticks just below the chrome nav */
 .sec-nav{top:var(--nav-h,58px)}
 
+/* ── BACK TO TOP ────────────────────────────────────────────────────── */
+#corner-vignette{
+  position:fixed;bottom:0;right:0;
+  width:320px;height:320px;
+  background:radial-gradient(circle at 100% 100%,
+    rgba(52,22,3,.97) 0%,rgba(36,15,2,.82) 22%,
+    rgba(22,9,1,.55) 42%,rgba(14,6,0,.25) 60%,transparent 72%
+  );
+  pointer-events:none;z-index:179;
+  opacity:0;transition:opacity .36s ease
+}
+#corner-vignette.visible{opacity:1}
+#back-top{
+  position:fixed;bottom:26px;right:28px;
+  transform:translateY(10px);z-index:180;
+  padding:10px;background:none;border:none;
+  color:var(--gold,#c9a84c);line-height:1;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  opacity:0;pointer-events:none;
+  transition:opacity .32s ease,transform .32s ease
+}
+#back-top span{
+  font-size:26px;display:inline-block;
+  text-shadow:0 0 18px rgba(201,168,76,.55);
+  transition:transform .22s ease,text-shadow .22s ease
+}
+#back-top::before,#back-top::after{content:none}
+#back-top.visible{opacity:1;pointer-events:auto;transform:translateY(0)}
+#back-top:hover span{
+  transform:translateY(-5px);
+  text-shadow:0 0 26px rgba(201,168,76,.95),0 0 54px rgba(201,168,76,.35)
+}
+
 /* ── RESPONSIVE ────────────────────────────────────────────────────── */
 @media(max-width:680px){
   html{overflow-x:hidden}

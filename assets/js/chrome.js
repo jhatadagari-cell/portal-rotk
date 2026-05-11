@@ -143,6 +143,34 @@
     });
   }
 
+  // ── Back to top ──────────────────────────────────────────────────────
+  function mountBackToTop() {
+    if (!document.getElementById('back-top')) {
+      const vign = document.createElement('div');
+      vign.id = 'corner-vignette';
+      document.body.appendChild(vign);
+
+      const btn = document.createElement('button');
+      btn.id = 'back-top';
+      btn.setAttribute('aria-label', 'Volver arriba');
+      btn.innerHTML = '<span>↑</span>';
+      document.body.appendChild(btn);
+    }
+
+    const btt = document.getElementById('back-top');
+    const pv  = document.getElementById('corner-vignette');
+
+    window.addEventListener('scroll', () => {
+      const show = window.scrollY > 400;
+      btt.classList.toggle('visible', show);
+      if (pv) pv.classList.toggle('visible', show);
+    }, { passive: true });
+
+    btt.addEventListener('click', () => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  }
+
   // ── Inyección ────────────────────────────────────────────────────────
   function mount() {
     injectMeta();
@@ -156,11 +184,12 @@
     const links = document.getElementById('nav-links');
     if (hb && links) {
       hb.addEventListener('click', () => links.classList.toggle('open'));
-      // Al hacer click en cualquier enlace del nav móvil, cerrar el menú.
       links.addEventListener('click', e => {
         if (e.target.tagName === 'A') links.classList.remove('open');
       });
     }
+
+    mountBackToTop();
   }
 
   if (document.readyState === 'loading') {
