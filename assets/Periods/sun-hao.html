@@ -20,8 +20,8 @@
 <meta name="twitter:image" content="https://jhatadagari-cell.github.io/portal-rotk/assets/img/og-default.png">
 <!-- v1-og:end -->
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700;900&family=Cinzel+Decorative:wght@400;700&family=IM+Fell+English:ital@0;1&family=Noto+Sans+SC:wght@300;400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../css/sun-hao.css">
-<link rel="stylesheet" href="../css/chrome.css?v=2">
+<link rel="stylesheet" href="../css/sun-hao.css?v=3">
+<link rel="stylesheet" href="../css/chrome.css?v=4">
 </head>
 <body>
 <div id="chrome-nav"></div>
@@ -114,17 +114,158 @@
 
     <!-- PÁGINA 2: Relaciones Clave -->
     <div class="wrap-page" data-page="relaciones">
-      <div style="text-align:center;padding:60px 20px;color:var(--muted)">
-        <h2 style="font-family:'Noto Serif SC',serif;font-size:24px;margin-bottom:12px">Relaciones Clave</h2>
-        <p>Esta sección será completada próximamente con las relaciones más importantes de Sun Hao.</p>
+
+      <div class="era-slider-wrap">
+        <div class="era-slider-header">
+          <span class="era-slider-name">Era Sima</span>
+          <span class="era-slider-years">249 – 265 d.C.</span>
+        </div>
+        <input type="range" id="era-range" class="era-range"
+               min="0" max="1" step="1" value="0" list="era-ticks" />
+        <datalist id="era-ticks">
+          <option value="0">Era Sima</option>
+          <option value="1">Dinastía Jin</option>
+        </datalist>
+        <div class="era-tick-labels">
+          <span>Era Sima</span>
+          <span>Dinastía Jin</span>
+        </div>
       </div>
+
+      <div class="rel-hub">
+        <div class="rel-hub-bubble">
+          <span class="rel-hub-placeholder">皓</span>
+        </div>
+        <span class="rel-hub-label">孫皓 · Sun Hao</span>
+      </div>
+
+      <div class="rel-panel" id="rel-panel" hidden>
+        <button class="rel-panel-close" aria-label="Cerrar">✕</button>
+        <div class="rel-panel-badge"></div>
+        <div class="rel-panel-name"></div>
+        <p class="rel-panel-desc"></p>
+      </div>
+
+      <div class="rel-orbit-section">
+        <h3 class="rel-orbit-label">El Legado que Traicionó</h3>
+        <div class="rel-bubbles rel-bubbles--lg">
+
+          <div class="rel-bubble"
+               data-eras="sima jin"
+               data-badge="El Abuelo Fundador de Wu"
+               data-badge-color="#d49e6a"
+               data-name="Sun Quan · 孙权"
+               data-desc="Bisabuelo de Sun Hao. Fundó el reino de Wu y lo mantuvo durante décadas frente a Wei y Shu mediante una mezcla de habilidad diplomática, control de los señores regionales y generales capaces. El legado que Sun Hao recibió era sólido. El modo en que gobernó disolvió desde dentro lo que tres generaciones habían construido.">
+            <div class="rel-bubble-img">
+              <img src="../img/Sun%20Quan/Sun%20Quan.webp" alt="Sun Quan" />
+            </div>
+            <span class="rel-bubble-name">Sun Quan</span>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="rel-orbit-section">
+        <h3 class="rel-orbit-label">El Escudo de Wu</h3>
+        <div class="rel-bubbles rel-bubbles--md">
+
+          <div class="rel-bubble"
+               data-eras="sima"
+               data-badge="El Último General de Wu"
+               data-badge-color="#d49e6a"
+               data-name="Lu Kang · 陆抗"
+               data-desc="El único general capaz de defender Wu durante el reinado de Sun Hao. Mantuvo la frontera norte frente a Yang Hu mediante una mezcla de firmeza y diplomacia táctica. Cuando murió en 274 d.C., Sun Hao no encontró un sucesor de su nivel. Lu Kang era el escudo que impedía que el plan de conquista de Jin se ejecutara. Sin él, el plazo para Wu se redujo drásticamente.">
+            <div class="rel-bubble-img rel-bubble-img--placeholder">
+              <span>抗</span>
+            </div>
+            <span class="rel-bubble-name">Lu Kang</span>
+          </div>
+
+          <div class="rel-bubble"
+               data-eras="sima"
+               data-badge="El Veterano de Tres Generaciones"
+               data-badge-color="#d49e6a"
+               data-name="Ding Feng · 丁奉"
+               data-desc="Veterano militar que había servido a Wu desde los tiempos de Sun Quan. Participó en las últimas operaciones defensivas de Wu bajo Sun Hao. Representaba la generación de generales formados bajo el liderazgo sólido de Wu, un contraste con el deterioro que el gobierno de Sun Hao produjo en los mandos más jóvenes.">
+            <div class="rel-bubble-img">
+              <img src="../img/Ding%20Feng/Ding%20Feng.webp" alt="Ding Feng" />
+            </div>
+            <span class="rel-bubble-name">Ding Feng</span>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="rel-orbit-section">
+        <h3 class="rel-orbit-label">Los Que Llegaron del Norte</h3>
+        <div class="rel-bubbles rel-bubbles--md">
+
+          <div class="rel-bubble"
+               data-eras="sima"
+               data-badge="El Arquitecto de la Caída"
+               data-badge-color="#c47a7a"
+               data-name="Yang Hu · 羊祜"
+               data-desc="Comandante Jin en la frontera norte. Mientras Sun Hao gobernaba con crueldad erosionando la lealtad de sus propios cuadros, Yang Hu acumulaba grano, preparaba planes y cultivaba la benevolencia hacia la población de Wu. Murió en 278 d.C. sin ver el resultado, pero diseñó el entorno que hizo la conquista inevitable.">
+            <div class="rel-bubble-img rel-bubble-img--placeholder">
+              <span>楊</span>
+            </div>
+            <span class="rel-bubble-name">Yang Hu</span>
+          </div>
+
+          <div class="rel-bubble"
+               data-eras="sima jin"
+               data-badge="El Que Lo Esperaba"
+               data-badge-color="#c47a7a"
+               data-name="Sima Yan · 司马炎"
+               data-desc="Emperador de Jin. Ordenó la conquista de Wu en 279 d.C. y recibió a Sun Hao en Luoyang diciéndole que tenía preparado un asiento para él desde hacía tiempo. La frase resume la relación entre ambos: Sima Yan construyó pacientemente la posición desde la que esperar el momento; Sun Hao lo aceleró desde dentro con su propio gobierno.">
+            <div class="rel-bubble-img rel-bubble-img--placeholder">
+              <span>炎</span>
+            </div>
+            <span class="rel-bubble-name">Sima Yan</span>
+          </div>
+
+          <div class="rel-bubble"
+               data-eras="jin"
+               data-badge="La Flota del Fin"
+               data-badge-color="#c47a7a"
+               data-name="Wang Jun · 王濬"
+               data-desc="Comandante naval de Jin que descendió el Yangtsé en 280 d.C. destruyendo las cadenas de hierro tendidas a través del río. Llegó a Jianye antes que las fuerzas terrestres. Sun Hao salió a su encuentro con las manos atadas. Wang Jun fue el instrumento final de una conquista diseñada una década antes por Yang Hu.">
+            <div class="rel-bubble-img rel-bubble-img--placeholder">
+              <span>濬</span>
+            </div>
+            <span class="rel-bubble-name">Wang Jun</span>
+          </div>
+
+        </div>
+      </div>
+
     </div>
 
     <!-- PÁGINA 3: Batallas -->
     <div class="wrap-page" data-page="batallas">
-      <div style="text-align:center;padding:60px 20px;color:var(--muted)">
-        <h2 style="font-family:'Noto Serif SC',serif;font-size:24px;margin-bottom:12px">Batallas</h2>
-        <p>Esta sección será completada próximamente con los enfrentamientos principales de Sun Hao.</p>
+      <div class="char-battles">
+
+        <div class="char-battle-card">
+          <p class="char-battle-year">272 d.C.</p>
+          <h3 class="char-battle-name">西陵之战 · La Batalla de Xiling</h3>
+          <p class="char-battle-flavor">Bu Chan, general de Wu apostado en la fortaleza de Xiling, deserta a Jin. Lu Kang lo rodea antes de que refuerzos de Jin puedan llegar y recupera la posición. La última gran victoria de Wu, ejecutada por Lu Kang sin participación real de Sun Hao, que no interfirió con el mando. Dos años después, Lu Kang muere.</p>
+          <span class="char-battle-result char-battle-result--victoria">Victoria</span>
+        </div>
+
+        <div class="char-battle-card">
+          <p class="char-battle-year">280 d.C.</p>
+          <h3 class="char-battle-name">破铁锁横江 · Las Cadenas del Yangtsé</h3>
+          <p class="char-battle-flavor">Wu había tendido cadenas de hierro a través del Yangtsé para detener la flota de Jin. Wang Jun construyó balsas cubiertas de grasa que, al arder, fundieron los eslabones. Las cadenas cedieron. La flota de Jin descendió sin obstáculos hacia Jianye. La defensa en la que Wu había confiado se deshizo en horas.</p>
+          <span class="char-battle-result char-battle-result--derrota">Derrota</span>
+        </div>
+
+        <div class="char-battle-card">
+          <p class="char-battle-year">280 d.C.</p>
+          <h3 class="char-battle-name">孙皓降晋 · La Rendición de Sun Hao</h3>
+          <p class="char-battle-flavor">Sin resistencia posible, Sun Hao sale al encuentro de Wang Jun con las manos atadas en señal de rendición total. Es conducido a Luoyang. Sima Yan le dice que tenía preparado un asiento para él desde hacía tiempo. Sun Hao responde que él también había tenido uno listo en el sur. Con su rendición terminan los Tres Reinos.</p>
+          <span class="char-battle-result char-battle-result--derrota">Derrota</span>
+        </div>
+
       </div>
     </div>
 
@@ -133,18 +274,97 @@
 
 <script>
 (function () {
-  const links = document.querySelectorAll(".sec-link[data-page]");
-  const pages = document.querySelectorAll(".wrap-page");
-  const slider = document.querySelector(".wrap-pages");
+  // ── Pager ──
+  const links = document.querySelectorAll('.sec-link[data-page]');
+  const pages = document.querySelectorAll('.wrap-page');
+  const slider = document.querySelector('.wrap-pages');
   function goTo(pageId) {
-    const idx = [...pages].findIndex((p) => p.dataset.page === pageId);
+    const idx = [...pages].findIndex(p => p.dataset.page === pageId);
     if (idx < 0) return;
     slider.style.transform = `translateX(-${idx * 100}%)`;
-    links.forEach((l) => l.classList.toggle("active", l.dataset.page === pageId));
+    links.forEach(l => l.classList.toggle('active', l.dataset.page === pageId));
   }
-  links.forEach((link) => {
-    link.addEventListener("click", (e) => { e.preventDefault(); goTo(link.dataset.page); });
+  links.forEach(link => {
+    link.addEventListener('click', e => { e.preventDefault(); goTo(link.dataset.page); });
   });
+
+  // ── Panel ──
+  const panel = document.getElementById('rel-panel');
+  const panelBadge = panel.querySelector('.rel-panel-badge');
+  const panelName  = panel.querySelector('.rel-panel-name');
+  const panelDesc  = panel.querySelector('.rel-panel-desc');
+  function showPanel(bubble) {
+    const { badge, badgeColor, name, desc } = bubble.dataset;
+    panelBadge.textContent = badge;
+    panelBadge.style.color = badgeColor;
+    panelBadge.style.borderColor = badgeColor;
+    panelName.textContent = name;
+    panelDesc.textContent = desc;
+    panel.hidden = false;
+    panel.style.animation = 'none';
+    panel.offsetHeight;
+    panel.style.animation = '';
+    panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+  document.querySelectorAll('.rel-bubble').forEach(bubble => {
+    bubble.addEventListener('click', () => {
+      const wasActive = bubble.classList.contains('active');
+      document.querySelectorAll('.rel-bubble').forEach(b => b.classList.remove('active'));
+      if (wasActive) { panel.hidden = true; }
+      else { bubble.classList.add('active'); showPanel(bubble); }
+    });
+  });
+  panel.querySelector('.rel-panel-close').addEventListener('click', () => {
+    panel.hidden = true;
+    document.querySelectorAll('.rel-bubble').forEach(b => b.classList.remove('active'));
+  });
+
+  // ── Era Slider ──
+  const ERAS = [
+    { id: 'sima', name: 'Era Sima',     years: '249 – 265 d.C.' },
+    { id: 'jin',  name: 'Dinastía Jin', years: '265 – 280 d.C.' },
+  ];
+  function toCamel(str) {
+    return str.split('-').map(s => s[0].toUpperCase() + s.slice(1)).join('');
+  }
+  function applyEra(idx, instant) {
+    const era = ERAS[idx];
+    document.querySelector('.era-slider-name').textContent = era.name;
+    document.querySelector('.era-slider-years').textContent = era.years;
+    document.querySelectorAll('.rel-bubble').forEach(b => {
+      const eras = (b.dataset.eras || '').split(' ');
+      const visible = eras.includes(era.id);
+      const key = toCamel(era.id);
+      if (b.dataset['badge' + key])      b.dataset.badge      = b.dataset['badge' + key];
+      if (b.dataset['badgeColor' + key]) b.dataset.badgeColor = b.dataset['badgeColor' + key];
+      if (b.dataset['desc' + key])       b.dataset.desc       = b.dataset['desc' + key];
+      if (visible) {
+        if (b.style.display === 'none') {
+          b.classList.remove('era-hidden');
+          b.style.display = '';
+          b.offsetHeight;
+          if (!instant) {
+            b.classList.add('bubble-entering');
+            b.addEventListener('animationend', () => b.classList.remove('bubble-entering'), { once: true });
+          }
+        }
+      } else {
+        b.classList.add('era-hidden');
+        b.style.display = 'none';
+      }
+    });
+    document.querySelectorAll('.rel-orbit-section').forEach(sec => {
+      const hasVisible = [...sec.querySelectorAll('.rel-bubble')].some(b => b.style.display !== 'none');
+      sec.classList.toggle('era-empty', !hasVisible);
+    });
+    const active = document.querySelector('.rel-bubble.active');
+    if (active && active.style.display === 'none') {
+      panel.hidden = true;
+      active.classList.remove('active');
+    }
+  }
+  document.getElementById('era-range').addEventListener('input', e => applyEra(+e.target.value));
+  applyEra(0, true);
 })();
 </script>
 

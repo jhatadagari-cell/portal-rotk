@@ -57,6 +57,7 @@
     if (declared) return declared;
     const p = location.pathname;
     if (/(?:^|\/)index\.html$/.test(p) || p.endsWith('/')) return 'home';
+    if (/facciones\.html$/.test(p)) return 'facciones';
     if (/batallas\.html$/.test(p)) return 'batallas';
     if (/mapa\.html$/.test(p)) return 'mapa';
     if (/\/Periods\//.test(p)) return 'personajes';
@@ -83,9 +84,10 @@
     <li><a href="${href('#periods')}"${isOn('eras')}>Eras</a></li>
     <li><a href="${href('#heroes')}"${isOn('personajes')}>Personajes</a></li>
     <li><a href="${href('#factions')}"${isOn('reinos')}>Reinos</a></li>
+    <li><a href="${href('assets/facciones.html')}"${isOn('facciones')}>Facciones</a></li>
     <li><a href="${href('assets/batallas.html')}"${isOn('batallas')}>Batallas</a></li>
+    <li><a href="${href('assets/mapa.html')}"${isOn('mapa')}>Mapa</a></li>
   </ul>
-  <a class="nav-cta" href="${href('assets/mapa.html')}"${ACTIVE==='mapa'?' aria-current="page"':''}>🗺 Mapa</a>
   <button class="hamburger" aria-label="Menú">
     <span></span><span></span><span></span>
   </button>
@@ -143,6 +145,34 @@
     });
   }
 
+  // ── Back to top ──────────────────────────────────────────────────────
+  function mountBackToTop() {
+    if (!document.getElementById('back-top')) {
+      const vign = document.createElement('div');
+      vign.id = 'corner-vignette';
+      document.body.appendChild(vign);
+
+      const btn = document.createElement('button');
+      btn.id = 'back-top';
+      btn.setAttribute('aria-label', 'Volver arriba');
+      btn.innerHTML = '<span>↑</span>';
+      document.body.appendChild(btn);
+    }
+
+    const btt = document.getElementById('back-top');
+    const pv  = document.getElementById('corner-vignette');
+
+    window.addEventListener('scroll', () => {
+      const show = window.scrollY > 400;
+      btt.classList.toggle('visible', show);
+      if (pv) pv.classList.toggle('visible', show);
+    }, { passive: true });
+
+    btt.addEventListener('click', () => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  }
+
   // ── Inyección ────────────────────────────────────────────────────────
   function mount() {
     injectMeta();
@@ -156,11 +186,12 @@
     const links = document.getElementById('nav-links');
     if (hb && links) {
       hb.addEventListener('click', () => links.classList.toggle('open'));
-      // Al hacer click en cualquier enlace del nav móvil, cerrar el menú.
       links.addEventListener('click', e => {
         if (e.target.tagName === 'A') links.classList.remove('open');
       });
     }
+
+    mountBackToTop();
   }
 
   if (document.readyState === 'loading') {

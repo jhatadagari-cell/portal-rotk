@@ -1,0 +1,303 @@
+/* facciones.css — página de listado con timeline slider */
+
+:root {
+  --bg:      #0e0c09;
+  --surface: rgba(255,255,255,.032);
+  --border:  rgba(255,255,255,.072);
+  --text:    #e8dcc8;
+  --muted:   #8a7a62;
+  --gold:    #c8962a;
+  --gold-rgb: 200,150,42;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Noto Sans SC', sans-serif;
+  min-height: 100vh;
+}
+
+/* ── Hero ─────────────────────────────────────────────────────────── */
+.fac-hero {
+  text-align: center;
+  padding: 52px 20px 40px;
+  border-bottom: 1px solid var(--border);
+}
+.fac-eyebrow {
+  font-family: 'Cinzel Decorative', serif;
+  font-size: 10px;
+  letter-spacing: .32em;
+  text-transform: uppercase;
+  color: var(--gold);
+  opacity: .75;
+  margin-bottom: 14px;
+}
+.fac-title {
+  font-family: 'Noto Serif SC', serif;
+  font-size: clamp(28px, 6vw, 44px);
+  color: var(--text);
+  margin-bottom: 14px;
+  line-height: 1.15;
+}
+.fac-desc {
+  font-family: 'IM Fell English', serif;
+  font-size: 17px;
+  line-height: 1.75;
+  color: var(--muted);
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+/* ── Timeline Slider ──────────────────────────────────────────────── */
+.fac-timeline-wrap {
+  max-width: 760px;
+  margin: 36px auto 0;
+  padding: 24px 28px 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+}
+.fac-year-display {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+.fac-year-num {
+  font-family: 'Cinzel Decorative', serif;
+  font-size: 38px;
+  color: var(--text);
+  line-height: 1;
+}
+.fac-year-dc {
+  font-family: 'Cinzel Decorative', serif;
+  font-size: 14px;
+  color: var(--gold);
+  opacity: .75;
+}
+.fac-era-name {
+  font-family: 'Noto Serif SC', serif;
+  font-size: 16px;
+  color: var(--muted);
+}
+.fac-range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(
+    to right,
+    var(--gold) 0%,
+    var(--gold) var(--pct, 30%),
+    rgba(255,255,255,.1) var(--pct, 30%),
+    rgba(255,255,255,.1) 100%
+  );
+  cursor: pointer;
+  outline: none;
+  margin-bottom: 12px;
+  accent-color: var(--gold);
+}
+.fac-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--gold);
+  box-shadow: 0 0 0 3px rgba(var(--gold-rgb), .22), 0 0 12px rgba(var(--gold-rgb), .4);
+  cursor: pointer;
+  transition: transform .15s;
+}
+.fac-range::-webkit-slider-thumb:hover { transform: scale(1.18); }
+.fac-range::-moz-range-thumb {
+  width: 16px; height: 16px; border-radius: 50%;
+  background: var(--gold); border: none;
+  box-shadow: 0 0 0 3px rgba(var(--gold-rgb), .22);
+}
+.fac-tick-labels {
+  display: flex;
+  justify-content: space-between;
+  font-family: 'Cinzel Decorative', serif;
+  font-size: 8px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  opacity: .5;
+}
+
+/* ── Conteo de facciones activas ─────────────────────────────────── */
+.fac-count {
+  text-align: center;
+  font-family: 'Cinzel Decorative', serif;
+  font-size: 10px;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--muted);
+  opacity: .6;
+  margin: 24px 0 12px;
+}
+
+/* ── Grid de tarjetas ─────────────────────────────────────────────── */
+.fac-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px 18px;
+  justify-content: center;
+  padding: 8px 16px 64px;
+  max-width: 1120px;
+  margin: 0 auto;
+}
+
+/* ── Tarjeta ──────────────────────────────────────────────────────── */
+.fac-card {
+  width: 270px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-top: 4px solid var(--fc, #c8962a);
+  border-radius: 12px;
+  padding: 18px 18px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: transform .22s ease, box-shadow .22s ease;
+  animation: facIn .32s ease both;
+}
+.fac-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 48px rgba(0,0,0,.5), 0 0 0 1px var(--fc, #c8962a33);
+}
+@keyframes facIn {
+  from { opacity: 0; transform: scale(.88) translateY(8px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+.fac-card.fac-hidden { display: none; }
+.fac-card.fac-entering { animation: facIn .32s ease both; }
+
+/* ── Cabecera de la tarjeta ───────────────────────────────────────── */
+.fac-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.fac-card-badge {
+  font-family: 'Cinzel Decorative', serif;
+  font-size: 8px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--fc, var(--gold));
+  border: 1px solid var(--fc, var(--gold));
+  padding: 2px 7px;
+  border-radius: 2px;
+  opacity: .9;
+  flex-shrink: 0;
+}
+.fac-card-yrs {
+  font-family: 'Cinzel Decorative', serif;
+  font-size: 9px;
+  letter-spacing: .12em;
+  color: var(--muted);
+  opacity: .7;
+  text-align: right;
+}
+
+/* ── Nombres ──────────────────────────────────────────────────────── */
+.fac-card-zh {
+  font-family: 'Noto Serif SC', serif;
+  font-size: 22px;
+  color: var(--fc, var(--text));
+  opacity: .65;
+  line-height: 1;
+}
+.fac-card-es {
+  font-family: 'Noto Serif SC', serif;
+  font-size: 18px;
+  color: var(--text);
+  line-height: 1.2;
+  margin-top: -4px;
+}
+
+/* ── Descripción ──────────────────────────────────────────────────── */
+.fac-card-desc {
+  font-family: 'IM Fell English', serif;
+  font-size: 14.5px;
+  line-height: 1.7;
+  color: var(--muted);
+  flex: 1;
+}
+
+/* ── Líderes ──────────────────────────────────────────────────────── */
+.fac-card-leaders {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 2px;
+}
+.fac-leader-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+.fac-leader-wrap::after {
+  content: attr(data-name);
+  position: absolute;
+  bottom: calc(100% + 7px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(14,12,9,.92);
+  border: 1px solid rgba(255,255,255,.1);
+  color: var(--text);
+  font-family: 'Noto Serif SC', serif;
+  font-size: 11px;
+  white-space: nowrap;
+  padding: 4px 9px;
+  border-radius: 4px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .15s;
+  z-index: 10;
+}
+.fac-leader-wrap:hover::after { opacity: 1; }
+.fac-leader-img {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid rgba(255,255,255,.1);
+  background: rgba(255,255,255,.04);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color .2s;
+}
+.fac-leader-wrap:hover .fac-leader-img { border-color: var(--fc, var(--gold)); }
+.fac-leader-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
+  transform: scale(1.35);
+  transform-origin: top center;
+  display: block;
+}
+.fac-leader-img span {
+  font-family: 'Cinzel Decorative', serif;
+  font-size: 14px;
+  color: var(--muted);
+  opacity: .5;
+  user-select: none;
+}
+
+/* ── Responsive ───────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .fac-timeline-wrap { margin: 28px 16px 0; }
+}
+@media (max-width: 640px) {
+  .fac-card { width: 100%; max-width: 420px; }
+  .fac-year-num { font-size: 28px; }
+  .fac-timeline-wrap { padding: 18px 18px 16px; }
+  .fac-hero { padding: 40px 16px 32px; }
+  .fac-tick-labels { font-size: 7px; gap: 0; }
+}

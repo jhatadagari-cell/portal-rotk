@@ -96,9 +96,15 @@ function charMatchesText(c) {
   return en.includes(q) || zh.includes(filterText.toLowerCase());
 }
 
+function getFactionId(label) {
+  if (typeof FACTIONS === 'undefined') return label;
+  const f = FACTIONS.find(f => [].concat(f.fac).includes(label));
+  return f ? f.id : label;
+}
+
 function charMatchesFactions(c) {
   if (selectedFactions.size === 0) return true;
-  return getCharFactions(c).some(f => selectedFactions.has(f.label));
+  return getCharFactions(c).some(f => selectedFactions.has(getFactionId(f.label)));
 }
 
 function renderFactionFilters(basePool) {
@@ -106,21 +112,25 @@ function renderFactionFilters(basePool) {
   const factionMap = new Map();
   basePool.forEach(({ c }) => {
     getCharFactions(c).forEach(({ label, color }) => {
-      if (!factionMap.has(label)) factionMap.set(label, color);
+      const fid = getFactionId(label);
+      if (!factionMap.has(fid)) {
+        const faction = typeof FACTIONS !== 'undefined' ? FACTIONS.find(f => f.id === fid) : null;
+        factionMap.set(fid, { es: faction ? faction.es : label, color: faction ? faction.color : color });
+      }
     });
   });
   for (const sel of selectedFactions) {
     if (!factionMap.has(sel)) selectedFactions.delete(sel);
   }
   container.innerHTML = '';
-  for (const [label, color] of factionMap) {
+  for (const [fid, { es, color }] of factionMap) {
     const btn = document.createElement('button');
-    btn.className = 'fac-filter-btn' + (selectedFactions.has(label) ? ' active' : '');
+    btn.className = 'fac-filter-btn' + (selectedFactions.has(fid) ? ' active' : '');
     btn.style.setProperty('--fc', color);
-    btn.textContent = label;
+    btn.textContent = es;
     btn.addEventListener('click', () => {
-      if (selectedFactions.has(label)) selectedFactions.delete(label);
-      else selectedFactions.add(label);
+      if (selectedFactions.has(fid)) selectedFactions.delete(fid);
+      else selectedFactions.add(fid);
       renderCharacters(activeEra);
     });
     container.appendChild(btn);
