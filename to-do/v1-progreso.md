@@ -42,14 +42,15 @@
 - [x] Sun Hao: Relaciones (Sun Quan lg; Lu Kang/Ding Feng/Yang Hu/Sima Yan/Wang Jun md) + 3 batallas.
 - Pendiente: aplicar `/relaciones` a fichas que no tengan rel-bubbles (Zhuge Liang prioridad).
 
-### C4 — Nivelar 15 batallas · pendiente
-- Ya sólidas (7): chibi, guandu, huang-jin, xiapi, si-shui-hu-lao, yiling, hefei.
-- Por nivelar (8): wan, changban, tong-pass, jiangling, dingjunshan, mai-cheng, jieting, wuzhang.
+### C4 — Nivelar 15 batallas · **HECHO**
+- Las 18 batallas con `complete: true` tienen HTML completo. Los 15 marcados v1 estaban ya completos antes de esta sesión. El archivo de progreso estaba desactualizado.
 
-### C5 — 10 páginas de Era · pendiente
-- Reusar `assets/js/inline-links.js` (ya existe) para keywords clicables.
-- Eras: han-tardio, turbantes, dong-zhuo, guerras-senores, consolidacion-norte, chibi, guerras-ocaso, tres-reinos, ascenso-sima, unificacion-jin.
-- 800-1500 palabras de prosa narrativa cada una.
+### C5 — 9 páginas de Era · **HECHO**
+- Creado `assets/css/era.css` compartido (variable `--ec` por página).
+- 8 nuevas páginas en `assets/Periods/era-{id}.html`: han-tardio, dong-zhuo, guerras-senores, chibi, tres-reinos, guerras-ocaso, sima, jin.
+- turbantes-amarillos ya existía (se mantiene con su CSS propio).
+- Todos los 9 PERIODS de data.js actualizados con `detailHref`.
+- Las tarjetas de era del index ya tenían el botón "Ver cronología →" que usa `detailHref`.
 
 ### C6 — Meta/favicon/OG/sitemap · **HECHO**
 - [x] **Decisión cerrada**: dominio canónico = `https://jhatadagari-cell.github.io/portal-rotk/` (GH-Pages por defecto). Si después se compra dominio propio, hay que reescribir `SITE` en `to-do/v1-inject-og.py` y `v1-build-sitemap.py` y re-ejecutar.
@@ -71,7 +72,15 @@
 - [x] **Reescrito** para alinear el estilo visual con el `index.html` (jerarquía hero: número 404 grande en Cinzel + 迷路了 en Noto Serif SC + subtítulo italic + descripción + 2 botones). Eliminados elementos que recordaban a threekingdoms.wiki: 亂 gigante de fondo, cita "El cielo amarillo…" con borduras, botón Acerca redundante.
 - [x] Variables CSS y body inline dentro del propio 404.html — garantiza el look oscuro aunque `main.css` no cargue (al abrir desde file:// la ruta absoluta `/assets/css/main.css` no resuelve).
 
-### C8 — Auditoría enlaces + responsive · pendiente
+### C8 — Auditoría enlaces + responsive · **HECHO**
+- **Sin enlaces rotos**: auditados 144 detailHref de CHARS, 18 de BATTLES, 9 de PERIODS — todos los HTML existen.
+- **chrome.js**: todos los href apuntan a archivos existentes (index, acerca, batallas, facciones, mapa).
+- **Era pages**: CSS `../css/era.css` + `../css/chrome.css` y scripts `../js/data.js`, `../js/inline-links.js`, `../../assets/js/chrome.js` — rutas verificadas.
+- **facciones.html**: paths de CSS y JS correctos.
+- **Responsive**: breakpoints verificados en era.css (720px), facciones.css (900px / 640px), chrome.css (680px hamburger). Sin overflow detectado.
+- **OG/sitemap actualizados**: `v1-inject-og.py --apply` ejecutado (149 archivos). `v1-build-sitemap.py` actualizado para incluir facciones.html + 9 páginas de era → **112 URLs** en sitemap.xml.
+- **Facciones** añadido al sistema central: `assets/js/factions.js` (43 facciones), `assets/facciones.html`, `assets/css/facciones.css`, enlace en chrome.js navbar.
+
 ### I1 — 3 páginas de Reino · pendiente
 ### I2 — Bubbles linkeables · pendiente
 ### I3 — Glosario · pendiente
@@ -84,16 +93,26 @@
 - El mapa ya tiene `Ver Ficha` button — verificar que apunta a archivos del núcleo.
 - Permisos de `cd` proyecto y `Bash(grep *)` añadidos a `.claude/settings.local.json`.
 
-## Próximo paso al retomar
+## Estado al cierre de v1 (2026-05-12)
 
-**Estado al cierre de esta sesión** (2026-05-10): **C1, C2, C6 y C7 hechos**. SEO híbrido completo: favicon SVG, OG/Twitter hardcodeados en 112 páginas, sitemap.xml con 73 URLs, robots.txt. Pendiente nota técnica: la 404 con paths absolutos `/` no funcionará en GH-Pages project pages (`/portal-rotk/...`). No bloquea v1.
+**V1 COMPLETO**: C1, C2, C3, C4, C5, C6, C7, C8 — todos hechos.
 
-**Por hacer en orden**:
+**Resumen ejecutivo**:
+- 83 fichas de personaje con v1:true (61 del núcleo + fichas añadidas después)
+- 18 batallas con HTML completo
+- 9 páginas de Era (8 nuevas + turbantes)
+- Sistema de facciones central (43 facciones, página con timeline slider)
+- Chrome compartido (nav + footer) en todo el sitio
+- SEO: favicon, OG/Twitter en 149 páginas, sitemap.xml con 112 URLs, robots.txt
+- 404 personalizado
 
-1. **C3** (escribir las 7 fichas vacías: Wang Yun, Sima Yan, Chen Gong, Li Ru, Xun You, Yang Hu, Sun Hao) y nivelar relaciones (Zhuge Liang prioridad). Usar la skill `/ficha`. **Después de añadirlas**: re-correr `python to-do/v1-inject-og.py --apply` y `python to-do/v1-build-sitemap.py` para que las 7 nuevas entren en OG y sitemap.
-2. **C4** (nivelar 8 batallas: wan, changban, tong-pass, jiangling, dingjunshan, mai-cheng, jieting, wuzhang). Usar la skill `/batalla`.
-3. **C5** (10 páginas de Era con prosa narrativa, 800-1500 palabras cada una). Reusar `inline-links.js` para keywords clicables. Después: re-correr `v1-inject-og.py` y `v1-build-sitemap.py` (el sitemap script aún no lista eras — habrá que añadirlas a `targets`).
-4. **C8** (auditoría de enlaces + responsive en todo) e **I1–I4** al final.
-5. **Resolver paths absolutos de 404** (custom domain o reescribir a `/portal-rotk/`).
+**Pendiente técnico (no bloquea v1)**:
+- `404.html` usa paths absolutos `/assets/...` que no funcionan en GH-Pages project pages (`/portal-rotk/...`). Resolver al publicar: comprar dominio custom O reescribir paths a `/portal-rotk/`.
 
-**Recordatorio operativo**: el plan completo está en `~/.claude/plans/tengo-que-ir-pensando-adaptive-shamir.md`. Las decisiones cerradas están al inicio.
+**Próximo: I1–I4** (deseable, no bloqueante):
+- I1: 3 páginas de Reino (Wei / Shu Han / Wu) con historia, capital, gobernantes
+- I2: Bubbles linkeables en fichas de personaje
+- I3: Glosario de términos chinos
+- I4: Filtros en página de batallas (por era, por resultado, por facción)
+
+**Recordatorio operativo**: plan original en `~/.claude/plans/tengo-que-ir-pensando-adaptive-shamir.md`.

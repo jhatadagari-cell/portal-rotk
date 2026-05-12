@@ -97,6 +97,12 @@ def main() -> int:
     entries.append((url_for("acerca.html"), "0.6", "monthly"))
     entries.append((url_for("assets/batallas.html"), "0.9", "weekly"))
     entries.append((url_for("assets/mapa.html"), "0.8", "monthly"))
+    entries.append((url_for("assets/facciones.html"), "0.8", "monthly"))
+    for era_id in [
+        "han-tardio", "turbantes-amarillos", "dong-zhuo", "guerras-senores",
+        "chibi", "tres-reinos", "guerras-ocaso", "sima", "jin",
+    ]:
+        entries.append((url_for(f"assets/Periods/era-{era_id}.html"), "0.7", "monthly"))
 
     for href in nucleo_chars:
         entries.append((url_for(href), "0.7", "monthly"))

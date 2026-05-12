@@ -1,0 +1,197 @@
+/* era.css — estilos compartidos para todas las páginas de Era.
+   Cada página define --ec (era color) en un <style>:root{--ec:…}</style> inline. */
+
+:root {
+  --ink:    #0b0600;
+  --parch:  #f0ddb0;
+  --parch2: #d4b870;
+  --gold:   #c9a84c;
+  --goldf:  rgba(201,168,76,.25);
+  --red:    #8b1a1a;
+  --border: rgba(201,168,76,.2);
+  --ec:     #c9a84c; /* fallback; cada página sobreescribe */
+}
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { background: var(--ink); color: var(--parch); font-family: 'IM Fell English', Georgia, serif; }
+a { text-decoration: none; }
+
+/* ── Wrap ── */
+.wrap { max-width: 980px; margin: 0 auto; padding: 34px 18px 80px; }
+
+/* ── Hero de era ── */
+.era-hero {
+  border: 1px solid rgba(255,255,255,.06);
+  border-left: 3px solid var(--ec);
+  border-radius: 3px;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--ec) 14%, transparent), rgba(11,6,0,.5));
+  padding: 22px 20px 18px;
+  margin-bottom: 26px;
+}
+.era-eyebrow {
+  font-family: 'Cinzel Decorative', serif;
+  font-size: 9px;
+  color: var(--gold);
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  opacity: .76;
+}
+.era-title {
+  font-family: 'Noto Serif SC', serif;
+  font-size: clamp(24px, 4vw, 38px);
+  font-weight: 900;
+  color: var(--parch);
+  margin-top: 6px;
+  line-height: 1.15;
+}
+.era-subtitle {
+  font-family: 'Cinzel Decorative', serif;
+  font-size: 10px;
+  color: var(--ec);
+  letter-spacing: .16em;
+  margin-top: 6px;
+  opacity: .85;
+}
+.era-lede {
+  font-family: 'Noto Sans SC', sans-serif;
+  font-size: 11px;
+  line-height: 1.7;
+  color: var(--parch2);
+  opacity: .82;
+  margin-top: 12px;
+}
+
+/* ── Prosa narrativa ── */
+.era-prose {
+  font-family: 'IM Fell English', Georgia, serif;
+  font-size: 16px;
+  line-height: 1.8;
+  color: var(--parch2);
+  margin-bottom: 14px;
+}
+.era-prose + .era-prose { margin-top: 10px; }
+
+/* ── Sec title ── */
+.sec-title {
+  font-family: 'Noto Serif SC', serif;
+  font-size: 19px;
+  color: var(--parch);
+  margin-bottom: 14px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255,255,255,.06);
+}
+section + section { margin-top: 32px; }
+
+/* ── Timeline ── */
+.timeline { position: relative; padding-left: 28px; }
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 9px; top: 2px; bottom: 2px;
+  width: 2px;
+  background: linear-gradient(var(--ec), rgba(201,168,76,.1));
+}
+.t-item {
+  position: relative;
+  margin-bottom: 12px;
+  border: 1px solid rgba(255,255,255,.05);
+  border-radius: 3px;
+  padding: 10px 12px;
+  background: rgba(255,255,255,.015);
+}
+.t-item::before {
+  content: '';
+  position: absolute;
+  left: -24px; top: 13px;
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  border: 2px solid var(--ec);
+  background: var(--ink);
+}
+.t-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.t-year {
+  font-family: 'Cinzel Decorative', serif;
+  font-size: 9px;
+  color: var(--gold);
+  letter-spacing: .11em;
+}
+.t-type {
+  font-family: 'Noto Sans SC', sans-serif;
+  font-size: 8px;
+  color: var(--ec);
+  border: 1px solid color-mix(in srgb, var(--ec) 45%, transparent);
+  padding: 2px 6px;
+  border-radius: 2px;
+}
+.t-name {
+  font-family: 'Noto Serif SC', serif;
+  font-size: 13px;
+  color: var(--parch);
+  margin-top: 5px;
+}
+.t-desc {
+  font-family: 'Noto Sans SC', sans-serif;
+  font-size: 10px;
+  color: var(--parch2);
+  line-height: 1.55;
+  opacity: .82;
+  margin-top: 4px;
+}
+
+/* ── Figuras ── */
+.chars {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+.char {
+  position: relative;
+  min-height: 140px;
+  border: 1px solid rgba(255,255,255,.06);
+  border-radius: 3px;
+  padding: 14px 12px 12px;
+  background: rgba(255,255,255,.015);
+  overflow: hidden;
+  transition: transform .22s ease, box-shadow .22s ease, background .22s ease;
+}
+.char:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 20px 40px rgba(0,0,0,.22);
+  background: rgba(255,255,255,.05);
+  z-index: 2;
+}
+.char-name {
+  font-family: 'Noto Serif SC', serif;
+  font-size: 16px;
+  color: var(--parch);
+}
+.char-role {
+  font-family: 'Cinzel Decorative', serif;
+  font-size: 8px;
+  color: var(--ec);
+  letter-spacing: .1em;
+  margin-top: 2px;
+  opacity: .9;
+}
+.char-txt {
+  font-family: 'Noto Sans SC', sans-serif;
+  font-size: 9.5px;
+  color: var(--parch2);
+  line-height: 1.5;
+  opacity: .8;
+  margin-top: 8px;
+}
+
+/* ── Responsive ── */
+@media (max-width: 720px) {
+  .wrap { padding: 24px 14px 58px; }
+  .timeline { padding-left: 23px; }
+  .t-item::before { left: -20px; }
+  .era-prose { font-size: 14px; }
+}

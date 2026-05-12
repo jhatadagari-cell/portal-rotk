@@ -2836,6 +2836,7 @@ const PERIODS = [
     desc: "El Gran Imperio Han se resquebraja. Eunucos corrompen la corte, el Emp. Ling vende cargos. Las semillas de la catástrofe.",
     legs: [["#c8962a", "Han 漢"]],
     suberas: ["Crisis cortesana", "Venta de cargos", "Declive fiscal"],
+    detailHref: "assets/Periods/era-han-tardio.html",
     factions: ["wei", "shu"],
   },
   {
@@ -2876,6 +2877,7 @@ const PERIODS = [
       "Coalición anti-Dong",
       "Huida y quema de Luoyang",
     ],
+    detailHref: "assets/Periods/era-dong-zhuo.html",
     factions: ["wei", "shu", "wu"],
   },
   {
@@ -2896,6 +2898,7 @@ const PERIODS = [
       "Ascenso de Cao Cao",
       "Longzhong y alianzas",
     ],
+    detailHref: "assets/Periods/era-guerras-senores.html",
     factions: ["wei", "shu", "wu"],
   },
   {
@@ -2912,6 +2915,7 @@ const PERIODS = [
       ["#bf2020", "Sun Quan 孫"],
     ],
     suberas: ["Alianza Liu-Sun", "Guerra naval", "Reparto de Jingzhou"],
+    detailHref: "assets/Periods/era-chibi.html",
     factions: ["wei", "shu", "wu"],
   },
   {
@@ -2932,6 +2936,7 @@ const PERIODS = [
       "Expediciones del Norte",
       "Fronteras estabilizadas",
     ],
+    detailHref: "assets/Periods/era-tres-reinos.html",
     factions: ["wei", "shu", "wu"],
   },
   {
@@ -2948,6 +2953,7 @@ const PERIODS = [
       ["#bf2020", "Wu 吳"],
     ],
     suberas: ["Campañas de Jiang Wei", "Intrigas Sima", "Caída de Shu"],
+    detailHref: "assets/Periods/era-guerras-ocaso.html",
     factions: ["wei", "shu", "wu"],
   },
   {
@@ -2963,6 +2969,7 @@ const PERIODS = [
       ["#bf2020", "Wu 吳"],
     ],
     suberas: ["Golpe de Gaoping", "Regencia militar", "Transición hacia Jin"],
+    detailHref: "assets/Periods/era-sima.html",
     factions: ["wei", "wu"],
   },
   {
@@ -2978,6 +2985,7 @@ const PERIODS = [
       ["#bf2020", "Wu 吳"],
     ],
     suberas: ["Coronación Jin", "Campaña del Yangtzé", "Rendición de Wu"],
+    detailHref: "assets/Periods/era-jin.html",
     factions: ["wu"],
   },
   {
