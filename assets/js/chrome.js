@@ -57,6 +57,7 @@
     if (declared) return declared;
     const p = location.pathname;
     if (/(?:^|\/)index\.html$/.test(p) || p.endsWith('/')) return 'home';
+    if (/facciones\.html$/.test(p)) return 'facciones';
     if (/batallas\.html$/.test(p)) return 'batallas';
     if (/mapa\.html$/.test(p)) return 'mapa';
     if (/\/Periods\//.test(p)) return 'personajes';
@@ -83,6 +84,7 @@
     <li><a href="${href('#periods')}"${isOn('eras')}>Eras</a></li>
     <li><a href="${href('#heroes')}"${isOn('personajes')}>Personajes</a></li>
     <li><a href="${href('#factions')}"${isOn('reinos')}>Reinos</a></li>
+    <li><a href="${href('assets/facciones.html')}"${isOn('facciones')}>Facciones</a></li>
     <li><a href="${href('assets/batallas.html')}"${isOn('batallas')}>Batallas</a></li>
     <li><a href="${href('assets/mapa.html')}"${isOn('mapa')}>Mapa</a></li>
   </ul>

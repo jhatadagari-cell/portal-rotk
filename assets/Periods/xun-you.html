@@ -129,17 +129,152 @@
 
     <!-- PÁGINA 2: Relaciones Clave -->
     <div class="wrap-page" data-page="relaciones">
-      <div style="text-align:center;padding:60px 20px;color:var(--muted)">
-        <h2 style="font-family:'Noto Serif SC',serif;font-size:24px;margin-bottom:12px">Relaciones Clave</h2>
-        <p>Esta sección será completada próximamente con las relaciones más importantes de Xun You.</p>
+
+      <div class="era-slider-wrap">
+        <div class="era-slider-header">
+          <span class="era-slider-name">Guerras de los Señores</span>
+          <span class="era-slider-years">193 – 208 d.C.</span>
+        </div>
+        <input type="range" id="era-range" class="era-range" min="0" max="2" step="1" value="0" list="era-ticks" />
+        <datalist id="era-ticks">
+          <option value="0">Guerras de los Señores</option>
+          <option value="1">Chibi</option>
+          <option value="2">Los Tres Reinos</option>
+        </datalist>
+        <div class="era-tick-labels">
+          <span>Guerras</span>
+          <span>Chibi</span>
+          <span>Tres Reinos</span>
+        </div>
       </div>
+
+      <div class="rel-hub">
+        <div class="rel-hub-bubble"><img src="../img/Xun You/Xun You.webp" alt="Xun You" /></div>
+        <span class="rel-hub-label">荀攸 · Xun You</span>
+      </div>
+
+      <div class="rel-panel" id="rel-panel" hidden>
+        <button class="rel-panel-close" aria-label="Cerrar">✕</button>
+        <div class="rel-panel-badge"></div>
+        <div class="rel-panel-name"></div>
+        <p class="rel-panel-desc"></p>
+      </div>
+
+      <div class="rel-orbit-section">
+        <h3 class="rel-orbit-label">El Señor</h3>
+        <div class="rel-bubbles rel-bubbles--lg">
+          <div class="rel-bubble"
+               data-eras="guerras-senores chibi tres-reinos"
+               data-badge="El Señor del Norte"
+               data-badge-color="#9bb1d3"
+               data-name="Cao Cao · 曹操"
+               data-desc="Xun You sirvió a Cao Cao durante toda su carrera activa. Era el consejero que resolvía el problema inmediato: cómo ganar el combate del día siguiente. Cao Cao consultaba a Xun You de forma permanente y reconoció que las victorias del norte — Baima, Yan Jin, Wuchao — se debieron en gran parte a sus tácticas. Cuando Xun You murió en 214 d.C., Cao Cao lo lloró abiertamente.">
+            <div class="rel-bubble-img">
+              <img src="../img/Cao Cao/Cao Cao.webp" alt="Cao Cao" />
+            </div>
+            <span class="rel-bubble-name">Cao Cao</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="rel-orbit-section">
+        <h3 class="rel-orbit-label">El Círculo de Consejeros</h3>
+        <div class="rel-bubbles rel-bubbles--md">
+          <div class="rel-bubble"
+               data-eras="guerras-senores chibi"
+               data-badge="El Tío Estratega"
+               data-badge-color="#9bb1d3"
+               data-name="Xun Yu · 荀彧"
+               data-desc="Xun Yu era el tío de Xun You y el consejero político de largo plazo de Cao Cao. Los dos Xun eran complementarios: Xun Yu trazaba el horizonte político, Xun You resolvía el combate de la semana. Trabajaron en paralelo durante los grandes años de expansión de Wei. Xun Yu murió en 212 d.C. tras un conflicto con Cao Cao sobre el uso del poder; Xun You no vivió ese mismo enfrentamiento.">
+            <div class="rel-bubble-img">
+              <img src="../img/Xun Yu/Xun Yu.webp" alt="Xun Yu" />
+            </div>
+            <span class="rel-bubble-name">Xun Yu</span>
+          </div>
+          <div class="rel-bubble"
+               data-eras="guerras-senores"
+               data-badge="El Consejero de las Estratagemas"
+               data-badge-color="#9bb1d3"
+               data-name="Guo Jia · 郭嘉"
+               data-desc="Guo Jia era otro de los grandes consejeros del círculo de Cao Cao, especializado en evaluaciones de carácter y predicciones sobre el comportamiento de los enemigos. Trabajó en paralelo a Xun You durante las campañas del norte. Murió en 207 d.C. durante la marcha a White Wolf Mountain, a los 38 años, justo cuando Cao Cao consideraba atacar el sur. Cao Cao lamentó su muerte más que ninguna otra pérdida de consejero.">
+            <div class="rel-bubble-img">
+              <img src="../img/Guo Jia/Guo Jia.webp" alt="Guo Jia" />
+            </div>
+            <span class="rel-bubble-name">Guo Jia</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="rel-orbit-section">
+        <h3 class="rel-orbit-label">El Gran Oponente</h3>
+        <div class="rel-bubbles rel-bubbles--md">
+          <div class="rel-bubble"
+               data-eras="guerras-senores"
+               data-badge="El Señor del Norte Caído"
+               data-badge-color="#7a6a4a"
+               data-name="Yuan Shao · 袁紹"
+               data-desc="Yuan Shao era el señor más poderoso del norte cuando Xun You diseñó las tácticas de la campaña de Guandu. Los planes de Xun You para matar a Yan Liang y Wen Chou privaron a Yuan Shao de sus dos mejores generales en una semana. La sugerencia de atacar los depósitos de Wuchao fue el punto de inflexión que destruyó al ejército más grande del norte. Yuan Shao murió al año siguiente, sin recuperarse de la derrota.">
+            <div class="rel-bubble-img">
+              <img src="../img/Yuan Shao/Yuan Shao.webp" alt="Yuan Shao" />
+            </div>
+            <span class="rel-bubble-name">Yuan Shao</span>
+          </div>
+        </div>
+      </div>
+
     </div>
 
     <!-- PÁGINA 3: Batallas -->
     <div class="wrap-page" data-page="batallas">
-      <div style="text-align:center;padding:60px 20px;color:var(--muted)">
-        <h2 style="font-family:'Noto Serif SC',serif;font-size:24px;margin-bottom:12px">Batallas</h2>
-        <p>Esta sección será completada próximamente con los enfrentamientos principales de Xun You.</p>
+      <div class="char-battles">
+
+        <div class="char-battle-card">
+          <div class="char-battle-top">
+            <span class="char-battle-year">200 d.C.</span>
+            <span class="char-battle-result victoria">Victoria</span>
+          </div>
+          <div class="char-battle-vs">
+            <span class="cbv-a">Cao Cao · Xun You</span>
+            <span class="cbv-sep">VS</span>
+            <span class="cbv-b">Yuan Shao</span>
+          </div>
+          <div class="char-battle-name">白马·延津</div>
+          <div class="char-battle-en">Baima y Yan Jin</div>
+          <p class="char-battle-flavor">Yuan Shao envió a sus dos mejores generales, Yan Liang y Wen Chou, hacia el norte. Xun You propuso la táctica: fingir un cruce del río en un punto diferente para dividir las fuerzas de Yuan Shao y atacar Baima por sorpresa. La maniobra funcionó. Guan Yu, que servía temporalmente a Cao Cao, reconoció a Yan Liang a distancia y lo mató en carga solitaria. Wen Chou murió pocos días después en Yan Jin. Yuan Shao perdió a sus mejores generales en una semana.</p>
+        </div>
+
+        <div class="char-battle-card">
+          <div class="char-battle-top">
+            <span class="char-battle-year">200 d.C.</span>
+            <span class="char-battle-result victoria">Victoria Decisiva</span>
+          </div>
+          <div class="char-battle-vs">
+            <span class="cbv-a">Cao Cao · Xun You</span>
+            <span class="cbv-sep">VS</span>
+            <span class="cbv-b">Yuan Shao</span>
+          </div>
+          <div class="char-battle-name">官渡之战</div>
+          <div class="char-battle-en">Batalla de Guandu</div>
+          <p class="char-battle-flavor">Xun You fue parte central de la planificación durante el largo asedio de Guandu. Yuan Shao llegó con cuatro veces más hombres; Cao Cao estaba al borde del colapso. El giro llegó cuando Xu You desertó y reveló la ubicación del depósito de suministros en Wuchao. Xun You apoyó el ataque inmediato: 5.000 jinetes quemaron los suministros en una incursión nocturna. El ejército de Yuan Shao, sin provisiones, se derrumbó.</p>
+          <a class="char-battle-link" href="../../assets/Battles/guandu.html">Ver batalla →</a>
+        </div>
+
+        <div class="char-battle-card">
+          <div class="char-battle-top">
+            <span class="char-battle-year">208 d.C.</span>
+            <span class="char-battle-result derrota">Derrota</span>
+          </div>
+          <div class="char-battle-vs">
+            <span class="cbv-a">Cao Cao · Xun You</span>
+            <span class="cbv-sep">VS</span>
+            <span class="cbv-b">Alianza Sun-Liu</span>
+          </div>
+          <div class="char-battle-name">赤壁之战</div>
+          <div class="char-battle-en">Batalla de Chibi</div>
+          <p class="char-battle-flavor">Xun You acompañó a Cao Cao en la campaña del sur y formó parte de la planificación de la misma. La derrota de Chibi fue una de las pocas ocasiones en que los planes de Cao Cao no funcionaron: el viento del sureste, los barcos incendiarios de Huang Gai y las enfermedades en el campamento combinaron para destruir la flota. La novela no atribuye el fracaso a ningún error táctico de Xun You — fue una derrota que ninguna estrategia podía haber anticipado.</p>
+          <a class="char-battle-link" href="../../assets/Battles/chibi.html">Ver batalla →</a>
+        </div>
+
       </div>
     </div>
 
@@ -148,18 +283,63 @@
 
 <script>
 (function () {
-  const links = document.querySelectorAll(".sec-link[data-page]");
-  const pages = document.querySelectorAll(".wrap-page");
-  const slider = document.querySelector(".wrap-pages");
+  const links = document.querySelectorAll('.sec-link[data-page]');
+  const pages = document.querySelectorAll('.wrap-page');
+  const slider = document.querySelector('.wrap-pages');
   function goTo(pageId) {
-    const idx = [...pages].findIndex((p) => p.dataset.page === pageId);
+    const idx = [...pages].findIndex(p => p.dataset.page === pageId);
     if (idx < 0) return;
     slider.style.transform = `translateX(-${idx * 100}%)`;
-    links.forEach((l) => l.classList.toggle("active", l.dataset.page === pageId));
+    links.forEach(l => l.classList.toggle('active', l.dataset.page === pageId));
   }
-  links.forEach((link) => {
-    link.addEventListener("click", (e) => { e.preventDefault(); goTo(link.dataset.page); });
+  links.forEach(link => { link.addEventListener('click', e => { e.preventDefault(); goTo(link.dataset.page); }); });
+  const panel = document.getElementById('rel-panel');
+  const panelBadge = panel.querySelector('.rel-panel-badge');
+  const panelName  = panel.querySelector('.rel-panel-name');
+  const panelDesc  = panel.querySelector('.rel-panel-desc');
+  function showPanel(bubble) {
+    const { badge, badgeColor, name, desc } = bubble.dataset;
+    panelBadge.textContent = badge; panelBadge.style.color = badgeColor; panelBadge.style.borderColor = badgeColor;
+    panelName.textContent = name; panelDesc.textContent = desc;
+    panel.hidden = false; panel.style.animation = 'none'; panel.offsetHeight; panel.style.animation = '';
+    panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+  document.querySelectorAll('.rel-bubble').forEach(bubble => {
+    bubble.addEventListener('click', () => {
+      const wasActive = bubble.classList.contains('active');
+      document.querySelectorAll('.rel-bubble').forEach(b => b.classList.remove('active'));
+      if (wasActive) { panel.hidden = true; } else { bubble.classList.add('active'); showPanel(bubble); }
+    });
   });
+  panel.querySelector('.rel-panel-close').addEventListener('click', () => {
+    panel.hidden = true; document.querySelectorAll('.rel-bubble').forEach(b => b.classList.remove('active'));
+  });
+  const ERAS = [
+    { id: 'guerras-senores', name: 'Guerras de los Señores', years: '193 – 208 d.C.' },
+    { id: 'chibi',           name: 'Chibi',                  years: '208 d.C.' },
+    { id: 'tres-reinos',     name: 'Los Tres Reinos',        years: '213 – 214 d.C.' },
+  ];
+  function toCamel(str) { return str.split('-').map(s => s[0].toUpperCase() + s.slice(1)).join(''); }
+  function applyEra(idx, instant) {
+    const era = ERAS[idx];
+    document.querySelector('.era-slider-name').textContent = era.name;
+    document.querySelector('.era-slider-years').textContent = era.years;
+    document.querySelectorAll('.rel-bubble').forEach(b => {
+      const visible = (b.dataset.eras || '').split(' ').includes(era.id);
+      const key = toCamel(era.id);
+      if (b.dataset['badge' + key])      b.dataset.badge      = b.dataset['badge' + key];
+      if (b.dataset['badgeColor' + key]) b.dataset.badgeColor = b.dataset['badgeColor' + key];
+      if (b.dataset['desc' + key])       b.dataset.desc       = b.dataset['desc' + key];
+      if (visible) {
+        if (b.style.display === 'none') { b.classList.remove('era-hidden'); b.style.display = ''; b.offsetHeight; if (!instant) { b.classList.add('bubble-entering'); b.addEventListener('animationend', () => b.classList.remove('bubble-entering'), { once: true }); } }
+      } else { b.classList.add('era-hidden'); b.style.display = 'none'; }
+    });
+    document.querySelectorAll('.rel-orbit-section').forEach(sec => { sec.classList.toggle('era-empty', ![...sec.querySelectorAll('.rel-bubble')].some(b => b.style.display !== 'none')); });
+    const active = document.querySelector('.rel-bubble.active');
+    if (active && active.style.display === 'none') { panel.hidden = true; active.classList.remove('active'); }
+  }
+  document.getElementById('era-range').addEventListener('input', e => applyEra(+e.target.value));
+  applyEra(0, true);
 })();
 </script>
 

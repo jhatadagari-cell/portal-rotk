@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="es" data-page-section="facciones">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Facciones · Portal ROTK</title>
+<meta name="description" content="Las facciones político-militares del Romance de los Tres Reinos. Warlords, reinos e imperios activos a lo largo del relato, con timeline interactivo (184–280 d.C.).">
+<meta property="og:site_name" content="Portal ROTK">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Facciones · Portal ROTK">
+<meta property="og:description" content="Las facciones político-militares del Romance de los Tres Reinos. Warlords, reinos e imperios activos a lo largo del relato, con timeline interactivo (184–280 d.C.).">
+<meta property="og:url" content="https://jhatadagari-cell.github.io/portal-rotk/assets/facciones.html">
+<meta property="og:image" content="https://jhatadagari-cell.github.io/portal-rotk/assets/img/og-default.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Facciones · Portal ROTK">
+<meta name="twitter:description" content="Las facciones político-militares del Romance de los Tres Reinos con timeline interactivo.">
+<meta name="twitter:image" content="https://jhatadagari-cell.github.io/portal-rotk/assets/img/og-default.png">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700;900&family=Cinzel+Decorative:wght@400;700&family=IM+Fell+English:ital@0;1&family=Noto+Sans+SC:wght@300;400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/facciones.css?v=1">
+<link rel="stylesheet" href="css/chrome.css?v=4">
+</head>
+<body>
+<div id="chrome-nav"></div>
+
+<header class="fac-hero">
+  <div class="fac-eyebrow">Portal ROTK</div>
+  <h1 class="fac-title">Facciones del Relato</h1>
+  <p class="fac-desc">Los bloques de poder que surgieron, dominaron y cayeron a lo largo del Romance de los Tres Reinos. Mueve el slider para ver qué facciones estaban activas en cada momento del relato.</p>
+</header>
+
+<section class="fac-timeline-wrap" style="max-width:760px;margin:36px auto 0;padding:24px 28px 20px">
+  <div class="fac-year-display">
+    <span class="fac-year-num">220</span>
+    <span class="fac-year-dc">d.C.</span>
+    <span class="fac-era-name">· Los Tres Reinos</span>
+  </div>
+  <input type="range" id="fac-range" class="fac-range"
+         min="184" max="280" step="1" value="220"
+         list="fac-ticks" />
+  <datalist id="fac-ticks">
+    <option value="184">184</option>
+    <option value="189">189</option>
+    <option value="192">192</option>
+    <option value="197">197</option>
+    <option value="200">200</option>
+    <option value="208">208</option>
+    <option value="220">220</option>
+    <option value="221">221</option>
+    <option value="249">249</option>
+    <option value="263">263</option>
+    <option value="265">265</option>
+    <option value="280">280</option>
+  </datalist>
+  <div class="fac-tick-labels">
+    <span>184</span>
+    <span>189</span>
+    <span>192</span>
+    <span>197</span>
+    <span>200</span>
+    <span>208</span>
+    <span>220</span>
+    <span>221</span>
+    <span>249</span>
+    <span>263</span>
+    <span>265</span>
+    <span>280</span>
+  </div>
+</section>
+
+<p class="fac-count" id="fac-count"></p>
+<main class="fac-grid" id="fac-grid"></main>
+
+<div id="chrome-footer"></div>
+<script src="js/factions.js?v=1"></script>
+<script>
+(function () {
+  const ERA_LABELS = [
+    [184, 'Han Tardío'],
+    [189, 'Era Dong Zhuo'],
+    [192, 'Guerras de los Señores'],
+    [200, 'Camino a Chibi'],
+    [208, 'Los Tres Reinos (transición)'],
+    [220, 'Los Tres Reinos'],
+    [249, 'Era Sima'],
+    [265, 'Dinastía Jin'],
+    [280, 'Unificación'],
+  ];
+
+  function eraForYear(y) {
+    return [...ERA_LABELS].reverse().find(([yr]) => y >= yr)?.[1] ?? 'Han Tardío';
+  }
+
+  function typeLabel(type) {
+    const MAP = {
+      empire:    'Imperio',
+      kingdom:   'Reino',
+      warlord:   'Señor de la Guerra',
+      rebel:     'Rebelión',
+      coalition: 'Coalición',
+    };
+    return MAP[type] || type;
+  }
+
+  function imgPath(id) {
+    const name = id.split('-').map(s => s[0].toUpperCase() + s.slice(1)).join(' ');
+    return 'img/' + encodeURIComponent(name) + '/' + encodeURIComponent(name) + '.webp';
+  }
+
+  function leaderBubble(id) {
+    const initial = id[0].toUpperCase();
+    const name = id.split('-').map(s => s[0].toUpperCase() + s.slice(1)).join(' ');
+    return '<div class="fac-leader-wrap" data-name="' + name + '">' +
+      '<div class="fac-leader-img">' +
+      '<img src="' + imgPath(id) + '" alt="' + name + '"' +
+      ' onerror="this.outerHTML=\'<span>' + initial + '</span>\'" />' +
+      '</div>' +
+      '</div>';
+  }
+
+  function buildCard(f) {
+    const endStr = f.end !== null ? String(f.end) : '—';
+    const yrs    = f.start + ' – ' + endStr;
+    const leaders = (f.leaders || []).slice(0, 3).map(leaderBubble).join('');
+
+    return '<div class="fac-card" data-id="' + f.id + '"' +
+      ' style="--fc:' + f.color + '">' +
+      '<div class="fac-card-top">' +
+        '<span class="fac-card-badge">' + typeLabel(f.type) + '</span>' +
+        '<span class="fac-card-yrs">' + yrs + ' d.C.</span>' +
+      '</div>' +
+      '<div class="fac-card-zh">' + f.zh + '</div>' +
+      '<div class="fac-card-es">' + f.es + '</div>' +
+      '<p class="fac-card-desc">' + f.desc + '</p>' +
+      (leaders ? '<div class="fac-card-leaders">' + leaders + '</div>' : '') +
+      '</div>';
+  }
+
+  // Construir todas las tarjetas una vez al inicio
+  function initCards() {
+    const grid = document.getElementById('fac-grid');
+    FACTIONS.filter(f => f.v1).forEach(f => {
+      const wrap = document.createElement('div');
+      wrap.innerHTML = buildCard(f);
+      grid.appendChild(wrap.firstChild);
+    });
+  }
+
+  // Actualizar el slider visual (fill progress)
+  function updateSliderFill(range) {
+    const pct = ((range.value - range.min) / (range.max - range.min) * 100).toFixed(1) + '%';
+    range.style.setProperty('--pct', pct);
+  }
+
+  function renderYear(year, instant) {
+    document.querySelector('.fac-year-num').textContent = year;
+    document.querySelector('.fac-era-name').textContent = '· ' + eraForYear(year);
+
+    let count = 0;
+    document.querySelectorAll('.fac-card').forEach(card => {
+      const f = FACTIONS.find(x => x.id === card.dataset.id);
+      if (!f) return;
+      const active = f.v1 && f.start <= year && (f.end === null || f.end >= year);
+
+      if (active) {
+        if (card.classList.contains('fac-hidden')) {
+          card.classList.remove('fac-hidden');
+          if (!instant) {
+            card.classList.add('fac-entering');
+            card.addEventListener('animationend',
+              () => card.classList.remove('fac-entering'),
+              { once: true }
+            );
+          }
+        }
+        count++;
+      } else {
+        card.classList.add('fac-hidden');
+      }
+    });
+
+    const countEl = document.getElementById('fac-count');
+    countEl.textContent = count === 1
+      ? '1 facción activa'
+      : count + ' facciones activas';
+  }
+
+  const range = document.getElementById('fac-range');
+
+  range.addEventListener('input', function () {
+    updateSliderFill(this);
+    renderYear(+this.value, false);
+  });
+
+  initCards();
+  updateSliderFill(range);
+  renderYear(220, true);
+})();
+</script>
+<script src="../assets/js/chrome.js"></script>
+</body>
+</html>

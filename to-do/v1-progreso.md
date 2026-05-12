@@ -32,10 +32,15 @@
 - [x] **Conflicto de variables resuelto**: cada CSS de ficha (cao-cao.css, diao-chan.css...) tiene su propio `:root` con tema cromático del personaje (cao-cao azul, diao-chan rosa, etc.) que define `--gold` y `--border`. chrome.css se carga DESPUÉS, así que su `:root` los pisaba. Solución: chrome.css ahora declara `--gold` y `--border` SCOPEADOS a `#nav, footer` (no a `:root`), preservando el theming de la ficha en su propio contenido.
 - [x] **Limpieza de duplicación hecha**: añadido `<link>` a chrome.css en `index.html`, `acerca.html` y `404.html`; retiradas las reglas del chrome de `main.css` (#nav, .nav-*, .hamburger lines 17-36, footer block lines 770-779, @media nav lines 1149-1151). main.css: 1151 → 1113 líneas. `.sec-nav` y `.sec-link` quedan en main.css (no son chrome).
 
-### C3 — Completar fichas núcleo · pendiente
-- 7 fichas con archivo vacío (Wang Yun, Sima Yan, Chen Gong, Li Ru, Xun You, Yang Hu, Sun Hao) son la primera prioridad: usar `/ficha`.
-- Después: aplicar `/relaciones` a las que no tengan rel-bubbles (Zhuge Liang prioridad).
-- Mínimo aceptable: 3 secciones presentes + 5-10 bubbles + lista batallas vinculadas.
+### C3 — Completar fichas núcleo · **HECHO**
+- [x] Wang Yun: Relaciones (Diao Chan lg, Dong Zhuo/Li Ru/Lü Bu/Emp.Xian/Jia Xu md) + 4 batallas.
+- [x] Chen Gong: Relaciones (Cao Cao era-specific, Lü Bu lg; Zhang Liao/Gao Shun md) + 3 batallas.
+- [x] Li Ru: Relaciones (Dong Zhuo lg; Wang Yun/Diao Chan/Lü Bu/Emp.Shao md) + 3 batallas.
+- [x] Xun You: Relaciones (Cao Cao lg; Xun Yu/Guo Jia/Yuan Shao md) + 3 batallas.
+- [x] Sima Yan: Relaciones (Sima Yi/Shi/Zhao lg; Cao Huan/Yang Hu/Du Yu/Wang Jun/Sun Hao md) + 2 batallas.
+- [x] Yang Hu: Relaciones (Sima Yan lg; Lu Kang lg; Du Yu/Wang Jun md) + 3 batallas.
+- [x] Sun Hao: Relaciones (Sun Quan lg; Lu Kang/Ding Feng/Yang Hu/Sima Yan/Wang Jun md) + 3 batallas.
+- Pendiente: aplicar `/relaciones` a fichas que no tengan rel-bubbles (Zhuge Liang prioridad).
 
 ### C4 — Nivelar 15 batallas · pendiente
 - Ya sólidas (7): chibi, guandu, huang-jin, xiapi, si-shui-hu-lao, yiling, hefei.

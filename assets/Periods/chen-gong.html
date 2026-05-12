@@ -114,17 +114,155 @@
 
     <!-- PÁGINA 2: Relaciones Clave -->
     <div class="wrap-page" data-page="relaciones">
-      <div style="text-align:center;padding:60px 20px;color:var(--muted)">
-        <h2 style="font-family:'Noto Serif SC',serif;font-size:24px;margin-bottom:12px">Relaciones Clave</h2>
-        <p>Esta sección será completada próximamente con las relaciones más importantes de Chen Gong.</p>
+
+      <div class="era-slider-wrap">
+        <div class="era-slider-header">
+          <span class="era-slider-name">Era Dong Zhuo</span>
+          <span class="era-slider-years">189 – 192 d.C.</span>
+        </div>
+        <input type="range" id="era-range" class="era-range" min="0" max="1" step="1" value="0" list="era-ticks" />
+        <datalist id="era-ticks">
+          <option value="0">Era Dong Zhuo</option>
+          <option value="1">Guerras de los Señores</option>
+        </datalist>
+        <div class="era-tick-labels">
+          <span>Dong Zhuo</span>
+          <span>Guerras de los Señores</span>
+        </div>
       </div>
+
+      <div class="rel-hub">
+        <div class="rel-hub-bubble">
+          <img src="../img/Chen Gong/Chen Gong.webp" alt="Chen Gong" />
+        </div>
+        <span class="rel-hub-label">陈宫 · Chen Gong</span>
+      </div>
+
+      <div class="rel-panel" id="rel-panel" hidden>
+        <button class="rel-panel-close" aria-label="Cerrar">✕</button>
+        <div class="rel-panel-badge"></div>
+        <div class="rel-panel-name"></div>
+        <p class="rel-panel-desc"></p>
+      </div>
+
+      <div class="rel-orbit-section">
+        <h3 class="rel-orbit-label">El Señor Que Abandonó</h3>
+        <div class="rel-bubbles rel-bubbles--lg">
+          <div class="rel-bubble"
+               data-eras="dong-zhuo guerras-senores"
+               data-badge="El Hombre Que Reveló Todo"
+               data-badge-color="#c8a060"
+               data-badge-dong-zhuo="El Hombre Que Reveló Todo"
+               data-badge-guerras-senores="El Enemigo Inevitable"
+               data-badge-color-guerras-senores="#bf2020"
+               data-name="Cao Cao · 曹操"
+               data-desc="Chen Gong se unió a Cao Cao durante su huida de Luoyang convencido de que era un hombre de principios. La masacre de la familia Lü Boshe — ejecutada por Cao Cao sobre una sospecha sin fundamento — lo hizo reconsiderar. Cao Cao dijo la frase que lo definió: prefiero traicionar yo al mundo antes de que el mundo me traicione. Chen Gong lo dejó partir esa misma noche."
+               data-desc-guerras-senores="Tras abandonarlo, Chen Gong pasó a ser el principal estratega de su enemigo. Los enfrentó en Yanzhou y en Xiapi. En la ejecución final, Cao Cao le ofreció la vida; Chen Gong la rechazó. Lo que empezó como una decepción moral se convirtió en una enemistad leal hasta la muerte.">
+            <div class="rel-bubble-img">
+              <img src="../img/Cao Cao/Cao Cao.webp" alt="Cao Cao" />
+            </div>
+            <span class="rel-bubble-name">Cao Cao</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="rel-orbit-section">
+        <h3 class="rel-orbit-label">El Señor Que Eligió</h3>
+        <div class="rel-bubbles rel-bubbles--lg">
+          <div class="rel-bubble"
+               data-eras="guerras-senores"
+               data-badge="El Señor Que No Escuchaba"
+               data-badge-color="#d49e6a"
+               data-name="Lü Bu · 呂布"
+               data-desc="Chen Gong no eligió a Lü Bu por admiración sino por necesidad: necesitaba un señor que no fuera Cao Cao. Intentó convertir el poder errático de Lü Bu en algo estable: diseñó defensas, propuso alianzas, planificó campañas. Lü Bu raramente siguió sus consejos cuando implicaban disciplina o renuncia a impulsos. En Xiapi, Chen Gong propuso una defensa activa que Lü Bu ignoró por escuchar a su esposa. La ciudad cayó y Chen Gong fue ejecutado. Lü Bu suplicó clemencia; Chen Gong, no.">
+            <div class="rel-bubble-img">
+              <img src="../img/Lu Bu/Lu Bu.webp" alt="Lü Bu" />
+            </div>
+            <span class="rel-bubble-name">Lü Bu</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="rel-orbit-section">
+        <h3 class="rel-orbit-label">La Guardia de Lü Bu</h3>
+        <div class="rel-bubbles rel-bubbles--md">
+          <div class="rel-bubble"
+               data-eras="guerras-senores"
+               data-badge="El General Fiel"
+               data-badge-color="#9ab0c8"
+               data-name="Zhang Liao · 張遼"
+               data-desc="Zhang Liao era el general más capaz bajo el mando de Lü Bu y compartió años de campaña con Chen Gong. Tras la caída de Xiapi, Zhang Liao se rindió a Cao Cao y pasó a ser uno de sus mejores generales — una de las incorporaciones más valiosas de la campaña. Chen Gong no siguió ese camino. Los dos hombres que habían servido juntos tomaron decisiones opuestas ante la misma derrota.">
+            <div class="rel-bubble-img">
+              <img src="../img/Zhang Liao/Zhang Liao.webp" alt="Zhang Liao" />
+            </div>
+            <span class="rel-bubble-name">Zhang Liao</span>
+          </div>
+          <div class="rel-bubble"
+               data-eras="guerras-senores"
+               data-badge="El Comandante de Élite"
+               data-badge-color="#9ab0c8"
+               data-name="Gao Shun · 高順"
+               data-desc="Gao Shun comandaba la guardia de élite de Lü Bu, los Osos Armados, y era conocido por su disciplina — un contraste marcado con el propio Lü Bu. Combatió fielmente hasta el final en Xiapi y fue ejecutado junto a Lü Bu tras la caída de la ciudad. A diferencia de Zhang Liao, no se rindió. Como Chen Gong, murió del lado que había elegido.">
+            <div class="rel-bubble-img rel-bubble-img--placeholder">
+              <span>順</span>
+            </div>
+            <span class="rel-bubble-name">Gao Shun</span>
+          </div>
+        </div>
+      </div>
+
     </div>
 
     <!-- PÁGINA 3: Batallas -->
     <div class="wrap-page" data-page="batallas">
-      <div style="text-align:center;padding:60px 20px;color:var(--muted)">
-        <h2 style="font-family:'Noto Serif SC',serif;font-size:24px;margin-bottom:12px">Batallas</h2>
-        <p>Esta sección será completada próximamente con los enfrentamientos principales de Chen Gong.</p>
+      <div class="char-battles">
+
+        <div class="char-battle-card">
+          <div class="char-battle-top">
+            <span class="char-battle-year">190 d.C.</span>
+            <span class="char-battle-result indecisa">Ruptura</span>
+          </div>
+          <div class="char-battle-vs">
+            <span class="cbv-a">Chen Gong</span>
+            <span class="cbv-sep">Y</span>
+            <span class="cbv-b">Cao Cao</span>
+          </div>
+          <div class="char-battle-name">分道扬镳</div>
+          <div class="char-battle-en">La Separación en el Camino</div>
+          <p class="char-battle-flavor">Tras ayudar a Cao Cao a escapar de Luoyang, Chen Gong viajó con él varios días. La masacre de la familia Lü Boshe — ejecutada por Cao Cao sobre una sospecha errónea — convenció a Chen Gong de que ese hombre no podía ser el núcleo de ningún proyecto legítimo. Se separó de él en silencio aquella noche. No fue un acto de traición sino de principio: Chen Gong había decidido cuáles eran sus límites, y Cao Cao los había cruzado.</p>
+        </div>
+
+        <div class="char-battle-card">
+          <div class="char-battle-top">
+            <span class="char-battle-year">194–195 d.C.</span>
+            <span class="char-battle-result indecisa">Indecisa</span>
+          </div>
+          <div class="char-battle-vs">
+            <span class="cbv-a">Lü Bu · Chen Gong</span>
+            <span class="cbv-sep">VS</span>
+            <span class="cbv-b">Cao Cao</span>
+          </div>
+          <div class="char-battle-name">兖州·濮阳之战</div>
+          <div class="char-battle-en">Yanzhou — Batalla de Puyang</div>
+          <p class="char-battle-flavor">Cuando Cao Cao marchó contra Xu Province dejando Yanzhou expuesta, Chen Gong convenció a Zhang Miao de invitar a Lü Bu a ocuparla. Casi toda la provincia se rindió sin combate — la jugada más brillante de Chen Gong. Cao Cao regresó y pasó un año recuperando lo que había perdido. Fue la prueba de que la estrategia de Chen Gong podía funcionar, cuando Lü Bu seguía los planes.</p>
+        </div>
+
+        <div class="char-battle-card">
+          <div class="char-battle-top">
+            <span class="char-battle-year">198–199 d.C.</span>
+            <span class="char-battle-result derrota">Derrota</span>
+          </div>
+          <div class="char-battle-vs">
+            <span class="cbv-a">Lü Bu · Chen Gong</span>
+            <span class="cbv-sep">VS</span>
+            <span class="cbv-b">Cao Cao · Liu Bei</span>
+          </div>
+          <div class="char-battle-name">下邳之战</div>
+          <div class="char-battle-en">Asedio de Xiapi</div>
+          <p class="char-battle-flavor">Chen Gong propuso una defensa activa: Lü Bu saldría con la caballería a operar en el exterior mientras la guarnición sostenía el interior, rompiendo el cerco entre los dos. Lü Bu aceptó, luego cambió de opinión tras escuchar a su esposa, luego bebió hasta quedar inútil. Chen Gong vio cómo su plan moría antes de ejecutarse. La ciudad cayó cuando los propios subordinados de Lü Bu lo traicionaron. Chen Gong fue capturado y ejecutado, rechazando el indulto de Cao Cao sin dudarlo.</p>
+          <a class="char-battle-link" href="../../assets/Battles/xiapi.html">Ver batalla →</a>
+        </div>
+
       </div>
     </div>
 
@@ -133,18 +271,69 @@
 
 <script>
 (function () {
-  const links = document.querySelectorAll(".sec-link[data-page]");
-  const pages = document.querySelectorAll(".wrap-page");
-  const slider = document.querySelector(".wrap-pages");
+  const links = document.querySelectorAll('.sec-link[data-page]');
+  const pages = document.querySelectorAll('.wrap-page');
+  const slider = document.querySelector('.wrap-pages');
   function goTo(pageId) {
-    const idx = [...pages].findIndex((p) => p.dataset.page === pageId);
+    const idx = [...pages].findIndex(p => p.dataset.page === pageId);
     if (idx < 0) return;
     slider.style.transform = `translateX(-${idx * 100}%)`;
-    links.forEach((l) => l.classList.toggle("active", l.dataset.page === pageId));
+    links.forEach(l => l.classList.toggle('active', l.dataset.page === pageId));
   }
-  links.forEach((link) => {
-    link.addEventListener("click", (e) => { e.preventDefault(); goTo(link.dataset.page); });
+  links.forEach(link => { link.addEventListener('click', e => { e.preventDefault(); goTo(link.dataset.page); }); });
+
+  const panel = document.getElementById('rel-panel');
+  const panelBadge = panel.querySelector('.rel-panel-badge');
+  const panelName  = panel.querySelector('.rel-panel-name');
+  const panelDesc  = panel.querySelector('.rel-panel-desc');
+  function showPanel(bubble) {
+    const { badge, badgeColor, name, desc } = bubble.dataset;
+    panelBadge.textContent = badge; panelBadge.style.color = badgeColor; panelBadge.style.borderColor = badgeColor;
+    panelName.textContent = name; panelDesc.textContent = desc;
+    panel.hidden = false; panel.style.animation = 'none'; panel.offsetHeight; panel.style.animation = '';
+    panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+  document.querySelectorAll('.rel-bubble').forEach(bubble => {
+    bubble.addEventListener('click', () => {
+      const wasActive = bubble.classList.contains('active');
+      document.querySelectorAll('.rel-bubble').forEach(b => b.classList.remove('active'));
+      if (wasActive) { panel.hidden = true; } else { bubble.classList.add('active'); showPanel(bubble); }
+    });
   });
+  panel.querySelector('.rel-panel-close').addEventListener('click', () => {
+    panel.hidden = true; document.querySelectorAll('.rel-bubble').forEach(b => b.classList.remove('active'));
+  });
+
+  const ERAS = [
+    { id: 'dong-zhuo',       name: 'Era Dong Zhuo',          years: '189 – 192 d.C.' },
+    { id: 'guerras-senores', name: 'Guerras de los Señores', years: '192 – 200 d.C.' },
+  ];
+  function toCamel(str) { return str.split('-').map(s => s[0].toUpperCase() + s.slice(1)).join(''); }
+  function applyEra(idx, instant) {
+    const era = ERAS[idx];
+    document.querySelector('.era-slider-name').textContent = era.name;
+    document.querySelector('.era-slider-years').textContent = era.years;
+    document.querySelectorAll('.rel-bubble').forEach(b => {
+      const visible = (b.dataset.eras || '').split(' ').includes(era.id);
+      const key = toCamel(era.id);
+      if (b.dataset['badge' + key])      b.dataset.badge      = b.dataset['badge' + key];
+      if (b.dataset['badgeColor' + key]) b.dataset.badgeColor = b.dataset['badgeColor' + key];
+      if (b.dataset['desc' + key])       b.dataset.desc       = b.dataset['desc' + key];
+      if (visible) {
+        if (b.style.display === 'none') {
+          b.classList.remove('era-hidden'); b.style.display = ''; b.offsetHeight;
+          if (!instant) { b.classList.add('bubble-entering'); b.addEventListener('animationend', () => b.classList.remove('bubble-entering'), { once: true }); }
+        }
+      } else { b.classList.add('era-hidden'); b.style.display = 'none'; }
+    });
+    document.querySelectorAll('.rel-orbit-section').forEach(sec => {
+      sec.classList.toggle('era-empty', ![...sec.querySelectorAll('.rel-bubble')].some(b => b.style.display !== 'none'));
+    });
+    const active = document.querySelector('.rel-bubble.active');
+    if (active && active.style.display === 'none') { panel.hidden = true; active.classList.remove('active'); }
+  }
+  document.getElementById('era-range').addEventListener('input', e => applyEra(+e.target.value));
+  applyEra(0, true);
 })();
 </script>
 

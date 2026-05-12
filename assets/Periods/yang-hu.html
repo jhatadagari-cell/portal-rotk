@@ -114,17 +114,134 @@
 
     <!-- PÁGINA 2: Relaciones Clave -->
     <div class="wrap-page" data-page="relaciones">
-      <div style="text-align:center;padding:60px 20px;color:var(--muted)">
-        <h2 style="font-family:'Noto Serif SC',serif;font-size:24px;margin-bottom:12px">Relaciones Clave</h2>
-        <p>Esta sección será completada próximamente con las relaciones más importantes de Yang Hu.</p>
+
+      <div class="era-slider-wrap">
+        <div class="era-slider-header">
+          <span class="era-slider-name">Era Sima</span>
+          <span class="era-slider-years">249 – 265 d.C.</span>
+        </div>
+        <input type="range" id="era-range" class="era-range"
+               min="0" max="1" step="1" value="0" list="era-ticks" />
+        <datalist id="era-ticks">
+          <option value="0">Era Sima</option>
+          <option value="1">Dinastía Jin</option>
+        </datalist>
+        <div class="era-tick-labels">
+          <span>Era Sima</span>
+          <span>Dinastía Jin</span>
+        </div>
       </div>
+
+      <div class="rel-hub">
+        <div class="rel-hub-bubble">
+          <span class="rel-hub-placeholder">羊</span>
+        </div>
+        <span class="rel-hub-label">羊祜 · Yang Hu</span>
+      </div>
+
+      <div class="rel-panel" id="rel-panel" hidden>
+        <button class="rel-panel-close" aria-label="Cerrar">✕</button>
+        <div class="rel-panel-badge"></div>
+        <div class="rel-panel-name"></div>
+        <p class="rel-panel-desc"></p>
+      </div>
+
+      <div class="rel-orbit-section">
+        <h3 class="rel-orbit-label">El Señor</h3>
+        <div class="rel-bubbles rel-bubbles--lg">
+
+          <div class="rel-bubble"
+               data-eras="sima jin"
+               data-badge="El Emperador de Jin"
+               data-badge-color="#c89edc"
+               data-name="Sima Yan · 司马炎"
+               data-desc="El señor al que Yang Hu sirvió y al que presentó repetidamente sus planes para la conquista de Wu. Sima Yan dudó durante años por temor a un fracaso. Finalmente ordenó la invasión en 279 d.C., dos años después de la muerte de Yang Hu, siguiendo los planes que él había dejado.">
+            <div class="rel-bubble-img rel-bubble-img--placeholder">
+              <span>炎</span>
+            </div>
+            <span class="rel-bubble-name">Sima Yan</span>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="rel-orbit-section">
+        <h3 class="rel-orbit-label">El Rival Honorable</h3>
+        <div class="rel-bubbles rel-bubbles--lg">
+
+          <div class="rel-bubble"
+               data-eras="sima"
+               data-badge="El Guardián de Wu"
+               data-badge-color="#c89edc"
+               data-name="Lu Kang · 陆抗"
+               data-desc="Comandante de las defensas de Wu en la frontera norte. Yang Hu y Lu Kang se respetaban mutuamente y evitaban combates sin necesidad. Yang Hu enviaba vino a Lu Kang cuando estaba enfermo; Lu Kang lo aceptaba. Cuando Lu Kang murió en 274 d.C., Yang Hu renovó la presión sobre Sima Yan para actuar, sabiendo que Wu no tendría un sucesor de su nivel.">
+            <div class="rel-bubble-img rel-bubble-img--placeholder">
+              <span>抗</span>
+            </div>
+            <span class="rel-bubble-name">Lu Kang</span>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="rel-orbit-section">
+        <h3 class="rel-orbit-label">Los Ejecutores del Plan</h3>
+        <div class="rel-bubbles rel-bubbles--md">
+
+          <div class="rel-bubble"
+               data-eras="jin"
+               data-badge="El Sucesor del Plan"
+               data-badge-color="#c89edc"
+               data-name="Du Yu · 杜预"
+               data-desc="Yang Hu le transmitió el plan de conquista de Wu en detalle antes de morir. En su lecho de muerte pidió a Sima Yan que le confiara la operación. Du Yu ejecutó el ataque terrestre en 280 d.C. siguiendo exactamente las instrucciones de Yang Hu.">
+            <div class="rel-bubble-img rel-bubble-img--placeholder">
+              <span>預</span>
+            </div>
+            <span class="rel-bubble-name">Du Yu</span>
+          </div>
+
+          <div class="rel-bubble"
+               data-eras="jin"
+               data-badge="La Flota del Yangtsé"
+               data-badge-color="#c89edc"
+               data-name="Wang Jun · 王濬"
+               data-desc="Comandante naval que descendió el Yangtsé con la flota de Jin en 280 d.C. destruyendo las defensas fluviales de Wu. Su avance por el río fue el componente del plan de Yang Hu que completó la pinza sobre Jianye. La victoria de Wang Jun fue, en su diseño, obra de Yang Hu.">
+            <div class="rel-bubble-img rel-bubble-img--placeholder">
+              <span>濬</span>
+            </div>
+            <span class="rel-bubble-name">Wang Jun</span>
+          </div>
+
+        </div>
+      </div>
+
     </div>
 
     <!-- PÁGINA 3: Batallas -->
     <div class="wrap-page" data-page="batallas">
-      <div style="text-align:center;padding:60px 20px;color:var(--muted)">
-        <h2 style="font-family:'Noto Serif SC',serif;font-size:24px;margin-bottom:12px">Batallas</h2>
-        <p>Esta sección será completada próximamente con los enfrentamientos principales de Yang Hu.</p>
+      <div class="char-battles">
+
+        <div class="char-battle-card">
+          <p class="char-battle-year">269 d.C.</p>
+          <h3 class="char-battle-name">荆州屯田 · La Frontera Sur</h3>
+          <p class="char-battle-flavor">Yang Hu asume el mando en Xiangyang. Establece graneros militares y reasigna tropas a labores agrícolas durante los períodos de paz. Crea la base logística que hará posible una invasión sostenida de Wu. Su argumento: sin reservas suficientes, ninguna campaña puede mantenerse el tiempo necesario.</p>
+          <span class="char-battle-result char-battle-result--victoria">Victoria Estratégica</span>
+        </div>
+
+        <div class="char-battle-card">
+          <p class="char-battle-year">269 – 274 d.C.</p>
+          <h3 class="char-battle-name">陆抗对峙 · La Rivalidad con Lu Kang</h3>
+          <p class="char-battle-flavor">Yang Hu y Lu Kang se enfrentan durante años en la frontera sin buscar combates innecesarios. Yang Hu devuelve prisioneros de Wu, respeta sus cosechas, envía vino a Lu Kang cuando está enfermo. Lu Kang acepta el vino. Ninguno destruye al otro antes de que las circunstancias lo exijan. Cuando Lu Kang muere en 274 d.C., Yang Hu sabe que el momento ha llegado.</p>
+          <span class="char-battle-result char-battle-result--indecisa">Indecisa</span>
+        </div>
+
+        <div class="char-battle-card">
+          <p class="char-battle-year">274 – 278 d.C.</p>
+          <h3 class="char-battle-name">伐吴之议 · El Plan para Wu</h3>
+          <p class="char-battle-flavor">Yang Hu presenta el plan de conquista de Wu a Sima Yan en múltiples ocasiones. El emperador duda. Yang Hu argumenta que con Lu Kang muerto, Wu no tiene un sucesor de su nivel y que el momento no puede prolongarse. Muere en 278 d.C. sin ver ejecutado el plan. En su lecho, pide a Sima Yan que confíe la operación a Du Yu. La conquista de 280 d.C. es suya póstumamente.</p>
+          <span class="char-battle-result char-battle-result--victoria">Victoria Póstuma</span>
+        </div>
+
       </div>
     </div>
 
@@ -133,18 +250,97 @@
 
 <script>
 (function () {
-  const links = document.querySelectorAll(".sec-link[data-page]");
-  const pages = document.querySelectorAll(".wrap-page");
-  const slider = document.querySelector(".wrap-pages");
+  // ── Pager ──
+  const links = document.querySelectorAll('.sec-link[data-page]');
+  const pages = document.querySelectorAll('.wrap-page');
+  const slider = document.querySelector('.wrap-pages');
   function goTo(pageId) {
-    const idx = [...pages].findIndex((p) => p.dataset.page === pageId);
+    const idx = [...pages].findIndex(p => p.dataset.page === pageId);
     if (idx < 0) return;
     slider.style.transform = `translateX(-${idx * 100}%)`;
-    links.forEach((l) => l.classList.toggle("active", l.dataset.page === pageId));
+    links.forEach(l => l.classList.toggle('active', l.dataset.page === pageId));
   }
-  links.forEach((link) => {
-    link.addEventListener("click", (e) => { e.preventDefault(); goTo(link.dataset.page); });
+  links.forEach(link => {
+    link.addEventListener('click', e => { e.preventDefault(); goTo(link.dataset.page); });
   });
+
+  // ── Panel ──
+  const panel = document.getElementById('rel-panel');
+  const panelBadge = panel.querySelector('.rel-panel-badge');
+  const panelName  = panel.querySelector('.rel-panel-name');
+  const panelDesc  = panel.querySelector('.rel-panel-desc');
+  function showPanel(bubble) {
+    const { badge, badgeColor, name, desc } = bubble.dataset;
+    panelBadge.textContent = badge;
+    panelBadge.style.color = badgeColor;
+    panelBadge.style.borderColor = badgeColor;
+    panelName.textContent = name;
+    panelDesc.textContent = desc;
+    panel.hidden = false;
+    panel.style.animation = 'none';
+    panel.offsetHeight;
+    panel.style.animation = '';
+    panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+  document.querySelectorAll('.rel-bubble').forEach(bubble => {
+    bubble.addEventListener('click', () => {
+      const wasActive = bubble.classList.contains('active');
+      document.querySelectorAll('.rel-bubble').forEach(b => b.classList.remove('active'));
+      if (wasActive) { panel.hidden = true; }
+      else { bubble.classList.add('active'); showPanel(bubble); }
+    });
+  });
+  panel.querySelector('.rel-panel-close').addEventListener('click', () => {
+    panel.hidden = true;
+    document.querySelectorAll('.rel-bubble').forEach(b => b.classList.remove('active'));
+  });
+
+  // ── Era Slider ──
+  const ERAS = [
+    { id: 'sima', name: 'Era Sima',     years: '249 – 265 d.C.' },
+    { id: 'jin',  name: 'Dinastía Jin', years: '265 – 280 d.C.' },
+  ];
+  function toCamel(str) {
+    return str.split('-').map(s => s[0].toUpperCase() + s.slice(1)).join('');
+  }
+  function applyEra(idx, instant) {
+    const era = ERAS[idx];
+    document.querySelector('.era-slider-name').textContent = era.name;
+    document.querySelector('.era-slider-years').textContent = era.years;
+    document.querySelectorAll('.rel-bubble').forEach(b => {
+      const eras = (b.dataset.eras || '').split(' ');
+      const visible = eras.includes(era.id);
+      const key = toCamel(era.id);
+      if (b.dataset['badge' + key])      b.dataset.badge      = b.dataset['badge' + key];
+      if (b.dataset['badgeColor' + key]) b.dataset.badgeColor = b.dataset['badgeColor' + key];
+      if (b.dataset['desc' + key])       b.dataset.desc       = b.dataset['desc' + key];
+      if (visible) {
+        if (b.style.display === 'none') {
+          b.classList.remove('era-hidden');
+          b.style.display = '';
+          b.offsetHeight;
+          if (!instant) {
+            b.classList.add('bubble-entering');
+            b.addEventListener('animationend', () => b.classList.remove('bubble-entering'), { once: true });
+          }
+        }
+      } else {
+        b.classList.add('era-hidden');
+        b.style.display = 'none';
+      }
+    });
+    document.querySelectorAll('.rel-orbit-section').forEach(sec => {
+      const hasVisible = [...sec.querySelectorAll('.rel-bubble')].some(b => b.style.display !== 'none');
+      sec.classList.toggle('era-empty', !hasVisible);
+    });
+    const active = document.querySelector('.rel-bubble.active');
+    if (active && active.style.display === 'none') {
+      panel.hidden = true;
+      active.classList.remove('active');
+    }
+  }
+  document.getElementById('era-range').addEventListener('input', e => applyEra(+e.target.value));
+  applyEra(0, true);
 })();
 </script>
 
