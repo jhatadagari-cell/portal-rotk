@@ -57,6 +57,9 @@
     if (declared) return declared;
     const p = location.pathname;
     if (/(?:^|\/)index\.html$/.test(p) || p.endsWith('/')) return 'home';
+    if (/periodos\.html$/.test(p)) return 'eras';
+    if (/personajes\.html$/.test(p)) return 'personajes';
+    if (/reinos\.html$/.test(p)) return 'reinos';
     if (/facciones\.html$/.test(p)) return 'facciones';
     if (/batallas\.html$/.test(p)) return 'batallas';
     if (/mapa\.html$/.test(p)) return 'mapa';
@@ -81,9 +84,9 @@
     <span class="nav-en">Romance de los Tres Reinos</span>
   </a>
   <ul class="nav-links" id="nav-links">
-    <li><a href="${href('#periods')}"${isOn('eras')}>Eras</a></li>
-    <li><a href="${href('#heroes')}"${isOn('personajes')}>Personajes</a></li>
-    <li><a href="${href('#factions')}"${isOn('reinos')}>Reinos</a></li>
+    <li><a href="${href('periodos.html')}"${isOn('eras')}>Eras</a></li>
+    <li><a href="${href('personajes.html')}"${isOn('personajes')}>Personajes</a></li>
+    <li><a href="${href('reinos.html')}"${isOn('reinos')}>Reinos</a></li>
     <li><a href="${href('assets/facciones.html')}"${isOn('facciones')}>Facciones</a></li>
     <li><a href="${href('assets/batallas.html')}"${isOn('batallas')}>Batallas</a></li>
     <li><a href="${href('assets/mapa.html')}"${isOn('mapa')}>Mapa</a></li>

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="es" data-page-section="personajes">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Personajes · Portal ROTK</title>
+<meta name="description" content="Fichas de los personajes del Romance de los Tres Reinos: héroes, estrategas, villanos y guerreros que forjaron el destino de una civilización.">
+<meta property="og:title" content="Personajes · Portal ROTK">
+<meta property="og:description" content="Fichas de los personajes del Romance de los Tres Reinos.">
+<meta property="og:url" content="https://jhatadagari-cell.github.io/portal-rotk/personajes.html">
+<meta property="og:image" content="https://jhatadagari-cell.github.io/portal-rotk/assets/img/og-default.png">
+
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700;900&family=Cinzel+Decorative:wght@400;700&family=IM+Fell+English:ital@0;1&family=Noto+Sans+SC:wght@300;400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/chrome.css?v=4">
+<link rel="stylesheet" href="assets/css/main.css">
+</head>
+<body>
+
+<div id="chrome-nav"></div>
+
+<section id="page-hero">
+  <div class="page-hero-in">
+    <p class="hero-tag">Héroes &amp; Villanos · Romance de los Tres Reinos</p>
+    <h1 class="page-hero-zh">人物</h1>
+    <p class="page-hero-en">Los Grandes Protagonistas</p>
+    <p class="page-hero-desc">Los hombres y mujeres cuyas decisiones marcaron el destino del Imperio Han y de los tres reinos nacientes.</p>
+  </div>
+</section>
+
+<section class="sec" id="heroes">
+  <div class="sec-hd">
+    <p class="sec-lbl">Héroes &amp; Villanos</p>
+    <h2 class="sec-ttl" id="heroes-title">Los Grandes Protagonistas</h2>
+    <p class="sec-dsc">Busca por nombre o filtra por facción.</p>
+    <div class="sec-div"></div>
+    <div class="char-filter" id="char-filter">
+      <div class="char-filter-search">
+        <span class="char-search-ico">⌕</span>
+        <input type="text" id="char-search" placeholder="Buscar personaje…" autocomplete="off">
+      </div>
+      <div class="char-filter-factions" id="char-faction-btns"></div>
+    </div>
+  </div>
+  <div id="era-banner"></div>
+  <div class="char-grid" id="char-grid"></div>
+  <div class="chars-more" id="chars-more" hidden>
+    <button class="era-reset" id="chars-more-btn"></button>
+  </div>
+</section>
+
+<div id="chrome-footer"></div>
+
+<div id="lubu-overlay">
+  <div class="lubu-content">
+    <div class="lubu-warn">⚠ WARNING ⚠</div>
+    <div class="lubu-zh">人中呂布</div>
+    <div class="lubu-en">IT'S LU BU</div>
+    <div class="lubu-run">RUN.</div>
+  </div>
+</div>
+
+<div id="cmod" onclick="if(event.target===this)closeMod()">
+  <div class="cmod-box" id="cmod-box">
+    <button class="cmod-x" onclick="closeMod()">✕</button>
+    <div id="cmod-inner"></div>
+  </div>
+</div>
+
+<script src="assets/js/data.js"></script>
+<script src="assets/js/factions.js"></script>
+<script src="assets/js/ui.js"></script>
+<script src="assets/js/chrome.js"></script>
+</body>
+</html>

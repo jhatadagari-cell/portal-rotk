@@ -1,0 +1,363 @@
+/* ══════════════════════════════════════════════
+   INTRO STORY — Sección narrativa scroll-driven
+   index.html · entre #stats y #factions
+   ══════════════════════════════════════════════ */
+
+#intro-story { position: relative; }
+
+/* ── Panel base ─────────────────────────────── */
+.story-panel {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+
+/* ── Reveal: elementos empiezan ocultos ──────── */
+.story-el {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.75s ease, transform 0.75s ease;
+}
+.story-panel.in-view .story-el {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Stagger genérico (panel 1 y 4) */
+.story-panel.in-view .story-el:nth-child(2) { transition-delay: 0.14s; }
+.story-panel.in-view .story-el:nth-child(3) { transition-delay: 0.28s; }
+.story-panel.in-view .story-el:nth-child(4) { transition-delay: 0.46s; }
+.story-panel.in-view .story-el:nth-child(5) { transition-delay: 0.66s; }
+
+/* Opacidades finales por tipo de elemento */
+.story-panel.in-view .story-num   { opacity: 0.48; }
+.story-panel.in-view .story-body  { opacity: 0.74; }
+
+/* ── Tipografía compartida ───────────────────── */
+.story-num {
+  font-family: 'Cinzel Decorative', serif;
+  font-size: 10px;
+  letter-spacing: .40em;
+  text-transform: uppercase;
+  color: var(--gold);
+  display: block;
+  margin-bottom: 10px;
+}
+.story-lbl {
+  font-family: 'Cinzel Decorative', serif;
+  font-size: 12px;
+  letter-spacing: .24em;
+  text-transform: uppercase;
+  color: var(--gold);
+  opacity: .72;
+  display: block;
+  margin-bottom: 12px;
+}
+.story-zh-sm {
+  font-family: 'Noto Serif SC', serif;
+  font-weight: 900;
+  font-size: clamp(34px, 5.5vw, 62px);
+  color: var(--gold);
+  line-height: 1;
+  display: block;
+  margin-bottom: 18px;
+  text-shadow: 0 0 44px rgba(201,168,76,.2);
+}
+.story-year {
+  font-family: 'Cinzel Decorative', serif;
+  font-size: 12px;
+  letter-spacing: .26em;
+  color: var(--gold);
+  display: block;
+  margin-bottom: 14px;
+  /* hereda reveal de .story-el — se declara también como story-el en el HTML */
+}
+.story-panel.in-view .story-year { opacity: 0.62; }
+
+.story-body {
+  font-family: 'IM Fell English', serif;
+  font-size: clamp(15px, 1.7vw, 18px);
+  color: var(--parch);
+  line-height: 1.86;
+  max-width: 460px;
+}
+
+/* ── Wrapper de contenido ────────────────────── */
+.story-content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  padding: 0 clamp(24px, 6vw, 88px);
+}
+.story-content--center {
+  max-width: 700px;
+  margin: 0 auto;
+  align-items: center;
+  text-align: center;
+  padding: clamp(64px, 9vh, 108px) clamp(24px, 6vw, 60px);
+}
+.story-content--center .story-body { max-width: none; }
+
+/* Carácter fantasma de fondo */
+.story-ghost {
+  position: absolute;
+  font-family: 'Noto Serif SC', serif;
+  font-weight: 900;
+  font-size: clamp(210px, 36vw, 420px);
+  color: var(--gold);
+  opacity: .038;
+  user-select: none;
+  pointer-events: none;
+  z-index: 0;
+  line-height: 1;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+/* ── PANEL 1: El Imperio (漢) ────────────────── */
+#story-dynasty {
+  justify-content: center;
+  background:
+    linear-gradient(to bottom, var(--ink) 0%, transparent 14%, transparent 86%, var(--ink) 100%),
+    radial-gradient(ellipse 68% 58% at 50% 48%, rgba(139,26,26,.14) 0%, transparent 68%),
+    var(--ink);
+}
+#story-dynasty::before {
+  content: '';
+  position: absolute; inset: 0;
+  pointer-events: none; z-index: 0;
+  background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23c9a84c' fill-opacity='0.019'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/svg%3E");
+}
+#story-dynasty .story-content { align-items: center; }
+
+/* ── PANEL 2: La Tierra (民) — imagen ────────── */
+#story-land {
+  min-height: 100vh;
+  background: var(--ink);
+}
+.story-img {
+  position: absolute;
+  inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+  object-position: center 30%;
+  filter: brightness(0.42) sepia(0.13) contrast(1.08) saturate(0.70);
+  transform: translateY(var(--story-py, 0px));
+  will-change: transform;
+  z-index: 0;
+}
+.story-img-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background:
+    linear-gradient(to right,
+      var(--ink) 0%,
+      rgba(11,6,0,.90) 22%,
+      rgba(11,6,0,.46) 50%,
+      rgba(11,6,0,.68) 80%,
+      var(--ink) 100%),
+    linear-gradient(to bottom,
+      var(--ink) 0%,
+      transparent 13%,
+      transparent 87%,
+      var(--ink) 100%);
+}
+#story-land .story-content {
+  padding-left: clamp(28px, 7vw, 130px);
+  padding-right: 40px;
+  max-width: 520px;
+}
+
+/* ── PANEL 3: El Cielo Amarillo — imagen espejada ── */
+#story-uprising {
+  min-height: 100vh;
+  background: var(--ink);
+}
+/* Overlay espejado: oscuro a la derecha, imagen visible a la izquierda */
+.story-img-overlay--right {
+  background:
+    linear-gradient(to left,
+      var(--ink) 0%,
+      rgba(11,6,0,.90) 22%,
+      rgba(11,6,0,.46) 50%,
+      rgba(11,6,0,.68) 80%,
+      var(--ink) 100%),
+    linear-gradient(to bottom,
+      var(--ink) 0%,
+      transparent 13%,
+      transparent 87%,
+      var(--ink) 100%);
+}
+/* Contenido alineado a la derecha */
+.story-content--right {
+  margin-left: auto;
+  padding-right: clamp(28px, 7vw, 130px);
+  padding-left: 40px;
+  max-width: 520px;
+}
+
+/* ── PANEL 6: La Fractura (裂) — imagen ─────── */
+#story-fracture {
+  min-height: 100vh;
+  background: var(--ink);
+}
+#story-fracture .story-content {
+  padding-left: clamp(28px, 7vw, 130px);
+  padding-right: 40px;
+  max-width: 520px;
+}
+
+/* ── PANEL 5: El Conflicto (亂) — imagen ─────── */
+#story-war {
+  min-height: 100vh;
+  background: var(--ink);
+}
+
+/* ── PANEL 4: La Respuesta (征) — imagen ────── */
+#story-response {
+  min-height: 100vh;
+  background: var(--ink);
+}
+#story-response .story-content {
+  padding-left: clamp(28px, 7vw, 130px);
+  padding-right: 40px;
+  max-width: 520px;
+}
+
+/* ── PANEL 5: La Profecía (cita) ─────────────── */
+#story-quote {
+  min-height: 100vh;
+  justify-content: center;
+  background:
+    radial-gradient(ellipse 52% 42% at 50% 50%, rgba(201,168,76,.065) 0%, transparent 72%),
+    linear-gradient(to bottom, var(--ink) 0%, transparent 10%, transparent 90%, var(--ink) 100%),
+    var(--ink);
+}
+
+/* Grupos de la cita — stagger específico */
+.story-quote-zh {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 40px;
+}
+.story-q-g {
+  font-family: 'Noto Serif SC', serif;
+  font-weight: 900;
+  font-size: clamp(28px, 5.2vw, 64px);
+  color: var(--gold);
+  line-height: 1.2;
+  letter-spacing: .03em;
+  text-shadow: 0 0 52px rgba(201,168,76,.22);
+  display: block;
+}
+#story-quote .story-q-g:nth-child(1) { transition-delay: 0.00s; }
+#story-quote .story-q-g:nth-child(2) { transition-delay: 0.54s; }
+#story-quote .story-q-g:nth-child(3) { transition-delay: 1.10s; }
+
+.story-quote-es {
+  font-family: 'IM Fell English', serif;
+  font-style: italic;
+  font-size: clamp(15px, 1.7vw, 18px);
+  color: var(--parch2);
+  line-height: 1.82;
+  max-width: 540px;
+  margin-bottom: 18px;
+  transition-delay: 1.84s !important;
+}
+.story-panel.in-view .story-quote-es { opacity: 0.70; }
+
+.story-quote-src {
+  font-family: 'Cinzel Decorative', serif;
+  font-size: 10px;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+  color: var(--gold);
+  transition-delay: 2.40s !important;
+}
+.story-panel.in-view .story-quote-src { opacity: 0.44; }
+
+/* ── PANEL 4: El Trípode (三) ────────────────── */
+#story-kingdoms {
+  justify-content: center;
+  min-height: 100vh;
+  background:
+    radial-gradient(ellipse 55% 68% at 10% 28%, rgba(30,90,191,.13) 0%, transparent 58%),
+    radial-gradient(ellipse 58% 52% at 50% 95%, rgba(30,138,46,.09) 0%, transparent 60%),
+    radial-gradient(ellipse 55% 68% at 90% 28%, rgba(191,32,32,.11) 0%, transparent 58%),
+    linear-gradient(to bottom, var(--ink) 0%, transparent 10%, transparent 90%, var(--ink) 100%),
+    var(--ink);
+}
+.story-kingdoms-row {
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
+  gap: clamp(20px, 6vw, 76px);
+  margin-bottom: 28px;
+}
+.story-k {
+  font-family: 'Noto Serif SC', serif;
+  font-weight: 900;
+  font-size: clamp(54px, 9.5vw, 116px);
+  color: var(--kc, var(--gold));
+  line-height: 1;
+  text-shadow:
+    0 0 48px color-mix(in srgb, var(--kc, var(--gold)) 40%, transparent),
+    0 0 100px color-mix(in srgb, var(--kc, var(--gold)) 16%, transparent);
+}
+/* Stagger específico para los tres caracteres */
+#story-kingdoms .story-k:nth-child(1) { transition-delay: 0.00s; }
+#story-kingdoms .story-k:nth-child(2) { transition-delay: 0.22s; }
+#story-kingdoms .story-k:nth-child(3) { transition-delay: 0.44s; }
+
+.story-kingdoms-line {
+  font-family: 'IM Fell English', serif;
+  font-size: clamp(16px, 2vw, 22px);
+  color: var(--parch);
+  letter-spacing: .03em;
+  margin-bottom: 30px;
+  transition-delay: 0.80s !important;
+}
+.story-panel.in-view .story-kingdoms-line { opacity: 0.62; }
+
+#story-kingdoms .btn-pri {
+  transition-delay: 1.14s !important;
+  display: inline-block;
+}
+
+/* ── Responsive ──────────────────────────────── */
+@media (max-width: 700px) {
+  .story-panel   { min-height: 90vh; }
+  #story-quote   { min-height: 100vh; }
+  #story-land    { min-height: 92vh; }
+  #story-kingdoms { min-height: 92vh; }
+
+  /* Paneles de imagen mobile: imagen arriba, texto abajo */
+  #story-land,
+  #story-uprising,
+  #story-response,
+  #story-war,
+  #story-fracture { align-items: flex-end; }
+  #story-land .story-content,
+  #story-uprising .story-content,
+  #story-response .story-content,
+  #story-war .story-content,
+  #story-fracture .story-content { padding: 36px 24px; max-width: 100%; margin-left: 0; }
+  .story-img-overlay,
+  .story-img-overlay--right {
+    background: linear-gradient(to top,
+      var(--ink) 0%,
+      rgba(11,6,0,.88) 32%,
+      rgba(11,6,0,.12) 62%,
+      var(--ink) 100%);
+  }
+  .story-body { max-width: 100%; }
+  .story-ghost { font-size: clamp(140px, 42vw, 200px); }
+  .story-kingdoms-row { gap: 18px; }
+  .story-k { font-size: clamp(44px, 14vw, 80px); }
+}

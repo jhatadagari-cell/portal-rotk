@@ -29,18 +29,9 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700;900&family=Cinzel+Decorative:wght@400;700&family=IM+Fell+English:ital@0;1&family=Noto+Sans+SC:wght@300;400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/chrome.css?v=4">
 <link rel="stylesheet" href="assets/css/main.css">
+<link rel="stylesheet" href="assets/css/intro.css">
 </head>
 <body>
-
-<!-- Era filter bookmark — visible only when an era is active -->
-<div id="era-bookmark">
-  <div class="bm-body">
-    <span id="era-bookmark-zh"></span>
-    <span class="bm-sep"></span>
-    <span id="era-bookmark-name"></span>
-    <button id="era-bookmark-close" type="button" aria-label="Quitar filtro de era">✕</button>
-  </div>
-</div>
 
 <div id="chrome-nav"></div>
 
@@ -53,112 +44,122 @@
     <h1 class="hero-zh">三國演義</h1>
     <p class="hero-en">Romance de los Tres Reinos</p>
     <p class="hero-yrs">168 — 316 d.C.</p>
-    <p class="hero-desc">El colosal ciclo épico de China: el ocaso de la Dinastía Han, la guerra entre señores feudales y el trípode de tres reinos rivales. Héroes, traidores, estrategas y guerreros que forjaron el destino de una civilización.</p>
+    <div class="hero-rule"></div>
+    <p class="hero-desc">El mayor Imperio del mundo conocido comenzó a desmoronarse. Sus fragmentos forjaron tres reinos en guerra perpetua. Esta es la historia de los hombres que lo vivieron.</p>
     <div class="hero-btns">
-      <a href="#periods" class="btn-pri">Navega por el periodo</a>
-      <a href="assets/mapa.html" class="btn-sec">Mapa Interactivo</a>
+      <a href="periodos.html" class="btn-pri">Explorar las Eras</a>
+      <a href="personajes.html" class="btn-sec">Ver Personajes</a>
     </div>
   </div>
-  <a class="hero-scroll" href="#periods">Descubrir</a>
+  <a class="hero-scroll" href="#intro-story">Descubrir</a>
 </section>
 
-<div id="stats">
-  <div class="stat-item"><div class="stat-n">10</div><div class="stat-l">Eras Históricas</div></div>
-  <div class="stat-item"><div class="stat-n">3</div><div class="stat-l">Reinos Rivales</div></div>
-  <div class="stat-item"><div class="stat-n">14</div><div class="stat-l">Provincias Zhou</div></div>
-  <div class="stat-item"><div class="stat-n">25+</div><div class="stat-l">Ciudades Históricas</div></div>
-  <div class="stat-item"><div class="stat-n">148</div><div class="stat-l">Años de Conflicto</div></div>
-</div>
+<section id="intro-story">
 
-<section class="sec" id="periods">
-  <div class="sec-hd">
-    <p class="sec-lbl">Cronología Histórica</p>
-    <h2 class="sec-ttl">Línea Temporal</h2>
-    <p class="sec-dsc">Selecciona una era para actualizar automáticamente los personajes y reinos intervinientes en el resto de la página.</p>
-    <div class="sec-div"></div>
-    <p id="era-state">Era activa: Todas</p>
-    <div class="era-controls">
-      <button id="era-reset" class="era-reset" type="button">Ver todo</button>
-      <span class="era-hint">Hover para descripción · Click para filtrar</span>
+  <!-- ── Panel 1: El Imperio Han ── -->
+  <div class="story-panel" id="story-dynasty">
+    <span class="story-ghost" aria-hidden="true">漢</span>
+    <div class="story-content story-content--center">
+      <span class="story-el story-num">一</span>
+      <span class="story-el story-lbl">El Imperio Han</span>
+      <span class="story-el story-zh-sm">漢</span>
+      <p class="story-el story-body">La Dinastía Han llevaba cuatrocientos años gobernando China. Era el mayor Imperio que el mundo conocido había visto. Sus leyes, su escritura, su filosofía conformaban una civilización sin igual. Pero en los palacios, los eunucos controlaban al Hijo del Cielo. El orden eterno había empezado a resquebrajarse.</p>
     </div>
   </div>
-  <div class="per-wrap">
-    <div class="per-nav-zone left" aria-hidden="true"></div>
-    <div class="per-grid" id="per-grid"></div>
-    <div class="per-nav-zone right" aria-hidden="true"></div>
+
+  <!-- ── Panel 2: La Gente — Han_tardio.webp ── -->
+  <div class="story-panel" id="story-land">
+    <img src="assets/img/intro/Han_tardio.webp" class="story-img" alt="" aria-hidden="true">
+    <div class="story-img-overlay"></div>
+    <div class="story-content">
+      <span class="story-el story-num">二</span>
+      <span class="story-el story-lbl">La Gente</span>
+      <span class="story-el story-zh-sm">民</span>
+      <span class="story-el story-year">~168 d.C.</span>
+      <p class="story-el story-body">Ochenta millones de almas trabajan la tierra de China. Pagan impuestos a señores que pagan a señores. Las sequías y las inundaciones se alternan con el hambre. Un campesino no sabe qué ocurre en la capital. Solo sabe que este año, de nuevo, el cielo no ha sido generoso.</p>
+    </div>
   </div>
+
+  <!-- ── Panel 3: El Cielo Amarillo — Turbantes_amarillos.webp ── -->
+  <div class="story-panel" id="story-uprising">
+    <img src="assets/img/intro/Turbantes_amarillos.webp" class="story-img" style="object-position:32% center" alt="" aria-hidden="true">
+    <div class="story-img-overlay story-img-overlay--right"></div>
+    <div class="story-content story-content--right">
+      <span class="story-el story-num">三</span>
+      <span class="story-el story-lbl">El Cielo Amarillo</span>
+      <span class="story-el story-zh-sm">黃</span>
+      <span class="story-el story-year">184 d.C.</span>
+      <p class="story-el story-body">Un maestro taoísta llamado Zhang Jue recorre China portando una promesa: el Cielo se renueva. «El Cielo Azul ha muerto. El Cielo Amarillo se alzará.» Medio millón de hambrientos se atan un turbante amarillo a la frente. No es una rebelión. Es una señal del Cielo. Y el Imperio tiembla.</p>
+    </div>
+  </div>
+
+  <!-- ── Panel 4: La Respuesta — Turbantes_amarillos_2.webp ── -->
+  <div class="story-panel" id="story-response">
+    <img src="assets/img/intro/Turbantes_amarillos_2.webp" class="story-img" alt="" aria-hidden="true">
+    <div class="story-img-overlay"></div>
+    <div class="story-content">
+      <span class="story-el story-num">四</span>
+      <span class="story-el story-lbl">La Respuesta del Imperio</span>
+      <span class="story-el story-zh-sm">征</span>
+      <span class="story-el story-year">184 d.C.</span>
+      <p class="story-el story-body">El Hijo del Cielo ordenó levantar milicias en cada provincia. Los señores respondieron con sus propios ejércitos, cada uno con sus propias ambiciones. Y en los campos de todo el Imperio, campesinos que al amanecer araban el barro fueron soldados al atardecer. El Imperio se defendía. Y al hacerlo, forjó a los hombres que un día lo devorarían.</p>
+    </div>
+  </div>
+
+  <!-- ── Panel 5: El Conflicto — Turbantes_amarillos_3.webp ── -->
+  <div class="story-panel" id="story-war">
+    <img src="assets/img/intro/Turbantes_amarillos_3.webp" class="story-img" style="object-position:55% center" alt="" aria-hidden="true">
+    <div class="story-img-overlay story-img-overlay--right"></div>
+    <div class="story-content story-content--right">
+      <span class="story-el story-num">五</span>
+      <span class="story-el story-lbl">El Conflicto</span>
+      <span class="story-el story-zh-sm">亂</span>
+      <span class="story-el story-year">184 — 185 d.C.</span>
+      <p class="story-el story-body">Los Turbantes Amarillos cayeron. Pero los ejércitos levantados para aplastarlos no se disolvieron. Cada señor había comprendido lo mismo: la lealtad al Hijo del Cielo valía mientras fuera conveniente. Y un ejército en campo propio vale más que cualquier edicto imperial.</p>
+    </div>
+  </div>
+
+  <!-- ── Panel 6: La Fractura — Alzamiento_warlords.webp ── -->
+  <div class="story-panel" id="story-fracture">
+    <img src="assets/img/intro/Alzamiento_warlords.webp" class="story-img" style="object-position:center 18%" alt="" aria-hidden="true">
+    <div class="story-img-overlay"></div>
+    <div class="story-content">
+      <span class="story-el story-num">六</span>
+      <span class="story-el story-lbl">La Fractura</span>
+      <span class="story-el story-zh-sm">裂</span>
+      <span class="story-el story-year">190 d.C.</span>
+      <p class="story-el story-body">Dieciocho estandartes. Dieciocho ambiciones. Se llamaban a sí mismos aliados en nombre de Han. Pero alrededor de esa mesa ya trazaban fronteras que aún no existían. Cao Cao. Liu Bei. Sun Jian. Sus nombres no eran todavía reinos. Pronto lo serían.</p>
+    </div>
+  </div>
+
+  <!-- ── Panel 7: La Profecía — la cita ── -->
+  <div class="story-panel" id="story-quote">
+    <div class="story-content story-content--center">
+      <div class="story-quote-zh">
+        <span class="story-el story-q-g">天下大勢，</span>
+        <span class="story-el story-q-g">分久必合，</span>
+        <span class="story-el story-q-g">合久必分</span>
+      </div>
+      <p class="story-el story-quote-es">«Lo que lleva mucho tiempo dividido, inevitablemente se une.<br>Lo que lleva mucho tiempo unido, inevitablemente se divide.»</p>
+      <p class="story-el story-quote-src">Abertura del Romance de los Tres Reinos · Luo Guanzhong, c. 1400</p>
+    </div>
+  </div>
+
+  <!-- ── Panel 4: El Trípode ── -->
+  <div class="story-panel" id="story-kingdoms">
+    <div class="story-content story-content--center">
+      <div class="story-kingdoms-row">
+        <span class="story-el story-k" style="--kc:var(--wei)">魏</span>
+        <span class="story-el story-k" style="--kc:var(--shu)">蜀</span>
+        <span class="story-el story-k" style="--kc:var(--wu)">吳</span>
+      </div>
+      <p class="story-el story-kingdoms-line">Tres reinos. Un trono. Incontables vidas.</p>
+      <a href="periodos.html" class="story-el btn-pri">Explorar las Eras</a>
+    </div>
+  </div>
+
 </section>
 
-<section class="sec" id="heroes">
-  <div class="sec-hd">
-    <p class="sec-lbl">Héroes &amp; Villanos</p>
-    <h2 class="sec-ttl" id="heroes-title">Los Grandes Protagonistas</h2>
-    <p class="sec-dsc">Los hombres y mujeres cuyas decisiones marcaron el destino del Imperio Han y de los tres reinos nacientes.</p>
-    <div class="sec-div"></div>
-    <div class="char-filter" id="char-filter">
-      <div class="char-filter-search">
-        <span class="char-search-ico">⌕</span>
-        <input type="text" id="char-search" placeholder="Buscar personaje…" autocomplete="off">
-      </div>
-      <div class="char-filter-factions" id="char-faction-btns"></div>
-    </div>
-  </div>
-  <div id="era-banner"></div>
-  <div class="char-grid" id="char-grid"></div>
-  <div class="chars-more" id="chars-more" hidden>
-    <button class="era-reset" id="chars-more-btn"></button>
-  </div>
-</section>
-
-<section class="sec sec-alt" id="factions">
-  <div class="sec-hd">
-    <p class="sec-lbl">Los Tres Reinos</p>
-    <h2 class="sec-ttl" id="factions-title">三國鼎立</h2>
-    <p class="sec-dsc">El trípode inestable: tres reinos que se equilibraron en una guerra perpetua hasta que uno devoró a los otros.</p>
-    <div class="sec-div"></div>
-  </div>
-  <div class="fac-grid">
-    <div class="fcard" style="--fc:var(--wei);border-top-color:var(--wei)" data-bg="魏" data-fid="wei">
-      <div class="fcard-zh" style="color:var(--wei)">魏</div>
-      <div class="fcard-en">Wei</div>
-      <div class="fcard-yrs">220 — 265 d.C.</div>
-      <p class="fcard-desc">El reino más poderoso, heredero del norte Han. Los Cao gobernaron en nombre del Hijo del Cielo hasta que la familia Sima los devoró desde dentro.</p>
-      <p class="fcard-cap">Capital: <b>Luoyang 洛阳</b></p>
-      <div class="fcard-rulers">
-        <span class="fcard-r">Cao Cao 曹操</span>
-        <span class="fcard-r">Cao Pi 曹丕</span>
-        <span class="fcard-r">Cao Rui 曹叡</span>
-        <span class="fcard-r">Sima Yi 司馬懿</span>
-      </div>
-    </div>
-    <div class="fcard" style="--fc:var(--shu);border-top-color:var(--shu)" data-bg="蜀" data-fid="shu">
-      <div class="fcard-zh" style="color:var(--shu)">蜀漢</div>
-      <div class="fcard-en">Shu Han</div>
-      <div class="fcard-yrs">221 — 263 d.C.</div>
-      <p class="fcard-desc">El reino del suroeste, el más pequeño de los tres. Liu Bei reclamó la legitimidad Han. Zhuge Liang dedicó su vida entera a su restauración imposible.</p>
-      <p class="fcard-cap">Capital: <b>Chengdu 成都</b></p>
-      <div class="fcard-rulers">
-        <span class="fcard-r">Liu Bei 劉備</span>
-        <span class="fcard-r">Zhuge Liang 諸葛亮</span>
-        <span class="fcard-r">Jiang Wei 姜維</span>
-        <span class="fcard-r">Liu Shan 劉禪</span>
-      </div>
-    </div>
-    <div class="fcard" style="--fc:var(--wu);border-top-color:var(--wu)" data-bg="吳" data-fid="wu">
-      <div class="fcard-zh" style="color:var(--wu)">吳</div>
-      <div class="fcard-en">Wu</div>
-      <div class="fcard-yrs">222 — 280 d.C.</div>
-      <p class="fcard-desc">El reino del sureste, dominando el Yangtzé. Sun Quan gobernó Wu con mano firme durante más de medio siglo, el más longevo de los tres reyes.</p>
-      <p class="fcard-cap">Capital: <b>Jianye 建業</b> (Nanjing)</p>
-      <div class="fcard-rulers">
-        <span class="fcard-r">Sun Ce 孫策</span>
-        <span class="fcard-r">Sun Quan 孫權</span>
-        <span class="fcard-r">Zhou Yu 周瑜</span>
-        <span class="fcard-r">Lu Xun 陸遜</span>
-      </div>
-    </div>
-  </div>
-</section>
 
 <section id="map-cta">
   <div class="map-inner">
@@ -188,21 +189,6 @@
 
 <div id="chrome-footer"></div>
 
-<div id="lubu-overlay">
-  <div class="lubu-content">
-    <div class="lubu-warn">⚠ WARNING ⚠</div>
-    <div class="lubu-zh">人中呂布</div>
-    <div class="lubu-en">IT'S LU BU</div>
-    <div class="lubu-run">RUN.</div>
-  </div>
-</div>
-
-<div id="cmod" onclick="if(event.target===this)closeMod()">
-  <div class="cmod-box" id="cmod-box">
-    <button class="cmod-x" onclick="closeMod()">✕</button>
-    <div id="cmod-inner"></div>
-  </div>
-</div>
 
 <div id="km-overlay" onclick="if(event.target===this)closeKm()">
   <div class="km-panel" id="km-panel">
@@ -218,8 +204,8 @@
 <script src="assets/js/data.js"></script>
 <script src="assets/js/factions.js"></script>
 <script src="assets/js/ui.js"></script>
-<script src="assets/js/era-fx.js"></script>
 <script src="assets/js/kingdoms.js"></script>
+<script src="assets/js/intro.js"></script>
 <script src="assets/js/chrome.js"></script>
 </body>
 </html>

@@ -29,7 +29,6 @@ function applyFactionTransition(el, c) {
 
   el.addEventListener('mouseenter', () => {
     clearTimeout(el._facTimer);
-    // Disable border-color transition on el so cursor tracking is instant
     el._facBaseTrans = el.style.transition;
     el.style.transition = el.style.transition.replace(/,?\s*border-color[^,]*/gi, '');
     const icoEl = el.querySelector('.ccard-ico');
@@ -45,7 +44,6 @@ function applyFactionTransition(el, c) {
   });
 
   el.addEventListener('mouseleave', () => {
-    // Restore el transition, add smooth reset to children
     el.style.transition = el._facBaseTrans || '';
     const icoEl = el.querySelector('.ccard-ico');
     const zhEl  = el.querySelector('.ccard-zh');
@@ -60,7 +58,7 @@ function applyFactionTransition(el, c) {
   });
 }
 
-// DOM refs
+// DOM refs — may be null on pages that don't include these sections
 const cgrid          = document.getElementById('char-grid');
 const charsMore      = document.getElementById('chars-more');
 const charsMoreBtn   = document.getElementById('chars-more-btn');
@@ -69,10 +67,12 @@ const eraState       = document.getElementById('era-state');
 const eraReset       = document.getElementById('era-reset');
 const heroesTitle    = document.getElementById('heroes-title');
 const factionsTitle  = document.getElementById('factions-title');
-const eraBookmark     = document.getElementById('era-bookmark');
-const eraBookmarkZh   = document.getElementById('era-bookmark-zh');
+const eraBookmark    = document.getElementById('era-bookmark');
+const eraBookmarkZh  = document.getElementById('era-bookmark-zh');
 const eraBookmarkName = document.getElementById('era-bookmark-name');
-document.getElementById('era-bookmark-close').addEventListener('click', () => setActiveEra(null));
+
+const _bmClose = document.getElementById('era-bookmark-close');
+if (_bmClose) _bmClose.addEventListener('click', () => setActiveEra(null));
 
 // ── Character grid ──
 const RANK_LABELS = { 1:'Figuras Clave Del Periodo', 2:'Otros Importantes', 3:'Otros Actores' };
@@ -81,7 +81,6 @@ function effectiveRank(c, eraId) {
   return (eraId && c.eraRank && c.eraRank[eraId] != null) ? c.eraRank[eraId] : (c.rank ?? 3);
 }
 
-// ── Character filter helpers ──
 function getCharFactions(c) {
   if (c.facs) return c.facs.map(f => ({ label: f.label, color: f.color }));
   return [{ label: c.fac, color: c.fc }];
@@ -109,6 +108,7 @@ function charMatchesFactions(c) {
 
 function renderFactionFilters(basePool) {
   const container = document.getElementById('char-faction-btns');
+  if (!container) return;
   const factionMap = new Map();
   basePool.forEach(({ c }) => {
     getCharFactions(c).forEach(({ label, color }) => {
@@ -138,10 +138,11 @@ function renderFactionFilters(basePool) {
 }
 
 function renderCharacters(filterEraId = null) {
+  if (!cgrid) return;
   cgrid.innerHTML = '';
   const basePool = CHARS
     .map((c, i) => ({ c, i }))
-    .filter(({ c }) => c.tags && c.fc)  // excluir batallas; mostrar todos los personajes
+    .filter(({ c }) => c.tags && c.fc)
     .filter(({ c }) => !filterEraId || (c.eras || []).includes(filterEraId));
 
   renderFactionFilters(basePool);
@@ -229,24 +230,26 @@ function renderCharacters(filterEraId = null) {
   }
 
   const hasHidden = pool.length > shown.length;
-  charsMore.hidden = !hasHidden && !showAllChars;
-  if (!charsMore.hidden) {
+  if (charsMore) charsMore.hidden = !hasHidden && !showAllChars;
+  if (charsMore && !charsMore.hidden && charsMoreBtn) {
     charsMoreBtn.textContent = showAllChars
       ? 'Ver menos'
       : `Ver todos${filterEraId ? ' en esta era' : ' los personajes'} · ${pool.length}`;
   }
 }
 
-cgrid.addEventListener('click', e => {
-  const card = e.target.closest('.ccard, .ccard-row');
-  if (!card) return;
-  const idx = parseInt(card.dataset.idx);
-  if (CHARS[idx] && CHARS[idx].zh === '吕布') {
-    luBuEasterEgg(idx);
-  } else {
-    openChar(idx);
-  }
-});
+if (cgrid) {
+  cgrid.addEventListener('click', e => {
+    const card = e.target.closest('.ccard, .ccard-row');
+    if (!card) return;
+    const idx = parseInt(card.dataset.idx);
+    if (CHARS[idx] && CHARS[idx].zh === '吕布') {
+      luBuEasterEgg(idx);
+    } else {
+      openChar(idx);
+    }
+  });
+}
 
 // ── Faction cards ──
 function renderFactions(filterEraId = null) {
@@ -259,144 +262,219 @@ function renderFactions(filterEraId = null) {
 
 // ── Period carousel ──
 const pgrid = document.getElementById('per-grid');
-const pwrap = pgrid.closest('.per-wrap');
-let edgeScrollDir = 0;
-let edgeScrollTimer = null;
+if (pgrid) {
+  const pwrap = pgrid.closest('.per-wrap');
+  let edgeScrollDir = 0;
+  let edgeScrollTimer = null;
 
-function setEdgeScroll(dir) {
-  if (edgeScrollDir === dir) return;
-  edgeScrollDir = dir;
-  pwrap.classList.toggle('nav-left', dir < 0);
-  pwrap.classList.toggle('nav-right', dir > 0);
-  if (!dir && edgeScrollTimer) {
-    clearInterval(edgeScrollTimer);
-    edgeScrollTimer = null;
-    return;
-  }
-  if (dir && !edgeScrollTimer) {
-    edgeScrollTimer = setInterval(() => {
-      if (!edgeScrollDir) return;
-      pgrid.scrollLeft += edgeScrollDir * 14;
-    }, 16);
+  const setEdgeScroll = (dir) => {
+    if (edgeScrollDir === dir) return;
+    edgeScrollDir = dir;
+    if (pwrap) {
+      pwrap.classList.toggle('nav-left', dir < 0);
+      pwrap.classList.toggle('nav-right', dir > 0);
+    }
+    if (!dir && edgeScrollTimer) {
+      clearInterval(edgeScrollTimer);
+      edgeScrollTimer = null;
+      return;
+    }
+    if (dir && !edgeScrollTimer) {
+      edgeScrollTimer = setInterval(() => {
+        if (!edgeScrollDir) return;
+        pgrid.scrollLeft += edgeScrollDir * 14;
+      }, 16);
+    }
+  };
+
+  PERIODS.forEach(p => {
+    const wrap = document.createElement('div');
+    wrap.className = 'pcard-wrap';
+
+    const d = document.createElement('div');
+    d.className = 'pcard';
+    d.dataset.pid = p.id;
+    d.style.cssText = `--pc:${p.c}`;
+    d.innerHTML = `
+      <div class="pcard-ico">${p.ico}</div>
+      <div class="pcard-en">${p.n}</div>
+      <div class="pcard-zh">${p.zh}</div>
+      <div class="pcard-over">
+        <div class="pcard-over-desc">${p.desc}</div>
+        ${p.detailHref ? `<a class="pcard-detail" href="${p.detailHref}" onclick="event.stopPropagation()">Ver cronología →</a>` : ''}
+      </div>
+    `;
+
+    const yr = document.createElement('div');
+    yr.className = 'pcard-yr';
+    yr.style.cssText = `--pc:${p.c}`;
+    yr.textContent = p.y;
+
+    wrap.appendChild(d);
+    wrap.appendChild(yr);
+    pgrid.appendChild(wrap);
+  });
+
+  pgrid.addEventListener('click', e => {
+    const detail = e.target.closest('.pcard-detail');
+    if (detail) return;
+    const card = e.target.closest('.pcard');
+    if (!card) return;
+    setActiveEra(card.dataset.pid);
+  });
+
+  pgrid.addEventListener('wheel', e => {
+    if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+      pgrid.scrollBy({ left: e.deltaY, behavior: 'smooth' });
+      e.preventDefault();
+    }
+  }, { passive: false });
+
+  if (pwrap) {
+    const leftZone  = pwrap.querySelector('.per-nav-zone.left');
+    const rightZone = pwrap.querySelector('.per-nav-zone.right');
+
+    if (leftZone) {
+      leftZone.addEventListener('mouseenter',  () => setEdgeScroll(-1));
+      leftZone.addEventListener('mouseleave',  () => setEdgeScroll(0));
+      leftZone.addEventListener('click', e => {
+        e.stopPropagation();
+        setEdgeScroll(0);
+        const step = (pgrid.querySelector('.pcard-wrap')?.offsetWidth ?? 200) + 22;
+        pgrid.scrollBy({ left: -step, behavior: 'smooth' });
+      });
+    }
+    if (rightZone) {
+      rightZone.addEventListener('mouseenter', () => setEdgeScroll(1));
+      rightZone.addEventListener('mouseleave', () => setEdgeScroll(0));
+      rightZone.addEventListener('click', e => {
+        e.stopPropagation();
+        setEdgeScroll(0);
+        const step = (pgrid.querySelector('.pcard-wrap')?.offsetWidth ?? 200) + 22;
+        pgrid.scrollBy({ left: step, behavior: 'smooth' });
+      });
+    }
+
+    pwrap.addEventListener('mouseleave', () => setEdgeScroll(0));
   }
 }
 
-PERIODS.forEach(p => {
-  const wrap = document.createElement('div');
-  wrap.className = 'pcard-wrap';
-
-  const d = document.createElement('div');
-  d.className = 'pcard';
-  d.dataset.pid = p.id;
-  d.style.cssText = `--pc:${p.c}`;
-  d.innerHTML = `
-    <div class="pcard-ico">${p.ico}</div>
-    <div class="pcard-en">${p.n}</div>
-    <div class="pcard-zh">${p.zh}</div>
-    <div class="pcard-over">
-      <div class="pcard-over-desc">${p.desc}</div>
-      ${p.detailHref ? `<a class="pcard-detail" href="${p.detailHref}" onclick="event.stopPropagation()">Ver cronología →</a>` : ''}
-    </div>
-  `;
-
-  const yr = document.createElement('div');
-  yr.className = 'pcard-yr';
-  yr.style.cssText = `--pc:${p.c}`;
-  yr.textContent = p.y;
-
-  wrap.appendChild(d);
-  wrap.appendChild(yr);
-  pgrid.appendChild(wrap);
-});
-
+// ── Era activation ──
 function setActiveEra(eraId) {
   activeEra = eraId;
   showAllChars = false;
   selectedFactions.clear();
   filterText = '';
-  document.getElementById('char-search').value = '';
+  const searchEl = document.getElementById('char-search');
+  if (searchEl) searchEl.value = '';
   const era = PERIODS.find(p => p.id === eraId);
   document.querySelectorAll('.pcard').forEach(card => {
     card.classList.toggle('active', card.dataset.pid === eraId);
   });
-  eraState.textContent = era ? `Era activa: ${era.n} · ${era.y}` : 'Era activa: Todas';
-  eraBookmark.classList.toggle('visible', !!era);
-  eraBookmark.style.setProperty('--bm-c', era ? era.c : '');
-  eraBookmarkZh.textContent = era ? era.zh : '';
-  eraBookmarkName.textContent = era ? era.n : '';
-  heroesTitle.textContent = era ? `Personajes clave · ${era.n}` : 'Los Grandes Protagonistas';
-  factionsTitle.textContent = era ? `Reinos intervinientes · ${era.zh}` : '三國鼎立';
+  if (eraState) eraState.textContent = era ? `Era activa: ${era.n} · ${era.y}` : 'Era activa: Todas';
+  if (eraBookmark) {
+    eraBookmark.classList.toggle('visible', !!era);
+    eraBookmark.style.setProperty('--bm-c', era ? era.c : '');
+  }
+  if (eraBookmarkZh)   eraBookmarkZh.textContent   = era ? era.zh : '';
+  if (eraBookmarkName) eraBookmarkName.textContent  = era ? era.n  : '';
+  if (heroesTitle)   heroesTitle.textContent   = era ? `Personajes clave · ${era.n}` : 'Los Grandes Protagonistas';
+  if (factionsTitle) factionsTitle.textContent = era ? `Reinos intervinientes · ${era.zh}` : '三國鼎立';
   renderCharacters(eraId);
   renderFactions(eraId);
-  if (eraId === 'turbantes')      startBlossom();    else stopBlossom();
-  if (eraId === 'chibi')          startFire();       else stopFire();
-  if (eraId === 'sima')           startBlizzard();   else stopBlizzard();
-  if (eraId === 'han-tardio')     startDust();       else stopDust();
-  if (eraId === 'jin')            startPeace();      else stopPeace();
-  if (eraId === 'guerras-senores') startLeaves();    else stopLeaves();
-  if (eraId === 'dong-zhuo')      startCinder();     else stopCinder();
-  if (eraId === 'guerras-ocaso')  startDuskRain();   else stopDuskRain();
-  if (eraId === 'ocho-principes') startChaos();      else stopChaos();
-  if (eraId === 'tres-reinos')    startWarDust();    else stopWarDust();
+  renderEraDetail(eraId);
+  if (typeof startBlossom  !== 'undefined') { if (eraId === 'turbantes')       startBlossom();    else stopBlossom();  }
+  if (typeof startFire     !== 'undefined') { if (eraId === 'chibi')           startFire();       else stopFire();     }
+  if (typeof startBlizzard !== 'undefined') { if (eraId === 'sima')            startBlizzard();   else stopBlizzard(); }
+  if (typeof startDust     !== 'undefined') { if (eraId === 'han-tardio')      startDust();       else stopDust();     }
+  if (typeof startPeace    !== 'undefined') { if (eraId === 'jin')             startPeace();      else stopPeace();    }
+  if (typeof startLeaves   !== 'undefined') { if (eraId === 'guerras-senores') startLeaves();     else stopLeaves();   }
+  if (typeof startCinder   !== 'undefined') { if (eraId === 'dong-zhuo')       startCinder();     else stopCinder();   }
+  if (typeof startDuskRain !== 'undefined') { if (eraId === 'guerras-ocaso')   startDuskRain();   else stopDuskRain(); }
+  if (typeof startChaos    !== 'undefined') { if (eraId === 'ocho-principes')  startChaos();      else stopChaos();    }
+  if (typeof startWarDust  !== 'undefined') { if (eraId === 'tres-reinos')     startWarDust();    else stopWarDust();  }
 }
 
-pgrid.addEventListener('click', e => {
-  const detail = e.target.closest('.pcard-detail');
-  if (detail) return;
-  const card = e.target.closest('.pcard');
-  if (!card) return;
-  setActiveEra(card.dataset.pid);
-});
-
-pgrid.addEventListener('wheel', e => {
-  if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
-    pgrid.scrollBy({ left: e.deltaY, behavior: 'smooth' });
-    e.preventDefault();
-  }
-}, { passive: false });
-
-const leftZone  = pwrap.querySelector('.per-nav-zone.left');
-const rightZone = pwrap.querySelector('.per-nav-zone.right');
-
-leftZone.addEventListener('mouseenter',  () => setEdgeScroll(-1));
-leftZone.addEventListener('mouseleave',  () => setEdgeScroll(0));
-rightZone.addEventListener('mouseenter', () => setEdgeScroll(1));
-rightZone.addEventListener('mouseleave', () => setEdgeScroll(0));
-
-leftZone.addEventListener('click', e => {
-  e.stopPropagation();
-  setEdgeScroll(0);
-  const step = (pgrid.querySelector('.pcard-wrap')?.offsetWidth ?? 200) + 22;
-  pgrid.scrollBy({ left: -step, behavior: 'smooth' });
-});
-rightZone.addEventListener('click', e => {
-  e.stopPropagation();
-  setEdgeScroll(0);
-  const step = (pgrid.querySelector('.pcard-wrap')?.offsetWidth ?? 200) + 22;
-  pgrid.scrollBy({ left: step, behavior: 'smooth' });
-});
-
-pwrap.addEventListener('mouseleave', () => setEdgeScroll(0));
-
-eraReset.addEventListener('click', () => setActiveEra(null));
-charsMoreBtn.addEventListener('click', () => {
+if (eraReset)    eraReset.addEventListener('click', () => setActiveEra(null));
+if (charsMoreBtn) charsMoreBtn.addEventListener('click', () => {
   showAllChars = !showAllChars;
   renderCharacters(activeEra);
 });
 
+// ── Era detail expansion panel (periodos.html) ──
+function renderEraDetail(eraId) {
+  const section = document.getElementById('era-detail');
+  const panel   = document.getElementById('era-detail-panel');
+  if (!section || !panel) return;
+
+  if (!eraId) {
+    section.classList.remove('visible');
+    return;
+  }
+
+  const era = PERIODS.find(p => p.id === eraId);
+  if (!era) { section.classList.remove('visible'); return; }
+
+  panel.innerHTML = `
+    <div class="era-detail-hd">
+      <span class="era-detail-ico">${era.ico}</span>
+      <div class="era-detail-meta">
+        <div class="era-detail-zh" style="color:${era.c}">${era.zh}</div>
+        <h2 class="era-detail-n">${era.n}</h2>
+        <div class="era-detail-y">${era.y}</div>
+      </div>
+    </div>
+    <div class="era-detail-div" style="background:${era.c}"></div>
+    <p class="era-detail-desc">${era.desc}</p>
+    ${era.legs && era.legs.length ? `
+      <div class="era-detail-block">
+        <h3 class="era-detail-block-ttl">Facciones del periodo</h3>
+        <div class="era-detail-legs">
+          ${era.legs.map(([color, label]) => `
+            <div class="era-leg">
+              <span class="era-leg-dot" style="background:${color}"></span>
+              <span class="era-leg-lbl">${label}</span>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    ` : ''}
+    ${era.suberas && era.suberas.length ? `
+      <div class="era-detail-block">
+        <h3 class="era-detail-block-ttl">Sub-periodos</h3>
+        <div class="era-detail-sublist">
+          ${era.suberas.map(s => `
+            <div class="era-subera" style="border-left-color:${era.c}">${s}</div>
+          `).join('')}
+        </div>
+      </div>
+    ` : ''}
+    ${era.detailHref ? `
+      <div class="era-detail-cta">
+        <a href="${era.detailHref}" class="era-detail-link">Ver cronología detallada →</a>
+      </div>
+    ` : ''}
+  `;
+
+  section.classList.add('visible');
+  setTimeout(() => section.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 60);
+}
+
 // ── FAQ ──
 const flist = document.getElementById('faq-list');
-FAQS.forEach(f => {
-  const item = document.createElement('div');
-  item.className = 'faq-item';
-  item.innerHTML = `
-    <button class="faq-q" onclick="this.parentElement.classList.toggle('open')">
-      <span>${f.q}</span><span class="faq-arrow">▾</span>
-    </button>
-    <div class="faq-a">${f.a}</div>
-  `;
-  flist.appendChild(item);
-});
+if (flist) {
+  FAQS.forEach(f => {
+    const item = document.createElement('div');
+    item.className = 'faq-item';
+    item.innerHTML = `
+      <button class="faq-q" onclick="this.parentElement.classList.toggle('open')">
+        <span>${f.q}</span><span class="faq-arrow">▾</span>
+      </button>
+      <div class="faq-a">${f.a}</div>
+    `;
+    flist.appendChild(item);
+  });
+}
 
 // ── Lü Bu easter egg ──
 function luBuEasterEgg(idx) {
@@ -404,29 +482,34 @@ function luBuEasterEgg(idx) {
   setTimeout(() => document.body.classList.remove('lubu-shaking'), 1050);
 
   const ov = document.getElementById('lubu-overlay');
-  ov.querySelectorAll('.lubu-zh,.lubu-en,.lubu-run').forEach(el => {
-    el.style.animation = 'none';
-    void el.offsetWidth;
-    el.style.animation = '';
-  });
-  ov.classList.add('lb-active');
-
-  setTimeout(() => {
-    ov.style.transition = 'opacity .68s ease';
-    ov.style.opacity = '0';
+  if (ov) {
+    ov.querySelectorAll('.lubu-zh,.lubu-en,.lubu-run').forEach(el => {
+      el.style.animation = 'none';
+      void el.offsetWidth;
+      el.style.animation = '';
+    });
+    ov.classList.add('lb-active');
     setTimeout(() => {
-      ov.classList.remove('lb-active');
-      ov.style.transition = '';
-      ov.style.opacity = '';
-      openChar(idx);
-    }, 690);
-  }, 3300);
+      ov.style.transition = 'opacity .68s ease';
+      ov.style.opacity = '0';
+      setTimeout(() => {
+        ov.classList.remove('lb-active');
+        ov.style.transition = '';
+        ov.style.opacity = '';
+        openChar(idx);
+      }, 690);
+    }, 3300);
+  } else {
+    openChar(idx);
+  }
 }
 
 // ── Character modal ──
 function openChar(i) {
   const c = CHARS[i];
-  const box = document.getElementById('cmod-box');
+  const cmod = document.getElementById('cmod');
+  const box  = document.getElementById('cmod-box');
+  if (!cmod || !box) return;
   box.style.borderColor = c.fc;
   document.getElementById('cmod-inner').innerHTML = `
     <div class="cmod-hd">
@@ -442,21 +525,25 @@ function openChar(i) {
     <div class="cmod-stats">${c.stats.map(s=>`<div class="cmod-stat"><div class="cmod-sl">${s[0]}</div><div class="cmod-sv">${s[1]}</div></div>`).join('')}</div>
     ${c.detailHref ? `<a class="cmod-detail-btn" href="${c.detailHref}">Ver Ficha · ${c.en}</a>` : `<button class="cmod-detail-btn" disabled>Ver Ficha · Próximamente</button>`}
   `;
-  document.getElementById('cmod').classList.add('open');
+  cmod.classList.add('open');
 }
 function closeMod() {
-  document.getElementById('cmod').classList.remove('open');
+  const cmod = document.getElementById('cmod');
+  if (cmod) cmod.classList.remove('open');
 }
-document.addEventListener('keydown', e => { if(e.key==='Escape') closeMod(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMod(); });
 
 // ── Character search filter ──
-document.getElementById('char-search').addEventListener('input', e => {
-  filterText = e.target.value.trim();
-  renderCharacters(activeEra);
-});
+const charSearchEl = document.getElementById('char-search');
+if (charSearchEl) {
+  charSearchEl.addEventListener('input', e => {
+    filterText = e.target.value.trim();
+    renderCharacters(activeEra);
+  });
+}
 
 // ── Init + scroll reveal ──
-renderCharacters();
+if (cgrid) renderCharacters();
 renderFactions();
 
 const obs = new IntersectionObserver(entries => {
@@ -468,21 +555,9 @@ const obs = new IntersectionObserver(entries => {
     }
   });
 }, { threshold: 0.08 });
-document.querySelectorAll('.ccard,.fcard,.pcard-wrap').forEach((el,i) => {
+document.querySelectorAll('.ccard,.fcard,.pcard-wrap').forEach((el, i) => {
   el.style.opacity = '0';
   el.style.transform = 'translateY(18px)';
   el.style.transition = `opacity 0.45s ${i*0.04}s ease, transform 0.45s ${i*0.04}s ease, box-shadow 0.18s, border-color 0.18s`;
   obs.observe(el);
-});
-
-// ── Back to top ──
-const _btt = document.getElementById('back-top');
-const _pv  = document.getElementById('corner-vignette');
-window.addEventListener('scroll', () => {
-  const show = scrollY > 400;
-  _btt.classList.toggle('visible', show);
-  _pv.classList.toggle('visible', show);
-}, { passive: true });
-_btt.addEventListener('click', () => {
-  window.scrollTo({ top: 0, behavior: 'smooth' });
 });

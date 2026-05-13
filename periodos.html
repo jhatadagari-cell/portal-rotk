@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="es" data-page-section="eras">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Eras Históricas · Portal ROTK</title>
+<meta name="description" content="Las diez eras del conflicto: del ocaso del Han Tardío a la unificación Jin. Explora cada periodo con sus facciones, sub-periodos y cronología detallada.">
+<meta property="og:title" content="Eras Históricas · Portal ROTK">
+<meta property="og:description" content="Las diez eras del conflicto: del ocaso del Han Tardío a la unificación Jin.">
+<meta property="og:url" content="https://jhatadagari-cell.github.io/portal-rotk/periodos.html">
+<meta property="og:image" content="https://jhatadagari-cell.github.io/portal-rotk/assets/img/og-default.png">
+
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700;900&family=Cinzel+Decorative:wght@400;700&family=IM+Fell+English:ital@0;1&family=Noto+Sans+SC:wght@300;400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/chrome.css?v=4">
+<link rel="stylesheet" href="assets/css/main.css">
+</head>
+<body>
+
+<div id="era-bookmark">
+  <div class="bm-body">
+    <span id="era-bookmark-zh"></span>
+    <span class="bm-sep"></span>
+    <span id="era-bookmark-name"></span>
+    <button id="era-bookmark-close" type="button" aria-label="Quitar selección de era">✕</button>
+  </div>
+</div>
+
+<div id="chrome-nav"></div>
+
+<section id="page-hero">
+  <div class="page-hero-in">
+    <p class="hero-tag">Cronología Histórica · 168 — 316 d.C.</p>
+    <h1 class="page-hero-zh">紀年</h1>
+    <p class="page-hero-en">Eras del Conflicto</p>
+    <p class="page-hero-desc">Diez periodos que abarcan el ocaso de la Dinastía Han, la guerra entre señores feudales, el trípode de los tres reinos y la unificación Jin.</p>
+  </div>
+</section>
+
+<section class="sec" id="periods">
+  <div class="sec-hd">
+    <p class="sec-lbl">Cronología Histórica</p>
+    <h2 class="sec-ttl">Línea Temporal</h2>
+    <p class="sec-dsc">Selecciona una era para ver su desglose histórico.</p>
+    <div class="sec-div"></div>
+    <p id="era-state">Selecciona una era para comenzar</p>
+    <div class="era-controls">
+      <button id="era-reset" class="era-reset" type="button">Ver todo</button>
+      <span class="era-hint">Hover para descripción · Click para desglose</span>
+    </div>
+  </div>
+  <div class="per-wrap">
+    <div class="per-nav-zone left" aria-hidden="true"></div>
+    <div class="per-grid" id="per-grid"></div>
+    <div class="per-nav-zone right" aria-hidden="true"></div>
+  </div>
+</section>
+
+<section id="era-detail" class="era-detail-sec">
+  <div class="wrap">
+    <div id="era-detail-panel"></div>
+  </div>
+</section>
+
+<div id="chrome-footer"></div>
+
+<script src="assets/js/data.js"></script>
+<script src="assets/js/factions.js"></script>
+<script src="assets/js/ui.js"></script>
+<script src="assets/js/era-fx.js"></script>
+<script src="assets/js/chrome.js"></script>
+</body>
+</html>
