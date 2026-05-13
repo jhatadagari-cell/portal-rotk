@@ -40,4 +40,16 @@
 
   // Inicializar posición sin esperar al primer scroll
   updateParallax();
+
+  // ── Fade "Descubrir" al hacer scroll ──────────────────────────────────
+  const heroScroll = document.querySelector('.hero-scroll');
+  if (heroScroll) {
+    const BASE_OPACITY = 0.32;
+    const FADE_DISTANCE = 180;
+    window.addEventListener('scroll', () => {
+      const progress = Math.min(window.scrollY / FADE_DISTANCE, 1);
+      heroScroll.style.opacity = BASE_OPACITY * (1 - progress);
+      heroScroll.style.pointerEvents = progress >= 1 ? 'none' : '';
+    }, { passive: true });
+  }
 })();
