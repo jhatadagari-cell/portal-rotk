@@ -143,6 +143,15 @@ footer::before{content:'';display:block;position:absolute;top:0;left:0;right:0;h
   opacity:.6;
   letter-spacing:.02em;
 }
+.cm-role{
+  font-family:'Cinzel Decorative',serif;
+  font-size:clamp(10px,1vw,12px);
+  letter-spacing:.28em;
+  text-transform:uppercase;
+  color:var(--gold,#c9a84c);
+  opacity:.65;
+  margin:6px 0 18px;
+}
 
 /* sec-nav sticks just below the chrome nav */
 .sec-nav{top:var(--nav-h,58px)}

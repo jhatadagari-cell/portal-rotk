@@ -18,41 +18,48 @@
       if (f) facColor = f.color;
     }
 
-    if (!facLabel && !period) return;
+    const heroCopy = document.querySelector('.hero-copy');
+    if (!heroCopy) return;
 
-    // Inject below the "Ficha" eyebrow in the hero section
-    const eyebrow = document.querySelector('.hero-copy .eyebrow');
-    if (!eyebrow) return;
+    // 1. Faction + dates — just below the eyebrow
+    const eyebrow = heroCopy.querySelector('.eyebrow');
+    if (eyebrow && (facLabel || period)) {
+      const meta = document.createElement('div');
+      meta.className = 'char-meta';
 
-    const meta = document.createElement('div');
-    meta.className = 'char-meta';
+      if (facLabel) {
+        const facEl = document.createElement('span');
+        facEl.className = 'cm-fac';
+        facEl.style.color = facColor;
+        facEl.style.borderColor = facColor;
+        facEl.textContent = facLabel;
+        meta.appendChild(facEl);
+      }
+      if (facLabel && period) {
+        const sep = document.createElement('span');
+        sep.className = 'cm-sep';
+        sep.setAttribute('aria-hidden', 'true');
+        meta.appendChild(sep);
+      }
+      if (period) {
+        const perEl = document.createElement('span');
+        perEl.className = 'cm-period';
+        perEl.textContent = period;
+        meta.appendChild(perEl);
+      }
 
-    if (facLabel) {
-      const facEl = document.createElement('span');
-      facEl.className = 'cm-fac';
-      facEl.style.color = facColor;
-      facEl.style.borderColor = facColor;
-      facEl.textContent = facLabel;
-      meta.appendChild(facEl);
+      eyebrow.style.marginBottom = '8px';
+      eyebrow.after(meta);
     }
 
-    if (facLabel && period) {
-      const sep = document.createElement('span');
-      sep.className = 'cm-sep';
-      sep.setAttribute('aria-hidden', 'true');
-      meta.appendChild(sep);
+    // 2. Role title — just below the h1
+    const title = heroCopy.querySelector('.title');
+    if (title && char.ttl) {
+      const role = document.createElement('p');
+      role.className = 'cm-role';
+      role.textContent = char.ttl;
+      title.after(role);
     }
-
-    if (period) {
-      const perEl = document.createElement('span');
-      perEl.className = 'cm-period';
-      perEl.textContent = period;
-      meta.appendChild(perEl);
-    }
-
-    // Tighten eyebrow gap so meta reads as part of the same block
-    eyebrow.style.marginBottom = '8px';
-    eyebrow.after(meta);
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
