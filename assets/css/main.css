@@ -1010,7 +1010,6 @@ body.lubu-shaking{animation:lubu-shake .98s ease-in-out}
   display:flex;
   flex-direction:column;
   align-items:center;
-  gap:14px;
   margin-top:22px
 }
 .char-filter-search{
@@ -1036,7 +1035,7 @@ body.lubu-shaking{animation:lubu-shake .98s ease-in-out}
   color:var(--parch);
   font-family:'IM Fell English',serif;
   font-size:19px;
-  padding:9px 14px 9px 36px;
+  padding:9px 44px 9px 36px;
   border-radius:2px;
   outline:none;
   transition:border-color .18s
@@ -1049,33 +1048,163 @@ body.lubu-shaking{animation:lubu-shake .98s ease-in-out}
   border-color:var(--gold)
 }
 
+/* ── Funnel button ── */
+.char-funnel{
+  position:absolute;
+  right:0;
+  top:0;
+  bottom:0;
+  width:40px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:none;
+  border:none;
+  border-left:1px solid var(--border);
+  cursor:pointer;
+  color:var(--gold);
+  opacity:.38;
+  transition:opacity .18s,background .18s,border-color .18s;
+  border-radius:0 2px 2px 0
+}
+.char-funnel:hover{
+  opacity:.8;
+  background:rgba(201,168,76,.06)
+}
+.char-funnel.active{
+  opacity:1;
+  background:rgba(201,168,76,.1);
+  border-color:rgba(201,168,76,.5)
+}
+.char-funnel.has-filters{
+  opacity:1
+}
+.char-funnel.has-filters::after{
+  content:'';
+  position:absolute;
+  top:7px;
+  right:7px;
+  width:5px;
+  height:5px;
+  border-radius:50%;
+  background:var(--gold);
+  box-shadow:0 0 6px rgba(201,168,76,.8)
+}
+.funnel-ico{
+  width:15px;
+  height:15px;
+  transition:fill .18s
+}
+.char-funnel.has-filters .funnel-ico{
+  fill:rgba(201,168,76,.25)
+}
+@keyframes funnel-pulse{
+  0%,100%{opacity:.38}
+  50%{opacity:.72}
+}
+.char-funnel:not(.has-filters):not(.active):not(:hover){
+  animation:funnel-pulse 2.6s ease-in-out 1.8s 3
+}
+
+/* ── Funnel dropdown panel ── */
+.char-funnel-panel{
+  position:absolute;
+  top:calc(100% + 6px);
+  left:50%;
+  transform:translateX(-50%) translateY(-8px);
+  min-width:100%;
+  width:max-content;
+  max-width:460px;
+  background:rgba(8,4,0,.97);
+  border:1px solid rgba(201,168,76,.3);
+  border-radius:2px;
+  padding:16px 18px 14px;
+  z-index:200;
+  box-shadow:0 12px 40px rgba(0,0,0,.7),0 0 0 1px rgba(201,168,76,.07);
+  backdrop-filter:blur(6px);
+  opacity:0;
+  pointer-events:none;
+  transition:opacity .2s ease,transform .2s ease
+}
+.char-funnel-panel.open{
+  opacity:1;
+  pointer-events:auto;
+  transform:translateX(-50%) translateY(0)
+}
+.funnel-lbl{
+  font-family:'Cinzel Decorative',serif;
+  font-size:10px;
+  letter-spacing:.3em;
+  text-transform:uppercase;
+  color:var(--gold);
+  opacity:.5;
+  margin:0 0 13px
+}
 .char-filter-factions{
   display:flex;
   flex-wrap:wrap;
-  justify-content:center;
-  gap:8px
+  gap:7px
 }
 .fac-filter-btn{
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
   font-family:'IM Fell English',serif;
   font-size:13px;
-  color:var(--fc,var(--gold));
-  border:1px solid rgba(201,168,76,.4);
-  padding:5px 12px;
+  color:var(--parch2);
+  border:1px solid rgba(201,168,76,.28);
+  padding:5px 11px 5px 9px;
   border-radius:2px;
   background:transparent;
   cursor:pointer;
   transition:all .18s;
-  letter-spacing:.04em
+  letter-spacing:.03em
 }
 .fac-filter-btn:hover{
-  background:rgba(201,168,76,.08);
-  border-color:var(--fc,var(--gold))
+  background:rgba(201,168,76,.07);
+  border-color:var(--fc,var(--gold));
+  color:var(--parch)
 }
 .fac-filter-btn.active{
-  background:rgba(201,168,76,.25);
+  background:rgba(201,168,76,.18);
   border-color:var(--fc,var(--gold));
   color:var(--parch);
   box-shadow:0 0 0 1px var(--fc,var(--gold))
+}
+.fac-dot{
+  width:7px;
+  height:7px;
+  border-radius:50%;
+  flex-shrink:0;
+  opacity:.85
+}
+.fac-count{
+  font-family:'Noto Sans SC',sans-serif;
+  font-size:11px;
+  opacity:.42;
+  margin-left:2px
+}
+.funnel-clear{
+  display:block;
+  width:100%;
+  text-align:center;
+  font-family:'Cinzel Decorative',serif;
+  font-size:10px;
+  letter-spacing:.2em;
+  text-transform:uppercase;
+  color:var(--parch2);
+  opacity:.4;
+  background:none;
+  border:none;
+  border-top:1px solid rgba(201,168,76,.1);
+  cursor:pointer;
+  padding:10px 0 0;
+  margin-top:12px;
+  transition:opacity .18s,color .18s
+}
+.funnel-clear:hover{
+  opacity:.85;
+  color:var(--gold)
 }
 
 /* ── Batallas ── */

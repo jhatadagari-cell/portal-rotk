@@ -36,8 +36,17 @@
       <div class="char-filter-search">
         <span class="char-search-ico">⌕</span>
         <input type="text" id="char-search" placeholder="Buscar personaje…" autocomplete="off">
+        <button class="char-funnel" id="char-funnel" aria-label="Filtrar por facción">
+          <svg class="funnel-ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">
+            <path d="M1.5 2.5h13L9.5 8.8v4.7l-3-1.5V8.8z"/>
+          </svg>
+        </button>
+        <div class="char-funnel-panel" id="char-funnel-panel">
+          <p class="funnel-lbl">Filtrar por Facción</p>
+          <div class="char-filter-factions" id="char-faction-btns"></div>
+          <button class="funnel-clear" id="funnel-clear" hidden>Limpiar filtros</button>
+        </div>
       </div>
-      <div class="char-filter-factions" id="char-faction-btns"></div>
     </div>
   </div>
   <div id="era-banner"></div>
