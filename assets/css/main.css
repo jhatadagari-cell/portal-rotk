@@ -178,7 +178,7 @@ body{background:var(--ink);color:var(--parch);font-family:'IM Fell English',Geor
 }
 .ccard-names{display:flex;align-items:baseline;gap:9px;margin-bottom:12px;flex-wrap:wrap}
 .ccard-zh{font-family:'Noto Serif SC',serif;font-size:22px;font-weight:700;color:var(--fc,var(--gold));line-height:1.1}
-.ccard-en{font-family:'Cinzel Decorative',serif;font-size:18px;font-weight:700;color:var(--parch);letter-spacing:.08em}
+.ccard-en{font-family:'Cinzel Decorative',serif;font-size:14px;font-weight:700;color:var(--parch);opacity:.88;letter-spacing:.09em}
 .ccard-rule{height:1px;background:linear-gradient(to right,var(--fc,var(--gold)),transparent);opacity:.2;margin-bottom:12px}
 .ccard-ttl{font-family:'IM Fell English',serif;font-style:italic;font-size:18px;color:var(--parch2);opacity:.65;margin-bottom:8px}
 .ccard-bio{font-family:'Noto Sans SC',sans-serif;font-size:13px;color:var(--parch2);line-height:1.62;opacity:.7;flex:1;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
