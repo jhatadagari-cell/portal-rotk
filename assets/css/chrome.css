@@ -152,6 +152,10 @@ footer::before{content:'';display:block;position:absolute;top:0;left:0;right:0;h
   opacity:.65;
   margin:6px 0 18px;
 }
+/* Extra top breathing room when banner is absent */
+.hero-copy.has-char-meta{
+  padding-top:36px;
+}
 
 /* sec-nav sticks just below the chrome nav */
 .sec-nav{top:var(--nav-h,58px)}

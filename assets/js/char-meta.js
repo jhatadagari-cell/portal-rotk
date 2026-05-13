@@ -21,9 +21,11 @@
     const heroCopy = document.querySelector('.hero-copy');
     if (!heroCopy) return;
 
-    // 1. Faction + dates — just below the eyebrow
-    const eyebrow = heroCopy.querySelector('.eyebrow');
-    if (eyebrow && (facLabel || period)) {
+    // Mark container so CSS can add breathing room
+    heroCopy.classList.add('has-char-meta');
+
+    // 1. Faction + dates — prepended as first element
+    if (facLabel || period) {
       const meta = document.createElement('div');
       meta.className = 'char-meta';
 
@@ -48,8 +50,7 @@
         meta.appendChild(perEl);
       }
 
-      eyebrow.style.marginBottom = '8px';
-      eyebrow.after(meta);
+      heroCopy.prepend(meta);
     }
 
     // 2. Role title — just below the h1
