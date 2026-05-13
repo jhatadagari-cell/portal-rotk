@@ -107,6 +107,45 @@ footer::before{content:'';display:block;position:absolute;top:0;left:0;right:0;h
   vertical-align:middle;
   letter-spacing:0;
 }
+
+/* ── Banner meta: facción + fechas ── */
+.char-banner-meta{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex-wrap:wrap;
+  gap:0;
+  margin:0 0 13px;
+}
+.cbm-fac{
+  font-family:'Cinzel Decorative',serif;
+  font-size:clamp(9px,1vw,11px);
+  letter-spacing:.22em;
+  text-transform:uppercase;
+  padding:4px 13px;
+  border:1px solid currentColor;
+  border-radius:1px;
+  opacity:.78;
+  line-height:1.5;
+}
+.cbm-sep{
+  display:inline-block;
+  width:5px;height:5px;
+  border-radius:50%;
+  background:var(--gold,#c9a84c);
+  opacity:.28;
+  margin:0 14px;
+  flex-shrink:0;
+}
+.cbm-period{
+  font-family:'IM Fell English',serif;
+  font-style:italic;
+  font-size:clamp(12px,1.1vw,14px);
+  color:var(--parch2,#b8a98a);
+  opacity:.62;
+  letter-spacing:.03em;
+}
+
 /* sec-nav sticks just below the chrome nav */
 .sec-nav{top:var(--nav-h,58px)}
 
