@@ -108,42 +108,40 @@ footer::before{content:'';display:block;position:absolute;top:0;left:0;right:0;h
   letter-spacing:0;
 }
 
-/* ── Banner meta: facción + fechas ── */
-.char-banner-meta{
-  display:flex;
+/* ── Char meta: facción + fechas (bajo el eyebrow "Ficha") ── */
+.char-meta{
+  display:inline-flex;
   align-items:center;
-  justify-content:center;
-  flex-wrap:wrap;
   gap:0;
-  margin:0 0 13px;
+  margin:0 0 20px;
 }
-.cbm-fac{
+.cm-fac{
   font-family:'Cinzel Decorative',serif;
-  font-size:clamp(9px,1vw,11px);
-  letter-spacing:.22em;
+  font-size:10px;
+  letter-spacing:.2em;
   text-transform:uppercase;
-  padding:4px 13px;
-  border:1px solid currentColor;
+  padding:3px 10px;
+  border:1px solid;
   border-radius:1px;
-  opacity:.78;
+  opacity:.72;
   line-height:1.5;
 }
-.cbm-sep{
+.cm-sep{
   display:inline-block;
-  width:5px;height:5px;
+  width:4px;height:4px;
   border-radius:50%;
   background:var(--gold,#c9a84c);
-  opacity:.28;
-  margin:0 14px;
+  opacity:.3;
+  margin:0 12px;
   flex-shrink:0;
 }
-.cbm-period{
+.cm-period{
   font-family:'IM Fell English',serif;
   font-style:italic;
-  font-size:clamp(12px,1.1vw,14px);
+  font-size:14px;
   color:var(--parch2,#b8a98a);
-  opacity:.62;
-  letter-spacing:.03em;
+  opacity:.6;
+  letter-spacing:.02em;
 }
 
 /* sec-nav sticks just below the chrome nav */

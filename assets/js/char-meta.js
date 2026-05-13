@@ -4,16 +4,13 @@
   function init() {
     if (typeof CHARS === 'undefined') return;
 
-    // Match current page to a character via detailHref
     const pagePath = location.pathname.split('/').filter(Boolean).pop() || '';
     const char = CHARS.find(c => c.detailHref && c.detailHref.split('/').pop() === pagePath);
     if (!char) return;
 
-    // Period string from stats (e.g. "155–220 d.C.")
     const periodEntry = char.stats && char.stats.find(s => s[0] === 'Período');
     const period = periodEntry ? periodEntry[1] : null;
 
-    // Faction: prefer FACTIONS lookup for centralized color, fall back to c.fc
     let facLabel = char.fac || null;
     let facColor = char.fc || '#c9a84c';
     if (typeof FACTIONS !== 'undefined' && facLabel) {
@@ -23,39 +20,39 @@
 
     if (!facLabel && !period) return;
 
-    const banner = document.querySelector('.char-banner');
-    if (!banner) return;
+    // Inject below the "Ficha" eyebrow in the hero section
+    const eyebrow = document.querySelector('.hero-copy .eyebrow');
+    if (!eyebrow) return;
 
     const meta = document.createElement('div');
-    meta.className = 'char-banner-meta';
+    meta.className = 'char-meta';
 
     if (facLabel) {
       const facEl = document.createElement('span');
-      facEl.className = 'cbm-fac';
+      facEl.className = 'cm-fac';
       facEl.style.color = facColor;
+      facEl.style.borderColor = facColor;
       facEl.textContent = facLabel;
       meta.appendChild(facEl);
     }
 
     if (facLabel && period) {
       const sep = document.createElement('span');
-      sep.className = 'cbm-sep';
+      sep.className = 'cm-sep';
       sep.setAttribute('aria-hidden', 'true');
       meta.appendChild(sep);
     }
 
     if (period) {
       const perEl = document.createElement('span');
-      perEl.className = 'cbm-period';
+      perEl.className = 'cm-period';
       perEl.textContent = period;
       meta.appendChild(perEl);
     }
 
-    // Insert before the last banner rule (bottom ornamental line)
-    const rules = banner.querySelectorAll('.char-banner-rule');
-    const lastRule = rules[rules.length - 1];
-    if (lastRule) banner.insertBefore(meta, lastRule);
-    else banner.appendChild(meta);
+    // Tighten eyebrow gap so meta reads as part of the same block
+    eyebrow.style.marginBottom = '8px';
+    eyebrow.after(meta);
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
