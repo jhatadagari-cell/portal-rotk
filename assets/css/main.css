@@ -155,42 +155,51 @@ body{background:var(--ink);color:var(--parch);font-family:'IM Fell English',Geor
 .char-rank-2{grid-template-columns:repeat(auto-fill,minmax(138px,1fr));gap:9px}
 
 /* Rank 1 card (full) */
+/* ── Character cards ── */
 .ccard{
-  display:flex;flex-direction:column;height:100%;background:rgba(255,255,255,.022);border:1px solid rgba(255,255,255,.052);
-  border-top:3px solid var(--fc,var(--gold));border-radius:4px;padding:17px 15px;
-  cursor:pointer;transition:transform .18s,box-shadow .18s;position:relative;overflow:hidden
+  display:flex;flex-direction:column;height:100%;
+  background:rgba(255,255,255,.025);
+  border:1px solid rgba(255,255,255,.055);
+  border-left:2px solid var(--fc,var(--gold));
+  border-radius:2px;padding:20px 18px 16px;
+  cursor:pointer;transition:transform .18s,box-shadow .18s,background .18s;
+  position:relative;overflow:hidden
 }
 .ccard::after{
-  content:attr(data-bg);position:absolute;right:-12px;top:-6px;
-  font-family:'Noto Serif SC',serif;font-size:88px;font-weight:900;
-  color:var(--fc,var(--gold));opacity:.036;pointer-events:none;line-height:1;user-select:none
+  content:attr(data-bg);position:absolute;right:-8px;top:-4px;
+  font-family:'Noto Serif SC',serif;font-size:108px;font-weight:900;
+  color:var(--fc,var(--gold));opacity:.052;pointer-events:none;line-height:1;user-select:none
 }
-.ccard:hover{transform:translateY(-5px);box-shadow:0 10px 28px rgba(0,0,0,.5),0 0 0 1px var(--fc,var(--goldf));overflow:visible;z-index:2}
-.ccard-hd{display:flex;align-items:center;gap:10px;margin-bottom:11px}
-.ccard-ico{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0;border:2px solid var(--fc,var(--gold));background:rgba(0,0,0,.3)}
-.ccard-zh{font-family:'Noto Serif SC',serif;font-size:20px;font-weight:700;color:var(--fc,var(--gold))}
-.ccard-en{font-family:'Cinzel Decorative',serif;font-size:16px;color:var(--gold);opacity:.48;letter-spacing:.1em;margin-top:1px}
-.ccard-ttl{font-family:'IM Fell English',serif;font-style:italic;font-size:19px;color:var(--parch2);opacity:.62;margin-bottom:7px}
-.ccard-bio{font-family:'Noto Sans SC',sans-serif;font-size:14px;color:var(--parch2);line-height:1.55;opacity:.74;flex:1;min-height:0;max-height:6.6em;overflow:hidden;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;text-overflow:ellipsis;transition:max-height .22s ease}
-.ccard:hover .ccard-bio{max-height:30em}
-.ccard-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:9px}
-.ccard-tag{font-family:'Noto Sans SC',sans-serif;font-size:11px;color:var(--fc,var(--gold));border:1px solid var(--fc,var(--goldf));padding:2px 6px;border-radius:2px;opacity:.78}
+.ccard:hover{
+  transform:translateY(-3px);
+  background:rgba(255,255,255,.038);
+  box-shadow:0 8px 28px rgba(0,0,0,.42),0 0 0 1px var(--fc,var(--goldf));
+  overflow:visible;z-index:2
+}
+.ccard-names{display:flex;align-items:baseline;gap:9px;margin-bottom:12px;flex-wrap:wrap}
+.ccard-zh{font-family:'Noto Serif SC',serif;font-size:22px;font-weight:700;color:var(--fc,var(--gold));line-height:1.1}
+.ccard-en{font-family:'Cinzel Decorative',serif;font-size:10px;color:var(--parch2);opacity:.4;letter-spacing:.09em}
+.ccard-rule{height:1px;background:linear-gradient(to right,var(--fc,var(--gold)),transparent);opacity:.2;margin-bottom:12px}
+.ccard-ttl{font-family:'IM Fell English',serif;font-style:italic;font-size:18px;color:var(--parch2);opacity:.65;margin-bottom:8px}
+.ccard-bio{font-family:'Noto Sans SC',sans-serif;font-size:13px;color:var(--parch2);line-height:1.62;opacity:.7;flex:1;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+.ccard-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:12px}
+.ccard-tag{font-family:'Noto Sans SC',sans-serif;font-size:10px;color:var(--fc,var(--gold));border:1px solid var(--fc,var(--goldf));padding:2px 7px;border-radius:1px;opacity:.65}
 .ccard-btn{display:block;margin-top:13px;text-align:center;font-family:'Cinzel Decorative',serif;font-size:16px;color:var(--fc,var(--gold));border:1px solid var(--fc,var(--goldf));padding:7px 10px;border-radius:2px;letter-spacing:.12em;text-transform:uppercase;transition:all .18s;background:transparent;cursor:pointer;width:100%}
 .ccard-btn:hover{background:rgba(255,255,255,.04);border-color:var(--fc,var(--gold))}
 
-/* Rank 2 card (compact square) */
+/* Rank 2 compact card */
 .ccard--sm{
   display:flex;flex-direction:column;align-items:center;text-align:center;
-  padding:14px 10px 12px;gap:4px;
+  padding:16px 10px 13px;gap:3px;
 }
-.ccard--sm .ccard-ico{width:34px;height:34px;font-size:19px;margin-bottom:2px}
-.ccard--sm .ccard-zh{font-size:14px}
-.ccard--sm .ccard-en{font-size:10px;letter-spacing:.06em}
-.ccard--sm .ccard-ttl{font-size:16px;margin-bottom:0;-webkit-line-clamp:2;display:-webkit-box;-webkit-box-orient:vertical;overflow:hidden}
-.ccard--sm .ccard-tags{justify-content:center;margin-top:6px}
-.ccard--sm .ccard-tag{font-size:10px;padding:1px 5px}
+.ccard--sm .ccard-zh{font-size:17px}
+.ccard--sm .ccard-en{font-size:9px;letter-spacing:.06em}
+.ccard--sm .ccard-ttl{font-size:13px;margin-bottom:0;margin-top:3px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.ccard--sm .ccard-rule{display:none}
+.ccard--sm .ccard-tags{justify-content:center;margin-top:7px}
+.ccard--sm .ccard-tag{font-size:9px;padding:1px 5px}
 
-/* Multi-faction transition cards */
+/* Multi-faction */
 .ccard--multifac{position:relative}
 .ccard--multifac::before{
   content:'⇄';position:absolute;top:7px;right:9px;
@@ -199,29 +208,28 @@ body{background:var(--ink);color:var(--parch);font-family:'IM Fell English',Geor
 }
 
 /* Rank 3 row list */
-.char-rank-list{display:flex;flex-direction:column;gap:5px}
+.char-rank-list{display:flex;flex-direction:column;gap:4px}
 .ccard-row{
   display:flex;align-items:center;gap:12px;
   padding:9px 14px;
   background:rgba(255,255,255,.013);
   border:1px solid rgba(255,255,255,.038);
-  border-left:3px solid var(--fc,var(--gold));
-  border-radius:3px;cursor:pointer;
+  border-left:2px solid var(--fc,var(--gold));
+  border-radius:2px;cursor:pointer;
   transition:background .14s,transform .14s;
   overflow:hidden;position:relative;
 }
 .ccard-row::after{
   content:attr(data-bg);position:absolute;right:-8px;top:50%;transform:translateY(-50%);
   font-family:'Noto Serif SC',serif;font-size:52px;font-weight:900;
-  color:var(--fc,var(--gold));opacity:.028;pointer-events:none;line-height:1;user-select:none
+  color:var(--fc,var(--gold));opacity:.03;pointer-events:none;line-height:1;user-select:none
 }
 .ccard-row:hover{background:rgba(255,255,255,.028);transform:translateX(3px)}
-.ccard-row .ccard-ico{width:32px;height:32px;font-size:14px;flex-shrink:0}
 .ccard-row-body{flex:1;min-width:0}
 .ccard-row-name{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
 .ccard-row .ccard-zh{font-size:14px}
 .ccard-row .ccard-en{font-size:10px;letter-spacing:.06em}
-.ccard-row .ccard-ttl{font-size:16px;margin-bottom:0;opacity:.52;margin-top:1px}
+.ccard-row .ccard-ttl{font-size:14px;margin-bottom:0;opacity:.5;margin-top:1px}
 .ccard-row .ccard-tags{flex-shrink:0;display:flex;flex-wrap:wrap;gap:4px;margin-top:0}
 .ccard-row .ccard-tag{font-size:10px;padding:1px 5px}
 .sec-nav{display:flex;gap:12px;padding:12px 20px;background:rgba(255,255,255,.02);border-bottom:1px solid rgba(255,255,255,.08);position:sticky;top:0;z-index:100;flex-wrap:wrap;justify-content:center}

@@ -202,7 +202,6 @@ function renderCharacters(filterEraId = null) {
           row.setAttribute('data-idx', i);
           row.style.cssText = `--fc:${c.fc}`;
           row.innerHTML = `
-            <div class="ccard-ico" style="border-color:${c.fc}">${c.ico}</div>
             <div class="ccard-row-body">
               <div class="ccard-row-name">
                 <span class="ccard-zh" style="color:${c.fc}">${c.zh}</span>
@@ -224,19 +223,16 @@ function renderCharacters(filterEraId = null) {
           d.className = c.facs ? `${baseClass} ccard--multifac` : baseClass;
           d.setAttribute('data-bg', c.zh[0]);
           d.setAttribute('data-idx', i);
-          d.style.cssText = `--fc:${c.fc};border-top-color:${c.fc}`;
+          d.style.cssText = `--fc:${c.fc}`;
           d.innerHTML = rank === 1 ? `
-            <div class="ccard-hd">
-              <div class="ccard-ico" style="border-color:${c.fc}">${c.ico}</div>
-              <div>
-                <div class="ccard-zh" style="color:${c.fc}">${c.zh}</div>
-                <div class="ccard-en">${c.en}</div>
-              </div>
+            <div class="ccard-names">
+              <span class="ccard-zh" style="color:${c.fc}">${c.zh}</span>
+              <span class="ccard-en">${c.en}</span>
             </div>
+            <div class="ccard-rule"></div>
             <div class="ccard-ttl">${c.ttl}</div>
             <div class="ccard-bio">${c.bio}</div>
             <div class="ccard-tags">${c.tags.map(t=>`<span class="ccard-tag">${t}</span>`).join('')}</div>` : `
-            <div class="ccard-ico" style="border-color:${c.fc}">${c.ico}</div>
             <div class="ccard-zh" style="color:${c.fc}">${c.zh}</div>
             <div class="ccard-en">${c.en}</div>
             <div class="ccard-ttl">${c.ttl}</div>
