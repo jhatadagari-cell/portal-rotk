@@ -423,57 +423,95 @@ function renderEraDetail(eraId) {
   const panel   = document.getElementById('era-detail-panel');
   if (!section || !panel) return;
 
-  if (!eraId) {
-    section.classList.remove('visible');
-    return;
-  }
+  if (!eraId) { section.classList.remove('visible'); return; }
 
   const era = PERIODS.find(p => p.id === eraId);
   if (!era) { section.classList.remove('visible'); return; }
 
+  // Characters for this era sorted by eraRank then overall rank
+  const eraChars = (typeof CHARS !== 'undefined' ? CHARS : [])
+    .filter(c => c.eras && c.eras.includes(eraId))
+    .sort((a, b) => {
+      const ra = (a.eraRank && a.eraRank[eraId]) || 9;
+      const rb = (b.eraRank && b.eraRank[eraId]) || 9;
+      return ra !== rb ? ra - rb : (a.rank || 9) - (b.rank || 9);
+    });
+
+  // Build vertical timeline rows (events + character side reveals)
+  const events = era.events || [];
+  const tlRows = events.map((ev, i) => {
+    const side = i % 2 === 0 ? 'right' : 'left';
+    const char = eraChars[i] || null;
+    const charHtml = char ? `
+      <div class="erd-char" style="--cfc:${char.fc || era.c}">
+        <div class="erd-char-zh">${char.zh}</div>
+        <div class="erd-char-en">${char.en}</div>
+        <div class="erd-char-role">${char.ttl || char.fac || ''}</div>
+        <div class="erd-char-bio">${(char.bio || '').slice(0, 90)}…</div>
+        ${char.detailHref ? `<a class="erd-char-link" href="${char.detailHref}">Ver ficha →</a>` : ''}
+      </div>` : '<div></div>';
+
+    return `
+      <div class="erd-tl-row" data-side="${side}">
+        ${charHtml}
+        <div class="erd-tl-node"></div>
+        <div class="erd-ev">
+          <div class="erd-ev-top">
+            <span class="erd-ev-y">${ev.y}</span>
+            <span class="erd-ev-type">${ev.type}</span>
+          </div>
+          <h3 class="erd-ev-n">${ev.n}</h3>
+          <p class="erd-ev-d">${ev.d}</p>
+        </div>
+      </div>`;
+  }).join('');
+
+  const legsHtml = era.legs && era.legs.length ? `
+    <div class="erd-hero-legs">
+      ${era.legs.map(([color, label]) =>
+        `<div class="erd-hero-leg">
+          <span class="erd-hero-leg-dot" style="background:${color}"></span>
+          <span class="erd-hero-leg-lbl">${label}</span>
+        </div>`
+      ).join('')}
+    </div>` : '';
+
+  const proseHtml = (era.prose || [])
+    .map(p => `<p class="erd-prose-p">${p}</p>`).join('');
+
   panel.innerHTML = `
-    <div class="era-detail-hd">
-      <span class="era-detail-ico">${era.ico}</span>
-      <div class="era-detail-meta">
-        <div class="era-detail-zh" style="color:${era.c}">${era.zh}</div>
-        <h2 class="era-detail-n">${era.n}</h2>
-        <div class="era-detail-y">${era.y}</div>
+    <div class="erd-wrap" style="--ec:${era.c}">
+      <div class="erd-hero">
+        <div class="erd-hero-bg" aria-hidden="true">${era.zh}</div>
+        <div class="erd-hero-zh">${era.zh}</div>
+        <h2 class="erd-hero-n">${era.n}</h2>
+        <div class="erd-hero-y">${era.y}</div>
+        <div class="erd-hero-rule"></div>
+        <p class="erd-hero-lede">${era.lede || era.desc}</p>
+        ${legsHtml}
       </div>
-    </div>
-    <div class="era-detail-div" style="background:${era.c}"></div>
-    <p class="era-detail-desc">${era.desc}</p>
-    ${era.legs && era.legs.length ? `
-      <div class="era-detail-block">
-        <h3 class="era-detail-block-ttl">Facciones del periodo</h3>
-        <div class="era-detail-legs">
-          ${era.legs.map(([color, label]) => `
-            <div class="era-leg">
-              <span class="era-leg-dot" style="background:${color}"></span>
-              <span class="era-leg-lbl">${label}</span>
-            </div>
-          `).join('')}
-        </div>
-      </div>
-    ` : ''}
-    ${era.suberas && era.suberas.length ? `
-      <div class="era-detail-block">
-        <h3 class="era-detail-block-ttl">Sub-periodos</h3>
-        <div class="era-detail-sublist">
-          ${era.suberas.map(s => `
-            <div class="era-subera" style="border-left-color:${era.c}">${s}</div>
-          `).join('')}
-        </div>
-      </div>
-    ` : ''}
-    ${era.detailHref ? `
-      <div class="era-detail-cta">
-        <a href="${era.detailHref}" class="era-detail-link">Ver cronología detallada →</a>
-      </div>
-    ` : ''}
-  `;
+      ${events.length ? `
+        <div class="erd-tl">
+          <div class="erd-tl-spine"></div>
+          ${tlRows}
+        </div>` : ''}
+      ${proseHtml ? `<div class="erd-prose">${proseHtml}</div>` : ''}
+      ${era.detailHref ? `
+        <div class="erd-cta">
+          <a href="${era.detailHref}" class="btn-sec">Ver cronología completa →</a>
+        </div>` : ''}
+    </div>`;
 
   section.classList.add('visible');
-  setTimeout(() => section.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 60);
+  setTimeout(() => section.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
+
+  // Scroll-reveal for character side panels
+  const revObs = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) { e.target.classList.add('visible'); revObs.unobserve(e.target); }
+    });
+  }, { threshold: 0.2 });
+  panel.querySelectorAll('.erd-char').forEach(el => revObs.observe(el));
 }
 
 // ── FAQ ──
