@@ -99,7 +99,9 @@
       "Bash(xargs sed -i '' 's/\\\\.css?v=2\"/.css?v=3\"/g')",
       "Bash(xargs sed -i '' 's/chrome\\\\.css?v=3/chrome.css?v=4/g')",
       "Bash(git merge *)",
-      "Bash(git check-ignore *)"
+      "Bash(git check-ignore *)",
+      "Bash(sed -n '1,10p' /Users/alejandropeyrocebrian/Documents/rotk/portal-rotk/assets/js/ui.js)",
+      "Bash(sed -n '100,175p' /Users/alejandropeyrocebrian/Documents/rotk/portal-rotk/assets/js/ui.js)"
     ]
   },
   "enabledPlugins": {

@@ -106,10 +106,18 @@ function charMatchesFactions(c) {
   return getCharFactions(c).some(f => selectedFactions.has(getFactionId(f.label)));
 }
 
+function updateFunnelState() {
+  const btn = document.getElementById('char-funnel');
+  const clearBtn = document.getElementById('funnel-clear');
+  if (btn) btn.classList.toggle('has-filters', selectedFactions.size > 0);
+  if (clearBtn) clearBtn.hidden = selectedFactions.size === 0;
+}
+
 function renderFactionFilters(basePool) {
   const container = document.getElementById('char-faction-btns');
   if (!container) return;
   const factionMap = new Map();
+  const countMap = new Map();
   basePool.forEach(({ c }) => {
     getCharFactions(c).forEach(({ label, color }) => {
       const fid = getFactionId(label);
@@ -117,17 +125,28 @@ function renderFactionFilters(basePool) {
         const faction = typeof FACTIONS !== 'undefined' ? FACTIONS.find(f => f.id === fid) : null;
         factionMap.set(fid, { es: faction ? faction.es : label, color: faction ? faction.color : color });
       }
+      countMap.set(fid, (countMap.get(fid) || 0) + 1);
     });
   });
   for (const sel of selectedFactions) {
     if (!factionMap.has(sel)) selectedFactions.delete(sel);
   }
+  const sorted = [...factionMap.entries()].sort((a, b) => (countMap.get(b[0]) || 0) - (countMap.get(a[0]) || 0));
   container.innerHTML = '';
-  for (const [fid, { es, color }] of factionMap) {
+  for (const [fid, { es, color }] of sorted) {
+    const count = countMap.get(fid) || 0;
     const btn = document.createElement('button');
     btn.className = 'fac-filter-btn' + (selectedFactions.has(fid) ? ' active' : '');
     btn.style.setProperty('--fc', color);
-    btn.textContent = es;
+    const dot = document.createElement('span');
+    dot.className = 'fac-dot';
+    dot.style.background = color;
+    const name = document.createElement('span');
+    name.textContent = es;
+    const cnt = document.createElement('span');
+    cnt.className = 'fac-count';
+    cnt.textContent = count;
+    btn.append(dot, name, cnt);
     btn.addEventListener('click', () => {
       if (selectedFactions.has(fid)) selectedFactions.delete(fid);
       else selectedFactions.add(fid);
@@ -135,6 +154,7 @@ function renderFactionFilters(basePool) {
     });
     container.appendChild(btn);
   }
+  updateFunnelState();
 }
 
 function renderCharacters(filterEraId = null) {
@@ -182,7 +202,6 @@ function renderCharacters(filterEraId = null) {
           row.setAttribute('data-idx', i);
           row.style.cssText = `--fc:${c.fc}`;
           row.innerHTML = `
-            <div class="ccard-ico" style="border-color:${c.fc}">${c.ico}</div>
             <div class="ccard-row-body">
               <div class="ccard-row-name">
                 <span class="ccard-zh" style="color:${c.fc}">${c.zh}</span>
@@ -204,19 +223,16 @@ function renderCharacters(filterEraId = null) {
           d.className = c.facs ? `${baseClass} ccard--multifac` : baseClass;
           d.setAttribute('data-bg', c.zh[0]);
           d.setAttribute('data-idx', i);
-          d.style.cssText = `--fc:${c.fc};border-top-color:${c.fc}`;
+          d.style.cssText = `--fc:${c.fc}`;
           d.innerHTML = rank === 1 ? `
-            <div class="ccard-hd">
-              <div class="ccard-ico" style="border-color:${c.fc}">${c.ico}</div>
-              <div>
-                <div class="ccard-zh" style="color:${c.fc}">${c.zh}</div>
-                <div class="ccard-en">${c.en}</div>
-              </div>
+            <div class="ccard-names">
+              <span class="ccard-zh" style="color:${c.fc}">${c.zh}</span>
+              <span class="ccard-en">${c.en}</span>
             </div>
+            <div class="ccard-rule"></div>
             <div class="ccard-ttl">${c.ttl}</div>
             <div class="ccard-bio">${c.bio}</div>
             <div class="ccard-tags">${c.tags.map(t=>`<span class="ccard-tag">${t}</span>`).join('')}</div>` : `
-            <div class="ccard-ico" style="border-color:${c.fc}">${c.ico}</div>
             <div class="ccard-zh" style="color:${c.fc}">${c.zh}</div>
             <div class="ccard-en">${c.en}</div>
             <div class="ccard-ttl">${c.ttl}</div>
@@ -531,13 +547,43 @@ function closeMod() {
   const cmod = document.getElementById('cmod');
   if (cmod) cmod.classList.remove('open');
 }
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMod(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeMod(); closeFunnelPanel(); } });
 
 // ── Character search filter ──
 const charSearchEl = document.getElementById('char-search');
 if (charSearchEl) {
   charSearchEl.addEventListener('input', e => {
     filterText = e.target.value.trim();
+    renderCharacters(activeEra);
+  });
+}
+
+// ── Funnel filter panel ──
+function closeFunnelPanel() {
+  const panel = document.getElementById('char-funnel-panel');
+  const btn = document.getElementById('char-funnel');
+  if (panel) panel.classList.remove('open');
+  if (btn) btn.classList.remove('active');
+}
+
+const funnelBtn = document.getElementById('char-funnel');
+const funnelPanel = document.getElementById('char-funnel-panel');
+if (funnelBtn && funnelPanel) {
+  funnelBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    const isOpen = funnelPanel.classList.toggle('open');
+    funnelBtn.classList.toggle('active', isOpen);
+  });
+  document.addEventListener('click', e => {
+    if (!funnelPanel.contains(e.target) && e.target !== funnelBtn) closeFunnelPanel();
+  });
+  funnelPanel.addEventListener('click', e => e.stopPropagation());
+}
+
+const funnelClearBtn = document.getElementById('funnel-clear');
+if (funnelClearBtn) {
+  funnelClearBtn.addEventListener('click', () => {
+    selectedFactions.clear();
     renderCharacters(activeEra);
   });
 }

@@ -107,6 +107,56 @@ footer::before{content:'';display:block;position:absolute;top:0;left:0;right:0;h
   vertical-align:middle;
   letter-spacing:0;
 }
+
+/* ── Char meta: facción + fechas (bajo el eyebrow "Ficha") ── */
+.char-meta{
+  display:inline-flex;
+  align-items:center;
+  gap:0;
+  margin:0 0 20px;
+}
+.cm-fac{
+  font-family:'Cinzel Decorative',serif;
+  font-size:10px;
+  letter-spacing:.2em;
+  text-transform:uppercase;
+  padding:3px 10px;
+  border:1px solid;
+  border-radius:1px;
+  opacity:.72;
+  line-height:1.5;
+}
+.cm-sep{
+  display:inline-block;
+  width:4px;height:4px;
+  border-radius:50%;
+  background:var(--gold,#c9a84c);
+  opacity:.3;
+  margin:0 12px;
+  flex-shrink:0;
+}
+.cm-period{
+  font-family:'IM Fell English',serif;
+  font-style:italic;
+  font-size:14px;
+  color:var(--parch2,#b8a98a);
+  opacity:.6;
+  letter-spacing:.02em;
+}
+.cm-role{
+  font-family:'Cinzel Decorative',serif;
+  font-size:clamp(10px,1vw,12px);
+  letter-spacing:.28em;
+  text-transform:uppercase;
+  color:var(--gold,#c9a84c);
+  opacity:.65;
+  margin:6px 0 18px;
+}
+/* Extra top breathing room when banner is absent */
+.hero-copy.has-char-meta{
+  padding-top:36px;
+}
+
 /* sec-nav sticks just below the chrome nav */
 .sec-nav{top:var(--nav-h,58px)}
 
