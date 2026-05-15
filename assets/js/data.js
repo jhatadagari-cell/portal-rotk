@@ -267,6 +267,7 @@ const CHARS = [
       ["Año", "184 d.C."],
       ["Título", "Gran Maestro"],
     ],
+    aliases: ["Zhang Jue"],
     detailHref: "assets/Periods/zhang-jiao.html",
     eras: ["han-tardio", "turbantes"],
     eraRank: { "han-tardio": 1, turbantes: 1 },

@@ -105,8 +105,8 @@ Añade al final del CSS (antes de los media queries):
 
 ```css
 .wrap-pager{overflow:hidden}
-.wrap-pages{display:flex;transition:transform 0.35s ease;width:300%}
-.wrap-page{flex:0 0 calc(100% / 3)}
+.wrap-pages{display:flex;transition:transform 0.35s ease;width:400%}
+.wrap-page{flex:0 0 calc(100% / 4)}
 .section-divider{display:flex;align-items:center;gap:12px;margin:24px 0;opacity:0.5}
 .section-divider span{flex:1;height:1px;background:rgba(255,255,255,.08)}
 .divider-ornament{font-size:16px;flex:0 0 auto}
@@ -166,9 +166,25 @@ a{text-decoration:none}
 .epilogue{padding:28px 26px;background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(0,0,0,.08));border:1px solid rgba(255,255,255,.08);border-radius:18px}
 .epilogue h2{font-family:'Noto Serif SC',serif;font-size:24px;color:var(--text);margin:0 0 14px}
 .epilogue p{margin:0;font-size:20px;line-height:1.9;color:var(--muted)}
+.cronica-list{display:flex;flex-direction:column;gap:0}
+.cronica-entry{position:relative;padding:32px 0 32px 28px;border-left:2px solid [accent25];transition:border-color .25s}
+.cronica-entry:first-child{padding-top:8px}
+.cronica-entry::before{content:'';position:absolute;left:-5px;top:36px;width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 3px [accent18];transition:box-shadow .25s}
+.cronica-entry:first-child::before{top:12px}
+.cronica-entry:hover{border-color:[accent60]}
+.cronica-entry:hover::before{box-shadow:0 0 0 5px [accent22]}
+.cronica-hd{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:14px}
+.cronica-year{font-family:'Cinzel Decorative',serif;font-size:11px;letter-spacing:.2em;color:var(--gold);opacity:.8;white-space:nowrap}
+.cronica-zh{font-family:'Noto Serif SC',serif;font-size:19px;color:[accent85]}
+.cronica-n{font-family:'Noto Serif SC',serif;font-size:20px;color:var(--text);margin:0;font-weight:700}
+.cronica-tag{font-family:'Cinzel Decorative',serif;font-size:9px;letter-spacing:.16em;text-transform:uppercase;padding:3px 9px;border-radius:2px;border:1px solid rgba(155,177,211,.22);color:var(--muted);opacity:.7;margin-left:auto}
+.cronica-body p{font-family:'IM Fell English',serif;font-size:17px;line-height:1.88;color:var(--muted);margin:0 0 1em}
+.cronica-body p:last-child{margin-bottom:0}
 @media(max-width:900px){#hdr{flex-direction:column;align-items:flex-start} .hero{grid-template-columns:1fr}}
 @media(max-width:640px){.wrap{padding:22px 16px 48px} .hbtns{width:100%;justify-content:flex-start} .hb{width:100%;text-align:center}}
 ```
+
+Para `[accent25]`, `[accent60]`, `[accent22]`, `[accent85]`: extrae los bytes RGB del `--accent` y usa `rgba(R,G,B,.25)`, `rgba(R,G,B,.60)`, `rgba(R,G,B,.22)`, `rgba(R,G,B,.85)` respectivamente.
 
 Para `[gold08]`, `[gold15]`, `[gold30]`: extrae los bytes RGB del `--gold` y usa `rgba(R,G,B,.08)`, `rgba(R,G,B,.15)`, `rgba(R,G,B,.30)`.
 
@@ -236,6 +252,7 @@ Estructura con tres pestañas como Cao Cao (El Personaje, Relaciones Clave place
   <a href="#" data-page="el-personaje" class="sec-link active">El Personaje</a>
   <a href="#" data-page="relaciones" class="sec-link">Relaciones Clave</a>
   <a href="#" data-page="batallas" class="sec-link">Batallas</a>
+  <a href="#" data-page="cronicas" class="sec-link">Crónicas</a>
 </nav>
 
 <main class="wrap wrap-pager">
@@ -315,6 +332,36 @@ Estructura con tres pestañas como Cao Cao (El Personaje, Relaciones Clave place
         <p>Esta sección será completada próximamente con los enfrentamientos principales de [en].</p>
       </div>
     </div>
+
+    <!-- PÁGINA 4: Crónicas -->
+    <div class="wrap-page" data-page="cronicas">
+      <div class="cronica-list">
+        <!-- Cada crónica es un article con id="cronica-[slug-del-evento]" para deep-linking desde Eras -->
+        <!-- Ejemplo de estructura: -->
+        <!--
+        <article class="cronica-entry" id="cronica-[slug]">
+          <div class="cronica-hd">
+            <span class="cronica-year">[año] d.C.</span>
+            <span class="cronica-zh">[título chino]</span>
+            <h3 class="cronica-n">[título español]</h3>
+            <span class="cronica-tag">[categoría]</span>
+          </div>
+          <div class="cronica-body">
+            <p>[párrafo narrativo 1]</p>
+            <p>[párrafo narrativo 2]</p>
+          </div>
+        </article>
+        -->
+
+        <!-- Escribe entre 3 y 6 crónicas cronológicas del personaje. Criterios de selección:
+             - Momentos que revelan el carácter del personaje, no solo victorias
+             - Cubrir arco completo: debut, momento cumbre, declive o final
+             - Cada crónica: 2 párrafos en IM Fell English, narrativo y evocador
+             - El id="cronica-[slug]" permitirá anclar desde el lector de Eras
+             - Categorías sugeridas para cronica-tag: Acto fundacional, Rival, Lealtad,
+               Derrota, Victoria, Traición, Final, Decisión, Batalla, Alianza -->
+      </div>
+    </div>
   </div>
 </main>
 
@@ -363,7 +410,8 @@ Edita solo la entrada del personaje. No toques ninguna otra línea.
 Informa de:
 1. Archivos creados: `assets/css/[slug].css` y `assets/Periods/[slug].html`
 2. Modificación en `assets/js/data.js`: campo `detailHref` añadido (botón "Ver Ficha" ahora habilitado en modal)
-3. Estructura: Ficha con tres pestañas (El Personaje completado, Relaciones Clave placeholder, Batallas placeholder)
+3. Estructura: Ficha con **cuatro pestañas** (El Personaje completado, Relaciones Clave placeholder, Batallas placeholder, Crónicas con entradas narrativas)
 4. Si se incluyó imagen o cómo se resolvió (busca en Descargas, o usa placeholder)
-5. Contenido: Directo y factual, sin excesivas filigranas, pero con romance en momentos clave
-6. Si quedan más personajes sin ficha, pregunta si continuar con el siguiente
+5. Crónicas: lista los IDs de anchor generados (`#cronica-[slug]`) — servirán para deep-linking desde el lector de Eras
+6. Contenido: Directo y factual, sin excesivas filigranas, pero con romance en momentos clave
+7. Si quedan más personajes sin ficha, pregunta si continuar con el siguiente
