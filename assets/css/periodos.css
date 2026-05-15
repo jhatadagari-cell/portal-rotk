@@ -903,26 +903,26 @@
 
 .reader-eye {
   position: absolute;
-  bottom: 24px;
-  right: 24px;
+  bottom: 22px;
+  right: 22px;
   z-index: 4;
-  width: 40px;
-  height: 40px;
-  background: rgba(8,3,0,.9);
-  border: 1px solid rgba(201,168,76,.42);
-  border-radius: 3px;
+  width: auto;
+  height: auto;
+  background: none;
+  border: none;
+  border-radius: 0;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: rgba(201,168,76,.78);
+  color: rgba(201,168,76,.72);
   pointer-events: auto;
-  transition: border-color .2s, color .2s, background .2s;
+  filter: drop-shadow(0 0 4px rgba(201,168,76,.18));
+  transition: color .2s, filter .2s;
 }
 .reader-eye:hover {
-  border-color: rgba(201,168,76,.78);
-  color: rgba(201,168,76,1);
-  background: rgba(18,7,0,.96);
+  color: rgba(230,200,110,1);
+  filter: drop-shadow(0 0 8px rgba(201,168,76,.55));
 }
 
 /* Icono swap: ojo abierto por defecto, ojo tachado en modo revelado */
@@ -967,12 +967,10 @@
   object-position: center center !important;
 }
 .reader-wrap.img-revealed .reader-eye {
-  bottom: 24px;
-  right: 24px;
-  width: 38px;
-  height: 38px;
-  color: rgba(201,168,76,.88);
-  border-color: rgba(201,168,76,.45);
+  bottom: 22px;
+  right: 22px;
+  color: rgba(230,200,110,.9);
+  filter: drop-shadow(0 0 6px rgba(201,168,76,.4));
   z-index: 501;
 }
 /* Bookmark oculto en fullscreen */
