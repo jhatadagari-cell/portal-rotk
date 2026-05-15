@@ -306,7 +306,7 @@
 
 .reader-wrap {
   position: relative;
-  min-height: 72vh;
+  height: clamp(480px, 72vh, 90vh);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -432,6 +432,8 @@
   padding: clamp(32px, 5vw, 56px) clamp(28px, 5vw, 56px) 24px clamp(88px, 8vw, 112px);
   align-items: start;
   min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 /* Page transition */

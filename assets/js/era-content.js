@@ -4,7 +4,7 @@
   const C = {
     "han-tardio": {
       paged: true,
-      bgImg: "assets/img/Eras/Era_Han_tardio.png",
+      bgImg: "assets/img/Eras/Era_Han_tardio.webp",
       lede: "El Gran Imperio Han no colapsa de golpe. Se desangra durante décadas de emperadores que mueren jóvenes y dejan el trono a niños gobernados por eunucos y clanes familiares. El Emperador Ling es el símbolo de esta decadencia: vende cargos oficiales al mejor postor, enriquece a los Diez Eunucos y desatiende las hambrunas que arrasan provincias enteras.",
       prose: [
         "El Han Tardío no colapsa de golpe. Se desangra durante décadas de emperadores que mueren jóvenes y dejan el trono a niños gobernados por eunucos y clanes familiares. El Emperador Ling es el símbolo de esta decadencia: vende cargos oficiales públicamente, enriquece a los Diez Eunucos y desatiende las hambrunas que arrasan provincias enteras.",
@@ -90,6 +90,7 @@
     },
     "turbantes": {
       paged: true,
+      bgImg: "assets/img/Eras/Era_Turbantes_amarillos.webp",
       lede: "Zhang Jue llevaba seis años sembrando promesas de justicia entre los desheredados de China. En 184 d.C. la red se activa simultáneamente en ocho provincias. Medio millón de guerreros con turbantes amarillos proclaman el Año Jiazi. El mayor levantamiento popular que ha visto el Han.",
       prose: [
         "La revuelta fracasa militarmente en meses, pero su impacto es permanente. El Han convoca a todos los señores regionales para aplacar a los Turbantes, y al hacerlo, arma a los mismos hombres que luego lo destruirán. Cao Cao, Liu Bei, Sun Jian: todos labran su primera reputación militar persiguiendo turbantes amarillos.",
@@ -130,6 +131,7 @@
           y: "184 d.C.",
           type: "Juramento fundacional",
           n: "Juramento del Melocotonero 桃園結義",
+          bgImg: "assets/img/Eras/Era_Turbantes_amarillos_treshermanos.webp",
           d: "Liu Bei lee el edicto de reclutamiento y suspira. Detrás de él, un hombre enorme lo interpela. Más tarde, en la huerta de Zhang Fei, tres hombres que acaban de conocerse juran hermandad para siempre.",
           body: `<p>En Zhuo, Liu Bei lee el edicto de reclutamiento del gobernador Liu Yan y suspira. Un hombre enorme —cabeza de leopardo, ojos redondos, mandíbula de golondrina, barba de tigre— aparece detrás de él y lo interpela: <em>«Hombre grande, ¿por qué suspirar si no actúas?»</em> Es Zhang Fei, propietario de tierras. Invita a Liu Bei a beber. En la taberna se cruzan con otro viajero que también se dirige a alistarse: Guan Yu, barba roja y espada al hombro, huyendo de su provincia natal desde que mató a un tirano local. Los tres beben juntos y al día siguiente van a la huerta de melocotoneros de Zhang Fei.</p><p>El juramento que pronuncian bajo los árboles en flor define el resto de la novela: <em>«Nosotros tres, aunque de apellidos distintos, juramos ser hermanos. Trabajaremos juntos para sostener el Han y proteger al pueblo. No pudiendo nacer el mismo día del mismo mes del mismo año, deseamos morir el mismo día del mismo mes del mismo año.»</em> Son tres hombres completamente distintos: Liu Bei lleva sangre imperial pero ningún poder; Guan Yu lleva un código de honor que ninguna lealtad política puede superar; Zhang Fei lleva una fuerza bruta que solo la amistad puede disciplinar.</p><p>El juramento del melocotonero no es histórico —no aparece en el Sanguo Zhi ni en el Hou Han Shu— pero es quizá el momento más famoso de toda la literatura china. Luo Guanzhong lo inventó, o lo amplificó de la tradición oral, porque entendió que esta historia necesitaba un origen moral, no solo militar. Los Tres Reinos no son solo una guerra: son la historia de tres hombres que prometieron algo y pagaron su precio.</p>`,
           char: {
