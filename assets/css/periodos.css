@@ -903,26 +903,26 @@
 
 .reader-eye {
   position: absolute;
-  bottom: 14px;
-  right: 14px;
+  bottom: 24px;
+  right: 24px;
   z-index: 4;
-  width: 34px;
-  height: 34px;
-  background: rgba(6,2,0,.82);
-  border: 1px solid rgba(201,168,76,.22);
-  border-radius: 2px;
+  width: 40px;
+  height: 40px;
+  background: rgba(8,3,0,.9);
+  border: 1px solid rgba(201,168,76,.42);
+  border-radius: 3px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: rgba(201,168,76,.52);
+  color: rgba(201,168,76,.78);
   pointer-events: auto;
   transition: border-color .2s, color .2s, background .2s;
 }
 .reader-eye:hover {
-  border-color: rgba(201,168,76,.58);
-  color: rgba(201,168,76,.9);
-  background: rgba(14,5,0,.92);
+  border-color: rgba(201,168,76,.78);
+  color: rgba(201,168,76,1);
+  background: rgba(18,7,0,.96);
 }
 
 /* Icono swap: ojo abierto por defecto, ojo tachado en modo revelado */
