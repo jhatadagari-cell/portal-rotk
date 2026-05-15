@@ -710,7 +710,7 @@
                 data-badge="El Poeta Preterido"
                 data-badge-color="#9bb1d3"
                 data-name="Cao Zhi · 曹植"
-                data-desc="El hijo al que Cao Cao quiso pero no eligió. Cao Zhi tenía el genio literario más extraordinario de la era —y la indisciplina que lo hacía políticamente inviable. Llegó tarde a una batalla por estar bebiendo vino. Cao Cao lo descartó y eligió a Cao Pi. Sobrevivió al reinado de su hermano escribiendo la prosa más refinada de la literatura clásica china."
+                data-desc="El hijo al que Cao Cao quiso pero finalmente no eligió. Cao Zhi tenía el genio literario más extraordinario de la era —y la indisciplina que lo hacía políticamente inviable. Llegó tarde a una batalla por estar bebiendo vino. Cao Cao lo descartó y eligió a Cao Pi. Sobrevivió al reinado de su hermano escribiendo la prosa más refinada de la literatura clásica china."
               >
                 <div class="rel-bubble-img rel-bubble-img--placeholder">
                   <span>植</span>
@@ -868,27 +868,26 @@
               </div>
               <div class="cronica-body">
                 <p>
-                  Cuando los Turbantes Amarillos se alzaron en primavera del
-                  184 d.C., la corte de Luoyang respondió nombrando generales
-                  con experiencia. A Cao Cao, con veintinueve años, le fue
-                  asignado el rango de 骑都尉 —Comandante de Caballería—, una
-                  de las catorce plazas creadas de urgencia para suprimir la
-                  rebelión. Fue enviado a Yingchuan (颍川), en el corazón de
-                  Henan, bajo las órdenes del general en jefe Huangfu Song
-                  (皇甫嵩). La campaña de Yingchuan fue la primera en la que
-                  Cao Cao dirigió tropas en combate real.
+                  Cuando los Turbantes Amarillos se alzaron en primavera del 184
+                  d.C., la corte de Luoyang respondió nombrando generales con
+                  experiencia. A Cao Cao, con veintinueve años, le fue asignado
+                  el rango de 骑都尉 —Comandante de Caballería—, una de las
+                  catorce plazas creadas de urgencia para suprimir la rebelión.
+                  Fue enviado a Yingchuan (颍川), en el corazón de Henan, bajo
+                  las órdenes del general en jefe Huangfu Song (皇甫嵩). La
+                  campaña de Yingchuan fue la primera en la que Cao Cao dirigió
+                  tropas en combate real.
                 </p>
                 <p>
                   Huangfu Song, Cao Cao y Zhu Jun (朱儁) aplastaron a los
                   Turbantes en sucesivas batallas a lo largo del verano. Las
-                  fuentes históricas —Sanguo Zhi, Hou Han Shu— coinciden en
-                  que la campaña fue veloz y decisiva: la zona central de la
-                  rebelión quedó destruida antes de que terminara el año.
-                  Para Cao Cao era algo más que una victoria: era la
-                  confirmación de que sabía hacer lo que Xu Shao había
-                  predicho. El caos había llegado, y él estaba en el lugar
-                  correcto, con el rango correcto, aprendiendo del mejor
-                  general del Imperio.
+                  fuentes históricas —Sanguo Zhi, Hou Han Shu— coinciden en que
+                  la campaña fue veloz y decisiva: la zona central de la
+                  rebelión quedó destruida antes de que terminara el año. Para
+                  Cao Cao era algo más que una victoria: era la confirmación de
+                  que sabía hacer lo que Xu Shao había predicho. El caos había
+                  llegado, y él estaba en el lugar correcto, con el rango
+                  correcto, aprendiendo del mejor general del Imperio.
                 </p>
               </div>
             </article>
@@ -1099,8 +1098,14 @@
           links.forEach((l) =>
             l.classList.toggle("active", l.dataset.page === pageId),
           );
-          if (pageId === 'cronicas' && !annotationsApplied && typeof applyAnnotations === 'function') {
-            applyAnnotations(document.querySelector('.wrap-page[data-page="cronicas"]'));
+          if (
+            pageId === "cronicas" &&
+            !annotationsApplied &&
+            typeof applyAnnotations === "function"
+          ) {
+            applyAnnotations(
+              document.querySelector('.wrap-page[data-page="cronicas"]'),
+            );
             annotationsApplied = true;
           }
         }
@@ -1115,17 +1120,17 @@
         const hash = window.location.hash;
         if (hash) {
           const target = document.getElementById(hash.slice(1));
-          if (target && target.classList.contains('cronica-entry')) {
+          if (target && target.classList.contains("cronica-entry")) {
             window.scrollTo(0, 0);
-            goTo('cronicas');
+            goTo("cronicas");
             setTimeout(() => {
-              target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-              target.classList.add('cronica-highlighted');
-              target.closest('.cronica-list')?.classList.add('has-highlight');
-              const btn = document.createElement('button');
-              btn.className = 'cronica-back-btn';
-              btn.textContent = '← Volver a la lectura';
-              btn.addEventListener('click', () => history.back());
+              target.scrollIntoView({ behavior: "smooth", block: "center" });
+              target.classList.add("cronica-highlighted");
+              target.closest(".cronica-list")?.classList.add("has-highlight");
+              const btn = document.createElement("button");
+              btn.className = "cronica-back-btn";
+              btn.textContent = "← Volver a la lectura";
+              btn.addEventListener("click", () => history.back());
               target.appendChild(btn);
             }, 380);
           }

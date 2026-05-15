@@ -103,7 +103,8 @@
       "Bash(sed -n '1,10p' /Users/alejandropeyrocebrian/Documents/rotk/portal-rotk/assets/js/ui.js)",
       "Bash(sed -n '100,175p' /Users/alejandropeyrocebrian/Documents/rotk/portal-rotk/assets/js/ui.js)",
       "Bash(python3 -m http.server 8765)",
-      "Bash(echo \"PID:$!\")"
+      "Bash(echo \"PID:$!\")",
+      "Bash(open *)"
     ]
   },
   "enabledPlugins": {
