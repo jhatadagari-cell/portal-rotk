@@ -1,6 +1,8 @@
 // ── Shared era state (read by era-fx.js) ──
 let activeEra = null;
 let showAllChars = false;
+let readerPage = 0;
+let readerKeyHandler = null;
 let filterText = '';
 let selectedFactions = new Set();
 
@@ -317,7 +319,6 @@ if (pgrid) {
       <div class="pcard-zh">${p.zh}</div>
       <div class="pcard-over">
         <div class="pcard-over-desc">${p.desc}</div>
-        ${p.detailHref ? `<a class="pcard-detail" href="${p.detailHref}" onclick="event.stopPropagation()">Ver cronología →</a>` : ''}
       </div>
     `;
 
@@ -417,63 +418,224 @@ if (charsMoreBtn) charsMoreBtn.addEventListener('click', () => {
   renderCharacters(activeEra);
 });
 
+// ── Paginated chronicle reader ──
+function renderPagedReader(era, section, panel) {
+  const events = era.events || [];
+  if (!events.length) return;
+
+  function goTo(idx) {
+    if (idx < 0 || idx >= events.length) return;
+    readerPage = idx;
+    const ev    = events[idx];
+    const char  = ev.char || null;
+    const isFirst = idx === 0;
+    const isLast  = idx === events.length - 1;
+
+    const charHtml = char
+      ? `<div class="reader-char" style="--cfc:${char.fc || era.c}">
+           <div class="reader-char-zh">${char.zh}</div>
+           <div class="reader-char-en">${char.en}</div>
+           <div class="reader-char-rule"></div>
+           <div class="reader-char-role">${char.role}</div>
+           <div class="reader-char-note">${char.note}</div>
+           ${char.href ? `<a class="reader-char-link" href="${char.href}">Ver ficha →</a>` : ''}
+         </div>`
+      : '<div class="reader-char reader-char-empty"></div>';
+
+    const dotsHtml = events.map((_, i) =>
+      `<button class="reader-dot${i === idx ? ' active' : ''}" data-i="${i}" aria-label="Página ${i+1}"></button>`
+    ).join('');
+
+    panel.innerHTML = `
+      <div class="reader-wrap" style="--ec:${era.c}">
+        <div class="reader-bg" aria-hidden="true">${(ev.bgImg || era.bgImg) ? `<img src="${ev.bgImg || era.bgImg}" alt="">` : ''}</div>
+        <div class="reader-bg-zh" aria-hidden="true">${era.zh}</div>
+        <div class="reader-hd">
+          <div class="reader-hd-left">
+            <span class="reader-hd-zh">${era.zh}</span>
+            <span class="reader-hd-sep">·</span>
+            <span class="reader-hd-n">${era.n}</span>
+          </div>
+          <div class="reader-pager">
+            <span class="reader-pager-cur">${idx + 1}</span>
+            <span class="reader-pager-sep">/</span>
+            <span class="reader-pager-tot">${events.length}</span>
+          </div>
+        </div>
+        <div class="reader-content">
+          <div class="reader-event">
+            <div class="reader-ev-eyebrow">
+              <span class="reader-ev-y">${ev.y}</span>
+              <span class="reader-ev-dot">·</span>
+              <span class="reader-ev-type">${ev.type}</span>
+            </div>
+            <h2 class="reader-ev-n">${ev.n}</h2>
+            ${ev.body
+              ? `<div class="reader-ev-body">${ev.body}</div>`
+              : `<p class="reader-ev-d">${ev.d}</p>`}
+          </div>
+          <div class="reader-divider"></div>
+          ${charHtml}
+        </div>
+        <div class="reader-nav">
+          <button class="reader-btn reader-prev" ${isFirst ? 'disabled' : ''} aria-label="Anterior">◀</button>
+          <div class="reader-dots">${dotsHtml}</div>
+          <button class="reader-btn reader-next" ${isLast ? 'disabled' : ''} aria-label="Siguiente">▶</button>
+        </div>
+      </div>
+      ${(() => { const cc = chroniclesForEvent(ev); return cc.length ? `
+      <div class="reader-chron-accordion" style="--ec:${era.c}">
+        <button class="reader-chron-toggle" aria-expanded="false">
+          <span class="reader-chron-toggle-left">
+            <span class="reader-chron-toggle-label">Crónicas</span>
+            <span class="reader-chron-toggle-year">${ev.y}</span>
+          </span>
+          <span class="reader-chron-toggle-right">
+            <span class="reader-chron-toggle-count">${cc.length}</span>
+            <span class="reader-chron-toggle-chevron">›</span>
+          </span>
+        </button>
+        <div class="reader-chron-body">
+          <div class="reader-chron-list">
+            ${cc.map(c => `
+              <a class="reader-chron-item" href="${c.href}#${c.id}" style="--cc:${c.fc}">
+                <span class="reader-chron-y">${c.y1} d.C.</span>
+                <span class="reader-chron-zh">${c.zh}</span>
+                <span class="reader-chron-n">${c.n}</span>
+                <span class="reader-chron-char">${c.char}</span>
+              </a>`).join('')}
+          </div>
+        </div>
+      </div>` : ''; })()}`;
+
+    panel.querySelector('.reader-prev')?.addEventListener('click', () => goTo(readerPage - 1));
+    panel.querySelector('.reader-next')?.addEventListener('click', () => goTo(readerPage + 1));
+    panel.querySelectorAll('.reader-dot[data-i]').forEach(d =>
+      d.addEventListener('click', () => goTo(+d.dataset.i))
+    );
+    panel.querySelector('.reader-chron-toggle')?.addEventListener('click', function () {
+      const acc = this.closest('.reader-chron-accordion');
+      acc.classList.toggle('open');
+      this.setAttribute('aria-expanded', acc.classList.contains('open'));
+    });
+
+    if (typeof applyAnnotations === 'function') applyAnnotations(panel);
+
+    // Trigger enter animation on next frame
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() =>
+        panel.querySelector('.reader-content')?.classList.add('reader-entered')
+      )
+    );
+  }
+
+  // Reset & keyboard
+  if (readerKeyHandler) document.removeEventListener('keydown', readerKeyHandler);
+  readerKeyHandler = e => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') goTo(readerPage + 1);
+    if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   goTo(readerPage - 1);
+  };
+  document.addEventListener('keydown', readerKeyHandler);
+
+  readerPage = 0;
+  goTo(0);
+  section.classList.add('visible');
+  setTimeout(() => section.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
+}
+
 // ── Era detail expansion panel (periodos.html) ──
 function renderEraDetail(eraId) {
   const section = document.getElementById('era-detail');
   const panel   = document.getElementById('era-detail-panel');
   if (!section || !panel) return;
 
-  if (!eraId) {
-    section.classList.remove('visible');
-    return;
-  }
+  if (!eraId) { section.classList.remove('visible'); return; }
 
   const era = PERIODS.find(p => p.id === eraId);
   if (!era) { section.classList.remove('visible'); return; }
 
+  if (era.paged) { renderPagedReader(era, section, panel); return; }
+
+  // Characters for this era sorted by eraRank then overall rank
+  const eraChars = (typeof CHARS !== 'undefined' ? CHARS : [])
+    .filter(c => c.eras && c.eras.includes(eraId))
+    .sort((a, b) => {
+      const ra = (a.eraRank && a.eraRank[eraId]) || 9;
+      const rb = (b.eraRank && b.eraRank[eraId]) || 9;
+      return ra !== rb ? ra - rb : (a.rank || 9) - (b.rank || 9);
+    });
+
+  // Build vertical timeline rows (events + character side reveals)
+  const events = era.events || [];
+  const tlRows = events.map((ev, i) => {
+    const side = i % 2 === 0 ? 'right' : 'left';
+    const char = eraChars[i] || null;
+    const charHtml = char ? `
+      <div class="erd-char" style="--cfc:${char.fc || era.c}">
+        <div class="erd-char-zh">${char.zh}</div>
+        <div class="erd-char-en">${char.en}</div>
+        <div class="erd-char-role">${char.ttl || char.fac || ''}</div>
+        <div class="erd-char-bio">${(char.bio || '').slice(0, 90)}…</div>
+        ${char.detailHref ? `<a class="erd-char-link" href="${char.detailHref}">Ver ficha →</a>` : ''}
+      </div>` : '<div></div>';
+
+    return `
+      <div class="erd-tl-row" data-side="${side}">
+        ${charHtml}
+        <div class="erd-tl-node"></div>
+        <div class="erd-ev">
+          <div class="erd-ev-top">
+            <span class="erd-ev-y">${ev.y}</span>
+            <span class="erd-ev-type">${ev.type}</span>
+          </div>
+          <h3 class="erd-ev-n">${ev.n}</h3>
+          <p class="erd-ev-d">${ev.d}</p>
+        </div>
+      </div>`;
+  }).join('');
+
+  const legsHtml = era.legs && era.legs.length ? `
+    <div class="erd-hero-legs">
+      ${era.legs.map(([color, label]) =>
+        `<div class="erd-hero-leg">
+          <span class="erd-hero-leg-dot" style="background:${color}"></span>
+          <span class="erd-hero-leg-lbl">${label}</span>
+        </div>`
+      ).join('')}
+    </div>` : '';
+
+  const proseHtml = (era.prose || [])
+    .map(p => `<p class="erd-prose-p">${p}</p>`).join('');
+
   panel.innerHTML = `
-    <div class="era-detail-hd">
-      <span class="era-detail-ico">${era.ico}</span>
-      <div class="era-detail-meta">
-        <div class="era-detail-zh" style="color:${era.c}">${era.zh}</div>
-        <h2 class="era-detail-n">${era.n}</h2>
-        <div class="era-detail-y">${era.y}</div>
+    <div class="erd-wrap" style="--ec:${era.c}">
+      <div class="erd-hero">
+        <div class="erd-hero-bg" aria-hidden="true">${era.zh}</div>
+        <div class="erd-hero-zh">${era.zh}</div>
+        <h2 class="erd-hero-n">${era.n}</h2>
+        <div class="erd-hero-y">${era.y}</div>
+        <div class="erd-hero-rule"></div>
+        <p class="erd-hero-lede">${era.lede || era.desc}</p>
+        ${legsHtml}
       </div>
-    </div>
-    <div class="era-detail-div" style="background:${era.c}"></div>
-    <p class="era-detail-desc">${era.desc}</p>
-    ${era.legs && era.legs.length ? `
-      <div class="era-detail-block">
-        <h3 class="era-detail-block-ttl">Facciones del periodo</h3>
-        <div class="era-detail-legs">
-          ${era.legs.map(([color, label]) => `
-            <div class="era-leg">
-              <span class="era-leg-dot" style="background:${color}"></span>
-              <span class="era-leg-lbl">${label}</span>
-            </div>
-          `).join('')}
-        </div>
-      </div>
-    ` : ''}
-    ${era.suberas && era.suberas.length ? `
-      <div class="era-detail-block">
-        <h3 class="era-detail-block-ttl">Sub-periodos</h3>
-        <div class="era-detail-sublist">
-          ${era.suberas.map(s => `
-            <div class="era-subera" style="border-left-color:${era.c}">${s}</div>
-          `).join('')}
-        </div>
-      </div>
-    ` : ''}
-    ${era.detailHref ? `
-      <div class="era-detail-cta">
-        <a href="${era.detailHref}" class="era-detail-link">Ver cronología detallada →</a>
-      </div>
-    ` : ''}
-  `;
+      ${events.length ? `
+        <div class="erd-tl">
+          <div class="erd-tl-spine"></div>
+          ${tlRows}
+        </div>` : ''}
+      ${proseHtml ? `<div class="erd-prose">${proseHtml}</div>` : ''}
+    </div>`;
 
   section.classList.add('visible');
-  setTimeout(() => section.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 60);
+  setTimeout(() => section.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
+
+  // Scroll-reveal for character side panels
+  const revObs = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) { e.target.classList.add('visible'); revObs.unobserve(e.target); }
+    });
+  }, { threshold: 0.2 });
+  panel.querySelectorAll('.erd-char').forEach(el => revObs.observe(el));
 }
 
 // ── FAQ ──
@@ -518,6 +680,28 @@ function luBuEasterEgg(idx) {
   } else {
     openChar(idx);
   }
+}
+
+// ── Chronicles matching ──
+function parseEvYear(yStr) {
+  const nums = (yStr || '').match(/\d{3,4}/g);
+  if (!nums) return null;
+  const years = nums.map(Number);
+  return [Math.min(...years), Math.max(...years)];
+}
+
+function chroniclesForEvent(ev) {
+  if (typeof CHRONICLES === 'undefined') return [];
+  const range = parseEvYear(ev.y);
+  if (!range) return [];
+  const [y1, y2] = range;
+  const out = [];
+  CHRONICLES.forEach(ch => {
+    ch.entries.forEach(e => {
+      if (e.y1 >= y1 && e.y1 <= y2) out.push({ ...e, char: ch.char, fc: ch.fc, href: ch.href });
+    });
+  });
+  return out;
 }
 
 // ── Character modal ──

@@ -272,6 +272,13 @@ body{background:var(--ink);color:var(--parch);font-family:'IM Fell English',Geor
   margin:0 calc(-1 * max(clamp(16px,5vw,72px),calc((100vw - 1380px) / 2)));position:relative;
   -webkit-mask-image:linear-gradient(to right,transparent 0,black 2%,black 98%,transparent 100%);
   mask-image:linear-gradient(to right,transparent 0,black 2%,black 98%,transparent 100%);
+  background:linear-gradient(180deg,transparent 0%,rgba(201,168,76,.022) 45%,rgba(201,168,76,.018) 75%,transparent 100%);
+  padding-bottom:8px;
+}
+.per-wrap::after{
+  content:'';position:absolute;bottom:0;left:5%;right:5%;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(201,168,76,.22) 22%,rgba(201,168,76,.22) 78%,transparent);
+  pointer-events:none;
 }
 .per-nav-zone{
   position:absolute;top:0;bottom:0;width:72px;z-index:5;pointer-events:auto;
