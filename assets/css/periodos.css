@@ -1,12 +1,7 @@
 /* periodos.css — era detail rich vertical layout */
 
-/* Override wrap width — bleed edge-to-edge igual que per-wrap */
-.era-detail-sec { overflow: hidden; }
-.era-detail-sec .wrap {
-  max-width: 100%;
-  padding: 0;
-  margin: 0 calc(-1 * max(clamp(16px,5vw,72px), calc((100vw - 1380px) / 2)));
-}
+/* Override wrap width for full-bleed sections */
+.era-detail-sec .wrap { max-width: 100%; padding: 0; }
 
 /* ── Wrapper ── */
 .erd-wrap { --ec: var(--gold); }
