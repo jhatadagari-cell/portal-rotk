@@ -903,8 +903,8 @@
 
 .reader-eye {
   position: absolute;
-  bottom: 22px;
-  right: 22px;
+  bottom: 38px;
+  right: 38px;
   z-index: 4;
   width: auto;
   height: auto;
@@ -967,8 +967,8 @@
   object-position: center center !important;
 }
 .reader-wrap.img-revealed .reader-eye {
-  bottom: 22px;
-  right: 22px;
+  bottom: 38px;
+  right: 38px;
   color: rgba(230,200,110,.9);
   filter: drop-shadow(0 0 6px rgba(201,168,76,.4));
   z-index: 501;
