@@ -1112,6 +1112,25 @@
           });
         });
 
+        const hash = window.location.hash;
+        if (hash) {
+          const target = document.getElementById(hash.slice(1));
+          if (target && target.classList.contains('cronica-entry')) {
+            window.scrollTo(0, 0);
+            goTo('cronicas');
+            setTimeout(() => {
+              target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              target.classList.add('cronica-highlighted');
+              target.closest('.cronica-list')?.classList.add('has-highlight');
+              const btn = document.createElement('button');
+              btn.className = 'cronica-back-btn';
+              btn.textContent = '← Volver a la lectura';
+              btn.addEventListener('click', () => history.back());
+              target.appendChild(btn);
+            }, 380);
+          }
+        }
+
         const panel = document.getElementById("rel-panel");
         const panelBadge = panel.querySelector(".rel-panel-badge");
         const panelName = panel.querySelector(".rel-panel-name");

@@ -503,7 +503,6 @@ function renderPagedReader(era, section, panel) {
                 <span class="reader-chron-zh">${c.zh}</span>
                 <span class="reader-chron-n">${c.n}</span>
                 <span class="reader-chron-char">${c.char}</span>
-                <span class="reader-chron-arrow">→</span>
               </a>`).join('')}
           </div>
         </div>

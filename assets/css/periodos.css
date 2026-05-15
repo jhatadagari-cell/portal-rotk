@@ -674,7 +674,7 @@
 }
 .reader-chron-item {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 10px;
   padding: 8px 12px;
   border-left: 2px solid var(--cc);
@@ -683,8 +683,20 @@
   text-decoration: none;
   transition: background .2s;
   color: inherit;
+  position: relative;
 }
 .reader-chron-item:hover { background: rgba(255,255,255,.06); }
+.reader-chron-y {
+  font-family: 'Cinzel Decorative', serif;
+  font-size: 11px;
+  letter-spacing: .04em;
+  color: var(--gold);
+  opacity: .95;
+  flex: 0 0 66px;
+  text-align: right;
+  padding-right: 12px;
+  border-right: 1px solid rgba(255,255,255,.1);
+}
 .reader-chron-zh {
   font-family: 'Noto Serif SC', serif;
   font-size: 14px;
@@ -702,31 +714,18 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-.reader-chron-y {
-  font-family: 'Cinzel Decorative', serif;
-  font-size: 9px;
-  letter-spacing: .06em;
-  color: var(--gold);
-  opacity: .85;
-  flex: 0 0 58px;
-  text-align: right;
-  padding-right: 10px;
-  border-right: 1px solid rgba(255,255,255,.08);
+  max-width: 45%;
 }
 .reader-chron-char {
   font-family: 'Cinzel Decorative', serif;
-  font-size: 9px;
-  letter-spacing: .1em;
-  color: var(--cc);
-  opacity: .8;
-  flex-shrink: 0;
-}
-.reader-chron-arrow {
   font-size: 11px;
+  letter-spacing: .08em;
   color: var(--cc);
-  opacity: .55;
-  flex-shrink: 0;
+  opacity: .9;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  pointer-events: none;
 }
 
 /* ── Navigation bar ── */
