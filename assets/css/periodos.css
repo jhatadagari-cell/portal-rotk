@@ -1,7 +1,12 @@
 /* periodos.css — era detail rich vertical layout */
 
-/* Override wrap width for full-bleed sections */
-.era-detail-sec .wrap { max-width: 100%; padding: 0; }
+/* Override wrap width — bleed edge-to-edge igual que per-wrap */
+.era-detail-sec { overflow: hidden; }
+.era-detail-sec .wrap {
+  max-width: 100%;
+  padding: 0;
+  margin: 0 calc(-1 * max(clamp(16px,5vw,72px), calc((100vw - 1380px) / 2)));
+}
 
 /* ── Wrapper ── */
 .erd-wrap { --ec: var(--gold); }
@@ -306,7 +311,7 @@
 
 .reader-wrap {
   position: relative;
-  height: clamp(480px, 72vh, 90vh);
+  height: clamp(600px, 84vh, 96vh);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -351,6 +356,7 @@
   opacity: .12;
   mix-blend-mode: screen;
   filter: grayscale(20%) contrast(1.1);
+  transition: opacity .55s ease, filter .55s ease, mix-blend-mode .55s ease;
 }
 
 /* Large faded zh character behind content */
@@ -380,6 +386,7 @@
   justify-content: space-between;
   padding: 18px 32px 0;
   flex-shrink: 0;
+  transition: opacity .4s ease;
 }
 .reader-hd-left {
   display: flex;
@@ -604,16 +611,17 @@
 .reader-chron-toggle {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
+  gap: 18px;
   width: 100%;
-  padding: 13px 20px;
-  background: rgba(255,255,255,.025);
+  padding: 14px 20px;
+  background: rgba(255,255,255,.044);
   border: none;
   cursor: pointer;
   color: inherit;
   transition: background .2s;
 }
-.reader-chron-toggle:hover { background: rgba(255,255,255,.04); }
+.reader-chron-toggle:hover { background: rgba(255,255,255,.07); }
 .reader-chron-toggle-left {
   display: flex;
   align-items: baseline;
@@ -625,7 +633,7 @@
   letter-spacing: .22em;
   text-transform: uppercase;
   color: var(--ec);
-  opacity: .9;
+  opacity: 1;
 }
 .reader-chron-toggle-year {
   font-family: 'IM Fell English', serif;
@@ -665,7 +673,7 @@
   transition: max-height .3s ease;
 }
 .reader-chron-accordion.open .reader-chron-body {
-  max-height: 320px;
+  max-height: 480px;
   overflow-y: auto;
 }
 .reader-chron-list {
@@ -740,6 +748,7 @@
   gap: 24px;
   padding: 0 32px 24px;
   flex-shrink: 0;
+  transition: opacity .4s ease;
 }
 .reader-btn {
   background: none;
@@ -891,4 +900,92 @@
   .erd-tl-node { grid-column: 1; }
   .erd-tl-spine { left: 14px; }
   .erd-prose { padding: 20px 20px 48px; }
+}
+
+/* ══════════════════════════════════════════════
+   IMAGE REVEAL — botón ojo en el reader
+   ══════════════════════════════════════════════ */
+
+.reader-eye {
+  position: absolute;
+  bottom: 14px;
+  right: 14px;
+  z-index: 4;
+  width: 34px;
+  height: 34px;
+  background: rgba(6,2,0,.82);
+  border: 1px solid rgba(201,168,76,.22);
+  border-radius: 2px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(201,168,76,.52);
+  pointer-events: auto;
+  transition: border-color .2s, color .2s, background .2s;
+}
+.reader-eye:hover {
+  border-color: rgba(201,168,76,.58);
+  color: rgba(201,168,76,.9);
+  background: rgba(14,5,0,.92);
+}
+
+/* Icono swap: ojo abierto por defecto, ojo tachado en modo revelado */
+.reader-eye .eye-open  { display: flex; align-items: center; }
+.reader-eye .eye-slash { display: none; align-items: center; }
+.reader-wrap.img-revealed .reader-eye .eye-open  { display: none; }
+.reader-wrap.img-revealed .reader-eye .eye-slash { display: flex; }
+
+/* Estado revelado — fullscreen lightbox */
+@keyframes lb-enter {
+  from { clip-path: circle(0%   at 50% 50%); opacity: 0; }
+  to   { clip-path: circle(150% at 50% 50%); opacity: 1; }
+}
+@keyframes lb-leave {
+  from { clip-path: circle(150% at 50% 50%); opacity: 1; }
+  to   { clip-path: circle(0%   at 50% 50%); opacity: 0; }
+}
+.reader-wrap.img-revealed {
+  position: fixed !important;
+  inset: 0 !important;
+  height: 100dvh !important;
+  z-index: 500;
+  background: rgba(2,1,0,.97) !important;
+  border: none !important;
+  animation: lb-enter .58s cubic-bezier(.22,1,.36,1) forwards;
+}
+.reader-wrap.img-revealed.img-leaving {
+  animation: lb-leave .44s cubic-bezier(.55,0,.8,.45) forwards;
+}
+.reader-wrap.img-revealed .reader-hd,
+.reader-wrap.img-revealed .reader-bg-zh,
+.reader-wrap.img-revealed .reader-content,
+.reader-wrap.img-revealed .reader-nav {
+  opacity: 0;
+  pointer-events: none;
+}
+.reader-wrap.img-revealed .reader-bg img {
+  opacity: 1 !important;
+  filter: none !important;
+  mix-blend-mode: normal !important;
+  object-fit: contain !important;
+  object-position: center center !important;
+}
+.reader-wrap.img-revealed .reader-eye {
+  bottom: 24px;
+  right: 24px;
+  width: 38px;
+  height: 38px;
+  color: rgba(201,168,76,.88);
+  border-color: rgba(201,168,76,.45);
+  z-index: 501;
+}
+/* Bookmark oculto en fullscreen */
+body:has(.reader-wrap.img-revealed) #era-bookmark {
+  opacity: 0;
+  pointer-events: none;
+}
+/* Pétalos visibles sobre el fullscreen */
+body:has(.reader-wrap.img-revealed) #blossom-overlay {
+  z-index: 501;
 }

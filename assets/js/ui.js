@@ -425,6 +425,7 @@ function renderPagedReader(era, section, panel) {
 
   function goTo(idx) {
     if (idx < 0 || idx >= events.length) return;
+    document.body.style.overflow = '';
     readerPage = idx;
     const ev    = events[idx];
     const char  = ev.char || null;
@@ -449,6 +450,7 @@ function renderPagedReader(era, section, panel) {
     panel.innerHTML = `
       <div class="reader-wrap" style="--ec:${era.c}">
         <div class="reader-bg" aria-hidden="true">${(ev.bgImg || era.bgImg) ? `<img src="${ev.bgImg || era.bgImg}" alt="">` : ''}</div>
+        ${ev.bgImg ? `<button class="reader-eye" title="Ver imagen completa" aria-label="Ver imagen completa"><span class="eye-open"><svg width="18" height="13" viewBox="0 0 18 13" fill="none"><path d="M9 .5C4.5.5 1 4.5 1 6.5 1 8.5 4.5 12.5 9 12.5c4.5 0 8-4 8-6S13.5.5 9 .5Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><circle cx="9" cy="6.5" r="2.5" stroke="currentColor" stroke-width="1.2"/></svg></span><span class="eye-slash"><svg width="20" height="16" viewBox="0 0 20 16" fill="none"><path d="M10 2C5.5 2 2 6 1 8c1 2 4.5 6 9 6s8-4 9-6c-1-2-4.5-6-9-6Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><circle cx="10" cy="8" r="2.5" stroke="currentColor" stroke-width="1.2"/><line x1="2.5" y1=".5" x2="17.5" y2="15.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span></button>` : ''}
         <div class="reader-bg-zh" aria-hidden="true">${era.zh}</div>
         <div class="reader-hd">
           <div class="reader-hd-left">
@@ -518,6 +520,38 @@ function renderPagedReader(era, section, panel) {
       acc.classList.toggle('open');
       this.setAttribute('aria-expanded', acc.classList.contains('open'));
     });
+
+    const _eye = panel.querySelector('.reader-eye');
+    if (_eye) {
+      function _closeFullscreen() {
+        const wrap = _eye.closest('.reader-wrap');
+        if (!wrap || !wrap.classList.contains('img-revealed') || wrap.classList.contains('img-leaving')) return;
+        wrap.classList.add('img-leaving');
+        wrap.addEventListener('animationend', () => {
+          wrap.classList.remove('img-revealed', 'img-leaving');
+          document.body.style.overflow = '';
+          _eye.title = 'Ver imagen completa';
+          _eye.setAttribute('aria-label', 'Ver imagen completa');
+          requestAnimationFrame(() => wrap.scrollIntoView({ behavior: 'smooth', block: 'center' }));
+        }, { once: true });
+      }
+
+      _eye.addEventListener('click', () => {
+        const wrap = _eye.closest('.reader-wrap');
+        if (wrap.classList.contains('img-revealed')) {
+          _closeFullscreen();
+        } else {
+          wrap.classList.add('img-revealed');
+          document.body.style.overflow = 'hidden';
+          _eye.title = 'Volver al texto';
+          _eye.setAttribute('aria-label', 'Volver al texto');
+        }
+      });
+
+      document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') _closeFullscreen();
+      });
+    }
 
     if (typeof applyAnnotations === 'function') applyAnnotations(panel);
 

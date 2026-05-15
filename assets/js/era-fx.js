@@ -4,44 +4,6 @@ const blossomOverlay = document.createElement('div');
 blossomOverlay.id = 'blossom-overlay';
 document.body.appendChild(blossomOverlay);
 
-(function buildBranches(){
-  function fl(x, y, rot, sc, al) {
-    sc = sc||1; al = al||.88; rot = rot||0;
-    const cs = ['#ffb8c5','#ffc0ca','#ffaab8','#ffd0da','#ffb4c2'];
-    const pts = cs.map((c,i) =>
-      `<ellipse cx="0" cy="${-8*sc}" rx="${4.5*sc}" ry="${6.5*sc}" fill="${c}" opacity="${al}" transform="rotate(${i*72})"/>`
-    ).join('');
-    return `<g transform="translate(${x},${y}) rotate(${rot})">${pts}<circle r="${2.8*sc}" fill="rgba(255,215,0,.6)"/></g>`;
-  }
-  function makeBranch(flip) {
-    const W = 420, H = 380;
-    // Tronco con color de tinta oscuro + sombra en la base para anclarlas visualmente
-    const tronco = `<g fill="none" stroke="rgba(28,10,2,.9)" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M-5,-5 C18,38 46,64 62,108 C74,140 66,178 60,220" stroke-width="9" stroke="rgba(14,4,0,.45)"/>
-      <path d="M-5,-5 C18,38 46,64 62,108 C74,140 66,178 60,220" stroke-width="5.5"/>
-      <path d="M30,46 C56,28 96,12 138,6 C168,1 198,6 225,2" stroke-width="3"/>
-      <path d="M176,5 C202,-6 230,-10 260,-16" stroke-width="1.8"/>
-      <path d="M50,78 C82,58 124,46 164,40 C198,35 232,38 268,32" stroke-width="2.8"/>
-      <path d="M232,37 C258,24 284,16 314,10" stroke-width="1.6"/>
-      <path d="M60,136 C90,118 128,110 168,104 C202,99 236,101 272,94" stroke-width="2.2"/>
-      <path d="M60,190 C84,176 116,172 152,168" stroke-width="1.6"/>
-    </g>`;
-    const flores = [
-      fl(225,2,-5,1,.84),  fl(260,-16,8,.78,.78),
-      fl(268,32,12,1,.86), fl(314,10,-8,.82,.76),
-      fl(272,94,5,1,.84),  fl(152,168,14,.85,.78),
-      fl(138,6,5,.72,.75), fl(42,88,-10,.68,.72),
-      fl(185,5,15,.6,.68), fl(230,38,8,.65,.70),
-    ].join('');
-    // Fade vertical: ramas y flores visibles en su totalidad, tronco se disuelve hacia abajo
-    const linGrad = `linear-gradient(to bottom, black 0%, black 48%, rgba(0,0,0,.35) 68%, transparent 86%)`;
-    const fade = `-webkit-mask-image:${linGrad};mask-image:${linGrad}`;
-    const pos = flip ? `style="position:absolute;top:0;right:0;${fade}"` : `style="position:absolute;top:0;left:0;${fade}"`;
-    const tr = flip ? `transform="scale(-1,1) translate(-${W},0)"` : '';
-    return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" ${pos}><g ${tr}>${tronco}${flores}</g></svg>`;
-  }
-  blossomOverlay.innerHTML = makeBranch(false) + makeBranch(true);
-})();
 
 const _blossomAnis = ['pfall-a','pfall-b','pfall-c'];
 const _blossomCols = ['hsla(340,65%,84%,.82)','hsla(345,70%,88%,.76)','hsla(350,60%,81%,.85)','hsla(335,55%,90%,.78)'];
