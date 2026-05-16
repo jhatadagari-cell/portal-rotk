@@ -549,6 +549,19 @@ function renderPagedReader(era, section, panel) {
 
     if (typeof applyAnnotations === 'function') applyAnnotations(panel);
 
+    // Scroll-fade: indica overflow con gradiente inferior; se apaga al llegar al fondo
+    const _content = panel.querySelector('.reader-content');
+    const _wrap    = panel.querySelector('.reader-wrap');
+    if (_content && _wrap) {
+      function _updateScrollFade() {
+        const atBottom = _content.scrollHeight - _content.scrollTop <= _content.clientHeight + 6;
+        _wrap.classList.toggle('reader-at-bottom', atBottom);
+      }
+      _content.addEventListener('scroll', _updateScrollFade, { passive: true });
+      // Evaluar estado inicial tras render
+      requestAnimationFrame(() => requestAnimationFrame(_updateScrollFade));
+    }
+
     // Trigger enter animation on next frame
     requestAnimationFrame(() =>
       requestAnimationFrame(() =>

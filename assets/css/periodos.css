@@ -739,7 +739,7 @@
 /* ── Navigation bar ── */
 .reader-nav {
   position: relative;
-  z-index: 2;
+  z-index: 3;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -747,6 +747,21 @@
   padding: 0 32px 24px;
   flex-shrink: 0;
   transition: opacity .4s ease;
+}
+/* Scroll fade — indica que hay contenido por debajo del pliegue visible */
+.reader-nav::before {
+  content: '';
+  position: absolute;
+  left: 0; right: 0;
+  top: -80px;
+  height: 80px;
+  background: linear-gradient(to bottom, transparent 0%, rgba(8,3,0,.72) 55%, rgba(6,2,0,.94) 100%);
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity .35s ease;
+}
+.reader-wrap.reader-at-bottom .reader-nav::before {
+  opacity: 0;
 }
 .reader-btn {
   background: none;
