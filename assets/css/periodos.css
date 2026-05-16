@@ -312,6 +312,7 @@
   overflow: hidden;
   border: 1px solid rgba(201,168,76,.14);
   background: linear-gradient(160deg, rgba(18,8,0,.95) 0%, rgba(10,4,0,.98) 100%);
+  transition: background .65s ease;
 }
 
 /* Corner ornaments */
@@ -351,7 +352,9 @@
   opacity: .12;
   mix-blend-mode: screen;
   filter: grayscale(20%) contrast(1.1);
-  transition: opacity .55s ease, filter .55s ease, mix-blend-mode .55s ease;
+  -webkit-mask-image: radial-gradient(ellipse 92% 88% at 50% 42%, black 28%, rgba(0,0,0,.82) 48%, rgba(0,0,0,.3) 66%, transparent 83%);
+  mask-image:         radial-gradient(ellipse 92% 88% at 50% 42%, black 28%, rgba(0,0,0,.82) 48%, rgba(0,0,0,.3) 66%, transparent 83%);
+  transition: opacity .65s ease, filter .65s ease;
 }
 
 /* Large faded zh character behind content */
@@ -931,26 +934,9 @@
 .reader-wrap.img-revealed .reader-eye .eye-open  { display: none; }
 .reader-wrap.img-revealed .reader-eye .eye-slash { display: flex; }
 
-/* Estado revelado — fullscreen lightbox */
-@keyframes lb-enter {
-  from { clip-path: circle(0%   at 50% 50%); opacity: 0; }
-  to   { clip-path: circle(150% at 50% 50%); opacity: 1; }
-}
-@keyframes lb-leave {
-  from { clip-path: circle(150% at 50% 50%); opacity: 1; }
-  to   { clip-path: circle(0%   at 50% 50%); opacity: 0; }
-}
+/* Estado revelado — imagen en color, texto oculto */
 .reader-wrap.img-revealed {
-  position: fixed !important;
-  inset: 0 !important;
-  height: 100dvh !important;
-  z-index: 500;
-  background: rgba(2,1,0,.97) !important;
-  border: none !important;
-  animation: lb-enter .58s cubic-bezier(.22,1,.36,1) forwards;
-}
-.reader-wrap.img-revealed.img-leaving {
-  animation: lb-leave .44s cubic-bezier(.55,0,.8,.45) forwards;
+  background: linear-gradient(160deg, rgba(6,2,0,.99) 0%, rgba(3,1,0,.99) 100%);
 }
 .reader-wrap.img-revealed .reader-hd,
 .reader-wrap.img-revealed .reader-bg-zh,
@@ -958,27 +944,14 @@
 .reader-wrap.img-revealed .reader-nav {
   opacity: 0;
   pointer-events: none;
+  transition: opacity .5s ease;
 }
 .reader-wrap.img-revealed .reader-bg img {
-  opacity: 1 !important;
-  filter: none !important;
-  mix-blend-mode: normal !important;
-  object-fit: contain !important;
-  object-position: center center !important;
+  opacity: .9;
+  filter: none;
+  mix-blend-mode: normal;
 }
 .reader-wrap.img-revealed .reader-eye {
-  bottom: 38px;
-  right: 38px;
-  color: rgba(230,200,110,.9);
-  filter: drop-shadow(0 0 6px rgba(201,168,76,.4));
-  z-index: 501;
-}
-/* Bookmark oculto en fullscreen */
-body:has(.reader-wrap.img-revealed) #era-bookmark {
-  opacity: 0;
-  pointer-events: none;
-}
-/* Pétalos visibles sobre el fullscreen */
-body:has(.reader-wrap.img-revealed) #blossom-overlay {
-  z-index: 501;
+  color: rgba(230,200,110,.85);
+  filter: drop-shadow(0 0 6px rgba(201,168,76,.35));
 }

@@ -523,33 +523,27 @@ function renderPagedReader(era, section, panel) {
 
     const _eye = panel.querySelector('.reader-eye');
     if (_eye) {
-      function _closeFullscreen() {
+      function _hideImage() {
         const wrap = _eye.closest('.reader-wrap');
-        if (!wrap || !wrap.classList.contains('img-revealed') || wrap.classList.contains('img-leaving')) return;
-        wrap.classList.add('img-leaving');
-        wrap.addEventListener('animationend', () => {
-          wrap.classList.remove('img-revealed', 'img-leaving');
-          document.body.style.overflow = '';
-          _eye.title = 'Ver imagen completa';
-          _eye.setAttribute('aria-label', 'Ver imagen completa');
-          requestAnimationFrame(() => wrap.scrollIntoView({ behavior: 'smooth', block: 'center' }));
-        }, { once: true });
+        if (!wrap || !wrap.classList.contains('img-revealed')) return;
+        wrap.classList.remove('img-revealed');
+        _eye.title = 'Ver imagen completa';
+        _eye.setAttribute('aria-label', 'Ver imagen completa');
       }
 
       _eye.addEventListener('click', () => {
         const wrap = _eye.closest('.reader-wrap');
         if (wrap.classList.contains('img-revealed')) {
-          _closeFullscreen();
+          _hideImage();
         } else {
           wrap.classList.add('img-revealed');
-          document.body.style.overflow = 'hidden';
           _eye.title = 'Volver al texto';
           _eye.setAttribute('aria-label', 'Volver al texto');
         }
       });
 
       document.addEventListener('keydown', e => {
-        if (e.key === 'Escape') _closeFullscreen();
+        if (e.key === 'Escape') _hideImage();
       });
     }
 
