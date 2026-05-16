@@ -222,7 +222,7 @@
     },
     "dong-zhuo": {
       paged: true,
-      bgImg: "assets/img/Eras/Era_dong_zhuo.webp",
+      bgImg: "assets/img/Eras/Era_Tirania_dongzhuo.png",
       lede: "El general fronterizo Dong Zhuo marcha sobre Luoyang con sus tropas norteñas, depone al heredero y convierte al Hijo del Cielo en su marioneta. Lo que sigue son tres años de terror, incendio y conspiración que fragmentan para siempre la autoridad Han.",
       prose: [
         "Cuando He Jin llama a Dong Zhuo para intimidar a los eunucos, firma su propia sentencia. He Jin muere asesinado antes de que llegue el ejército; los eunucos son masacrados por Yuan Shao; y Dong Zhuo, ya dentro de Luoyang, encuentra un vacío de poder que llena con brutalidad sin precedentes.",
@@ -249,6 +249,7 @@
           type: "Golpe de Estado",
           n: "Dong Zhuo ocupa Luoyang",
           d: "Con sus tropas norteñas, Dong Zhuo ocupa la capital antes de que nadie pueda detenerle. Depone al Emp. Shao y entroniza al niño Liu Xie como Emp. Xian, su marioneta de por vida.",
+          bgImg: "assets/img/Eras/Era_Tirania_dongzhuo.png",
           body: `<p>Dong Zhuo lleva años en las fronteras del noroeste combatiendo a los Qiang. Es un general de origen humilde que se ha ganado cada rango en el campo de batalla y que desprecia a los aristócratas de la corte con la intensidad que solo tiene quien ha nacido fuera de sus círculos. Cuando la carta de He Jin le llega invitándolo a marchar sobre Luoyang, entiende la oportunidad antes de que He Jin la entienda él mismo.</p><p>Entra en la capital con tres mil jinetes. Encuentra a los dos jóvenes príncipes —Emp. Shao y el Príncipe de Chenliu— en el camino de regreso al palacio tras el desastre del río. La novela describe la escena con precisión: Dong Zhuo se acerca al Emp. Shao y le habla de lo ocurrido. El Emp. Shao, de catorce años, llora y no acierta a responder. El Príncipe de Chenliu, de nueve, le explica con calma lo sucedido y da instrucciones precisas a los presentes. Dong Zhuo observa y decide en ese momento qué hijo del Emp. Ling le será más útil.</p><p>En días depone al Emp. Shao —que será envenenado meses después— y entroniza al Príncipe de Chenliu con el nombre de Emp. Xian. Es el mismo Emp. Xian que reinará de nombre durante treinta años mientras Cao Cao lo usa como fuente de legitimidad. Pero eso está todavía lejos: por ahora es la marioneta de Dong Zhuo, que se nombra a sí mismo Primer Ministro, Duque de Mei y General Supremo en una sola semana.</p><aside class="reader-hist"><strong>Nota histórica</strong>El Sanguo Zhi registra que el Emp. Xian fue entronizado el noveno mes del año Chuping (189 d.C.) y que gobernó de nombre hasta el vigésimo quinto año de Jian'an (220 d.C.), cuando Cao Pi lo forzó a abdicar. Su reinado nominal de 31 años es el más largo de los emperadores Han del periodo.</aside>`,
           char: {
             zh: "董卓",

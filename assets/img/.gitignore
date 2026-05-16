@@ -1,2 +1,3 @@
 *.png
 !og-default.png
+!Eras/*.png
