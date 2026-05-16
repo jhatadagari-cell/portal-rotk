@@ -427,16 +427,36 @@
 .reader-pager-tot { opacity: .5; }
 
 /* ── Main content area ── */
+.reader-content-clip {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  z-index: 2;
+}
+.reader-content-clip::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 76px;
+  background: linear-gradient(to bottom, transparent 0%, rgba(8,3,0,.75) 55%, rgba(6,2,0,.96) 100%);
+  pointer-events: none;
+  z-index: 4;
+  opacity: 1;
+  transition: opacity .35s ease;
+}
+.reader-wrap.reader-at-bottom .reader-content-clip::after {
+  opacity: 0;
+}
 .reader-content {
   position: relative;
   z-index: 2;
-  flex: 1;
+  height: 100%;
   display: grid;
   grid-template-columns: 1fr 1px minmax(220px, 36%);
   gap: 0;
   padding: clamp(32px, 5vw, 56px) clamp(28px, 5vw, 56px) 24px clamp(88px, 8vw, 112px);
   align-items: start;
-  min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
 }
@@ -739,7 +759,7 @@
 /* ── Navigation bar ── */
 .reader-nav {
   position: relative;
-  z-index: 3;
+  z-index: 2;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -747,21 +767,6 @@
   padding: 0 32px 24px;
   flex-shrink: 0;
   transition: opacity .4s ease;
-}
-/* Scroll fade — indica que hay contenido por debajo del pliegue visible */
-.reader-nav::before {
-  content: '';
-  position: absolute;
-  left: 0; right: 0;
-  top: -80px;
-  height: 80px;
-  background: linear-gradient(to bottom, transparent 0%, rgba(8,3,0,.72) 55%, rgba(6,2,0,.94) 100%);
-  pointer-events: none;
-  opacity: 1;
-  transition: opacity .35s ease;
-}
-.reader-wrap.reader-at-bottom .reader-nav::before {
-  opacity: 0;
 }
 .reader-btn {
   background: none;
@@ -955,7 +960,7 @@
 }
 .reader-wrap.img-revealed .reader-hd,
 .reader-wrap.img-revealed .reader-bg-zh,
-.reader-wrap.img-revealed .reader-content,
+.reader-wrap.img-revealed .reader-content-clip,
 .reader-wrap.img-revealed .reader-nav {
   opacity: 0;
   pointer-events: none;

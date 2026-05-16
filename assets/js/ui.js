@@ -464,6 +464,7 @@ function renderPagedReader(era, section, panel) {
             <span class="reader-pager-tot">${events.length}</span>
           </div>
         </div>
+        <div class="reader-content-clip">
         <div class="reader-content">
           <div class="reader-event">
             <div class="reader-ev-eyebrow">
@@ -478,6 +479,7 @@ function renderPagedReader(era, section, panel) {
           </div>
           <div class="reader-divider"></div>
           ${charHtml}
+        </div>
         </div>
         <div class="reader-nav">
           <button class="reader-btn reader-prev" ${isFirst ? 'disabled' : ''} aria-label="Anterior">◀</button>
