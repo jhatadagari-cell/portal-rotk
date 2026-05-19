@@ -104,7 +104,15 @@
       "Bash(sed -n '100,175p' /Users/alejandropeyrocebrian/Documents/rotk/portal-rotk/assets/js/ui.js)",
       "Bash(python3 -m http.server 8765)",
       "Bash(echo \"PID:$!\")",
-      "Bash(open *)"
+      "Bash(open *)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\usuario\\\\Desktop\\\\Portal ROTK\" -Recurse -Filter \"*.html\")",
+      "Bash(Select-Object -First 20)",
+      "Bash(magick \"Era_Tirania_dongzhuo.png\" -quality 90 \"Era_Tirania_dongzhuo.webp\")",
+      "Bash(magick \"Era_Tirania_dongzhuo_hulao.png\" -quality 90 \"Era_Tirania_dongzhuo_hulao.webp\")",
+      "Bash(magick \"Era_Tirania_donzhuo_sevenstardagger.png\" -quality 90 \"Era_Tirania_donzhuo_sevenstardagger.webp\")",
+      "PowerShell(Get-Command *)",
+      "PowerShell(cd \"C:\\\\Users\\\\usuario\\\\Desktop\\\\Portal ROTK\"; $env:PYTHONUTF8=1; python convert_to_webp.py)",
+      "Bash(Get-ChildItem -Recurse -Filter \"main.css\")"
     ]
   },
   "enabledPlugins": {

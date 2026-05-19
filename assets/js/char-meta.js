@@ -63,6 +63,30 @@
     }
   }
 
+  function adaptHeroLede() {
+    const hero  = document.querySelector('.hero');
+    const media = hero && hero.querySelector('.hero-media');
+    const copy  = hero && hero.querySelector('.hero-copy');
+    if (!hero || !media || !copy) return;
+
+    // Target: .hero-lede OR last direct <p class="lede"> child of hero-copy
+    const lede = copy.querySelector(':scope > .hero-lede')
+              || copy.querySelector(':scope > p.lede:last-of-type');
+    if (!lede) return;
+
+    if (copy.offsetHeight > media.offsetHeight + 24) {
+      Object.assign(lede.style, {
+        gridColumn : '1 / -1',
+        margin     : '0',
+        paddingTop : '4px',
+      });
+      hero.appendChild(lede);
+    }
+  }
+
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
+
+  // Run after fonts are measured to get accurate text heights
+  (document.fonts ? document.fonts.ready : Promise.resolve()).then(adaptHeroLede);
 })();

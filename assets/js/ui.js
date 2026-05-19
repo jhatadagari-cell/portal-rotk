@@ -312,23 +312,21 @@ if (pgrid) {
     const d = document.createElement('div');
     d.className = 'pcard';
     d.dataset.pid = p.id;
-    d.style.cssText = `--pc:${p.c}`;
+    d.style.cssText = `--pc:${p.c}${p.bgImg ? `;--pimg:url('${p.bgImg}')` : ''}`;
     d.innerHTML = `
-      <div class="pcard-ico">${p.ico}</div>
-      <div class="pcard-en">${p.n}</div>
-      <div class="pcard-zh">${p.zh}</div>
+      <div class="pcard-bg" aria-hidden="true"></div>
+      <div class="pcard-zh-bg" aria-hidden="true">${p.zh}</div>
+      <div class="pcard-foot">
+        <div class="pcard-yr">${p.y}</div>
+        <div class="pcard-n">${p.n}</div>
+        <div class="pcard-zh">${p.zh}</div>
+      </div>
       <div class="pcard-over">
         <div class="pcard-over-desc">${p.desc}</div>
       </div>
     `;
 
-    const yr = document.createElement('div');
-    yr.className = 'pcard-yr';
-    yr.style.cssText = `--pc:${p.c}`;
-    yr.textContent = p.y;
-
     wrap.appendChild(d);
-    wrap.appendChild(yr);
     pgrid.appendChild(wrap);
   });
 
@@ -377,7 +375,7 @@ if (pgrid) {
 }
 
 // ── Era activation ──
-function setActiveEra(eraId) {
+function setActiveEra(eraId, opts = {}) {
   activeEra = eraId;
   showAllChars = false;
   selectedFactions.clear();
@@ -399,7 +397,7 @@ function setActiveEra(eraId) {
   if (factionsTitle) factionsTitle.textContent = era ? `Reinos intervinientes · ${era.zh}` : '三國鼎立';
   renderCharacters(eraId);
   renderFactions(eraId);
-  renderEraDetail(eraId);
+  renderEraDetail(eraId, opts);
   if (typeof startBlossom  !== 'undefined') { if (eraId === 'turbantes')       startBlossom();    else stopBlossom();  }
   if (typeof startFire     !== 'undefined') { if (eraId === 'chibi')           startFire();       else stopFire();     }
   if (typeof startBlizzard !== 'undefined') { if (eraId === 'sima')            startBlizzard();   else stopBlizzard(); }
@@ -419,7 +417,7 @@ if (charsMoreBtn) charsMoreBtn.addEventListener('click', () => {
 });
 
 // ── Paginated chronicle reader ──
-function renderPagedReader(era, section, panel) {
+function renderPagedReader(era, section, panel, opts = {}) {
   const events = era.events || [];
   if (!events.length) return;
 
@@ -431,6 +429,9 @@ function renderPagedReader(era, section, panel) {
     const char  = ev.char || null;
     const isFirst = idx === 0;
     const isLast  = idx === events.length - 1;
+    const currentEraIdx = PERIODS.findIndex(p => p.id === era.id);
+    const nextEra = (isLast && currentEraIdx >= 0 && currentEraIdx < PERIODS.length - 1)
+      ? PERIODS[currentEraIdx + 1] : null;
 
     const charHtml = char
       ? `<div class="reader-char" style="--cfc:${char.fc || era.c}">
@@ -450,7 +451,7 @@ function renderPagedReader(era, section, panel) {
     panel.innerHTML = `
       <div class="reader-wrap" style="--ec:${era.c}">
         <div class="reader-bg" aria-hidden="true">${(ev.bgImg || era.bgImg) ? `<img src="${ev.bgImg || era.bgImg}" alt="">` : ''}</div>
-        ${ev.bgImg ? `<button class="reader-eye" title="Ver imagen completa" aria-label="Ver imagen completa"><span class="eye-open"><svg width="28" height="19" viewBox="0 0 18 13" fill="none"><path d="M9 .5C4.5.5 1 4.5 1 6.5 1 8.5 4.5 12.5 9 12.5c4.5 0 8-4 8-6S13.5.5 9 .5Z" stroke="currentColor" stroke-width="1" stroke-linejoin="round"/><circle cx="9" cy="6.5" r="2.5" stroke="currentColor" stroke-width="1"/></svg></span><span class="eye-slash"><svg width="30" height="22" viewBox="0 0 20 16" fill="none"><path d="M10 2C5.5 2 2 6 1 8c1 2 4.5 6 9 6s8-4 9-6c-1-2-4.5-6-9-6Z" stroke="currentColor" stroke-width="1" stroke-linejoin="round"/><circle cx="10" cy="8" r="2.5" stroke="currentColor" stroke-width="1"/><line x1="2.5" y1=".5" x2="17.5" y2="15.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></span></button>` : ''}
+        ${(ev.bgImg || era.bgImg) ? `<button class="reader-eye" title="Ver imagen completa" aria-label="Ver imagen completa"><span class="eye-open"><svg width="28" height="19" viewBox="0 0 18 13" fill="none"><path d="M9 .5C4.5.5 1 4.5 1 6.5 1 8.5 4.5 12.5 9 12.5c4.5 0 8-4 8-6S13.5.5 9 .5Z" stroke="currentColor" stroke-width="1" stroke-linejoin="round"/><circle cx="9" cy="6.5" r="2.5" stroke="currentColor" stroke-width="1"/></svg></span><span class="eye-slash"><svg width="30" height="22" viewBox="0 0 20 16" fill="none"><path d="M10 2C5.5 2 2 6 1 8c1 2 4.5 6 9 6s8-4 9-6c-1-2-4.5-6-9-6Z" stroke="currentColor" stroke-width="1" stroke-linejoin="round"/><circle cx="10" cy="8" r="2.5" stroke="currentColor" stroke-width="1"/><line x1="2.5" y1=".5" x2="17.5" y2="15.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></span></button>` : ''}
         <div class="reader-bg-zh" aria-hidden="true">${era.zh}</div>
         <div class="reader-hd">
           <div class="reader-hd-left">
@@ -484,7 +485,14 @@ function renderPagedReader(era, section, panel) {
         <div class="reader-nav">
           <button class="reader-btn reader-prev" ${isFirst ? 'disabled' : ''} aria-label="Anterior">◀</button>
           <div class="reader-dots">${dotsHtml}</div>
-          <button class="reader-btn reader-next" ${isLast ? 'disabled' : ''} aria-label="Siguiente">▶</button>
+          ${nextEra
+            ? `<button class="reader-next-era" style="--nec:${nextEra.c}" aria-label="Ir a ${nextEra.n}">
+                <span class="rne-label">Siguiente era →</span>
+                <span class="rne-name">${nextEra.n}</span>
+                <span class="rne-zh">${nextEra.zh}</span>
+               </button>`
+            : `<button class="reader-btn reader-next" ${isLast ? 'disabled' : ''} aria-label="Siguiente">▶</button>`
+          }
         </div>
       </div>
       ${(() => { const cc = chroniclesForEvent(ev); return cc.length ? `
@@ -514,6 +522,11 @@ function renderPagedReader(era, section, panel) {
 
     panel.querySelector('.reader-prev')?.addEventListener('click', () => goTo(readerPage - 1));
     panel.querySelector('.reader-next')?.addEventListener('click', () => goTo(readerPage + 1));
+    panel.querySelector('.reader-next-era')?.addEventListener('click', () => {
+      if (!nextEra) return;
+      setActiveEra(nextEra.id, { noScroll: true });
+      setTimeout(() => document.getElementById('periods')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
+    });
     panel.querySelectorAll('.reader-dot[data-i]').forEach(d =>
       d.addEventListener('click', () => goTo(+d.dataset.i))
     );
@@ -583,11 +596,11 @@ function renderPagedReader(era, section, panel) {
   readerPage = 0;
   goTo(0);
   section.classList.add('visible');
-  setTimeout(() => section.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
+  if (!opts.noScroll) setTimeout(() => section.scrollIntoView({ behavior: 'smooth', block: 'center' }), 60);
 }
 
 // ── Era detail expansion panel (periodos.html) ──
-function renderEraDetail(eraId) {
+function renderEraDetail(eraId, opts = {}) {
   const section = document.getElementById('era-detail');
   const panel   = document.getElementById('era-detail-panel');
   if (!section || !panel) return;
@@ -597,7 +610,7 @@ function renderEraDetail(eraId) {
   const era = PERIODS.find(p => p.id === eraId);
   if (!era) { section.classList.remove('visible'); return; }
 
-  if (era.paged) { renderPagedReader(era, section, panel); return; }
+  if (era.paged) { renderPagedReader(era, section, panel, opts); return; }
 
   // Characters for this era sorted by eraRank then overall rank
   const eraChars = (typeof CHARS !== 'undefined' ? CHARS : [])
@@ -670,7 +683,7 @@ function renderEraDetail(eraId) {
     </div>`;
 
   section.classList.add('visible');
-  setTimeout(() => section.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
+  if (!opts.noScroll) setTimeout(() => section.scrollIntoView({ behavior: 'smooth', block: 'center' }), 60);
 
   // Scroll-reveal for character side panels
   const revObs = new IntersectionObserver(entries => {

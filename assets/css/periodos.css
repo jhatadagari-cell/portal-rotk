@@ -356,7 +356,6 @@
   mask-image:         radial-gradient(ellipse 92% 88% at 50% 42%, black 28%, rgba(0,0,0,.82) 48%, rgba(0,0,0,.3) 66%, transparent 83%);
   transition: opacity .65s ease, filter .65s ease;
 }
-
 /* Large faded zh character behind content */
 .reader-bg-zh {
   position: absolute;
@@ -455,7 +454,7 @@
   display: grid;
   grid-template-columns: 1fr 1px minmax(220px, 36%);
   gap: 0;
-  padding: clamp(32px, 5vw, 56px) clamp(28px, 5vw, 56px) 24px clamp(88px, 8vw, 112px);
+  padding: clamp(32px, 5vw, 56px) clamp(28px, 5vw, 56px) 80px clamp(88px, 8vw, 112px);
   align-items: start;
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -758,16 +757,18 @@
 
 /* ── Navigation bar ── */
 .reader-nav {
-  position: relative;
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
   z-index: 2;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 24px;
   padding: 12px 32px 24px;
-  flex-shrink: 0;
   transition: opacity .4s ease;
-  background: linear-gradient(to bottom, rgba(6,2,0,.88) 0%, rgba(8,3,0,.55) 55%, transparent 100%);
+  background: linear-gradient(to top, rgba(6,2,0,.92) 0%, rgba(8,3,0,.58) 55%, transparent 100%);
 }
 .reader-btn {
   background: none;
@@ -791,6 +792,47 @@
 .reader-btn:disabled {
   opacity: .2;
   cursor: default;
+}
+/* ── Next-era button (last page) ── */
+.reader-next-era {
+  background: none;
+  border: none;
+  border-left: 2px solid var(--nec, var(--gold));
+  padding: 3px 0 3px 10px;
+  cursor: pointer;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  max-width: 130px;
+  flex-shrink: 0;
+  transition: opacity .2s;
+}
+.reader-next-era:hover { opacity: .7; }
+.rne-label {
+  font-family: 'Cinzel Decorative', serif;
+  font-size: 7.5px;
+  letter-spacing: .15em;
+  color: var(--nec, var(--gold));
+  opacity: .65;
+}
+.rne-name {
+  font-family: 'IM Fell English', serif;
+  font-style: italic;
+  font-size: 14px;
+  color: var(--parch);
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 124px;
+}
+.rne-zh {
+  font-family: 'Noto Serif SC', serif;
+  font-size: 10px;
+  color: var(--nec, var(--gold));
+  opacity: .42;
+  letter-spacing: .1em;
 }
 .reader-dots {
   display: flex;
@@ -822,7 +864,7 @@
 @media (max-width: 680px) {
   .reader-content {
     grid-template-columns: 1fr;
-    padding: 28px 20px 20px;
+    padding: 28px 20px 72px;
     gap: 24px;
   }
   .reader-divider { display: none; }
@@ -971,7 +1013,10 @@
   opacity: .9;
   filter: none;
   mix-blend-mode: normal;
+  -webkit-mask-image: radial-gradient(ellipse 86% 82% at 50% 50%, black 18%, rgba(0,0,0,.75) 40%, rgba(0,0,0,.2) 58%, transparent 72%);
+  mask-image:         radial-gradient(ellipse 86% 82% at 50% 50%, black 18%, rgba(0,0,0,.75) 40%, rgba(0,0,0,.2) 58%, transparent 72%);
 }
+
 .reader-wrap.img-revealed .reader-eye {
   color: rgba(230,200,110,.85);
   filter: drop-shadow(0 0 6px rgba(201,168,76,.35));
