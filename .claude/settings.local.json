@@ -112,7 +112,10 @@
       "Bash(magick \"Era_Tirania_donzhuo_sevenstardagger.png\" -quality 90 \"Era_Tirania_donzhuo_sevenstardagger.webp\")",
       "PowerShell(Get-Command *)",
       "PowerShell(cd \"C:\\\\Users\\\\usuario\\\\Desktop\\\\Portal ROTK\"; $env:PYTHONUTF8=1; python convert_to_webp.py)",
-      "Bash(Get-ChildItem -Recurse -Filter \"main.css\")"
+      "Bash(Get-ChildItem -Recurse -Filter \"main.css\")",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\usuario\\\\.claude\\\\skills\" -Force -ErrorAction SilentlyContinue)",
+      "Bash(Select-Object FullName)",
+      "Bash(git *)"
     ]
   },
   "enabledPlugins": {
