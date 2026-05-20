@@ -395,19 +395,24 @@ function setActiveEra(eraId, opts = {}) {
   if (eraBookmarkName) eraBookmarkName.textContent  = era ? era.n  : '';
   if (heroesTitle)   heroesTitle.textContent   = era ? `Personajes clave · ${era.n}` : 'Los Grandes Protagonistas';
   if (factionsTitle) factionsTitle.textContent = era ? `Reinos intervinientes · ${era.zh}` : '三國鼎立';
-  renderCharacters(eraId);
-  renderFactions(eraId);
-  renderEraDetail(eraId, opts);
-  if (typeof startBlossom  !== 'undefined') { if (eraId === 'turbantes')       startBlossom();    else stopBlossom();  }
-  if (typeof startFire     !== 'undefined') { if (eraId === 'chibi')           startFire();       else stopFire();     }
-  if (typeof startBlizzard !== 'undefined') { if (eraId === 'sima')            startBlizzard();   else stopBlizzard(); }
-  if (typeof startDust     !== 'undefined') { if (eraId === 'han-tardio')      startDust();       else stopDust();     }
-  if (typeof startPeace    !== 'undefined') { if (eraId === 'jin')             startPeace();      else stopPeace();    }
-  if (typeof startLeaves   !== 'undefined') { if (eraId === 'guerras-senores') startLeaves();     else stopLeaves();   }
-  if (typeof startCinder   !== 'undefined') { if (eraId === 'dong-zhuo')       startCinder();     else stopCinder();   }
-  if (typeof startDuskRain !== 'undefined') { if (eraId === 'guerras-ocaso')   startDuskRain();   else stopDuskRain(); }
-  if (typeof startChaos    !== 'undefined') { if (eraId === 'ocho-principes')  startChaos();      else stopChaos();    }
-  if (typeof startWarDust  !== 'undefined') { if (eraId === 'tres-reinos')     startWarDust();    else stopWarDust();  }
+  // El resaltado de la tarjeta y el marcador ya están aplicados arriba; la
+  // reconstrucción pesada (rejillas + reader) y los efectos ambientales se
+  // difieren un frame para que el click se sienta instantáneo.
+  requestAnimationFrame(() => {
+    renderCharacters(eraId);
+    renderFactions(eraId);
+    renderEraDetail(eraId, opts);
+    if (typeof startBlossom  !== 'undefined') { if (eraId === 'turbantes')       startBlossom();    else stopBlossom();  }
+    if (typeof startFire     !== 'undefined') { if (eraId === 'chibi')           startFire();       else stopFire();     }
+    if (typeof startBlizzard !== 'undefined') { if (eraId === 'sima')            startBlizzard();   else stopBlizzard(); }
+    if (typeof startDust     !== 'undefined') { if (eraId === 'han-tardio')      startDust();       else stopDust();     }
+    if (typeof startPeace    !== 'undefined') { if (eraId === 'jin')             startPeace();      else stopPeace();    }
+    if (typeof startLeaves   !== 'undefined') { if (eraId === 'guerras-senores') startLeaves();     else stopLeaves();   }
+    if (typeof startCinder   !== 'undefined') { if (eraId === 'dong-zhuo')       startCinder();     else stopCinder();   }
+    if (typeof startDuskRain !== 'undefined') { if (eraId === 'guerras-ocaso')   startDuskRain();   else stopDuskRain(); }
+    if (typeof startChaos    !== 'undefined') { if (eraId === 'ocho-principes')  startChaos();      else stopChaos();    }
+    if (typeof startWarDust  !== 'undefined') { if (eraId === 'tres-reinos')     startWarDust();    else stopWarDust();  }
+  });
 }
 
 if (eraReset)    eraReset.addEventListener('click', () => setActiveEra(null));

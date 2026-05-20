@@ -1,3 +1,7 @@
+// Respeta la preferencia del sistema de "movimiento reducido":
+// con ella activa, los efectos ambientales no arrancan.
+const _REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
 // ── CHERRY BLOSSOM AMBIENT (Turbantes Amarillos) ──
 
 const blossomOverlay = document.createElement('div');
@@ -26,6 +30,7 @@ function _spawnPetal() {
 }
 
 function startBlossom() {
+  if (_REDUCED) return;
   if (activeEra && activeEra !== 'turbantes') return;
   if (_blossomTimer) return;
   document.body.classList.add('blossom-on');
@@ -57,7 +62,10 @@ document.body.appendChild(_cnv);
 const _ctx = _cnv.getContext('2d');
 let _cW, _cH;
 (function _szCnv(){ _cW = _cnv.width = innerWidth; _cH = _cnv.height = innerHeight; })();
-window.addEventListener('resize', function(){ _cW = _cnv.width = innerWidth; _cH = _cnv.height = innerHeight; });
+window.addEventListener('resize', function(){
+  _cW = _cnv.width = innerWidth; _cH = _cnv.height = innerHeight;
+  if (_shipCache) _buildCache();
+});
 
 // Ship definitions: xr=screen-left (0–1), w=display-px, rot=deg, nw/nh=SVG viewbox, d=hull path
 // masts: array of {xf=x-fraction, topH=mast-top as fraction of nh above ship, sailBot=sail-bottom fraction, sailLW/RW=sail-width fractions, battens=batten count}
@@ -95,6 +103,61 @@ const _SHIPS = [
 ];
 const _sPaths = _SHIPS.map(function(s){ return new Path2D(s.d); });
 
+// ── Sprites de resplandor pre-horneados ──
+// Crear un radial gradient por partícula y por frame es el mayor coste de
+// Canvas2D. En su lugar horneamos el degradado UNA vez a un canvas pequeño
+// y luego sólo hacemos drawImage (barato). La opacidad por vida de la
+// partícula se aplica con globalAlpha en draw().
+const _SPR = 64;
+function _bakeSprite(stops){
+  const c = document.createElement('canvas');
+  c.width = c.height = _SPR;
+  const x = c.getContext('2d');
+  const g = x.createRadialGradient(_SPR/2,_SPR/2,0, _SPR/2,_SPR/2,_SPR/2);
+  stops.forEach(function(s){ g.addColorStop(s[0], s[1]); });
+  x.fillStyle = g; x.fillRect(0,0,_SPR,_SPR);
+  return c;
+}
+// Fuego: 16 cubos de color a lo largo de la vida de la partícula
+// (el degradado original viraba amarillo→naranja→rojo según la edad).
+const _FIRE_SPR = [];
+for (var _fi = 0; _fi < 16; _fi++){
+  var _ft = _fi/15, _fr = 255, _fg = 0;
+  if      (_ft < .28) _fg = (210 - _ft/.28*165)|0;
+  else if (_ft < .56) _fg = (45  - (_ft-.28)/.28*45)|0;
+  else                _fr = (255 - (_ft-.56)/.44*175)|0;
+  _FIRE_SPR.push(_bakeSprite([
+    [0,   'rgba('+_fr+','+_fg+',0,1)'],
+    [.42, 'rgba('+((_fr*.72)|0)+','+((_fg*.18)|0)+',0,.478)'],
+    [1,   'rgba(0,0,0,0)']
+  ]));
+}
+const _EMBER_SPR = _bakeSprite([
+  [0,   'rgba(255,240,90,1)'],
+  [.36, 'rgba(255,108,10,.72)'],
+  [1,   'rgba(150,12,0,0)']
+]);
+const _SMOKE_SPR = _bakeSprite([
+  [0,  'rgba(11,5,2,.3)'],
+  [.5, 'rgba(7,3,1,.13)'],
+  [1,  'rgba(0,0,0,0)']
+]);
+
+// Capas estáticas cacheadas: el agua y los barcos no se mueven, así que se
+// dibujan una sola vez a canvas offscreen y cada frame sólo se hace blit.
+var _waterCache = null, _shipCache = null, _cacheW = 0, _cacheH = 0;
+function _buildCache(){
+  if (!_waterCache){
+    _waterCache = document.createElement('canvas');
+    _shipCache  = document.createElement('canvas');
+  }
+  _waterCache.width = _shipCache.width = _cW;
+  _waterCache.height = _shipCache.height = _cH;
+  _drawWater(_waterCache.getContext('2d'));
+  _drawShips(_shipCache.getContext('2d'));
+  _cacheW = _cW; _cacheH = _cH;
+}
+
 // ── Particle constructors ──
 
 function FireP(x, y) {
@@ -111,16 +174,9 @@ FireP.prototype.tick = function(){
 };
 FireP.prototype.draw = function(){
   const t = 1 - this.life, rad = this.r*(.38 + this.life*.62);
-  let r = 255, g = 0;
-  if      (t < .28) g = (210 - t/.28*165)|0;
-  else if (t < .56) g = (45  - (t-.28)/.28*45)|0;
-  else              r = (255 - (t-.56)/.44*175)|0;
-  const gd = _ctx.createRadialGradient(this.x,this.y,0,this.x,this.y,rad);
-  gd.addColorStop(0,   `rgba(${r},${g},0,${(this.life*.92).toFixed(2)})`);
-  gd.addColorStop(.42, `rgba(${(r*.72)|0},${(g*.18)|0},0,${(this.life*.44).toFixed(2)})`);
-  gd.addColorStop(1,   'rgba(0,0,0,0)');
-  _ctx.beginPath(); _ctx.arc(this.x,this.y,rad,0,6.28);
-  _ctx.fillStyle = gd; _ctx.fill();
+  _ctx.globalAlpha = this.life*.92;
+  _ctx.drawImage(_FIRE_SPR[Math.min(15, (t*16)|0)], this.x-rad, this.y-rad, rad*2, rad*2);
+  _ctx.globalAlpha = 1;
 };
 FireP.prototype.dead = function(){ return this.life <= 0; };
 
@@ -136,12 +192,9 @@ SmokeP.prototype.tick = function(){
   this.y += this.vy; this.r += .45; this.life -= this.decay;
 };
 SmokeP.prototype.draw = function(){
-  const gd = _ctx.createRadialGradient(this.x,this.y,0,this.x,this.y,this.r);
-  gd.addColorStop(0,  `rgba(11,5,2,${(this.life*.3).toFixed(2)})`);
-  gd.addColorStop(.5, `rgba(7,3,1,${(this.life*.13).toFixed(2)})`);
-  gd.addColorStop(1,  'rgba(0,0,0,0)');
-  _ctx.beginPath(); _ctx.arc(this.x,this.y,this.r,0,6.28);
-  _ctx.fillStyle = gd; _ctx.fill();
+  _ctx.globalAlpha = Math.min(1, this.life);
+  _ctx.drawImage(_SMOKE_SPR, this.x-this.r, this.y-this.r, this.r*2, this.r*2);
+  _ctx.globalAlpha = 1;
 };
 SmokeP.prototype.dead = function(){ return this.life <= 0; };
 
@@ -164,12 +217,10 @@ EmberP.prototype.draw = function(){
     _ctx.fillStyle = 'rgba(255,88,10,'+(i/arr.length*this.life*.48).toFixed(2)+')';
     _ctx.fill();
   }, this);
-  const gd = _ctx.createRadialGradient(this.x,this.y,0,this.x,this.y,this.r*3);
-  gd.addColorStop(0,   `rgba(255,240,90,${this.life.toFixed(2)})`);
-  gd.addColorStop(.36, `rgba(255,108,10,${(this.life*.72).toFixed(2)})`);
-  gd.addColorStop(1,   'rgba(150,12,0,0)');
-  _ctx.beginPath(); _ctx.arc(this.x,this.y,this.r*3,0,6.28);
-  _ctx.fillStyle = gd; _ctx.fill();
+  const d = this.r*3;
+  _ctx.globalAlpha = Math.min(1, this.life);
+  _ctx.drawImage(_EMBER_SPR, this.x-d, this.y-d, d*2, d*2);
+  _ctx.globalAlpha = 1;
 };
 EmberP.prototype.dead = function(){ return this.life <= 0; };
 
@@ -200,34 +251,34 @@ function _pts(){
   }, []);
 }
 
-// Water glow reflection under each ship
-function _drawWater(){
+// Water glow reflection under each ship — capa estática, se hornea al cache
+function _drawWater(ctx){
   _SHIPS.forEach(function(s){
     var cx = s.xr*_cW + s.w*.5;
-    var gd = _ctx.createRadialGradient(cx,_cH,0,cx,_cH,s.w*.8);
+    var gd = ctx.createRadialGradient(cx,_cH,0,cx,_cH,s.w*.8);
     gd.addColorStop(0,'rgba(85,12,0,.24)');
     gd.addColorStop(.4,'rgba(50,6,0,.11)');
     gd.addColorStop(1,'rgba(0,0,0,0)');
-    _ctx.fillStyle = gd;
-    _ctx.beginPath();
-    _ctx.ellipse(cx,_cH,s.w*.62,s.w*.15,0,0,6.28);
-    _ctx.fill();
+    ctx.fillStyle = gd;
+    ctx.beginPath();
+    ctx.ellipse(cx,_cH,s.w*.62,s.w*.15,0,0,6.28);
+    ctx.fill();
   });
 }
 
-// Ship silhouettes + masts + battened sails + pennants drawn on canvas
-function _drawShips(){
+// Ship silhouettes + masts + battened sails + pennants — capa estática
+function _drawShips(ctx){
   _SHIPS.forEach(function(s, i){
     var sc = s.w/s.nw;
     var ty = _cH - s.nh*sc*.55;
-    _ctx.save();
-    _ctx.translate(s.xr*_cW, ty);
-    _ctx.scale(sc, sc);
-    _ctx.rotate(s.rot*.01745);
+    ctx.save();
+    ctx.translate(s.xr*_cW, ty);
+    ctx.scale(sc, sc);
+    ctx.rotate(s.rot*.01745);
 
     // Hull silhouette
-    _ctx.fillStyle = '#060100';
-    _ctx.fill(_sPaths[i]);
+    ctx.fillStyle = '#060100';
+    ctx.fill(_sPaths[i]);
 
     s.masts.forEach(function(m){
       var mx    = m.xf * s.nw;
@@ -237,12 +288,12 @@ function _drawShips(){
       var sBotY = s.nh * m.sailBot;
 
       // Mast pole
-      _ctx.strokeStyle = 'rgba(4,2,0,.96)';
-      _ctx.lineWidth = 2.2/sc;
-      _ctx.beginPath();
-      _ctx.moveTo(mx, mBase);
-      _ctx.lineTo(mx, mTop);
-      _ctx.stroke();
+      ctx.strokeStyle = 'rgba(4,2,0,.96)';
+      ctx.lineWidth = 2.2/sc;
+      ctx.beginPath();
+      ctx.moveTo(mx, mBase);
+      ctx.lineTo(mx, mTop);
+      ctx.stroke();
 
       // Sail vertices — trapezoid narrower at top (Chinese lug sail shape)
       var slT = mx - s.nw * m.sailLW * 0.62;
@@ -251,38 +302,38 @@ function _drawShips(){
       var srB = mx + s.nw * m.sailRW;
 
       // Sail body — semi-transparent so fire glows through fabric
-      _ctx.fillStyle = 'rgba(8,3,1,.68)';
-      _ctx.beginPath();
-      _ctx.moveTo(slT, sTopY);
-      _ctx.lineTo(srT, sTopY);
-      _ctx.lineTo(srB, sBotY);
-      _ctx.lineTo(slB, sBotY);
-      _ctx.closePath();
-      _ctx.fill();
+      ctx.fillStyle = 'rgba(8,3,1,.68)';
+      ctx.beginPath();
+      ctx.moveTo(slT, sTopY);
+      ctx.lineTo(srT, sTopY);
+      ctx.lineTo(srB, sBotY);
+      ctx.lineTo(slB, sBotY);
+      ctx.closePath();
+      ctx.fill();
 
       // Bamboo batten lines (interpolate width top→bottom)
-      _ctx.strokeStyle = 'rgba(3,1,0,.88)';
-      _ctx.lineWidth = 1.1/sc;
+      ctx.strokeStyle = 'rgba(3,1,0,.88)';
+      ctx.lineWidth = 1.1/sc;
       for (var b = 0; b <= m.battens; b++){
         var t  = b / m.battens;
         var by = sTopY + (sBotY - sTopY) * t;
-        _ctx.beginPath();
-        _ctx.moveTo(slT + (slB - slT) * t, by);
-        _ctx.lineTo(srT + (srB - srT) * t, by);
-        _ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(slT + (slB - slT) * t, by);
+        ctx.lineTo(srT + (srB - srT) * t, by);
+        ctx.stroke();
       }
 
       // Red pennant flag at mast top
-      _ctx.fillStyle = 'rgba(165,20,8,.82)';
-      _ctx.beginPath();
-      _ctx.moveTo(mx,                        mTop);
-      _ctx.lineTo(mx + s.nw * 0.055,         mTop + s.nh * 0.055);
-      _ctx.lineTo(mx,                        mTop + s.nh * 0.068);
-      _ctx.closePath();
-      _ctx.fill();
+      ctx.fillStyle = 'rgba(165,20,8,.82)';
+      ctx.beginPath();
+      ctx.moveTo(mx,                        mTop);
+      ctx.lineTo(mx + s.nw * 0.055,         mTop + s.nh * 0.055);
+      ctx.lineTo(mx,                        mTop + s.nh * 0.068);
+      ctx.closePath();
+      ctx.fill();
     });
 
-    _ctx.restore();
+    ctx.restore();
   });
 }
 
@@ -294,17 +345,22 @@ function _loop(t){
   var dt = Math.min(t - _lt, 50); _lt = t; _st += dt;
   _ctx.clearRect(0,0,_cW,_cH);
 
-  _drawWater();
+  // Capa de agua: blit del cache estático
+  _ctx.drawImage(_waterCache, 0, 0);
 
   if (_st > 26){
     _st = 0;
-    var pts = _pts();
-    pts.forEach(function(p){
-      if (Math.random() > .38) _parts.push(new FireP(p.x, p.y));
-      if (Math.random() > .87) _parts.push(new EmberP(p.x, p.y));
-    });
-    if (Math.random() > .6){ var rp=pts[Math.random()*pts.length|0]; _parts.push(new SmokeP(rp.x,rp.y)); }
-    if (Math.random() > .7) _parts.push(new AshP());
+    // Tope de seguridad: en régimen normal hay ~300-400 partículas; este
+    // límite sólo evita una acumulación descontrolada en casos extremos.
+    if (_parts.length < 800){
+      var pts = _pts();
+      pts.forEach(function(p){
+        if (Math.random() > .38) _parts.push(new FireP(p.x, p.y));
+        if (Math.random() > .87) _parts.push(new EmberP(p.x, p.y));
+      });
+      if (Math.random() > .6){ var rp=pts[Math.random()*pts.length|0]; _parts.push(new SmokeP(rp.x,rp.y)); }
+      if (Math.random() > .7) _parts.push(new AshP());
+    }
   }
 
   _parts = _parts.filter(function(p){ p.tick(); return !p.dead(); });
@@ -313,8 +369,9 @@ function _loop(t){
   _ctx.globalCompositeOperation = 'lighter';
   _parts.forEach(function(p){ if (p.type==='fire'||p.type==='ember') p.draw(); });
 
+  // Capa de barcos: blit del cache estático (sobre el fuego)
   _ctx.globalCompositeOperation = 'source-over';
-  _drawShips();
+  _ctx.drawImage(_shipCache, 0, 0);
 
   _parts.forEach(function(p){ if (p.type==='smoke'||p.type==='ash') p.draw(); });
 }
@@ -335,6 +392,7 @@ function _schedArrow(){ _arrowTimer = setTimeout(function(){ _spawnArrow(); _sch
 
 // ── Public fire controls (called from era selector + hover) ──
 function startFire(){
+  if (_REDUCED) return;
   if (activeEra && activeEra !== 'chibi') return;
   if (_stopTO){ clearTimeout(_stopTO); _stopTO = null; }
   if (_raf){
@@ -344,6 +402,7 @@ function startFire(){
   }
   document.body.classList.add('fire-on');
   _cnv.style.opacity = '1';
+  if (!_shipCache || _cacheW !== _cW || _cacheH !== _cH) _buildCache();
   _lt = performance.now(); _loop(_lt);
   var pts = _pts();
   for (var i=0; i<75; i++){
@@ -408,6 +467,7 @@ function _spawnGustLine() {
 }
 
 function startBlizzard() {
+  if (_REDUCED) return;
   if (activeEra && activeEra !== 'sima') return;
   if (_blizzardTimer) return;
   document.body.classList.add('blizzard-on');
@@ -426,6 +486,7 @@ function stopBlizzard() {
 }
 
 function startBlizzardGust() {
+  if (_REDUCED) return;
   if (activeEra && activeEra !== 'sima' && !document.body.classList.contains('blizzard-on')) return;
   for (let i = 0; i < 12; i++) setTimeout(() => _spawnFlake(true), i * 30);
   for (let i = 0; i < 5; i++) setTimeout(_spawnGustLine, i * 80);
@@ -465,6 +526,7 @@ function _spawnDust() {
 }
 
 function startDust() {
+  if (_REDUCED) return;
   if (activeEra && activeEra !== 'han-tardio') return;
   if (_dustTimer) return;
   document.body.classList.add('dust-on');
@@ -515,6 +577,7 @@ function _spawnLantern() {
 }
 
 function startPeace() {
+  if (_REDUCED) return;
   if (activeEra && activeEra !== 'jin') return;
   if (_peaceTimer) return;
   document.body.classList.add('peace-on');
@@ -558,6 +621,7 @@ function _spawnLeaf() {
 }
 
 function startLeaves() {
+  if (_REDUCED) return;
   if (activeEra && activeEra !== 'guerras-senores') return;
   if (_leavesTimer) return;
   document.body.classList.add('leaves-on');
@@ -604,6 +668,7 @@ function _spawnCinder() {
 }
 
 function startCinder() {
+  if (_REDUCED) return;
   if (activeEra && activeEra !== 'dong-zhuo') return;
   if (_cinderTimer) return;
   document.body.classList.add('cinder-on');
@@ -646,6 +711,7 @@ function _spawnDrop() {
 }
 
 function startDuskRain() {
+  if (_REDUCED) return;
   if (activeEra && activeEra !== 'guerras-ocaso') return;
   if (_duskTimer) return;
   document.body.classList.add('dusk-rain-on');
@@ -702,6 +768,7 @@ function _scheduleLightning() {
 }
 
 function startChaos() {
+  if (_REDUCED) return;
   if (activeEra && activeEra !== 'ocho-principes') return;
   if (_chaosRainTimer) return;
   document.body.classList.add('chaos-on');
@@ -779,6 +846,7 @@ function _wdBurst() {
 }
 
 function startWarDust() {
+  if (_REDUCED) return;
   if (activeEra && activeEra !== 'tres-reinos') return;
   if (_wdTimer) return;
   document.body.classList.add('wardust-on');
@@ -800,4 +868,42 @@ if (_tresCard) {
   _tresCard.addEventListener('mouseenter', startWarDust);
   _tresCard.addEventListener('mouseleave', stopWarDust);
 }
+
+// ── Pausa con la pestaña oculta ──
+// Los spawners (setInterval/timeout) seguían creando nodos en segundo plano.
+// Al ocultar la pestaña se detienen todos; al volver se reanuda el de la era
+// activa. requestAnimationFrame ya lo pausa el navegador, pero el canvas de
+// fuego también se libera para no dejar partículas colgadas.
+document.addEventListener('visibilitychange', function () {
+  if (document.hidden) {
+    clearInterval(_blossomTimer);    _blossomTimer = null;
+    clearInterval(_dustTimer);       _dustTimer = null;
+    clearInterval(_peaceTimer);      _peaceTimer = null;
+    clearInterval(_leavesTimer);     _leavesTimer = null;
+    clearInterval(_cinderTimer);     _cinderTimer = null;
+    clearInterval(_duskTimer);       _duskTimer = null;
+    clearInterval(_blizzardTimer);   _blizzardTimer = null;
+    clearInterval(_chaosRainTimer);  _chaosRainTimer = null;
+    clearTimeout(_lightningTimer);   _lightningTimer = null;
+    clearInterval(_wdTimer);         _wdTimer = null;
+    clearTimeout(_arrowTimer);       _arrowTimer = null;
+    clearTimeout(_stopTO);           _stopTO = null;
+    if (_raf) { cancelAnimationFrame(_raf); _raf = null; }
+    _parts = [];
+    if (_ctx) _ctx.clearRect(0, 0, _cW, _cH);
+  } else {
+    switch (typeof activeEra !== 'undefined' ? activeEra : null) {
+      case 'turbantes':       startBlossom();  break;
+      case 'chibi':           startFire();     break;
+      case 'sima':            startBlizzard(); break;
+      case 'han-tardio':      startDust();     break;
+      case 'jin':             startPeace();    break;
+      case 'guerras-senores': startLeaves();   break;
+      case 'dong-zhuo':       startCinder();   break;
+      case 'guerras-ocaso':   startDuskRain(); break;
+      case 'ocho-principes':  startChaos();    break;
+      case 'tres-reinos':     startWarDust();  break;
+    }
+  }
+});
 
