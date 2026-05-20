@@ -115,7 +115,8 @@
       "Bash(Get-ChildItem -Recurse -Filter \"main.css\")",
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\usuario\\\\.claude\\\\skills\" -Force -ErrorAction SilentlyContinue)",
       "Bash(Select-Object FullName)",
-      "Bash(git *)"
+      "Bash(git *)",
+      "Bash([ -f \"$f.html\" ])"
     ]
   },
   "enabledPlugins": {

@@ -242,7 +242,7 @@
             fc: "#7a6040",
             role: "Señor del Norte",
             note: "Jefe del clan Yuan, el más prestigioso de las Cuatro Familias del Han. Es quien desencadena la masacre de eunucos cuando He Jin muere. Su decisión de matar a todo hombre sin barba elimina el problema —y toda posibilidad de volver atrás—. Pronto será elegido comandante de la Gran Coalición, aunque su indecisión estratégica lo perderá.",
-            href: null,
+            href: "assets/Periods/yuan-shao.html",
           },
         },
         {
@@ -257,7 +257,7 @@
             fc: "#9922cc",
             role: "Primer Ministro y tirano",
             note: "General de frontera convertido en dueño de China. Brutal, inteligente y profundamente despectivo de la clase letrada que lo rodea. Nombra a su hijo adoptivo Lü Bu como guardaespaldas personal —el guerrero más temible del Imperio a su servicio—. Gobernará Luoyang durante un año antes de verse obligado a huir hacia Chang'an.",
-            href: null,
+            href: "assets/Periods/dong-zhuo.html",
           },
         },
         {
@@ -288,7 +288,7 @@
             fc: "#7a6040",
             role: "Comandante general de la Coalición",
             note: "Elegido por su apellido, no por su capacidad de mando. Su indecisión ante los pasos de Luoyang y su envidia hacia Sun Jian son las grietas que destruyen la coalición desde dentro. El mismo hombre que masacró a los eunucos en un día tardará meses en no avanzar un kilómetro hacia Dong Zhuo.",
-            href: null,
+            href: "assets/Periods/yuan-shao.html",
           },
         },
         {
@@ -303,7 +303,7 @@
             fc: "#1e8a2e",
             role: "Segundo hermano de Liu Bei",
             note: "Aparece en la coalición sin título, sin rango, sin más crédito que el de hermano jurado de un aspirante sin tierra. La escena del vino caliente es su primera aparición en solitario y la que establece su identidad definitiva en la novela: el hombre que promete lo imposible y lo cumple antes de que el vino se enfríe.",
-            href: null,
+            href: "assets/Periods/guan-yu.html",
           },
         },
         {
@@ -319,7 +319,7 @@
             fc: "#8b1218",
             role: "General supremo de Dong Zhuo",
             note: "Hijo adoptivo de Dong Zhuo y el guerrero más temible del Romance. Ningún general de la coalición puede enfrentarle en solitario. Solo los tres hermanos juntos lo hacen retroceder. Su lealtad, sin embargo, tiene precio: es el mismo hombre que ya mató a su anterior padre adoptivo Ding Yuan para unirse a Dong Zhuo.",
-            href: null,
+            href: "assets/Periods/lu-bu.html",
           },
         },
         {
@@ -334,7 +334,7 @@
             fc: "#9922cc",
             role: "Consejero estratega de Dong Zhuo",
             note: "El arquitecto intelectual de la tiranía. Mientras Dong Zhuo impone el terror por la fuerza, Li Ru le da la forma política: es él quien argumenta la destitución del Emp. Shao, quien diseña su envenenamiento cuando se convierte en un problema, y quien recomienda el abandono y la destrucción de Luoyang. Aparece poco en la novela, pero sus decisiones son algunas de las más determinantes del período.",
-            href: null,
+            href: "assets/Periods/li-ru.html",
           },
         },
         {
@@ -349,7 +349,7 @@
             fc: "#c43c00",
             role: "Señor del Sur, Tigre de Jiangdong",
             note: "El único señor de la coalición que combate sin calcular la retirada. Su hallazgo del Sello Imperial es el momento de mayor peso histórico que tiene en la novela: decide ocultarlo y jurar en falso, lo que lo convierte en el primer gran traidor de la causa Han dentro de la propia coalición de los leales. Muere sin aprovecharlo. Su hijo lo negociará por soldados.",
-            href: null,
+            href: "assets/Periods/sun-jian.html",
           },
         },
         {
@@ -364,7 +364,7 @@
             fc: "#9922cc",
             role: "La Bella de la Estratagema",
             note: "Una de las Cuatro Grandes Bellezas de la historia china. La novela la construye como agente consciente de su misión, no como víctima pasiva: jura ante el altar de la luna que actuará para salvar al Han y cumple su promesa con una precisión que ningún general de la coalición fue capaz de alcanzar. Desaparece de la narración tras la muerte de Dong Zhuo.",
-            href: null,
+            href: "assets/Periods/diao-chan.html",
           },
         },
       ],
@@ -404,7 +404,7 @@
             fc: "#7a6040",
             role: "Gobernador de Xuzhou",
             note: "El anciano gobernador que recibe el golpe entero de la venganza de Cao Cao por un crimen que no ordenó. Su decisión final —ofrecer Xuzhou a Liu Bei en su lecho de muerte— le da al heredero del Han su primera base territorial. La provincia no le durará dos años, pero el gesto de Tao Qian establece el patrón: Liu Bei recibe tierras como reconocimiento de virtud, no como conquista militar.",
-            href: null,
+            href: "assets/Periods/tao-qian.html",
           },
         },
         {
@@ -464,7 +464,7 @@
             fc: "#a06030",
             role: "Pretendido Emperador del Zhong",
             note: "Yuan Shu hereda el prestigio del clan Yuan —cuatro generaciones de Tres Excelencias del Han— y lo convierte en la mayor humillación dinástica del periodo. Su declaración imperial es la decisión política más estúpida del Romance: una jugada que ningún cálculo defiende y que él toma porque confunde la posesión del Sello con el Mandato. Su agonía pidiendo miel es el contrapunto exacto a la disciplina de Cao Cao y la paciencia de Liu Bei.",
-            href: null,
+            href: "assets/Periods/yuan-shu.html",
           },
         },
         {
@@ -554,7 +554,7 @@
             fc: "#1e8a2e",
             role: "El Dragón Dormido",
             note: "La entrada de Zhuge Liang es el momento de mayor peso dramático del Romance hasta ese punto: un hombre que lo sabe todo esperando a que el hombre correcto llame tres veces. El Plan de Longzhong es la única vez en la novela en que alguien articula la estructura de los tres reinos antes de que existan. Zhuge Liang la dibuja sobre un mapa en 207 d.C. y pasa los siguientes veintisiete años intentando ejecutarla.",
-            href: null,
+            href: "assets/Periods/zhuge-liang.html",
           },
         },
       ],
@@ -609,7 +609,7 @@
             fc: "#1e8a2e",
             role: "Embajador de Liu Bei en Wu",
             note: "Su primera gran misión política. Sin ejército que lo respalde y sin más capital que su elocuencia, convence a la corte más rica del sur de combatir junto a un señor sin tierra. La manipulación del poema de la Torre del Bronce es uno de los grandes momentos retóricos del Romance: Zhuge Liang sabe que el orgullo de Zhou Yu es más explotable que el cálculo de Sun Quan y construye su discurso sobre la grieta exacta. Es también el origen de la rivalidad obsesiva entre Zhou Yu y él que culminará en la frase final del comandante de Wu.",
-            href: null,
+            href: "assets/Periods/zhuge-liang.html",
           },
         },
         {
@@ -624,7 +624,7 @@
             fc: "#1e8a2e",
             role: "Genio bajo el mando de Wu",
             note: "Zhuge Liang acepta la trampa de Zhou Yu sabiendo que el riesgo es la ejecución. Su seguridad viene de un cálculo meteorológico exacto: ha leído los signos atmosféricos y sabe la noche exacta en que caerá niebla espesa sobre el Yangtzé. Es el primer momento del Romance en que se le atribuye conocimiento sobrenatural del clima —el segundo será el viento del sureste, días después. La novela construye sobre estas dos predicciones la imagen del estratega que «sabe la tierra y conoce el cielo».",
-            href: null,
+            href: "assets/Periods/zhuge-liang.html",
           },
         },
         {
@@ -669,7 +669,7 @@
             fc: "#1e8a2e",
             role: "Invocador taoísta",
             note: "El altar de los Siete Astros es el primer ritual mágico explícito que el Romance le atribuye. La novela construye la escena con todos los códigos del taoísmo religioso —ayuno, números, vestimenta, dirección cardinal— y la cierra con la huida ya planeada en el momento exacto en que Zhou Yu intenta matarlo. Es la mejor síntesis del personaje: cada acto suyo opera en dos niveles —el cosmológico y el operacional— y nunca olvida el segundo.",
-            href: null,
+            href: "assets/Periods/zhuge-liang.html",
           },
         },
         {
