@@ -79,6 +79,64 @@ body{background:var(--ink);color:var(--parch);font-family:'IM Fell English',Geor
 }
 #era-bookmark-close:hover{opacity:1;text-shadow:0 0 18px rgba(201,168,76,.85)}
 
+/* ── ERA BOOKMARK mobile: píldora inferior centrada ── */
+@media(max-width:640px){
+  #era-bookmark{
+    top:auto;
+    bottom:calc(16px + env(safe-area-inset-bottom,0px));
+    left:50%;
+    padding-top:0;
+    transform:translateX(-50%) translateY(calc(100% + 40px));
+  }
+  #era-bookmark.visible{
+    transform:translateX(-50%) translateY(0);
+  }
+  .bm-body{
+    flex-direction:row;
+    align-items:center;
+    width:calc(100vw - 96px);
+    padding:10px 14px;
+    gap:10px;
+    border-left:3px solid var(--bm-c,var(--gold));
+    border-right:1px solid rgba(201,168,76,.2);
+    border-bottom:1px solid rgba(201,168,76,.2);
+    border-top:1px solid rgba(201,168,76,.12);
+    border-radius:0 4px 4px 0;
+  }
+  .bm-body::before,.bm-body::after{display:none}
+  #era-bookmark-zh{
+    writing-mode:horizontal-tb;
+    text-orientation:mixed;
+    font-size:20px;
+    flex-shrink:0;
+  }
+  .bm-sep{
+    width:1px;height:18px;margin:0;
+    background:rgba(201,168,76,.3);
+    flex-shrink:0;
+  }
+  #era-bookmark-name{
+    display:block;
+    flex:1;
+    font-family:'IM Fell English',Georgia,serif;
+    font-size:14px;
+    color:var(--parch);
+    opacity:.85;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    letter-spacing:.04em;
+  }
+  #era-bookmark-close{
+    margin-top:0;
+    margin-left:auto;
+    opacity:.55;
+    font-size:16px;
+    flex-shrink:0;
+    padding:4px;
+  }
+}
+
 /* ── HERO ── */
 #hero{
   min-height:92vh;display:flex;align-items:center;justify-content:center;

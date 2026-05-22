@@ -1695,6 +1695,29 @@ const CHARS = [
   },
 
   {
+    zh: "諸葛誕",
+    en: "Zhuge Dan",
+    zi: "Gongxiu 公休",
+    ico: "🔱",
+    fc: "#1e5abf",
+    fcbg: "rgba(30,90,191,.12)",
+    rank: 3,
+    ttl: "El Último Bastión de Wei",
+    bio: "Primo lejano de Zhuge Liang, sirvió a Wei con lealtad absoluta mientras los Sima devoraban el reino. En 257 d.C. se alzó en Shouchun —la tercera y última de las Tres Rebeliones de Huainan— antes de que llegara la orden de arresto. Sostuvo el asedio casi un año. Cuando las murallas cedieron, cargó a caballo contra el ejército de Sima Zhao. Sus guardias murieron gritando su nombre antes que arrodillarse.",
+    tags: ["Wei 魏", "Rebelión", "?–258 d.C."],
+    fac: "Wei 魏",
+    stats: [
+      ["Facción", "Wei 魏"],
+      ["Rebelión", "Shouchun 257–258 d.C."],
+      ["Período", "?–258 d.C."],
+      ["Pariente", "Zhuge Liang, Zhuge Jin"],
+    ],
+    detailHref: "assets/Periods/zhuge-dan.html",
+    eras: ["tres-reinos", "guerras-ocaso", "sima"],
+    eraRank: { sima: 2, "guerras-ocaso": 2 },
+  },
+
+  {
     zh: "丁奉",
     en: "Ding Feng",
     zi: "Chengyuan 承淵",
@@ -2079,6 +2102,29 @@ const CHARS = [
     detailHref: "assets/Periods/lu-zhi.html",
     eras: ["han-tardio", "turbantes"],
     eraRank: { "han-tardio": 1, turbantes: 1 },
+  },
+
+  {
+    zh: "朱儁",
+    en: "Zhu Jun",
+    zi: "Gong Wei 公偉",
+    ico: "⚔️",
+    fc: "#c9a84c",
+    fcbg: "rgba(201,168,76,.12)",
+    rank: 3,
+    ttl: "El Pacificador del Centro",
+    bio: "Uno de los tres comandantes imperiales enviados a sofocar la Rebelión de los Turbantes Amarillos en 184 d.C. Mientras Lu Zhi combatía en el norte, Zhu Jun y Huangfu Song asumieron el teatro central y del sur. Sun Jian hizo sus primeras armas bajo sus órdenes. Tomó Wancheng (宛城) tras meses de campaña, sellando la victoria en el frente sur. Fiel al Han hasta el final, intentó organizar resistencia contra Li Jue y Guo Si tras la muerte de Wang Yun, pero el Imperio ya era irreparable.",
+    tags: ["Han 漢", "General Imperial", "?–195 d.C."],
+    fac: "Han 漢",
+    stats: [
+      ["Facción", "Han 漢"],
+      ["Teatro", "Centro y Sur"],
+      ["Bajo su mando", "Sun Jian"],
+      ["Período", "?–195 d.C."],
+    ],
+    detailHref: "assets/Periods/zhu-jun.html",
+    eras: ["turbantes", "dong-zhuo"],
+    eraRank: { turbantes: 1, "dong-zhuo": 2 },
   },
 
   // ── Facción Liu Biao / Jingzhou ──
@@ -2823,6 +2869,29 @@ const CHARS = [
     detailHref: "assets/Periods/du-yu.html",
     eras: ["jin"],
     eraRank: { jin: 1 },
+  },
+
+  {
+    zh: "左慈",
+    en: "Zuo Ci",
+    zi: "Yuanfang 元放",
+    ico: "🧙",
+    fc: "#607080",
+    fcbg: "rgba(96,112,128,.12)",
+    rank: 4,
+    ttl: "El Taoísta Inmortal",
+    bio: "El ermitaño taoísta que burló a Cao Cao con magia imposible: conjuró perca de Songjiang de un cuenco de agua, jengibre de Shu y vino de una posada a ciento cincuenta li de distancia. Le entregó el libro celestial Tianwen Dunjia. Cuando Cao Cao ordenó su captura, se transformó en carnero y se multiplicó en cientos de figuras que desaparecieron al mismo tiempo. El único hombre del que Cao Cao no pudo deshacerse porque no era del todo alcanzable.",
+    tags: ["Independiente", "Taoísta", "Han Tardío"],
+    fac: "Independiente",
+    stats: [
+      ["Facción", "Independiente"],
+      ["Arte", "Taoísmo esotérico"],
+      ["Rival", "Cao Cao 曹操"],
+      ["Libro", "Tianwen Dunjia 天文遁甲"],
+    ],
+    detailHref: "assets/Periods/zuo-ci.html",
+    eras: ["tres-reinos"],
+    eraRank: { "tres-reinos": 4 },
   },
 ];
 
