@@ -1,0 +1,218 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   haciendas.css — Página de Haciendas (recompensa de mecenazgo).
+   Usa la paleta y fuentes globales de main.css.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── Aviso de fase ─────────────────────────────────────────────────────── */
+.hac-aviso{
+  max-width:620px;margin:0 auto;
+  border:1px solid rgba(201,168,76,.22);
+  border-radius:3px;background:rgba(201,168,76,.04);
+  padding:16px 20px;text-align:center;
+}
+.hac-aviso p{
+  font-family:'Noto Sans SC',sans-serif;font-size:13px;
+  color:var(--parch2);opacity:.72;line-height:1.7;
+}
+.hac-aviso b{color:var(--gold);font-weight:700}
+
+/* ── Escaleras (niveles y cargos comparten base) ───────────────────────── */
+.tier-ladder,
+.rango-ladder{max-width:720px;margin:0 auto;display:flex;flex-direction:column;gap:8px}
+
+.tier-row,
+.rango-row{
+  display:flex;align-items:center;gap:16px;
+  padding:14px 18px;border-radius:3px;
+  background:rgba(255,255,255,.018);
+  border:1px solid rgba(255,255,255,.05);
+  border-left:2px solid rgba(201,168,76,.3);
+}
+
+/* ── Niveles de hacienda ───────────────────────────────────────────────── */
+.tier-row[data-nivel="3"]{border-left-color:var(--gold);background:rgba(201,168,76,.05)}
+.tier-row[data-nivel="2"]{border-left-color:rgba(201,168,76,.6)}
+.tier-zh{
+  font-family:'Noto Serif SC',serif;font-size:34px;font-weight:900;
+  color:var(--gold);line-height:1;flex-shrink:0;width:52px;text-align:center;
+}
+.tier-row[data-nivel="3"] .tier-zh{text-shadow:0 0 22px rgba(201,168,76,.4)}
+.tier-body{flex:1;min-width:0}
+.tier-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.tier-nombre{
+  font-family:'Cinzel Decorative',serif;font-size:16px;
+  color:var(--parch);letter-spacing:.05em;
+}
+.tier-lvl{
+  font-family:'Cinzel Decorative',serif;font-size:10px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--gold);opacity:.6;
+}
+.tier-desc{
+  font-family:'Noto Sans SC',sans-serif;font-size:12.5px;
+  color:var(--parch2);opacity:.66;line-height:1.6;margin-top:3px;
+}
+.tier-elite{
+  font-family:'IM Fell English',serif;font-style:italic;font-size:13px;
+  color:var(--parch2);opacity:.62;margin-top:5px;
+}
+.tier-elite b{color:var(--gold);font-style:normal;font-weight:400;opacity:.9}
+
+/* ── Escalera de cargos ────────────────────────────────────────────────── */
+.rango-row[data-nivel="5"]{border-left-color:var(--gold);background:rgba(201,168,76,.05)}
+.rango-row[data-nivel="4"]{border-left-color:rgba(201,168,76,.7)}
+.rango-row[data-nivel="3"]{border-left-color:rgba(201,168,76,.5)}
+.rango-zh{
+  font-family:'Noto Serif SC',serif;font-size:30px;font-weight:900;
+  color:var(--gold);line-height:1;flex-shrink:0;width:48px;text-align:center;
+}
+.rango-row[data-nivel="5"] .rango-zh{text-shadow:0 0 22px rgba(201,168,76,.4)}
+.rango-body{flex:1;min-width:0}
+.rango-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.rango-nombre{
+  font-family:'Cinzel Decorative',serif;font-size:15px;
+  color:var(--parch);letter-spacing:.06em;
+}
+.rango-sala{
+  font-family:'IM Fell English',serif;font-style:italic;font-size:14px;
+  color:var(--parch2);opacity:.5;
+}
+.rango-desc{
+  font-family:'Noto Sans SC',sans-serif;font-size:12.5px;
+  color:var(--parch2);opacity:.66;line-height:1.6;margin-top:3px;
+}
+.rango-tier{
+  flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  width:38px;height:38px;border-radius:50%;
+  border:1px solid rgba(201,168,76,.35);
+  font-family:'Noto Serif SC',serif;font-size:18px;font-weight:700;
+  color:var(--gold);background:rgba(201,168,76,.05);cursor:help;
+}
+
+/* ── Panel de hacienda ─────────────────────────────────────────────────── */
+.hac-list{max-width:880px;margin:0 auto;display:flex;flex-direction:column;gap:34px}
+.hac-panel{
+  position:relative;overflow:hidden;
+  border:1px solid rgba(255,255,255,.06);
+  border-top:3px solid var(--hac,var(--gold));
+  border-radius:4px;padding:26px 26px 24px;
+  background:rgba(255,255,255,.016);
+}
+.hac-panel::before{
+  content:attr(data-bg);position:absolute;right:-24px;top:-30px;
+  font-family:'Noto Serif SC',serif;font-weight:900;font-size:180px;
+  color:var(--hac,var(--gold));opacity:.04;pointer-events:none;
+  user-select:none;line-height:1;
+}
+
+.hac-head{display:flex;align-items:center;gap:18px;position:relative}
+.hac-zh{
+  font-family:'Noto Serif SC',serif;font-size:46px;font-weight:900;
+  color:var(--hac,var(--gold));line-height:1;flex-shrink:0;
+  text-shadow:0 0 30px color-mix(in srgb,var(--hac,var(--gold)) 35%,transparent);
+}
+.hac-titles{flex:1;min-width:0}
+.hac-name-row{display:flex;align-items:center;gap:11px;flex-wrap:wrap}
+.hac-nombre{
+  font-family:'Noto Serif SC',serif;font-size:22px;font-weight:900;
+  color:var(--parch);
+}
+.hac-tier{
+  display:inline-flex;align-items:center;gap:5px;
+  font-family:'Cinzel Decorative',serif;font-size:10px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--gold);
+  border:1px solid rgba(201,168,76,.4);border-radius:2px;
+  padding:3px 9px;background:rgba(201,168,76,.06);cursor:help;
+}
+.hac-tier b{font-family:'Noto Serif SC',serif;font-size:14px;font-weight:900}
+.hac-lema{
+  font-family:'IM Fell English',serif;font-style:italic;font-size:15px;
+  color:var(--parch2);opacity:.62;margin-top:3px;
+}
+.hac-meta{
+  font-family:'Cinzel Decorative',serif;font-size:10px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--hac,var(--gold));opacity:.62;margin-top:6px;
+}
+.hac-dot{margin:0 6px;opacity:.5}
+.hac-desc{
+  font-family:'Noto Sans SC',sans-serif;font-size:13.5px;
+  color:var(--parch2);opacity:.7;line-height:1.74;
+  margin:16px 0 4px;position:relative;
+  border-top:1px solid rgba(201,168,76,.1);padding-top:14px;
+}
+
+.hac-body{margin-top:18px;display:flex;flex-direction:column;gap:20px;position:relative}
+
+/* ── Bloque de un cargo dentro de la hacienda ──────────────────────────── */
+.hac-rango-band{
+  display:flex;align-items:baseline;gap:10px;
+  padding-bottom:7px;margin-bottom:11px;
+  border-bottom:1px solid rgba(201,168,76,.16);
+}
+.hac-rango-zh{
+  font-family:'Noto Serif SC',serif;font-size:20px;font-weight:900;
+  color:var(--hac,var(--gold));line-height:1;
+}
+.hac-rango-nombre{
+  font-family:'Cinzel Decorative',serif;font-size:13px;letter-spacing:.08em;
+  color:var(--parch);
+}
+.hac-rango-sala{
+  font-family:'IM Fell English',serif;font-style:italic;font-size:13px;
+  color:var(--parch2);opacity:.45;margin-left:auto;
+}
+
+/* ── Placas de mecenas ─────────────────────────────────────────────────── */
+.placa-grid{
+  list-style:none;display:grid;gap:9px;
+  grid-template-columns:repeat(auto-fill,minmax(190px,1fr));
+}
+.placa{
+  background:rgba(255,255,255,.026);
+  border:1px solid rgba(255,255,255,.06);
+  border-left:2px solid var(--hac,var(--gold));
+  border-radius:2px;padding:10px 13px;
+}
+.placa-nombre{
+  font-family:'Noto Serif SC',serif;font-size:15px;font-weight:700;
+  color:var(--parch);display:block;
+}
+.placa-desde{
+  font-family:'Noto Sans SC',sans-serif;font-size:11px;
+  color:var(--hac,var(--gold));opacity:.66;
+}
+.placa-nota{
+  font-family:'IM Fell English',serif;font-style:italic;font-size:13px;
+  color:var(--parch2);opacity:.6;line-height:1.55;margin-top:6px;
+}
+
+.hac-vacia{
+  font-family:'IM Fell English',serif;font-style:italic;font-size:15px;
+  color:var(--parch2);opacity:.5;line-height:1.7;text-align:center;
+  padding:14px 0;
+}
+
+/* ── Cargos por desbloquear ────────────────────────────────────────────── */
+.hac-locked{
+  margin-top:18px;padding-top:14px;
+  border-top:1px dashed rgba(201,168,76,.16);
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+}
+.hac-locked-lbl{
+  font-family:'Cinzel Decorative',serif;font-size:9px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--parch2);opacity:.5;
+}
+.hac-locked-item{
+  font-family:'Noto Sans SC',sans-serif;font-size:11.5px;
+  color:var(--parch2);opacity:.55;
+  border:1px solid rgba(255,255,255,.08);border-radius:2px;
+  padding:3px 8px;
+}
+.hac-locked-item i{font-style:normal;opacity:.7;color:var(--gold)}
+
+@media(max-width:560px){
+  .hac-panel{padding:22px 18px}
+  .hac-zh{font-size:38px}
+  .tier-row,.rango-row{gap:12px;padding:12px 14px}
+  .tier-zh{font-size:28px;width:44px}
+  .rango-zh{font-size:26px;width:40px}
+}
