@@ -2030,6 +2030,32 @@ const CHARS = [
 
   // ── Facción Han Imperial ──
   {
+    zh: "劉辯",
+    en: "Liu Bian",
+    zi: "",
+    ico: "👑",
+    fc: "#c9a84c",
+    fcbg: "rgba(201,168,76,.12)",
+    rank: 4,
+    ttl: "El Príncipe de Hongnong",
+    bio: "Hijo mayor del Emperador Ling y la Emperatriz He, fue entronizado a los trece años en 189 d.C. como Emperador Shao con el apoyo de su tío He Jin. Reinó apenas cinco meses antes de que Dong Zhuo irrumpiera en Luoyang, depusiera al joven en una asamblea pública y entronizara en su lugar a su hermanastro Liu Xie. Rebajado a Príncipe de Hongnong y confinado en provincias, fue obligado a beber veneno en 190 d.C. a los catorce años. Su breve y trágico reinado marcó el derrumbe irreversible del poder Han.",
+    tags: ["Han 漢", "Emp. Depuesto", "176–190 d.C."],
+    fac: "Han 漢",
+    stats: [
+      ["Facción", "Han 漢"],
+      ["Reinado", "5 meses, 189 d.C."],
+      ["Período", "176–190 d.C."],
+      ["Destino", "Envenenado por Dong Zhuo"],
+    ],
+    detailHref: "assets/Periods/liu-bian.html",
+    eras: ["han-tardio", "dong-zhuo"],
+    eraRank: {
+      "han-tardio": 3,
+      "dong-zhuo": 1,
+    },
+  },
+
+  {
     zh: "漢獻帝",
     en: "Han Xiandi",
     v1: true,
@@ -2079,6 +2105,29 @@ const CHARS = [
     detailHref: "assets/Periods/he-jin.html",
     eras: ["han-tardio", "turbantes"],
     eraRank: { "han-tardio": 1, turbantes: 2 },
+  },
+
+  {
+    zh: "張讓",
+    en: "Zhang Rang",
+    zi: "",
+    ico: "🏛️",
+    fc: "#c9a84c",
+    fcbg: "rgba(201,168,76,.12)",
+    rank: 3,
+    ttl: "El Padre Adoptivo del Cielo",
+    bio: "Líder de los Diez Eunucos Regulares y figura más poderosa de la corte del Emperador Ling. El propio Hijo del Cielo lo llamaba su «padre adoptivo». Acumuló riquezas y poder sin precedentes para un eunuco, controlando cada nombramiento y decreto durante décadas. En 189 d.C. ordenó la emboscada que mató a He Jin, desencadenando el caos que destruyó la capital. Huyó con el Emperador hacia el Río Amarillo y se ahogó al ser acorralado, abriendo involuntariamente el camino a Dong Zhuo.",
+    tags: ["Han 漢", "Eunuco", "?–189 d.C."],
+    fac: "Han 漢",
+    stats: [
+      ["Facción", "Han 漢"],
+      ["Cargo", "Eunuco Jefe 十常侍"],
+      ["Período", "?–189 d.C."],
+      ["Muerte", "Ahogado en el Río Amarillo"],
+    ],
+    detailHref: "assets/Periods/zhang-rang.html",
+    eras: ["han-tardio", "turbantes", "dong-zhuo"],
+    eraRank: { "han-tardio": 2, turbantes: 1, "dong-zhuo": 1 },
   },
 
   {

@@ -92,6 +92,22 @@ a{text-decoration:none}
 @media(max-width:900px){#hdr{flex-direction:column;align-items:flex-start} .hero{grid-template-columns:1fr}}
 @media(max-width:640px){.wrap-page{padding:22px 16px 48px} .hbtns{width:100%;justify-content:flex-start} .hb{width:100%;text-align:center}}
 
+/* ── crónicas ── */
+.cronica-list{display:flex;flex-direction:column;gap:0;padding-left:4px}
+.cronica-entry{position:relative;padding:26px 20px 30px 32px;border-left:2px solid rgba(191,32,32,.2);border-radius:0 12px 12px 0;transition:border-color .3s,background .3s}
+.cronica-entry+.cronica-entry{margin-top:4px}
+.cronica-entry::before{content:'';position:absolute;left:-5px;top:32px;width:8px;height:8px;border-radius:50%;background:#bf2020;box-shadow:0 0 0 3px rgba(191,32,32,.15);transition:box-shadow .3s}
+.cronica-entry:hover{border-color:rgba(191,32,32,.5);background:rgba(191,32,32,.04)}
+.cronica-entry:hover::before{box-shadow:0 0 0 6px rgba(191,32,32,.18)}
+.cronica-hd{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin-bottom:14px}
+.cronica-year{order:1;font-family:'Cinzel Decorative',serif;font-size:10px;letter-spacing:.22em;color:var(--gold);opacity:.75}
+.cronica-tag{order:2;font-family:'Cinzel Decorative',serif;font-size:8px;letter-spacing:.16em;text-transform:uppercase;padding:2px 8px;border-radius:2px;border:1px solid rgba(212,158,106,.2);color:var(--muted);opacity:.55}
+.cronica-zh{order:3;flex:0 0 100%;font-family:'Noto Serif SC',serif;font-size:28px;line-height:1.15;color:rgba(191,32,32,.75);margin-top:6px}
+.cronica-n{order:4;flex:0 0 100%;font-family:'Noto Serif SC',serif;font-size:16px;font-weight:400;letter-spacing:.04em;color:var(--text);opacity:.7;margin:3px 0 0}
+.cronica-body{margin-top:16px;padding-top:14px;border-top:1px solid rgba(255,255,255,.06)}
+.cronica-body p{font-family:'IM Fell English',serif;font-size:17px;line-height:1.88;color:var(--muted);margin:0 0 1em}
+.cronica-body p:last-child{margin-bottom:0}
+
 /* ── responsive (fichas) ── */
 @media(max-width:900px){.hero{grid-template-columns:1fr} .hero-media{max-width:400px;margin:0 auto} .hero-copy{padding:0} .rel-grid{grid-template-columns:1fr}}
 @media(max-width:640px){.hero-media{max-width:280px} .hzh{font-size:20px} .sec-title{font-size:20px} .title{font-size:clamp(26px,8vw,36px)} .subtitle{font-size:18px} .lede{font-size:17px;line-height:1.7} .intro p{font-size:17px;line-height:1.75} .era-card h3{font-size:18px} .era-card p{font-size:16px;line-height:1.7} .epilogue p{font-size:17px;line-height:1.75} .rel-panel-name{font-size:17px} .rel-panel-desc{font-size:15px} .rel-desc{font-size:15px} .rel-group-title{font-size:14px} .rel-hub-bubble{width:120px;height:120px} .rel-bubbles--lg .rel-bubble-img{width:110px;height:110px} .rel-bubbles--lg .rel-bubble-name{font-size:13px;max-width:110px} .rel-bubbles{gap:14px 16px} .char-battle-name{font-size:18px} .char-battle-flavor{font-size:15px} .era-slider-name{font-size:18px} .timeline{padding-left:36px} .timeline::before{left:10px} .tl-item::before{left:-35px;width:18px;height:18px} .tl-header{flex-direction:column;gap:4px} .tl-name{font-size:18px} .tl-year{font-size:11px}}

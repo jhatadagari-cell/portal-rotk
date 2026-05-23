@@ -12,7 +12,7 @@ Si `$ARGUMENTS` está vacío, lee `assets/js/data.js`, encuentra todos los perso
 
 ---
 
-## Paso 1 — Localizar y Fact-check el personaje
+## Paso 1 — Localizar, Fact-check y Mapa Vital del personaje
 
 Busca en `assets/js/data.js` la entrada cuyo campo `en` coincida con `$ARGUMENTS` (búsqueda insensible a mayúsculas si hace falta). Si no hay coincidencia exacta en `en`, busca también en `zi`.
 
@@ -27,6 +27,17 @@ Busca en `assets/js/data.js` la entrada cuyo campo `en` coincida con `$ARGUMENTS
 Extrae y anota estos campos:
 - `zh`, `en`, `zi`, `ttl`, `bio`, `fac`, `fc`, `fcbg`, `tags`, `stats`, `eras`
 - Si tiene `facs` (multi-facción), usa el primer `facs[0].color` como color secundario pero `fc` como color principal.
+
+**MAPA VITAL — antes de escribir nada, construye internamente una lista cronológica exhaustiva de todos los hitos del personaje en la novela:**
+- Origen, infancia o formación (si tiene relevancia narrativa)
+- Cada alianza, traición o cambio de bando
+- Cada batalla o campaña mayor en la que participa
+- Cada episodio célebre o estratagema conocida
+- Cada pérdida significativa (aliados, territorios, batallas)
+- Muerte, legado, o destino final
+- Inventos, obras escritas u otras aportaciones si las hay
+
+Este mapa guiará las crónicas: ningún periodo de más de ~8 años de vida activa puede quedar sin cobertura.
 
 ---
 
@@ -353,13 +364,44 @@ Estructura con tres pestañas como Cao Cao (El Personaje, Relaciones Clave place
         </article>
         -->
 
-        <!-- Escribe entre 3 y 6 crónicas cronológicas del personaje. Criterios de selección:
-             - Momentos que revelan el carácter del personaje, no solo victorias
-             - Cubrir arco completo: debut, momento cumbre, declive o final
-             - Cada crónica: 2 párrafos en IM Fell English, narrativo y evocador
-             - El id="cronica-[slug]" permitirá anclar desde el lector de Eras
-             - Categorías sugeridas para cronica-tag: Acto fundacional, Rival, Lealtad,
-               Derrota, Victoria, Traición, Final, Decisión, Batalla, Alianza -->
+        <!--
+        CRÓNICAS — COBERTURA COMPLETA Y EXHAUSTIVA
+        ===========================================
+        NO hay un máximo de entradas. Escribe tantas como requiera el personaje
+        para cubrir su vida completa sin saltos temporales significativos:
+          - Personajes de primer orden (Cao Cao, Liu Bei, Sun Quan, Zhuge Liang...): esperar 10-17 entradas
+          - Personajes secundarios importantes: esperar 5-9 entradas
+          - Personajes menores: mínimo 3 entradas, cubriendo debut, clímax y final
+
+        PROCESO ANTES DE ESCRIBIR:
+        1. Toma el Mapa Vital construido en el Paso 1
+        2. Planifica en una lista interna: título, fecha y tipo de cada entrada prevista
+        3. Verifica que no haya huecos de más de ~8 años sin cobertura
+        4. Verifica que estén representadas categorías variadas (no solo batallas)
+        5. Solo entonces escribe el HTML
+
+        CONTENIDO OBLIGATORIO — cada personaje debe tener al menos una entrada de cada tipo:
+          ✓ Formación / Acto fundacional (origen, primer hito, o cómo entró en la historia)
+          ✓ Momento cumbre (batalla, estratagema o episodio por el que es más recordado)
+          ✓ Un momento que revele el carácter, no solo la habilidad (lealtad, traición, dilema moral)
+          ✓ Declive, derrota clave, o circunstancias de la muerte
+          ✓ Legado o cómo lo recuerda la novela / la historia
+
+        CALIDAD POR ENTRADA:
+          - Exactamente 2 párrafos de prosa narrativa (cada uno 3-6 frases)
+          - Escrito en español literario con IM Fell English como fuente base
+          - Factual: basado en el Romance; si algo es leyenda vs historia, señalarlo dentro del texto
+          - Cada entrada lleva: cronica-year, cronica-tag, cronica-zh (carácteres chinos del evento),
+            cronica-n (título en español), y 2 párrafos en cronica-body
+          - Si no existe un título chino canónico para el evento, inventa uno breve y apropiado
+
+        CATEGORÍAS DISPONIBLES para cronica-tag (ampliar si hace falta):
+          Formación · Acto fundacional · Alianza · Diplomacia · Estratagema · Batalla
+          Conquista · Administración · Lealtad · Traición · Tragedia · Política
+          Derrota · Victoria · Decisión · Legado · Leyenda · Ingenio · Final
+
+        ORDEN: estrictamente cronológico por fecha del evento.
+        -->
       </div>
     </div>
   </div>
@@ -412,6 +454,11 @@ Informa de:
 2. Modificación en `assets/js/data.js`: campo `detailHref` añadido (botón "Ver Ficha" ahora habilitado en modal)
 3. Estructura: Ficha con **cuatro pestañas** (El Personaje completado, Relaciones Clave placeholder, Batallas placeholder, Crónicas con entradas narrativas)
 4. Si se incluyó imagen o cómo se resolvió (busca en Descargas, o usa placeholder)
-5. Crónicas: lista los IDs de anchor generados (`#cronica-[slug]`) — servirán para deep-linking desde el lector de Eras
-6. Contenido: Directo y factual, sin excesivas filigranas, pero con romance en momentos clave
+5. **Crónicas — informe de cobertura:**
+   - Número total de entradas escritas
+   - Rango temporal cubierto (desde X hasta Y d.C.)
+   - Lista de los IDs de anchor generados (`#cronica-[slug]`) — servirán para deep-linking
+   - Si algún periodo de vida activa quedó sin crónica, explicar por qué (personaje con vida documentada corta, etc.)
+   - Qué episodios famosos del personaje quedaron incluidos vs. cuáles no tienen fuente suficiente
+6. Contenido: Directo y factual; si alguna entrada mezcla leyenda con historia, indicarlo
 7. Si quedan más personajes sin ficha, pregunta si continuar con el siguiente
