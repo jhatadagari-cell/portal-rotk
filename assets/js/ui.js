@@ -308,6 +308,12 @@ if (pgrid) {
   PERIODS.forEach(p => {
     const wrap = document.createElement('div');
     wrap.className = 'pcard-wrap';
+    wrap.style.setProperty('--pc', p.c);
+
+    // Year label lives above the rail, outside the card
+    const yr = document.createElement('div');
+    yr.className = 'pcard-yr';
+    yr.textContent = p.y;
 
     const d = document.createElement('div');
     d.className = 'pcard';
@@ -317,7 +323,6 @@ if (pgrid) {
       <div class="pcard-bg" aria-hidden="true"></div>
       <div class="pcard-zh-bg" aria-hidden="true">${p.zh}</div>
       <div class="pcard-foot">
-        <div class="pcard-yr">${p.y}</div>
         <div class="pcard-n">${p.n}</div>
         <div class="pcard-zh">${p.zh}</div>
       </div>
@@ -326,6 +331,7 @@ if (pgrid) {
       </div>
     `;
 
+    wrap.appendChild(yr);
     wrap.appendChild(d);
     pgrid.appendChild(wrap);
   });
@@ -386,7 +392,10 @@ function setActiveEra(eraId, opts = {}) {
   document.querySelectorAll('.pcard').forEach(card => {
     card.classList.toggle('active', card.dataset.pid === eraId);
   });
-  if (eraState) eraState.textContent = era ? `Era activa: ${era.n} · ${era.y}` : 'Era activa: Todas';
+  const detailSec = document.getElementById('era-detail');
+  if (detailSec) detailSec.style.setProperty('--era-c', era ? era.c : 'rgba(201,168,76,.3)');
+  document.getElementById('page-hero')?.classList.toggle('era-active', !!era);
+  if (eraState) eraState.textContent = era ? `Era activa: ${era.n} · ${era.y}` : '';
   if (eraBookmark) {
     eraBookmark.classList.toggle('visible', !!era);
     eraBookmark.style.setProperty('--bm-c', era ? era.c : '');
@@ -523,7 +532,20 @@ function renderPagedReader(era, section, panel, opts = {}) {
               </a>`).join('')}
           </div>
         </div>
-      </div>` : ''; })()}`;
+      </div>` : ''; })()}
+      ${(() => {
+        const swBtns = PERIODS.map(p =>
+          `<button class="era-sw-btn${p.id === era.id ? ' active' : ''}" data-eid="${p.id}" style="--swc:${p.c}">${p.zh} <span style="opacity:.5;font-size:8px">${(p.y.match(/\d+/) || [''])[0]}</span></button>`
+        ).join('');
+        return `<div class="era-switcher" role="navigation" aria-label="Cambiar era">${swBtns}</div>`;
+      })()}`;
+
+    panel.querySelectorAll('.era-sw-btn[data-eid]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (btn.dataset.eid === era.id) return;
+        setActiveEra(btn.dataset.eid, { noScroll: true });
+      });
+    });
 
     panel.querySelector('.reader-prev')?.addEventListener('click', () => goTo(readerPage - 1));
     panel.querySelector('.reader-next')?.addEventListener('click', () => goTo(readerPage + 1));

@@ -172,7 +172,8 @@
     }, { passive: true });
 
     btt.addEventListener('click', () => {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      const anchor = document.getElementById('periods') ?? document.getElementById('page-hero') ?? document.body;
+      anchor.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
   }
 
