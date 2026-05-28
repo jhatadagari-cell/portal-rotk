@@ -539,32 +539,6 @@ body{background:var(--ink);color:var(--parch);font-family:'IM Fell English',Geor
 .era-reset:hover{border-color:var(--gold);background:rgba(201,168,76,.06)}
 .era-hint{font-family:'Noto Sans SC',sans-serif;font-size:13px;color:var(--parch2);opacity:.6}
 
-/* ── Era-switcher (nav between eras from within the reader) ── */
-.era-switcher{
-  display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap;
-  padding:14px max(clamp(16px,5vw,72px),calc((100vw - 1380px) / 2));
-  border-top:1px solid rgba(201,168,76,.1);
-  margin-top:0;
-}
-.era-sw-btn{
-  font-family:'Cinzel Decorative',serif;font-size:9px;letter-spacing:.14em;
-  padding:5px 10px;border-radius:2px;cursor:pointer;
-  background:transparent;border:1px solid rgba(201,168,76,.14);
-  color:var(--parch2);opacity:.7;
-  transition:all .2s;white-space:nowrap;
-}
-.era-sw-btn:hover{opacity:1;background:rgba(201,168,76,.06);border-color:rgba(201,168,76,.35)}
-.era-sw-btn.active{
-  opacity:1;
-  background:rgba(201,168,76,.1);
-  border-color:rgba(201,168,76,.5);
-  color:var(--gold);
-}
-.era-sw-label{
-  font-family:'Noto Sans SC',sans-serif;font-size:11px;
-  color:var(--parch2);opacity:.4;padding:0 4px;
-}
-
 /* ── Timeline scroll-down hint arrow ── */
 .timeline-cue{
   display:flex;justify-content:center;align-items:center;gap:8px;
@@ -657,18 +631,8 @@ body.blossom-on #blossom-overlay{opacity:1}
 .bpetal{position:absolute;pointer-events:none;border-radius:50% 50% 50% 0/60% 60% 40% 40%}
 
 /* ── CHIBI FIRE AMBIENT ── */
-#fire-overlay{position:fixed;inset:0;pointer-events:none;z-index:98;overflow:hidden;opacity:0;transition:opacity 1.4s ease}
+#fire-overlay{position:fixed;inset:0;pointer-events:none;z-index:98;overflow:hidden;opacity:0;transition:opacity 1.4s ease;background:rgba(80,10,0,.08)}
 body.fire-on #fire-overlay{opacity:1}
-#fire-overlay::before{
-  content:'';position:absolute;bottom:0;left:0;right:0;height:58%;
-  background:linear-gradient(to top,rgba(105,14,0,.72) 0%,rgba(65,7,0,.34) 46%,rgba(28,3,0,.08) 76%,transparent 100%);
-  pointer-events:none
-}
-#fire-overlay::after{
-  content:'';position:absolute;top:0;left:0;right:0;height:52%;
-  background:linear-gradient(to bottom,rgba(6,3,1,.68) 0%,rgba(5,2,1,.16) 68%,transparent 100%);
-  pointer-events:none
-}
 
 /* ── SIMA BLIZZARD AMBIENT ── */
 #blizzard-overlay{position:fixed;inset:0;pointer-events:none;z-index:98;overflow:hidden;opacity:0;transition:opacity .9s ease}
@@ -698,14 +662,70 @@ body.blizzard-on #blizzard-overlay{opacity:1}
   100%{transform:translateX(-160vw);opacity:0}
 }
 .blizzard-gust{animation:gust-sweep var(--dur, .9s) ease-out forwards}
+/* ── CHIBI — Canvas brasas + DOM ceniza/ráfagas ── */
+
+/* Canvas brasas (z-99 nítido) */
 #chibi-canvas{position:fixed;inset:0;pointer-events:none;z-index:99;opacity:0;transition:opacity 1.4s ease}
-@keyframes arrow-fly{
-  0%  {transform:translate(0,0);opacity:0}
-  5%  {opacity:1}
-  91% {opacity:.9}
-  100%{transform:translate(-115vw,30vh);opacity:0}
+/* Bloom — blur+screen replica el halo de fuego sin WebGL */
+#chibi-bloom{
+  position:fixed;inset:0;pointer-events:none;z-index:100;
+  opacity:0;transition:opacity 1.8s ease;
+  filter:blur(24px) brightness(2.9) saturate(1.40);
+  mix-blend-mode:screen;will-change:opacity
 }
-.farrow{position:fixed;pointer-events:none;display:flex;align-items:center;z-index:100;will-change:transform,opacity}
+/* En móvil los canvas no se muestran (sin hover y sin RAF innecesario) */
+@media(max-width:640px){#chibi-canvas,#chibi-bloom{display:none}}
+
+/* Ceniza — fragmentos DOM arrastrados por el viento */
+.chibif{
+  position:fixed;pointer-events:none;
+  border-radius:38% 62% 55% 45%/45% 38% 62% 55%;
+  will-change:transform,opacity;z-index:99
+}
+@keyframes chibif-fly{
+  0%  {transform:translate(0,0) rotate(0deg);opacity:0}
+  7%  {opacity:1}
+  88% {opacity:.82}
+  100%{transform:translate(var(--dx),var(--dy)) rotate(var(--rot));opacity:0}
+}
+
+/* Ráfagas de viento cálido — líneas en grupo, muy rápidas */
+.chibig{
+  position:fixed;right:-340px;pointer-events:none;height:3px;
+  background:linear-gradient(to left,transparent 0%,rgba(230,100,14,.0) 6%,rgba(230,100,14,.78) 22%,rgba(200,78,10,.56) 55%,rgba(155,50,5,.26) 84%,transparent 100%);
+  filter:blur(1px);will-change:transform,opacity;
+  animation:chibig-sweep .45s ease-in-out forwards;z-index:99
+}
+@keyframes chibig-sweep{
+  0%  {transform:translateX(0);opacity:0}
+  5%  {opacity:1}
+  75% {opacity:.62}
+  100%{transform:translateX(calc(-118vw - 340px));opacity:0}
+}
+
+/* Desktop: overlay base más dramático */
+#fire-overlay::before{
+  content:'';position:absolute;bottom:0;left:0;right:0;height:62%;
+  background:linear-gradient(to top,rgba(120,16,0,.80) 0%,rgba(72,8,0,.38) 44%,rgba(30,4,0,.10) 74%,transparent 100%);
+  pointer-events:none
+}
+#fire-overlay::after{
+  content:'';position:absolute;top:0;left:0;right:0;height:55%;
+  background:linear-gradient(to bottom,rgba(8,2,0,.74) 0%,rgba(6,2,0,.18) 66%,transparent 100%);
+  pointer-events:none
+}
+
+/* Mobile: overlay reducido para no tapar el reader */
+@media(max-width:640px){
+  #fire-overlay::before{
+    height:16%;
+    background:linear-gradient(to top,rgba(100,12,0,.52) 0%,rgba(42,5,0,.16) 60%,transparent 100%)
+  }
+  #fire-overlay::after{
+    height:20%;
+    background:linear-gradient(to bottom,rgba(8,2,0,.44) 0%,rgba(5,2,0,.05) 72%,transparent 100%)
+  }
+}
 
 /* ── HAN TARDIO — Polvo dorado ── */
 #dust-overlay{position:fixed;inset:0;pointer-events:none;z-index:97;overflow:hidden;opacity:0;transition:opacity .9s ease}

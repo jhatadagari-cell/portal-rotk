@@ -854,40 +854,7 @@ a {
 .ann-tip-def{font-family:'Noto Sans SC',sans-serif;font-size:12px;color:var(--muted);opacity:.62;line-height:1.62}
 
 /* ── Chronicle deep-link highlight ── */
-.cronica-list.has-highlight .cronica-entry {
-  transition: opacity .45s ease, filter .45s ease;
-}
-.cronica-list.has-highlight .cronica-entry:not(.cronica-highlighted) {
-  opacity: .1;
-  filter: blur(1.5px);
-}
-.cronica-highlighted {
-  position: relative;
-  z-index: 1;
-  box-shadow: 0 0 0 1px var(--accent), 0 0 0 6px rgba(30,90,191,.12), 0 16px 56px rgba(0,0,0,.5);
-  border-radius: 16px;
-  transition: box-shadow .45s ease;
-}
-
-.cronica-back-btn {
-  display: inline-block;
-  margin-top: 20px;
-  padding: 9px 18px;
-  font-family: 'Cinzel Decorative', serif;
-  font-size: 10px;
-  letter-spacing: .16em;
-  color: var(--gold);
-  background: rgba(255,255,255,.04);
-  border: 1px solid rgba(255,255,255,.1);
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background .2s, border-color .2s, color .2s;
-}
-.cronica-back-btn:hover {
-  background: rgba(255,255,255,.09);
-  border-color: var(--gold);
-  color: var(--text);
-}
+/* Highlight CSS movido a inline-links.js (compartido con todas las fichas) */
 
 /* ── responsive (fichas) ── */
 @media(max-width:900px){.hero{grid-template-columns:1fr} .hero-media{max-width:400px;margin:0 auto} .hero-copy{padding:0} .rel-grid{grid-template-columns:1fr}}

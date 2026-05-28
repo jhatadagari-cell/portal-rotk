@@ -129,7 +129,10 @@
       "Bash(sed -n '2350,2385p' /Users/alejandropeyrocebrian/Documents/rotk/portal-rotk/assets/js/data.js)",
       "Bash(sed -n '2733,2840p' /Users/alejandropeyrocebrian/Documents/rotk/portal-rotk/assets/js/data.js)",
       "Bash(sed *)",
-      "Bash(awk '{print length, NR\": \"$0}')"
+      "Bash(awk '{print length, NR\": \"$0}')",
+      "Bash(xargs ls -lh)",
+      "Bash(sort -k5 -h)",
+      "Bash(awk '{print $5, $NF}')"
     ]
   },
   "enabledPlugins": {

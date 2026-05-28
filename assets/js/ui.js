@@ -532,20 +532,7 @@ function renderPagedReader(era, section, panel, opts = {}) {
               </a>`).join('')}
           </div>
         </div>
-      </div>` : ''; })()}
-      ${(() => {
-        const swBtns = PERIODS.map(p =>
-          `<button class="era-sw-btn${p.id === era.id ? ' active' : ''}" data-eid="${p.id}" style="--swc:${p.c}">${p.zh} <span style="opacity:.5;font-size:8px">${(p.y.match(/\d+/) || [''])[0]}</span></button>`
-        ).join('');
-        return `<div class="era-switcher" role="navigation" aria-label="Cambiar era">${swBtns}</div>`;
-      })()}`;
-
-    panel.querySelectorAll('.era-sw-btn[data-eid]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        if (btn.dataset.eid === era.id) return;
-        setActiveEra(btn.dataset.eid, { noScroll: true });
-      });
-    });
+      </div>` : ''; })()}`;
 
     panel.querySelector('.reader-prev')?.addEventListener('click', () => goTo(readerPage - 1));
     panel.querySelector('.reader-next')?.addEventListener('click', () => goTo(readerPage + 1));

@@ -50,380 +50,230 @@ if (_turbCard) {
   _turbCard.addEventListener('mouseleave', stopBlossom);
 }
 
-// ── CHIBI FIRE AMBIENT — Canvas particle system ──
+// ── CHIBI — Ceniza + viento (DOM) · Brasas (canvas + bloom) ──
+// Las brasas usan canvas con additive blending: se iluminan entre sí y con
+// el fondo igual que fuego real. El bloom pass (CSS blur+screen) genera
+// el halo sin Three.js. Ceniza y ráfagas siguen en DOM (formas geométricas
+// no necesitan additive blending).
 
 const fireOverlay = document.createElement('div');
 fireOverlay.id = 'fire-overlay';
 document.body.appendChild(fireOverlay);
 
+// Canvas brasas (z-99, nítido) + bloom (z-100, blur+screen)
 const _cnv = document.createElement('canvas');
 _cnv.id = 'chibi-canvas';
 document.body.appendChild(_cnv);
 const _ctx = _cnv.getContext('2d');
+
+const _bloomCnv = document.createElement('canvas');
+_bloomCnv.id = 'chibi-bloom';
+document.body.appendChild(_bloomCnv);
+const _bloomCtx = _bloomCnv.getContext('2d');
+
 let _cW, _cH;
-(function _szCnv(){ _cW = _cnv.width = innerWidth; _cH = _cnv.height = innerHeight; })();
-window.addEventListener('resize', function(){
-  _cW = _cnv.width = innerWidth; _cH = _cnv.height = innerHeight;
-  if (_shipCache) _buildCache();
+(function _szCnv(){
+  _cW = _cnv.width = _bloomCnv.width = innerWidth;
+  _cH = _cnv.height = _bloomCnv.height = innerHeight;
+})();
+window.addEventListener('resize', () => {
+  _cW = _cnv.width = _bloomCnv.width = innerWidth;
+  _cH = _cnv.height = _bloomCnv.height = innerHeight;
 });
 
-// Ship definitions: xr=screen-left (0–1), w=display-px, rot=deg, nw/nh=SVG viewbox, d=hull path
-// masts: array of {xf=x-fraction, topH=mast-top as fraction of nh above ship, sailBot=sail-bottom fraction, sailLW/RW=sail-width fractions, battens=batten count}
-const _SHIPS = [
-  // ── 楼船 (lóuchuán) — Large tower warship
-  { xr:.03, w:290, rot:-1.5, nw:340, nh:148,
-    masts:[
-      {xf:.27, topH:.54, sailBot:.30, sailLW:.095, sailRW:.085, battens:7},
-      {xf:.67, topH:.43, sailBot:.22, sailLW:.078, sailRW:.070, battens:6}
-    ],
-    d:'M 5,146 C 4,124 9,100 20,84 L 28,72 Q 36,62 42,56 Q 46,51 48,49 Q 52,47 66,47 L 72,39 L 88,33 L 88,47 L 124,45 L 124,35 L 130,25 L 140,17 Q 154,10 172,7 Q 190,10 204,17 L 214,25 L 220,35 L 220,47 L 264,43 L 276,36 L 288,27 Q 306,17 320,9 Q 328,15 330,32 L 332,56 L 333,92 L 333,146 L 5,146 Z'
-  },
-  // ── 蒙冲 (méngchōng) — Fast attack ram ship
-  { xr:.31, w:190, rot:1.2, nw:220, nh:96,
-    masts:[
-      {xf:.44, topH:.58, sailBot:.24, sailLW:.100, sailRW:.090, battens:5}
-    ],
-    d:'M 5,94 C 4,78 7,62 16,50 Q 24,40 30,33 Q 34,27 36,24 Q 40,22 52,22 L 60,15 L 76,11 L 76,23 L 148,21 L 156,15 L 172,11 L 178,19 L 188,20 L 196,13 Q 204,6 210,3 Q 215,7 216,20 L 216,40 L 215,94 L 5,94 Z'
-  },
-  // ── 斗舰 (dǒujiàn) — Medium battle junk with tower
-  { xr:.57, w:255, rot:-.8, nw:292, nh:132,
-    masts:[
-      {xf:.26, topH:.52, sailBot:.28, sailLW:.088, sailRW:.080, battens:6},
-      {xf:.64, topH:.41, sailBot:.20, sailLW:.072, sailRW:.068, battens:5}
-    ],
-    d:'M 5,130 C 4,110 8,89 18,73 Q 26,60 34,52 Q 38,46 40,42 Q 44,39 58,39 L 64,30 L 80,24 L 80,39 L 108,37 L 108,26 L 116,17 Q 128,9 144,5 Q 160,2 174,5 Q 186,9 194,17 L 200,26 L 200,39 L 236,34 L 252,26 Q 264,17 276,9 Q 281,14 282,28 L 280,52 L 279,90 L 279,130 L 5,130 Z'
-  },
-  // ── 走舸 (zǒugě) — Light scout galley
-  { xr:.83, w:135, rot:2.5, nw:172, nh:90,
-    masts:[
-      {xf:.42, topH:.60, sailBot:.26, sailLW:.095, sailRW:.085, battens:4}
-    ],
-    d:'M 5,88 C 4,74 7,58 16,46 Q 22,38 28,32 Q 32,26 34,23 Q 38,21 50,21 L 58,14 L 72,10 L 76,20 L 134,18 L 144,13 Q 156,7 164,4 Q 168,8 169,20 L 168,38 L 168,88 L 5,88 Z'
-  }
-];
-const _sPaths = _SHIPS.map(function(s){ return new Path2D(s.d); });
-
-// ── Sprites de resplandor pre-horneados ──
-// Crear un radial gradient por partícula y por frame es el mayor coste de
-// Canvas2D. En su lugar horneamos el degradado UNA vez a un canvas pequeño
-// y luego sólo hacemos drawImage (barato). La opacidad por vida de la
-// partícula se aplica con globalAlpha en draw().
-const _SPR = 64;
-function _bakeSprite(stops){
+// ── Sprites pre-horneados: 12 pasos de color (caliente → frío) ──
+// Núcleo blanco-cálido → corona naranja → halo rojo → transparente.
+// Un canvas 52×52 por paso; drawImage es mucho más barato que radialGradient por frame.
+const _ESPR_SZ = 52;
+function _bakeEmberSpr(g) {
   const c = document.createElement('canvas');
-  c.width = c.height = _SPR;
+  c.width = c.height = _ESPR_SZ;
   const x = c.getContext('2d');
-  const g = x.createRadialGradient(_SPR/2,_SPR/2,0, _SPR/2,_SPR/2,_SPR/2);
-  stops.forEach(function(s){ g.addColorStop(s[0], s[1]); });
-  x.fillStyle = g; x.fillRect(0,0,_SPR,_SPR);
+  const grd = x.createRadialGradient(_ESPR_SZ/2,_ESPR_SZ/2,0, _ESPR_SZ/2,_ESPR_SZ/2,_ESPR_SZ/2);
+  grd.addColorStop(0.00, 'rgba(255,252,235,1)');
+  grd.addColorStop(0.16, `rgba(255,${g},8,0.96)`);
+  grd.addColorStop(0.46, `rgba(255,${Math.max(0,g-55)},0,0.46)`);
+  grd.addColorStop(0.76, `rgba(${Math.max(180,255-Math.round(g*0.5))},0,0,0.14)`);
+  grd.addColorStop(1.00, 'rgba(0,0,0,0)');
+  x.fillStyle = grd; x.fillRect(0,0,_ESPR_SZ,_ESPR_SZ);
   return c;
 }
-// Fuego: 16 cubos de color a lo largo de la vida de la partícula
-// (el degradado original viraba amarillo→naranja→rojo según la edad).
-const _FIRE_SPR = [];
-for (var _fi = 0; _fi < 16; _fi++){
-  var _ft = _fi/15, _fr = 255, _fg = 0;
-  if      (_ft < .28) _fg = (210 - _ft/.28*165)|0;
-  else if (_ft < .56) _fg = (45  - (_ft-.28)/.28*45)|0;
-  else                _fr = (255 - (_ft-.56)/.44*175)|0;
-  _FIRE_SPR.push(_bakeSprite([
-    [0,   'rgba('+_fr+','+_fg+',0,1)'],
-    [.42, 'rgba('+((_fr*.72)|0)+','+((_fg*.18)|0)+',0,.478)'],
-    [1,   'rgba(0,0,0,0)']
-  ]));
+const _ESPR = [];
+for (let _ei = 0; _ei < 12; _ei++) {
+  // g recorre 235 (amarillo brillante) → 12 (rojo intenso)
+  _ESPR.push(_bakeEmberSpr(Math.round(235 - (_ei / 11) * 223)));
 }
-const _EMBER_SPR = _bakeSprite([
-  [0,   'rgba(255,240,90,1)'],
-  [.36, 'rgba(255,108,10,.72)'],
-  [1,   'rgba(150,12,0,0)']
-]);
-const _SMOKE_SPR = _bakeSprite([
-  [0,  'rgba(11,5,2,.3)'],
-  [.5, 'rgba(7,3,1,.13)'],
-  [1,  'rgba(0,0,0,0)']
-]);
 
-// Capas estáticas cacheadas: el agua y los barcos no se mueven, así que se
-// dibujan una sola vez a canvas offscreen y cada frame sólo se hace blit.
-var _waterCache = null, _shipCache = null, _cacheW = 0, _cacheH = 0;
-function _buildCache(){
-  if (!_waterCache){
-    _waterCache = document.createElement('canvas');
-    _shipCache  = document.createElement('canvas');
+// ── EmberP: brasa individual con trail de 5 puntos ──
+function EmberP() {
+  this.x  = _cW * (0.04 + Math.random() * 0.92);
+  this.y  = _cH * (0.18 + Math.random() * 0.74);
+  this.vx = -(1.8 + Math.random() * 3.6);    // viento siempre a la izquierda
+  this.vy = -(0.8 + Math.random() * 2.8);    // sube al nacer
+  this.r  = 2.4 + Math.random() * 6.2;
+  this.life  = 1.0;
+  this.decay = 0.010 + Math.random() * 0.016;
+  this.w  = Math.random() * 6.28;
+  this.trail = [];
+}
+EmberP.prototype.tick = function() {
+  this.trail.push({ x: this.x, y: this.y });
+  if (this.trail.length > 5) this.trail.shift();
+  this.w  += 0.14;
+  this.vy += 0.058;                           // gravedad suave
+  this.vx += (Math.random() - 0.52) * 0.09;  // turbulencia
+  this.x  += this.vx + Math.sin(this.w) * 0.72;
+  this.y  += this.vy;
+  this.life -= this.decay;
+};
+EmberP.prototype.draw = function() {
+  const age = 1 - this.life;
+  const spr = _ESPR[Math.min(11, (age * 12) | 0)];
+  const tn  = this.trail.length;
+  // Cola: segmentos anteriores con opacidad y tamaño decrecientes
+  for (let i = 0; i < tn; i++) {
+    const tf = (i + 1) / tn;
+    const rd = this.r * (0.20 + tf * 0.65);
+    _ctx.globalAlpha = tf * this.life * 0.55;
+    _ctx.drawImage(spr, this.trail[i].x - rd, this.trail[i].y - rd, rd * 2, rd * 2);
   }
-  _waterCache.width = _shipCache.width = _cW;
-  _waterCache.height = _shipCache.height = _cH;
-  _drawWater(_waterCache.getContext('2d'));
-  _drawShips(_shipCache.getContext('2d'));
-  _cacheW = _cW; _cacheH = _cH;
-}
-
-// ── Particle constructors ──
-
-function FireP(x, y) {
-  this.x = x + (Math.random()-.5)*40; this.y = y;
-  this.vx = (Math.random()-.5)*1.5;
-  this.vy = -(1.8 + Math.random()*3.2);
-  this.life = 1; this.decay = .005 + Math.random()*.008;
-  this.r = 15 + Math.random()*26; this.w = Math.random()*6.28;
-  this.type = 'fire';
-}
-FireP.prototype.tick = function(){
-  this.w += .065; this.x += this.vx + Math.sin(this.w)*.95;
-  this.y += this.vy; this.vy *= .982; this.life -= this.decay;
-};
-FireP.prototype.draw = function(){
-  const t = 1 - this.life, rad = this.r*(.38 + this.life*.62);
-  _ctx.globalAlpha = this.life*.92;
-  _ctx.drawImage(_FIRE_SPR[Math.min(15, (t*16)|0)], this.x-rad, this.y-rad, rad*2, rad*2);
+  // Núcleo
+  const rd = this.r * (0.42 + this.life * 0.58);
+  _ctx.globalAlpha = this.life * 0.94;
+  _ctx.drawImage(spr, this.x - rd, this.y - rd, rd * 2, rd * 2);
   _ctx.globalAlpha = 1;
 };
-FireP.prototype.dead = function(){ return this.life <= 0; };
-
-function SmokeP(x, y) {
-  this.x = x + (Math.random()-.5)*75; this.y = y - 52 - Math.random()*48;
-  this.vx = (Math.random()-.5)*.62; this.vy = -(0.3 + Math.random()*.72);
-  this.life = .65 + Math.random()*.35; this.decay = .002 + Math.random()*.0015;
-  this.r = 30 + Math.random()*45; this.w = Math.random()*6.28;
-  this.type = 'smoke';
-}
-SmokeP.prototype.tick = function(){
-  this.w += .013; this.x += this.vx + Math.sin(this.w)*.3;
-  this.y += this.vy; this.r += .45; this.life -= this.decay;
+EmberP.prototype.dead = function() {
+  return this.life <= 0 || this.x < -30 || this.y > _cH + 30;
 };
-SmokeP.prototype.draw = function(){
-  _ctx.globalAlpha = Math.min(1, this.life);
-  _ctx.drawImage(_SMOKE_SPR, this.x-this.r, this.y-this.r, this.r*2, this.r*2);
-  _ctx.globalAlpha = 1;
-};
-SmokeP.prototype.dead = function(){ return this.life <= 0; };
 
-function EmberP(x, y) {
-  this.x = x + (Math.random()-.5)*55; this.y = y - 18;
-  this.vx = (Math.random()-.5)*5; this.vy = -(4 + Math.random()*6);
-  this.life = 1; this.decay = .013 + Math.random()*.012;
-  this.r = 1.4 + Math.random()*3; this.trail = [];
-  this.type = 'ember';
-}
-EmberP.prototype.tick = function(){
-  this.trail.push({x:this.x, y:this.y});
-  if (this.trail.length > 8) this.trail.shift();
-  this.vy += .09; this.vx *= .982;
-  this.x += this.vx; this.y += this.vy; this.life -= this.decay;
-};
-EmberP.prototype.draw = function(){
-  this.trail.forEach(function(pt, i, arr){
-    _ctx.beginPath(); _ctx.arc(pt.x,pt.y,this.r*.4,0,6.28);
-    _ctx.fillStyle = 'rgba(255,88,10,'+(i/arr.length*this.life*.48).toFixed(2)+')';
-    _ctx.fill();
-  }, this);
-  const d = this.r*3;
-  _ctx.globalAlpha = Math.min(1, this.life);
-  _ctx.drawImage(_EMBER_SPR, this.x-d, this.y-d, d*2, d*2);
-  _ctx.globalAlpha = 1;
-};
-EmberP.prototype.dead = function(){ return this.life <= 0; };
+let _embers = [], _raf = null, _lt = 0, _est = 0;
 
-function AshP() {
-  this.x = Math.random()*_cW; this.y = -8;
-  this.vx = (Math.random()-.5)*.5; this.vy = .36 + Math.random()*.65;
-  this.life = .5 + Math.random()*.5; this.decay = .0007 + Math.random()*.0005;
-  this.r = .7 + Math.random()*2.3; this.w = Math.random()*6.28;
-  this.type = 'ash';
-}
-AshP.prototype.tick = function(){
-  this.w += .016; this.x += this.vx + Math.sin(this.w)*.22;
-  this.y += this.vy; this.life -= this.decay;
-};
-AshP.prototype.draw = function(){
-  _ctx.beginPath(); _ctx.arc(this.x,this.y,this.r,0,6.28);
-  _ctx.fillStyle = 'rgba(170,158,144,'+(this.life*.54).toFixed(2)+')';
-  _ctx.fill();
-};
-AshP.prototype.dead = function(){ return this.life <= 0 || this.y > _cH+10; };
+function _loopFire(t) {
+  _raf = requestAnimationFrame(_loopFire);
+  const dt = Math.min(t - _lt, 50); _lt = t; _est += dt;
 
-// Fire spawn points: 3 columns per ship at superstructure level
-function _pts(){
-  return _SHIPS.reduce(function(acc, s){
-    var sc = s.w/s.nw, sx = s.xr*_cW, fy = _cH - s.nh*sc*.44;
-    acc.push({x:sx+s.w*.24,y:fy},{x:sx+s.w*.5,y:fy-10},{x:sx+s.w*.76,y:fy});
-    return acc;
-  }, []);
-}
+  _ctx.clearRect(0, 0, _cW, _cH);
+  _bloomCtx.clearRect(0, 0, _cW, _cH);
 
-// Water glow reflection under each ship — capa estática, se hornea al cache
-function _drawWater(ctx){
-  _SHIPS.forEach(function(s){
-    var cx = s.xr*_cW + s.w*.5;
-    var gd = ctx.createRadialGradient(cx,_cH,0,cx,_cH,s.w*.8);
-    gd.addColorStop(0,'rgba(85,12,0,.24)');
-    gd.addColorStop(.4,'rgba(50,6,0,.11)');
-    gd.addColorStop(1,'rgba(0,0,0,0)');
-    ctx.fillStyle = gd;
-    ctx.beginPath();
-    ctx.ellipse(cx,_cH,s.w*.62,s.w*.15,0,0,6.28);
-    ctx.fill();
-  });
-}
-
-// Ship silhouettes + masts + battened sails + pennants — capa estática
-function _drawShips(ctx){
-  _SHIPS.forEach(function(s, i){
-    var sc = s.w/s.nw;
-    var ty = _cH - s.nh*sc*.55;
-    ctx.save();
-    ctx.translate(s.xr*_cW, ty);
-    ctx.scale(sc, sc);
-    ctx.rotate(s.rot*.01745);
-
-    // Hull silhouette
-    ctx.fillStyle = '#060100';
-    ctx.fill(_sPaths[i]);
-
-    s.masts.forEach(function(m){
-      var mx    = m.xf * s.nw;
-      var mBase = s.nh * 0.28;
-      var mTop  = -s.nh * m.topH;
-      var sTopY = mTop + s.nh * 0.08;
-      var sBotY = s.nh * m.sailBot;
-
-      // Mast pole
-      ctx.strokeStyle = 'rgba(4,2,0,.96)';
-      ctx.lineWidth = 2.2/sc;
-      ctx.beginPath();
-      ctx.moveTo(mx, mBase);
-      ctx.lineTo(mx, mTop);
-      ctx.stroke();
-
-      // Sail vertices — trapezoid narrower at top (Chinese lug sail shape)
-      var slT = mx - s.nw * m.sailLW * 0.62;
-      var srT = mx + s.nw * m.sailRW * 0.62;
-      var slB = mx - s.nw * m.sailLW;
-      var srB = mx + s.nw * m.sailRW;
-
-      // Sail body — semi-transparent so fire glows through fabric
-      ctx.fillStyle = 'rgba(8,3,1,.68)';
-      ctx.beginPath();
-      ctx.moveTo(slT, sTopY);
-      ctx.lineTo(srT, sTopY);
-      ctx.lineTo(srB, sBotY);
-      ctx.lineTo(slB, sBotY);
-      ctx.closePath();
-      ctx.fill();
-
-      // Bamboo batten lines (interpolate width top→bottom)
-      ctx.strokeStyle = 'rgba(3,1,0,.88)';
-      ctx.lineWidth = 1.1/sc;
-      for (var b = 0; b <= m.battens; b++){
-        var t  = b / m.battens;
-        var by = sTopY + (sBotY - sTopY) * t;
-        ctx.beginPath();
-        ctx.moveTo(slT + (slB - slT) * t, by);
-        ctx.lineTo(srT + (srB - srT) * t, by);
-        ctx.stroke();
-      }
-
-      // Red pennant flag at mast top
-      ctx.fillStyle = 'rgba(165,20,8,.82)';
-      ctx.beginPath();
-      ctx.moveTo(mx,                        mTop);
-      ctx.lineTo(mx + s.nw * 0.055,         mTop + s.nh * 0.055);
-      ctx.lineTo(mx,                        mTop + s.nh * 0.068);
-      ctx.closePath();
-      ctx.fill();
-    });
-
-    ctx.restore();
-  });
-}
-
-// ── Main render loop ──
-var _parts = [], _raf = null, _st = 0, _lt = 0, _arrowTimer = null, _stopTO = null;
-
-function _loop(t){
-  _raf = requestAnimationFrame(_loop);
-  var dt = Math.min(t - _lt, 50); _lt = t; _st += dt;
-  _ctx.clearRect(0,0,_cW,_cH);
-
-  // Capa de agua: blit del cache estático
-  _ctx.drawImage(_waterCache, 0, 0);
-
-  if (_st > 26){
-    _st = 0;
-    // Tope de seguridad: en régimen normal hay ~300-400 partículas; este
-    // límite sólo evita una acumulación descontrolada en casos extremos.
-    if (_parts.length < 800){
-      var pts = _pts();
-      pts.forEach(function(p){
-        if (Math.random() > .38) _parts.push(new FireP(p.x, p.y));
-        if (Math.random() > .87) _parts.push(new EmberP(p.x, p.y));
-      });
-      if (Math.random() > .6){ var rp=pts[Math.random()*pts.length|0]; _parts.push(new SmokeP(rp.x,rp.y)); }
-      if (Math.random() > .7) _parts.push(new AshP());
+  // Spawn cada ~28 ms: 3–5 brasas nuevas mientras no saturemos
+  if (_est > 28) {
+    _est = 0;
+    if (_embers.length < 160) {
+      const n = 3 + (Math.random() * 3 | 0);
+      for (let i = 0; i < n; i++) _embers.push(new EmberP());
     }
   }
 
-  _parts = _parts.filter(function(p){ p.tick(); return !p.dead(); });
+  _embers = _embers.filter(e => { e.tick(); return !e.dead(); });
 
-  // Additive blending: overlapping fire particles sum their light for realistic glow
+  // Additive blending: las brasas se acumulan y se iluminan entre sí
   _ctx.globalCompositeOperation = 'lighter';
-  _parts.forEach(function(p){ if (p.type==='fire'||p.type==='ember') p.draw(); });
-
-  // Capa de barcos: blit del cache estático (sobre el fuego)
+  _embers.forEach(e => e.draw());
   _ctx.globalCompositeOperation = 'source-over';
-  _ctx.drawImage(_shipCache, 0, 0);
 
-  _parts.forEach(function(p){ if (p.type==='smoke'||p.type==='ash') p.draw(); });
+  // Bloom: solo brasas jóvenes (life > 0.48) — las más brillantes dan el halo
+  _bloomCtx.globalCompositeOperation = 'lighter';
+  _embers.forEach(e => {
+    if (e.life > 0.48) {
+      const spr = _ESPR[Math.min(11, ((1 - e.life) * 12) | 0)];
+      const rd  = e.r * 2.1;
+      _bloomCtx.globalAlpha = (e.life - 0.48) / 0.52 * 0.58;
+      _bloomCtx.drawImage(spr, e.x - rd, e.y - rd, rd * 2, rd * 2);
+    }
+  });
+  _bloomCtx.globalCompositeOperation = 'source-over';
+  _bloomCtx.globalAlpha = 1;
 }
 
-// ── Fire arrows (DOM/CSS, occasional) ──
-function _spawnArrow(){
-  var el = document.createElement('div');
-  el.className = 'farrow';
-  var top = (10+Math.random()*52).toFixed(1), len = 50+Math.random()*32, spd = (1.4+Math.random()*1.1).toFixed(1);
-  el.style.cssText = 'top:'+top+'%;right:-'+(len+22)+'px;animation:arrow-fly '+spd+'s ease-in forwards';
-  el.innerHTML =
-    '<div style="width:'+len+'px;height:2px;background:linear-gradient(to left,rgba(65,40,14,.9),rgba(100,58,20,.6));border-radius:1px;flex-shrink:0"></div>'+
-    '<div style="width:6px;height:6px;border-radius:50%;flex-shrink:0;background:rgba(255,125,12,.95);box-shadow:0 0 8px rgba(255,95,0,.9),0 0 18px rgba(230,60,0,.5)"></div>';
+let _ashTimer = null;
+
+// Ceniza y carbón — DOM, arrastrados por el viento
+function _spawnAsh() {
+  const el  = document.createElement('div');
+  const lg  = Math.random() > 0.65;
+  el.className = 'chibif';
+  const sz   = lg ? (9 + Math.random() * 18) : (2 + Math.random() * 8);
+  const szH  = (sz * (0.35 + Math.random() * 0.60)).toFixed(1);
+  const top  = (-5 + Math.random() * 108).toFixed(1);
+  const left = (10 + Math.random() * 95).toFixed(1);
+  const dx   = (-(200 + Math.random() * 320)).toFixed(1);
+  const dy   = (-15 + Math.random() * 60).toFixed(1);
+  const rot  = (Math.random() * 900 - 200).toFixed(1);
+  const dur  = (1.2 + Math.random() * 2.0).toFixed(2);
+  const del  = (Math.random() * 0.10).toFixed(2);
+  const v    = Math.random();
+  const r    = (16 + v * 30) | 0;
+  const a    = (0.60 + Math.random() * 0.35).toFixed(2);
+  el.style.cssText = [
+    `width:${sz.toFixed(1)}px`, `height:${szH}px`,
+    `top:${top}%`, `left:${left}%`,
+    `background:rgba(${r},${Math.max(0,r-8)|0},${Math.max(0,r-15)|0},${a})`,
+    `--dx:${dx}px`, `--dy:${dy}vh`, `--rot:${rot}deg`,
+    `animation:chibif-fly ${dur}s ${del}s ease-in forwards`
+  ].join(';');
   document.body.appendChild(el);
-  el.addEventListener('animationend', function(){ el.remove(); });
+  el.addEventListener('animationend', () => el.remove());
 }
-function _schedArrow(){ _arrowTimer = setTimeout(function(){ _spawnArrow(); _schedArrow(); }, 13000+Math.random()*19000); }
 
-// ── Public fire controls (called from era selector + hover) ──
-function startFire(){
+// Ráfagas de viento — DOM, 2–4 líneas paralelas por ráfaga
+function _spawnGust() {
+  const n    = 2 + (Math.random() * 3 | 0);
+  const base = 4 + Math.random() * 82;
+  for (let i = 0; i < n; i++) {
+    const el  = document.createElement('div');
+    el.className = 'chibig';
+    const top = (base + i * (1.0 + Math.random() * 3.2)).toFixed(1);
+    const len = (160 + Math.random() * 280).toFixed(0);
+    const dur = (0.28 + Math.random() * 0.32).toFixed(2);
+    const del = (i * 0.030).toFixed(3);
+    el.style.cssText = [
+      `top:${top}%`, `width:${len}px`,
+      `animation-duration:${dur}s`,
+      `animation-delay:${del}s`
+    ].join(';');
+    document.body.appendChild(el);
+    el.addEventListener('animationend', () => el.remove());
+  }
+}
+
+function startFire() {
   if (_REDUCED) return;
   if (activeEra && activeEra !== 'chibi') return;
-  if (_stopTO){ clearTimeout(_stopTO); _stopTO = null; }
-  if (_raf){
-    document.body.classList.add('fire-on');
-    _cnv.style.opacity = '1';
-    return;
-  }
+  if (_ashTimer) return;
   document.body.classList.add('fire-on');
   _cnv.style.opacity = '1';
-  if (!_shipCache || _cacheW !== _cW || _cacheH !== _cH) _buildCache();
-  _lt = performance.now(); _loop(_lt);
-  var pts = _pts();
-  for (var i=0; i<75; i++){
-    var p = pts[Math.random()*pts.length|0];
-    _parts.push(new FireP(p.x, p.y + Math.random()*55));
-    if (Math.random()>.62) _parts.push(new EmberP(p.x, p.y));
-    if (Math.random()>.8)  _parts.push(new SmokeP(p.x, p.y));
+  _bloomCnv.style.opacity = '1';
+  // Ráfaga DOM inicial
+  for (let i = 0; i < 48; i++) {
+    setTimeout(_spawnAsh, i * 22);
+    if (i % 6 === 0) setTimeout(_spawnGust, i * 22 + 3);
   }
-  _schedArrow();
+  _ashTimer = setInterval(() => {
+    _spawnAsh();
+    _spawnAsh();
+    if (Math.random() > 0.38) _spawnAsh();
+    if (Math.random() > 0.44) _spawnGust();
+  }, 150);
+  // RAF brasas (solo desktop)
+  if (!_raf && _cW > 640) {
+    _lt = performance.now();
+    _loopFire(_lt);
+  }
 }
 
-function stopFire(){
+function stopFire() {
   if (activeEra === 'chibi') return;
   document.body.classList.remove('fire-on');
   _cnv.style.opacity = '0';
-  _stopTO = setTimeout(function(){
-    _stopTO = null;
-    cancelAnimationFrame(_raf); _raf = null;
-    _parts = []; _ctx.clearRect(0,0,_cW,_cH);
-  }, 1500);
-  clearTimeout(_arrowTimer); _arrowTimer = null;
+  _bloomCnv.style.opacity = '0';
+  clearInterval(_ashTimer); _ashTimer = null;
+  setTimeout(() => {
+    if (_raf) { cancelAnimationFrame(_raf); _raf = null; }
+    _embers = [];
+    _ctx.clearRect(0, 0, _cW, _cH);
+    _bloomCtx.clearRect(0, 0, _cW, _cH);
+  }, 1600);
 }
 
 const _chibiCard = document.querySelector('.pcard[data-pid="chibi"]');
@@ -870,10 +720,8 @@ if (_tresCard) {
 }
 
 // ── Pausa con la pestaña oculta ──
-// Los spawners (setInterval/timeout) seguían creando nodos en segundo plano.
-// Al ocultar la pestaña se detienen todos; al volver se reanuda el de la era
-// activa. requestAnimationFrame ya lo pausa el navegador, pero el canvas de
-// fuego también se libera para no dejar partículas colgadas.
+// Los spawners (setInterval/timeout) seguían creando nodos DOM en segundo plano.
+// Al ocultar la pestaña se detienen todos; al volver se reanuda el de la era activa.
 document.addEventListener('visibilitychange', function () {
   if (document.hidden) {
     clearInterval(_blossomTimer);    _blossomTimer = null;
@@ -886,11 +734,9 @@ document.addEventListener('visibilitychange', function () {
     clearInterval(_chaosRainTimer);  _chaosRainTimer = null;
     clearTimeout(_lightningTimer);   _lightningTimer = null;
     clearInterval(_wdTimer);         _wdTimer = null;
-    clearTimeout(_arrowTimer);       _arrowTimer = null;
-    clearTimeout(_stopTO);           _stopTO = null;
+    clearInterval(_ashTimer);        _ashTimer = null;
     if (_raf) { cancelAnimationFrame(_raf); _raf = null; }
-    _parts = [];
-    if (_ctx) _ctx.clearRect(0, 0, _cW, _cH);
+    _embers = [];
   } else {
     switch (typeof activeEra !== 'undefined' ? activeEra : null) {
       case 'turbantes':       startBlossom();  break;

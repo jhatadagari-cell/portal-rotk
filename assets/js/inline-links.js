@@ -286,6 +286,47 @@ const IL_CSS = `
   .ilmod-stats { grid-template-columns: 1fr; }
   .ilmod-bio { font-size: 16px; }
 }
+
+/* ── Crónica deep-link: resalte + oscurecimiento ──
+   Se aplica cuando la URL apunta a #cronica-xxx.
+   Las variables --accent, --gold, --text las define el CSS de cada ficha,
+   por lo que el resalte adopta automáticamente el color de facción.       */
+.cronica-list.has-highlight .cronica-entry {
+  transition: opacity .45s ease, filter .45s ease;
+}
+.cronica-list.has-highlight .cronica-entry:not(.cronica-highlighted) {
+  opacity: .10;
+  filter: blur(1.5px);
+  pointer-events: none;
+}
+.cronica-highlighted {
+  position: relative;
+  z-index: 1;
+  box-shadow: 0 0 0 1px var(--accent),
+              0 0 0 6px rgba(255,255,255,.06),
+              0 16px 56px rgba(0,0,0,.52);
+  border-radius: 16px;
+  transition: box-shadow .45s ease;
+}
+.cronica-back-btn {
+  display: inline-block;
+  margin-top: 20px;
+  padding: 9px 18px;
+  font-family: 'Cinzel Decorative', serif;
+  font-size: 10px;
+  letter-spacing: .16em;
+  color: var(--gold);
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.10);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background .2s, border-color .2s, color .2s;
+}
+.cronica-back-btn:hover {
+  background: rgba(255,255,255,.09);
+  border-color: var(--gold);
+  color: var(--text);
+}
 `;
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -563,4 +604,53 @@ document.addEventListener("DOMContentLoaded", () => {
 
   processTextNodes(kmap, sortedKeywords);
   wireClickHandler(kmap);
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// Crónica deep-link — resalta la entrada y oscurece las demás
+// Se activa cuando la URL contiene #cronica-xxx al cargar la ficha.
+// No depende de goTo() (definida en cada ficha): navega el slider directamente.
+// ─────────────────────────────────────────────────────────────────────────
+
+document.addEventListener("DOMContentLoaded", function _initCronicaDeepLink() {
+  const hash = window.location.hash;
+  if (!hash) return;
+
+  const target = document.getElementById(hash.slice(1));
+  if (!target || !target.classList.contains("cronica-entry")) return;
+
+  // Navegar al slide "cronicas" replicando la lógica de goTo() de cada ficha
+  const pages  = document.querySelectorAll(".wrap-page");
+  const links  = document.querySelectorAll(".sec-link[data-page]");
+  const slider = document.querySelector(".wrap-pages");
+  if (slider) {
+    const idx = [...pages].findIndex((p) => p.dataset.page === "cronicas");
+    if (idx >= 0) {
+      window.scrollTo(0, 0);
+      slider.style.transform = `translateX(-${idx * 100}%)`;
+      links.forEach((l) =>
+        l.classList.toggle("active", l.dataset.page === "cronicas"),
+      );
+      // Disparar applyAnnotations si la ficha la tiene registrada
+      if (typeof applyAnnotations === "function") {
+        const pg = document.querySelector('.wrap-page[data-page="cronicas"]');
+        if (pg) applyAnnotations(pg);
+      }
+    }
+  }
+
+  // Resalte con pequeño delay para dejar que el slide anime
+  setTimeout(() => {
+    target.scrollIntoView({ behavior: "smooth", block: "center" });
+    target.classList.add("cronica-highlighted");
+    target.closest(".cronica-list")?.classList.add("has-highlight");
+    // Botón de vuelta — solo si no existe ya (evita duplicados)
+    if (!target.querySelector(".cronica-back-btn")) {
+      const btn = document.createElement("button");
+      btn.className = "cronica-back-btn";
+      btn.textContent = "← Volver a la lectura";
+      btn.addEventListener("click", () => history.back());
+      target.appendChild(btn);
+    }
+  }, 380);
 });
