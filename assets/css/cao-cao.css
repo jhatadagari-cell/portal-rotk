@@ -280,6 +280,27 @@ a {
   line-height: 1.8;
   color: var(--muted);
 }
+/* Card con mucho texto → banner horizontal a todo el ancho.
+   El JS añade .era-card--wide al artículo largo y .era-grid--has-wide a su grid. */
+.era-card--wide {
+  grid-column: 1 / -1;
+}
+@media (min-width: 700px) {
+  /* Con una card ancha presente, la era usa 2 columnas: las cortas se
+     emparejan arriba y la ancha ocupa la fila completa debajo (sin huecos). */
+  .era-grid--has-wide {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .era-card--wide {
+    display: grid;
+    grid-template-columns: minmax(150px, 0.4fr) 1fr;
+    column-gap: 30px;
+    align-items: start;
+  }
+  .era-card--wide h3 {
+    margin: 0;
+  }
+}
 .epilogue {
   padding: 28px 26px;
   background: linear-gradient(
@@ -789,6 +810,324 @@ a {
 .rel-orbit-section.era-empty {
   display: none;
 }
+/* ── Marco narrativo de Relaciones ── */
+.rel-intro {
+  max-width: 680px;
+  margin: 0 auto 30px;
+  text-align: center;
+}
+.rel-intro-eyebrow {
+  display: block;
+  font-family: "Cinzel Decorative", serif;
+  font-size: 12px;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--gold);
+  opacity: 0.75;
+  margin-bottom: 14px;
+}
+.rel-intro-lede {
+  font-family: "IM Fell English", serif;
+  font-size: 18px;
+  line-height: 1.8;
+  color: var(--muted);
+  margin: 0;
+}
+.rel-intro-lede strong {
+  color: var(--text);
+  font-weight: 400;
+}
+/* Bloque temático (linaje / tejido de alianzas) */
+.rel-block {
+  margin-bottom: 8px;
+}
+.rel-block-head {
+  text-align: center;
+  margin-bottom: 24px;
+}
+.rel-block-head .rel-orbit-label {
+  margin-bottom: 10px;
+}
+.rel-block-note {
+  font-family: "IM Fell English", serif;
+  font-style: italic;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--muted);
+  opacity: 0.78;
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+/* ── Árbol genealógico: La Casa de Cao ── */
+.lineage {
+  position: relative;
+  margin-bottom: 8px;
+  padding: 8px 12px 24px;
+}
+/* El panel del árbol no debe salir pegado a la última fila de nodos */
+#tree-panel {
+  margin-top: 32px;
+}
+.tree {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.tree-tier {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 38px;
+}
+/* Conector vertical entre tiers */
+.tree-link {
+  width: 2px;
+  height: 30px;
+  background: linear-gradient(
+    to bottom,
+    rgba(155, 177, 211, 0.1),
+    rgba(155, 177, 211, 0.45),
+    rgba(155, 177, 211, 0.1)
+  );
+}
+/* Nodo del árbol — hereda el lenguaje de .rel-bubble */
+.tree-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+}
+.tree-node .rel-bubble-img {
+  width: 92px;
+  height: 92px;
+  background: var(--panel);
+}
+.tree-node--self .rel-bubble-img {
+  width: 132px;
+  height: 132px;
+  border-color: var(--gold);
+  box-shadow:
+    0 0 0 6px rgba(155, 177, 211, 0.12),
+    0 0 32px rgba(155, 177, 211, 0.26);
+}
+.tree-node .rel-bubble-name {
+  font-size: 13px;
+}
+.tree-node:hover .rel-bubble-img {
+  transform: scale(1.07);
+  border-color: var(--gold);
+  box-shadow:
+    0 0 0 4px rgba(155, 177, 211, 0.16),
+    0 0 18px rgba(155, 177, 211, 0.2);
+}
+.tree-node.active .rel-bubble-img {
+  transform: scale(1.1);
+  border-color: var(--gold);
+  box-shadow:
+    0 0 0 5px rgba(155, 177, 211, 0.26),
+    0 0 26px rgba(155, 177, 211, 0.3);
+}
+.tree-node:hover .rel-bubble-name,
+.tree-node.active .rel-bubble-name {
+  color: var(--text);
+}
+/* Línea de unión matrimonial (Cao Cao + consortes) */
+.tier-union {
+  align-items: center;
+  gap: 30px;
+}
+.tier-union .union-line {
+  position: absolute;
+  top: 66px;
+  left: 18%;
+  right: 18%;
+  height: 2px;
+  background: linear-gradient(
+    to right,
+    transparent,
+    rgba(155, 177, 211, 0.4) 20%,
+    rgba(155, 177, 211, 0.4) 80%,
+    transparent
+  );
+  z-index: 0;
+}
+.tier-union .tree-node {
+  z-index: 1;
+}
+/* Fila de hijos: barra fraternal + tirantes verticales */
+.tier-children {
+  flex-wrap: wrap;
+  gap: 26px 30px;
+  padding-top: 20px;
+  max-width: 760px;
+}
+.tier-children .sibling-bar {
+  position: absolute;
+  top: 0;
+  left: 8%;
+  right: 8%;
+  height: 2px;
+  background: linear-gradient(
+    to right,
+    transparent,
+    rgba(155, 177, 211, 0.35) 10%,
+    rgba(155, 177, 211, 0.35) 90%,
+    transparent
+  );
+}
+.tree-node.has-stub::before {
+  content: "";
+  position: absolute;
+  top: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 2px;
+  height: 20px;
+  background: rgba(155, 177, 211, 0.35);
+}
+@media (max-width: 640px) {
+  .tree-tier {
+    gap: 22px;
+  }
+  .tree-node .rel-bubble-img {
+    width: 76px;
+    height: 76px;
+  }
+  .tree-node--self .rel-bubble-img {
+    width: 104px;
+    height: 104px;
+  }
+  /* En móvil los conectores horizontales se desalinean al envolver: ocultar */
+  .tier-union .union-line,
+  .tier-children .sibling-bar,
+  .tree-node.has-stub::before {
+    display: none;
+  }
+  .tier-children {
+    padding-top: 0;
+  }
+}
+
+/* ── Prototipo tinta/pincel (filtro SVG nativo #ink-brush, sin dependencias) ── */
+.ink-defs {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+/* Conectores como trazos de pincel: un poco más gruesos + filtro de tinta */
+.tree-link {
+  width: 3px;
+  filter: url(#ink-brush);
+}
+.tier-union .union-line,
+.tier-children .sibling-bar {
+  height: 3px;
+  filter: url(#ink-brush);
+}
+.tree-node.has-stub::before {
+  width: 3px;
+  filter: url(#ink-brush);
+}
+/* Marco de tinta alrededor del retrato — anillo aparte, NO distorsiona la foto */
+.tree-node .rel-bubble-img {
+  border-color: rgba(155, 177, 211, 0.12);
+}
+.tree-node::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 92px;
+  height: 92px;
+  transform: translateX(-50%);
+  border: 3px solid var(--gold);
+  border-radius: 50%;
+  filter: url(#ink-brush);
+  opacity: 0.8;
+  pointer-events: none;
+  transition:
+    transform 0.22s ease,
+    opacity 0.22s;
+}
+.tree-node--self::after {
+  width: 132px;
+  height: 132px;
+}
+.tree-node:hover::after {
+  transform: translateX(-50%) scale(1.07);
+  opacity: 1;
+}
+.tree-node.active::after {
+  transform: translateX(-50%) scale(1.1);
+  opacity: 1;
+}
+@media (max-width: 640px) {
+  .tree-node::after {
+    width: 76px;
+    height: 76px;
+  }
+  .tree-node--self::after {
+    width: 104px;
+    height: 104px;
+  }
+}
+
+/* ── Caligrafía de pincel + sello rojo (印章) ── */
+/* Caracteres chinos del título en fuente caligráfica */
+.zh-brush {
+  font-family: "Ma Shan Zheng", "Noto Serif SC", serif;
+  font-size: 1.35em;
+  letter-spacing: 0.04em;
+  vertical-align: -0.06em;
+}
+/* Placeholders del árbol: carácter a pincel, más grande y suelto */
+.tree-node .rel-bubble-img--placeholder span {
+  font-family: "Ma Shan Zheng", "Noto Serif SC", serif;
+  font-size: 34px;
+  line-height: 1;
+  color: var(--gold);
+  opacity: 0.62;
+}
+/* Sello rojo 印章 — estampado en la esquina del linaje */
+.lineage-seal {
+  position: absolute;
+  top: 2px;
+  right: 6px;
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Ma Shan Zheng", "Noto Serif SC", serif;
+  font-size: 42px;
+  line-height: 1;
+  color: #f3e7cf;
+  background: #b1322c;
+  border-radius: 9px;
+  transform: rotate(-4deg);
+  filter: url(#ink-brush);
+  box-shadow: 0 5px 16px rgba(0, 0, 0, 0.4);
+  opacity: 0.93;
+  z-index: 2;
+}
+@media (max-width: 640px) {
+  .lineage-seal {
+    width: 46px;
+    height: 46px;
+    font-size: 32px;
+    top: 0;
+    right: 2px;
+  }
+}
+
 /* ── Tab Batallas (personaje) ── */
 .char-battles{display:flex;flex-direction:column;gap:16px}
 .char-battle-card{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:20px 22px;position:relative;overflow:hidden;transition:border-color .22s}

@@ -132,7 +132,11 @@
       "Bash(awk '{print length, NR\": \"$0}')",
       "Bash(xargs ls -lh)",
       "Bash(sort -k5 -h)",
-      "Bash(awk '{print $5, $NF}')"
+      "Bash(awk '{print $5, $NF}')",
+      "WebFetch(domain:threekingdoms.wiki)",
+      "Bash(cd *)",
+      "Bash(md5 -q /tmp/era-ORIGINAL.png /tmp/era-ACTUAL.png)",
+      "Read(//private/tmp/**)"
     ]
   },
   "enabledPlugins": {

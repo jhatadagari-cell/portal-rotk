@@ -39,11 +39,11 @@
     <!-- v1-og:end -->
 
     <link
-      href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700;900&family=Cinzel+Decorative:wght@400;700&family=IM+Fell+English:ital@0;1&family=Noto+Sans+SC:wght@300;400;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700;900&family=Cinzel+Decorative:wght@400;700&family=IM+Fell+English:ital@0;1&family=Noto+Sans+SC:wght@300;400;700&family=Ma+Shan+Zheng&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="../css/cao-cao.css?v=3" />
-    <link rel="stylesheet" href="../css/chrome.css?v=4" />
+    <link rel="stylesheet" href="../css/cao-cao.css?v=14" />
+    <link rel="stylesheet" href="../css/chrome.css?v=6" />
   </head>
   <body>
     <div id="chrome-nav"></div>
@@ -311,6 +311,223 @@
         </div>
 
         <div class="wrap-page" data-page="relaciones">
+          <!-- ── Marco narrativo de la sección ── -->
+          <header class="rel-intro">
+            <span class="rel-intro-eyebrow">Relaciones Clave</span>
+            <p class="rel-intro-lede">
+              La vida de Cao Cao se entiende a través de dos vínculos: la
+              <strong>sangre</strong> que heredó y el clan que fundó, y el
+              <strong>tejido de aliados, consejeros y rivales</strong> que cambió
+              con cada era. Pulsa cualquier rostro para conocer su historia.
+            </p>
+          </header>
+
+          <!-- ── Árbol genealógico: La Casa de Cao ── -->
+          <section class="rel-block lineage" id="lineage">
+            <!-- Filtro de tinta/pincel (nativo SVG, sin dependencias) -->
+            <svg class="ink-defs" width="0" height="0" aria-hidden="true" focusable="false">
+              <defs>
+                <filter id="ink-brush" x="-30%" y="-30%" width="160%" height="160%" color-interpolation-filters="sRGB">
+                  <feTurbulence type="fractalNoise" baseFrequency="0.016 0.022" numOctaves="2" seed="7" result="n" />
+                  <feDisplacementMap in="SourceGraphic" in2="n" scale="5" xChannelSelector="R" yChannelSelector="G" />
+                </filter>
+              </defs>
+            </svg>
+            <div class="lineage-seal" aria-hidden="true">曹</div>
+            <div class="rel-block-head">
+              <h3 class="rel-orbit-label">
+                La Casa de Cao · <span class="zh-brush">曹氏</span>
+              </h3>
+              <p class="rel-block-note">
+                Su linaje y su descendencia. Un vínculo que no cambia con el tiempo.
+              </p>
+            </div>
+            <div class="tree">
+              <!-- Abuelo -->
+              <div class="tree-tier">
+                <div
+                  class="tree-node"
+                  data-badge="Abuelo · Eunuco"
+                  data-badge-color="#c9a84c"
+                  data-name="Cao Teng · 曹腾"
+                  data-desc="El eunuco que sirvió a cuatro emperadores Han y fue el único de su condición en recibir un título nobiliario póstumo. Adoptó a Cao Song como heredero: de él arranca el linaje y las conexiones cortesanas que harían posible el ascenso de toda la casa Cao."
+                >
+                  <div class="rel-bubble-img rel-bubble-img--placeholder">
+                    <span>腾</span>
+                  </div>
+                  <span class="rel-bubble-name">Cao Teng</span>
+                </div>
+              </div>
+
+              <div class="tree-link"></div>
+
+              <!-- Padre -->
+              <div class="tree-tier">
+                <div
+                  class="tree-node"
+                  data-badge="Padre"
+                  data-badge-color="#c9a84c"
+                  data-name="Cao Song · 曹嵩"
+                  data-desc="Hijo adoptivo de Cao Teng, llegó a Gran Comandante del Imperio. Su asesinato en 193 d.C. a manos de hombres de Tao Qian fue la deuda de sangre que desató las brutales campañas de Cao Cao contra la provincia de Xu."
+                >
+                  <div class="rel-bubble-img rel-bubble-img--placeholder">
+                    <span>嵩</span>
+                  </div>
+                  <span class="rel-bubble-name">Cao Song</span>
+                </div>
+              </div>
+
+              <div class="tree-link"></div>
+
+              <!-- Cao Cao + consortes -->
+              <div class="tree-tier tier-union">
+                <div class="union-line" aria-hidden="true"></div>
+                <div
+                  class="tree-node"
+                  data-badge="Primera Esposa"
+                  data-badge-color="#9bb1d3"
+                  data-name="Lady Ding · 丁夫人"
+                  data-desc="Esposa principal de Cao Cao y madre adoptiva de Cao Ang. Cuando Ang murió en Wancheng cubriendo la huida de su marido, le reprochó la pérdida y se marchó del hogar. Cao Cao fue a buscarla en persona; ella no se volvió. Nunca regresó."
+                >
+                  <div class="rel-bubble-img rel-bubble-img--placeholder">
+                    <span>丁</span>
+                  </div>
+                  <span class="rel-bubble-name">Lady Ding</span>
+                </div>
+                <div
+                  class="tree-node tree-node--self"
+                  data-badge="Canciller de Wei"
+                  data-badge-color="#1e5abf"
+                  data-name="Cao Cao · 曹操"
+                  data-desc="El arquitecto del norte. Sobre el linaje de un eunuco de Qiao levantó el estado más sólido de su era. De su sangre y de su clan saldría la dinastía que su hijo Cao Pi coronaría en 220 d.C."
+                >
+                  <div class="rel-bubble-img">
+                    <img src="../img/Cao%20Cao/Cao%20Cao.webp" alt="Cao Cao" />
+                  </div>
+                  <span class="rel-bubble-name">Cao Cao</span>
+                </div>
+                <div
+                  class="tree-node"
+                  data-badge="Consorte Principal"
+                  data-badge-color="#9bb1d3"
+                  data-name="Lady Bian · 卞夫人"
+                  data-desc="Ascendida a consorte principal tras la marcha de Lady Ding, gobernó el hogar con una ecuanimidad célebre: cuando llegaron las noticias de Guandu, se negó a celebrar antes de que el resultado fuera seguro. Madre de Cao Pi, Cao Zhang y Cao Zhi — los hijos que definirían el futuro de Wei."
+                >
+                  <div class="rel-bubble-img">
+                    <img
+                      src="../img/Lady%20Bian/Lady%20Bian.webp"
+                      alt="Lady Bian"
+                    />
+                  </div>
+                  <span class="rel-bubble-name">Lady Bian</span>
+                </div>
+              </div>
+
+              <div class="tree-link"></div>
+
+              <!-- Hijos -->
+              <div class="tree-tier tier-children">
+                <div class="sibling-bar" aria-hidden="true"></div>
+                <div
+                  class="tree-node has-stub"
+                  data-badge="Primogénito"
+                  data-badge-color="#9bb1d3"
+                  data-name="Cao Ang · 曹昂"
+                  data-desc="El hijo mayor. En la emboscada de Wancheng (197 d.C.) cedió su caballo a su padre para que escapara de la traición de Zhang Xiu, y murió cubriendo la retirada. Su muerte rompió para siempre la familia que Cao Cao había construido con Lady Ding."
+                >
+                  <div class="rel-bubble-img rel-bubble-img--placeholder">
+                    <span>昂</span>
+                  </div>
+                  <span class="rel-bubble-name">Cao Ang</span>
+                </div>
+                <div
+                  class="tree-node has-stub"
+                  data-badge="Heredero · 1.er Emp. de Wei"
+                  data-badge-color="#1e5abf"
+                  data-name="Cao Pi · 曹丕"
+                  data-desc="El hijo que completó la obra que el padre no se atrevió a coronar. Cao Cao lo eligió sobre Cao Zhi por su frialdad política. En 220 d.C. depuso a Han Xiandi y se proclamó Emperador de Wei, otorgando a su padre el título póstumo de Emperador Wu."
+                >
+                  <div class="rel-bubble-img">
+                    <img src="../img/Cao%20Pi/Cao%20Pi.webp" alt="Cao Pi" />
+                  </div>
+                  <span class="rel-bubble-name">Cao Pi</span>
+                </div>
+                <div
+                  class="tree-node has-stub"
+                  data-badge="El General de Barba Amarilla"
+                  data-badge-color="#1e5abf"
+                  data-name="Cao Zhang · 曹彰"
+                  data-desc="El hijo guerrero, de fuerza prodigiosa y arrojo temerario; capaz de doblegar a una fiera con las manos. Cao Cao lo apodó «Barba Amarilla». Sometió a los Wuhuan del norte. Nunca disputó el trono: solo quería mandar ejércitos."
+                >
+                  <div class="rel-bubble-img rel-bubble-img--placeholder">
+                    <span>彰</span>
+                  </div>
+                  <span class="rel-bubble-name">Cao Zhang</span>
+                </div>
+                <div
+                  class="tree-node has-stub"
+                  data-badge="El Poeta Preterido"
+                  data-badge-color="#9bb1d3"
+                  data-name="Cao Zhi · 曹植"
+                  data-desc="El genio literario más extraordinario de la era — y la indisciplina que lo hizo políticamente inviable. Llegó tarde a una batalla por estar bebiendo. Cao Cao lo descartó y eligió a Cao Pi. Sobrevivió al reinado de su hermano escribiendo la prosa más refinada del clásico chino."
+                >
+                  <div class="rel-bubble-img">
+                    <img src="../img/Cao%20Zhi/Cao%20Zhi.webp" alt="Cao Zhi" />
+                  </div>
+                  <span class="rel-bubble-name">Cao Zhi</span>
+                </div>
+                <div
+                  class="tree-node has-stub"
+                  data-badge="El Niño Prodigio"
+                  data-badge-color="#9bb1d3"
+                  data-name="Cao Chong · 曹冲"
+                  data-desc="El hijo más brillante: siendo un niño pesó un elefante haciéndolo subir a un bote y midiendo el agua desplazada. Cao Cao lo amaba sobre todos sus hijos. Murió a los doce años (208 d.C.); con él se apagó la sucesión que Cao Cao había soñado."
+                >
+                  <div class="rel-bubble-img rel-bubble-img--placeholder">
+                    <span>冲</span>
+                  </div>
+                  <span class="rel-bubble-name">Cao Chong</span>
+                </div>
+                <div
+                  class="tree-node has-stub"
+                  data-badge="Emperatriz de Han"
+                  data-badge-color="#c9a84c"
+                  data-name="Cao Jie · 曹节"
+                  data-desc="Hija de Cao Cao, entregada como consorte a Han Xiandi y luego emperatriz. Cuando los emisarios de su propio hermano Cao Pi vinieron a exigir el sello imperial para forzar la abdicación, se dice que lo arrojó al suelo entre lágrimas y los maldijo."
+                >
+                  <div class="rel-bubble-img rel-bubble-img--placeholder">
+                    <span>节</span>
+                  </div>
+                  <span class="rel-bubble-name">Cao Jie</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Panel propio del árbol -->
+            <div class="rel-panel" id="tree-panel" hidden>
+              <button class="rel-panel-close" aria-label="Cerrar">✕</button>
+              <div class="rel-panel-badge"></div>
+              <div class="rel-panel-name"></div>
+              <p class="rel-panel-desc"></p>
+            </div>
+          </section>
+
+          <div class="section-divider">
+            <span></span>
+            <span class="divider-ornament">◆</span>
+            <span></span>
+          </div>
+
+          <!-- ── El tejido de alianzas (por era) ── -->
+          <section class="rel-block">
+            <div class="rel-block-head">
+              <h3 class="rel-orbit-label">El Tejido de Alianzas · 縱橫</h3>
+              <p class="rel-block-note">
+                Sus vínculos cambiaron con cada época. Desliza para ver quién
+                estaba a su lado en cada era.
+              </p>
+            </div>
+
           <!-- Slider temporal -->
           <div class="era-slider-wrap">
             <div class="era-slider-header">
@@ -391,19 +608,6 @@
                   <img src="../img/Guo%20Jia/Guo%20Jia.webp" alt="Guo Jia" />
                 </div>
                 <span class="rel-bubble-name">Guo Jia</span>
-              </div>
-              <div
-                class="rel-bubble"
-                data-eras="tres-reinos"
-                data-badge="Heredero"
-                data-badge-color="#9bb1d3"
-                data-name="Cao Pi · 曹丕"
-                data-desc="El hijo que completó la obra que el padre no se atrevió a coronar formalmente. Cao Cao lo eligió sobre Cao Zhi reconociendo en él la frialdad política de los grandes gobernantes. En 220 d.C. Cao Pi depuso a Han Xiandi y se proclamó Emperador de Wei."
-              >
-                <div class="rel-bubble-img">
-                  <img src="../img/Cao%20Pi/Cao%20Pi.webp" alt="Cao Pi" />
-                </div>
-                <span class="rel-bubble-name">Cao Pi</span>
               </div>
             </div>
           </div>
@@ -724,41 +928,7 @@
             </div>
           </div>
 
-          <!-- Familia -->
-          <div class="rel-orbit-section">
-            <h3 class="rel-orbit-label">Familia</h3>
-            <div class="rel-bubbles rel-bubbles--md">
-              <div
-                class="rel-bubble"
-                data-eras="guerras-senores chibi tres-reinos"
-                data-badge="Consorte Principal"
-                data-badge-color="#9bb1d3"
-                data-name="Lady Bian · 卞夫人"
-                data-desc="Ascendida a consorte principal tras la repudiación de Lady Ding, Lady Bian gobernó el hogar de Cao Cao con una ecuanimidad que todos notaron: cuando llegaron las noticias de Guandu, se negó a alborotarse antes de que el resultado fuera seguro. Era la madre de Cao Pi, Cao Zhang y Cao Zhi — los tres hijos que definirían el futuro de Wei."
-              >
-                <div class="rel-bubble-img">
-                  <img
-                    src="../img/Lady%20Bian/Lady%20Bian.webp"
-                    alt="Lady Bian"
-                  />
-                </div>
-                <span class="rel-bubble-name">Lady Bian</span>
-              </div>
-              <div
-                class="rel-bubble"
-                data-eras="tres-reinos"
-                data-badge="El Poeta Preterido"
-                data-badge-color="#9bb1d3"
-                data-name="Cao Zhi · 曹植"
-                data-desc="El hijo al que Cao Cao quiso pero finalmente no eligió. Cao Zhi tenía el genio literario más extraordinario de la era —y la indisciplina que lo hacía políticamente inviable. Llegó tarde a una batalla por estar bebiendo vino. Cao Cao lo descartó y eligió a Cao Pi. Sobrevivió al reinado de su hermano escribiendo la prosa más refinada de la literatura clásica china."
-              >
-                <div class="rel-bubble-img rel-bubble-img--placeholder">
-                  <span>植</span>
-                </div>
-                <span class="rel-bubble-name">Cao Zhi</span>
-              </div>
-            </div>
-          </div>
+          </section>
         </div>
 
         <!-- ── Batallas ── -->
@@ -1485,33 +1655,48 @@
         // Nota: el deep-link de crónicas (#cronica-xxx) lo gestiona inline-links.js
         // para que funcione en todas las fichas, no solo en esta.
 
-        const panel = document.getElementById("rel-panel");
-        const panelBadge = panel.querySelector(".rel-panel-badge");
-        const panelName = panel.querySelector(".rel-panel-name");
-        const panelDesc = panel.querySelector(".rel-panel-desc");
+        // Dos paneles: el del árbol (bajo el linaje) y el de los círculos.
+        const panel = document.getElementById("rel-panel"); // círculos
+        const treePanel = document.getElementById("tree-panel"); // árbol
+        const ALL_PANELS = [panel, treePanel];
+        const CLICKABLE = ".rel-bubble, .tree-node";
 
-        function showPanel(bubble) {
+        function fillPanel(p, bubble) {
           const { badge, badgeColor, name, desc } = bubble.dataset;
-          panelBadge.textContent = badge;
-          panelBadge.style.color = badgeColor;
-          panelBadge.style.borderColor = badgeColor;
-          panelName.textContent = name;
-          panelDesc.textContent = desc;
-          panel.hidden = false;
-          panel.style.animation = "none";
-          panel.offsetHeight;
-          panel.style.animation = "";
-          panel.scrollIntoView({ behavior: "smooth", block: "center" });
+          p.querySelector(".rel-panel-badge").textContent = badge;
+          p.querySelector(".rel-panel-badge").style.color = badgeColor;
+          p.querySelector(".rel-panel-badge").style.borderColor = badgeColor;
+          p.querySelector(".rel-panel-name").textContent = name;
+          p.querySelector(".rel-panel-desc").textContent = desc;
+          p.hidden = false;
+          p.style.animation = "none";
+          p.offsetHeight;
+          p.style.animation = "";
         }
 
-        document.querySelectorAll(".rel-bubble").forEach((bubble) => {
+        function clearActive() {
+          document
+            .querySelectorAll(CLICKABLE)
+            .forEach((b) => b.classList.remove("active"));
+        }
+
+        function showPanel(bubble) {
+          // El nodo del árbol usa su propio panel; las burbujas, el de abajo.
+          const isTree = bubble.classList.contains("tree-node");
+          const target = isTree ? treePanel : panel;
+          ALL_PANELS.forEach((p) => {
+            if (p !== target) p.hidden = true;
+          });
+          fillPanel(target, bubble);
+          target.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        }
+
+        document.querySelectorAll(CLICKABLE).forEach((bubble) => {
           bubble.addEventListener("click", () => {
             const wasActive = bubble.classList.contains("active");
-            document
-              .querySelectorAll(".rel-bubble")
-              .forEach((b) => b.classList.remove("active"));
+            clearActive();
             if (wasActive) {
-              panel.hidden = true;
+              ALL_PANELS.forEach((p) => (p.hidden = true));
             } else {
               bubble.classList.add("active");
               showPanel(bubble);
@@ -1519,14 +1704,12 @@
           });
         });
 
-        panel
-          .querySelector(".rel-panel-close")
-          .addEventListener("click", () => {
-            panel.hidden = true;
-            document
-              .querySelectorAll(".rel-bubble")
-              .forEach((b) => b.classList.remove("active"));
+        ALL_PANELS.forEach((p) => {
+          p.querySelector(".rel-panel-close").addEventListener("click", () => {
+            p.hidden = true;
+            clearActive();
           });
+        });
 
         // Era slider
         const ERAS = [
@@ -1607,6 +1790,20 @@
           .getElementById("era-range")
           .addEventListener("input", (e) => applyEra(+e.target.value));
         applyEra(0, true);
+
+        // Era-cards con mucho texto → banner horizontal a todo el ancho.
+        // Se colapsa el whitespace del HTML para medir solo el texto real.
+        const WIDE_THRESHOLD = 480;
+        document.querySelectorAll(".era-card").forEach((card) => {
+          const p = card.querySelector("p");
+          if (!p) return;
+          const len = p.textContent.replace(/\s+/g, " ").trim().length;
+          if (len > WIDE_THRESHOLD) {
+            card.classList.add("era-card--wide");
+            const grid = card.closest(".era-grid");
+            if (grid) grid.classList.add("era-grid--has-wide");
+          }
+        });
       })();
     </script>
 
