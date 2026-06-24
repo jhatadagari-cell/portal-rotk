@@ -14,26 +14,32 @@
 
 
 /* ── TIERS (niveles de hacienda) ──────────────────────────────────────────
-   El nivel de una hacienda. A futuro subirá solo según una puntuación
-   (apoyo de los mecenas + misiones de la web); por ahora lo subes tú a mano
-   con el campo `tier` de cada hacienda. `nivel` va de 1 en adelante.        */
+   El nivel de una hacienda. El nivel YA NO se pone a mano: se deduce de la
+   `puntuacion` de cada casa. Cuando la puntuación cruza el `umbral` de un
+   nivel, la hacienda asciende sola.
+     · nivel  : 1 en adelante.
+     · umbral : puntos necesarios para ALCANZAR este nivel. El primero debe
+                ser 0. Sube estos números para que cueste más ascender.       */
 const HAC_TIERS = [
   {
     nivel: 1,
     nombre: 'Residencia',
     zh: '宅',
+    umbral: 0,
     desc: 'Una casa recién fundada. Muros modestos, pero su nombre ya cuenta.'
   },
   {
     nivel: 2,
     nombre: 'Mansión',
     zh: '府',
+    umbral: 100,
     desc: 'Una casa establecida, residencia digna de un dignatario.'
   },
   {
     nivel: 3,
     nombre: 'Hacienda Mayor',
     zh: '邸',
+    umbral: 300,
     desc: 'Una gran finca señorial. Solo las casas más sostenidas la alcanzan.'
   }
 ];
@@ -45,8 +51,9 @@ const HAC_TIERS = [
               de nivel 1 solo puede tener cargos con tier 1; al ascender se
               abren los superiores. El cargo más alto de cada tier es su
               "cargo de élite".
-   `umbral` : donación/puntuación orientativa — referencia para ti, no se
-              calcula nada solo.
+   `umbral` : puntos MÍNIMOS que debe tener un miembro para alcanzar este
+              cargo (si el nivel de la hacienda ya lo tiene desbloqueado).
+              El cargo de cada miembro se deduce solo de sus puntos.
    `sala`   : nombre del pabellón — se usará en la futura vista pixel art.    */
 const HAC_RANGOS = [
   {
@@ -97,38 +104,39 @@ const HAC_RANGOS = [
 ];
 
 
-/* ── HACIENDAS ────────────────────────────────────────────────────────────
-   Campos de cada hacienda:
-     · tier       : nivel actual (1-3). Solo admite cargos de ese tier o menor.
-     · puntuacion : puntuación global de la casa. MANUAL por ahora — el
-                    sistema que la calcula (apoyo + misiones) llegará después.
-                    Pon 0 u omítelo si aún no aplica.
-   Cada miembro: { mecenas, rango, desde, nota }
-     · mecenas : nombre/alias visible del donante.
-     · rango   : DEBE coincidir con un `id` de HAC_RANGOS y estar permitido
-                 por el `tier` de la hacienda.
-     · desde   : mes de alta, formato 'AAAA-MM'.
-     · nota    : opcional, una línea de dedicatoria o detalle (o '').
+/* ── HACIENDAS (semilla inicial) ──────────────────────────────────────────
+   ESTO ES LA SEMILLA. En cuanto uses el panel de admin (admin-haciendas.html),
+   los datos pasan a guardarse en el navegador (localStorage) y este fichero
+   deja de mandar. Para volver a la semilla: botón "Restaurar ejemplo" del panel.
 
-   Los miembros del ejemplo están marcados — bórralos cuando tengas mecenas
-   reales y ajusta el `tier` de la hacienda al real.                         */
+   La PUNTUACIÓN de la casa = suma de los puntos de sus miembros (+ puntosExtra).
+   El NIVEL de la casa se deduce de esa puntuación, y el CARGO de cada miembro
+   se deduce de SUS puntos (limitado por el nivel de la casa).
+
+   Campos de cada hacienda:
+     · puntosExtra : puntos sueltos de la casa (p.ej. futuras misiones). Se
+                     SUMAN al total. Pon 0 si no aplica.
+   Cada miembro: { nombre, puntos, desde, nota }
+     · nombre : nombre/alias visible del mecenas.
+     · puntos : sus puntos. Determinan su cargo automáticamente.
+     · desde  : mes de alta, formato 'AAAA-MM' (opcional).
+     · nota   : opcional, una línea de dedicatoria o detalle (o '').          */
 const HAC_HACIENDAS = [
   {
     id: 'sima',
     nombre: 'Hacienda Sima',
     zh: '司馬莊',
     color: '#8820b0',                       // acento de la casa (morado Jin)
-    tier: 2,                                // Mansión 府 — abre hasta Consejero
-    puntuacion: 0,                          // manual; sistema de puntos pendiente
+    puntosExtra: 0,                         // puntos de misiones (futuro)
     lema: 'El tiempo lo conquista todo.',
     fundada: '2026',
     descripcion: 'La primera hacienda del portal. Quien la sostiene comparte ' +
                  'el destino de un linaje que supo esperar su hora.',
     miembros: [
       // ▼▼▼ EJEMPLOS — bórralos cuando tengas mecenas reales ▼▼▼
-      { mecenas: 'Mecenas de ejemplo', rango: 'consejero', desde: '2026-05', nota: 'Sostuvo la hacienda desde su fundación.' },
-      { mecenas: 'Otro ejemplo',       rango: 'vasallo',   desde: '2026-05', nota: '' },
-      { mecenas: 'Tercer ejemplo',     rango: 'comensal',  desde: '2026-05', nota: '' }
+      { nombre: 'Mecenas de ejemplo', puntos: 110, desde: '2026-05', nota: 'Sostuvo la hacienda desde su fundación.' },
+      { nombre: 'Otro ejemplo',       puntos: 20,  desde: '2026-05', nota: '' },
+      { nombre: 'Tercer ejemplo',     puntos: 5,   desde: '2026-05', nota: '' }
       // ▲▲▲ EJEMPLOS ▲▲▲
     ]
   }

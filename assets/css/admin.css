@@ -1,0 +1,120 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   admin.css — Panel de administración de Haciendas (admin-haciendas.html).
+   Solo lo ve el admin. Usa la paleta global de main.css.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── Acceso denegado ────────────────────────────────────────────────────── */
+.adm-denied{min-height:calc(100vh - var(--nav-h));display:flex;align-items:center;justify-content:center;padding:40px 20px}
+.adm-denied-card{text-align:center;max-width:360px}
+.adm-denied-zh{font-family:'Noto Serif SC',serif;font-size:64px;font-weight:900;color:var(--red);opacity:.8}
+.adm-denied-card h1{font-family:'Noto Serif SC',serif;font-size:26px;color:var(--parch);margin:10px 0 8px}
+.adm-denied-card p{font-family:'Noto Sans SC',sans-serif;font-size:14px;color:var(--parch2);opacity:.7;margin-bottom:20px}
+.adm-denied-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+
+/* ── Contenedor ─────────────────────────────────────────────────────────── */
+.adm{max-width:1180px;margin:0 auto;padding:34px clamp(16px,4vw,40px) 80px}
+.adm-head{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;flex-wrap:wrap}
+.adm-eyebrow{font-family:'Cinzel Decorative',serif;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);opacity:.7}
+.adm-ttl{font-family:'Noto Serif SC',serif;font-size:clamp(26px,4vw,38px);font-weight:900;color:var(--parch);margin-top:4px}
+
+.adm-warn{font-family:'Noto Sans SC',sans-serif;font-size:12px;color:#e0c08a;opacity:.8;background:rgba(201,168,76,.06);border:1px solid rgba(201,168,76,.18);border-radius:3px;padding:10px 14px;margin:18px 0}
+
+/* ── Botones ────────────────────────────────────────────────────────────── */
+.adm-btn{
+  display:inline-flex;align-items:center;gap:6px;cursor:pointer;
+  font-family:'Cinzel Decorative',serif;font-size:11px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--parch2);text-decoration:none;
+  background:rgba(255,255,255,.03);border:1px solid rgba(201,168,76,.3);
+  border-radius:3px;padding:9px 14px;transition:all .16s;white-space:nowrap;
+}
+.adm-btn:hover{background:rgba(201,168,76,.1);color:var(--gold);border-color:var(--gold)}
+.adm-btn-gold{background:var(--gold);color:var(--ink);border-color:var(--gold);font-weight:700}
+.adm-btn-gold:hover{filter:brightness(1.1);color:var(--ink)}
+.adm-btn-danger{border-color:rgba(139,26,26,.5);color:#d98a8a}
+.adm-btn-danger:hover{background:rgba(139,26,26,.18);color:#f0b0b0;border-color:#8b1a1a}
+
+.adm-toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}
+
+/* ── Formularios (nueva + edición) ──────────────────────────────────────── */
+.adm-newform{border:1px solid rgba(201,168,76,.2);border-radius:4px;background:rgba(255,255,255,.018);padding:20px;margin-bottom:22px}
+.adm-newform h3,.adm-members-ttl{font-family:'Cinzel Decorative',serif;font-size:14px;letter-spacing:.08em;color:var(--gold);margin-bottom:14px}
+.adm-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+.adm-grid label,.adm-addmember label{display:flex;flex-direction:column;gap:5px;font-family:'Cinzel Decorative',serif;font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);opacity:.85}
+.adm-col2{grid-column:1 / -1}
+.adm-grid input,.adm-grid textarea{
+  font-family:'Noto Sans SC',sans-serif;font-size:13px;color:var(--parch);
+  background:rgba(0,0,0,.25);border:1px solid rgba(201,168,76,.22);
+  border-radius:3px;padding:9px 11px;resize:vertical;
+}
+.adm-grid input:focus,.adm-grid textarea:focus{outline:none;border-color:var(--gold)}
+.adm-grid input[type=color]{padding:3px;height:38px;cursor:pointer}
+.adm-newform-actions,.adm-edit-actions{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}
+
+/* ── Cuerpo: lista + detalle ────────────────────────────────────────────── */
+.adm-body{display:grid;grid-template-columns:300px 1fr;gap:24px;align-items:start}
+
+.adm-list{display:flex;flex-direction:column;gap:8px}
+.adm-listitem{
+  display:flex;align-items:center;gap:12px;cursor:pointer;text-align:left;
+  background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.06);
+  border-left:3px solid var(--hac,var(--gold));border-radius:3px;
+  padding:11px 13px;transition:all .16s;width:100%;
+}
+.adm-listitem:hover{background:rgba(201,168,76,.06)}
+.adm-listitem.on{background:rgba(201,168,76,.1);border-color:rgba(201,168,76,.4);border-left-color:var(--hac,var(--gold))}
+.adm-li-zh{font-family:'Noto Serif SC',serif;font-size:26px;font-weight:900;color:var(--hac,var(--gold));line-height:1;flex-shrink:0}
+.adm-li-body{display:flex;flex-direction:column;gap:3px;min-width:0}
+.adm-li-name{font-family:'Noto Serif SC',serif;font-size:15px;font-weight:700;color:var(--parch);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.adm-li-meta{font-family:'Noto Sans SC',sans-serif;font-size:11px;color:var(--parch2);opacity:.6}
+
+/* ── Detalle ────────────────────────────────────────────────────────────── */
+.adm-detail{border:1px solid rgba(255,255,255,.06);border-radius:4px;background:rgba(255,255,255,.014);padding:22px}
+.adm-detail-head{display:flex;align-items:center;gap:16px;margin-bottom:16px}
+.adm-detail-zh{font-family:'Noto Serif SC',serif;font-size:42px;font-weight:900;color:var(--hac,var(--gold));line-height:1;text-shadow:0 0 24px color-mix(in srgb,var(--hac,var(--gold)) 35%,transparent)}
+.adm-detail-head h2{font-family:'Noto Serif SC',serif;font-size:22px;font-weight:900;color:var(--parch)}
+.adm-detail-tier{font-family:'Cinzel Decorative',serif;font-size:11px;letter-spacing:.1em;color:var(--gold);opacity:.8;margin-top:4px}
+
+.adm-prog{margin-bottom:18px}
+.adm-prog-bar{height:6px;border-radius:4px;overflow:hidden;background:rgba(255,255,255,.06);border:1px solid rgba(201,168,76,.14)}
+.adm-prog-bar span{display:block;height:100%;border-radius:4px;transition:width .5s ease}
+.adm-prog-lbl{font-family:'Cinzel Decorative',serif;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--parch2);opacity:.65;margin-top:7px}
+.adm-prog-lbl b{color:var(--gold)}
+
+.adm-edit{margin-bottom:20px;border:1px solid rgba(201,168,76,.14);border-radius:3px}
+.adm-edit summary{cursor:pointer;font-family:'Cinzel Decorative',serif;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);padding:11px 14px}
+.adm-edit form{padding:0 14px 16px}
+
+/* ── Tabla de mecenas ───────────────────────────────────────────────────── */
+.adm-table{width:100%;border-collapse:collapse;margin-bottom:14px}
+.adm-table th{font-family:'Cinzel Decorative',serif;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);opacity:.6;text-align:left;padding:6px 8px;border-bottom:1px solid rgba(201,168,76,.18)}
+.adm-table td{font-family:'Noto Sans SC',sans-serif;font-size:13px;color:var(--parch);padding:9px 8px;border-bottom:1px solid rgba(255,255,255,.05);vertical-align:middle}
+.adm-pts-cell{display:flex;align-items:center;gap:5px;white-space:nowrap}
+.adm-pts{width:64px;font-family:'Noto Sans SC',sans-serif;font-size:13px;color:var(--parch);background:rgba(0,0,0,.3);border:1px solid rgba(201,168,76,.25);border-radius:3px;padding:5px 7px;text-align:center}
+.adm-pts:focus{outline:none;border-color:var(--gold)}
+.adm-step{cursor:pointer;width:24px;height:24px;border-radius:3px;border:1px solid rgba(201,168,76,.3);background:rgba(255,255,255,.03);color:var(--gold);font-size:14px;line-height:1;transition:all .14s}
+.adm-step:hover{background:rgba(201,168,76,.12)}
+.adm-cargo{font-family:'Noto Serif SC',serif;font-size:13px;color:var(--gold);font-weight:700;display:inline-block}
+.adm-cargo-no{color:var(--parch2);opacity:.45;font-weight:400}
+.adm-hint{display:block;font-family:'Noto Sans SC',sans-serif;font-size:10px;color:var(--parch2);opacity:.5;margin-top:2px}
+.adm-del{cursor:pointer;background:none;border:none;color:#a05050;font-size:14px;transition:color .14s}
+.adm-del:hover{color:#e09090}
+
+.adm-addmember{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding-top:14px;border-top:1px dashed rgba(201,168,76,.18)}
+.adm-addmember input{font-family:'Noto Sans SC',sans-serif;font-size:13px;color:var(--parch);background:rgba(0,0,0,.25);border:1px solid rgba(201,168,76,.22);border-radius:3px;padding:9px 11px}
+.adm-addmember input[name=nombre]{flex:1;min-width:150px}
+.adm-addmember input[name=puntos]{width:80px}
+.adm-addmember input[name=nota]{flex:1;min-width:140px}
+.adm-addmember input:focus{outline:none;border-color:var(--gold)}
+
+.adm-empty{font-family:'IM Fell English',serif;font-style:italic;font-size:14px;color:var(--parch2);opacity:.5;text-align:center;padding:18px 8px}
+
+/* ── Responsive ─────────────────────────────────────────────────────────── */
+@media(max-width:820px){
+  .adm-body{grid-template-columns:1fr}
+  .adm-list{flex-direction:row;overflow-x:auto;padding-bottom:6px}
+  .adm-listitem{min-width:220px}
+}
+@media(max-width:540px){
+  .adm-grid{grid-template-columns:1fr}
+  .adm-list{flex-direction:column}
+}

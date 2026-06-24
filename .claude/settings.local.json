@@ -136,7 +136,9 @@
       "WebFetch(domain:threekingdoms.wiki)",
       "Bash(cd *)",
       "Bash(md5 -q /tmp/era-ORIGINAL.png /tmp/era-ACTUAL.png)",
-      "Read(//private/tmp/**)"
+      "Read(//private/tmp/**)",
+      "Bash(ls -la haciendas.html assets/js/haciendas*.js assets/css/haciendas.css)",
+      "Bash(ls -la to-do/)"
     ]
   },
   "enabledPlugins": {

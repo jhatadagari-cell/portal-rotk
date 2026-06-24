@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="es" data-page-section="admin">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Panel de Haciendas · Portal ROTK</title>
+<meta name="robots" content="noindex">
+
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700;900&family=Cinzel+Decorative:wght@400;700&family=IM+Fell+English:ital@0;1&family=Noto+Sans+SC:wght@300;400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/chrome.css?v=4">
+<link rel="stylesheet" href="assets/css/main.css">
+<link rel="stylesheet" href="assets/css/admin.css">
+</head>
+<body>
+
+<div id="chrome-nav"></div>
+
+<!-- Pantalla de acceso denegado (si no eres admin) -->
+<main class="adm-denied" id="adm-denied" hidden>
+  <div class="adm-denied-card">
+    <span class="adm-denied-zh">禁</span>
+    <h1>Acceso restringido</h1>
+    <p>Este panel es solo para el administrador.</p>
+    <div class="adm-denied-actions">
+      <a class="adm-btn adm-btn-gold" href="acceder.html">Acceder</a>
+      <button class="adm-btn" id="adm-denied-logout" hidden>Cerrar sesión</button>
+    </div>
+  </div>
+</main>
+
+<!-- Panel (solo admin) -->
+<main class="adm" id="adm" hidden>
+  <header class="adm-head">
+    <div>
+      <p class="adm-eyebrow">Mecenazgo · Administración</p>
+      <h1 class="adm-ttl">Panel de Haciendas</h1>
+    </div>
+    <div class="adm-head-actions">
+      <a class="adm-btn" href="haciendas.html" target="_blank">Ver página pública ↗</a>
+    </div>
+  </header>
+
+  <p class="adm-warn">⚠ Prototipo: los datos se guardan solo en este navegador (localStorage). No se comparten con otros visitantes.</p>
+
+  <div class="adm-toolbar">
+    <button class="adm-btn adm-btn-gold" id="btn-nueva">+ Nueva hacienda</button>
+    <button class="adm-btn" id="btn-seed">Restaurar ejemplo (Sima)</button>
+    <button class="adm-btn adm-btn-danger" id="btn-clear">Vaciar todo</button>
+  </div>
+
+  <!-- Formulario de nueva hacienda (oculto por defecto) -->
+  <form class="adm-newform" id="form-nueva" hidden>
+    <h3>Nueva hacienda</h3>
+    <div class="adm-grid">
+      <label>Nombre<input name="nombre" required placeholder="Hacienda Cao"></label>
+      <label>Caracteres 漢字<input name="zh" placeholder="曹莊" maxlength="6"></label>
+      <label>Color (acento)<input name="color" type="color" value="#c9a84c"></label>
+      <label>Fundada<input name="fundada" placeholder="2026"></label>
+      <label class="adm-col2">Lema<input name="lema" placeholder="Un lema para la casa"></label>
+      <label class="adm-col2">Descripción<textarea name="descripcion" rows="2" placeholder="Breve descripción de la casa"></textarea></label>
+    </div>
+    <div class="adm-newform-actions">
+      <button type="submit" class="adm-btn adm-btn-gold">Crear hacienda</button>
+      <button type="button" class="adm-btn" id="btn-cancela-nueva">Cancelar</button>
+    </div>
+  </form>
+
+  <div class="adm-body">
+    <!-- Lista de haciendas -->
+    <aside class="adm-list" id="adm-list"></aside>
+
+    <!-- Detalle de la hacienda seleccionada -->
+    <section class="adm-detail" id="adm-detail"></section>
+  </div>
+</main>
+
+<div id="chrome-footer"></div>
+
+<script src="assets/js/auth.js"></script>
+<script src="assets/js/haciendas-data.js"></script>
+<script src="assets/js/hac-calc.js"></script>
+<script src="assets/js/hac-store.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  async function boot() {
+  // Supabase es asíncrono: esperamos a la sesión inicial antes del guard.
+  await Auth.ready();
+
+  // ── Guard: solo admin ──
+  if (!Auth.isAdmin()) {
+    document.getElementById('adm-denied').hidden = false;
+    // Si hay sesión (pero no es admin), ofrecemos salir para no quedar atrapado.
+    if (Auth.current()) {
+      const out = document.getElementById('adm-denied-logout');
+      out.hidden = false;
+      out.addEventListener('click', async () => { await Auth.logout(); location.href = 'acceder.html'; });
+    }
+    return;
+  }
+  document.getElementById('adm').hidden = false;
+
+  const { haciendaPuntos, tierDePuntos, progresoHacia, rangoDePuntos, clampTier } = HacCalc;
+  const RANGOS = (typeof HAC_RANGOS !== 'undefined') ? HAC_RANGOS : [];
+
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, c => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]
+  ));
+  const mesActual = () => new Date().toISOString().slice(0, 7);
+  const uid = () => 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+
+  let selectedId = null;
+
+  // Normaliza una hacienda: asegura ids de miembros y campos por defecto.
+  function norm(h) {
+    h.puntosExtra = Number(h.puntosExtra) || 0;
+    h.miembros = (h.miembros || []).map(m => ({
+      id: m.id || uid(),
+      nombre: m.nombre || m.mecenas || 'Sin nombre',
+      puntos: Number(m.puntos) || 0,
+      desde: m.desde || '',
+      nota: m.nota || ''
+    }));
+    return h;
+  }
+
+  function saveHacienda(h) { HacStore.upsert(norm(h)); }
+
+  // ── Render lista ──
+  function renderList() {
+    const host = document.getElementById('adm-list');
+    const all = HacStore.all();
+    if (!all.length) {
+      host.innerHTML = `<p class="adm-empty">No hay haciendas. Crea una o restaura el ejemplo.</p>`;
+      return;
+    }
+    host.innerHTML = all.map(h => {
+      const pts = haciendaPuntos(h);
+      const t = tierDePuntos(pts);
+      const on = h.id === selectedId ? ' on' : '';
+      return `
+        <button class="adm-listitem${on}" data-id="${esc(h.id)}" style="--hac:${esc(h.color || 'var(--gold)')}">
+          <span class="adm-li-zh">${esc(h.zh || '—')}</span>
+          <span class="adm-li-body">
+            <span class="adm-li-name">${esc(h.nombre)}</span>
+            <span class="adm-li-meta">${esc(t.zh)} ${esc(t.nombre)} · ${pts} pts · ${(h.miembros || []).length} mecenas</span>
+          </span>
+        </button>`;
+    }).join('');
+    host.querySelectorAll('.adm-listitem').forEach(b =>
+      b.addEventListener('click', () => { selectedId = b.dataset.id; render(); }));
+  }
+
+  // ── Render detalle ──
+  function renderDetail() {
+    const host = document.getElementById('adm-detail');
+    const h = selectedId ? HacStore.get(selectedId) : null;
+    if (!h) {
+      host.innerHTML = `<p class="adm-empty">Selecciona una hacienda de la izquierda, o crea una nueva.</p>`;
+      return;
+    }
+    const pts = haciendaPuntos(h);
+    const tInfo = tierDePuntos(pts);
+    const tier = clampTier(tInfo.nivel);
+    const prog = progresoHacia(pts, tInfo);
+    const progTxt = prog
+      ? `Faltan <b>${prog.faltan} pts</b> para ${esc(prog.sig.zh)} ${esc(prog.sig.nombre)}`
+      : 'Nivel máximo alcanzado';
+
+    const filas = (h.miembros || []).map(m => {
+      const r = rangoDePuntos(m.puntos, tier);
+      const cargo = r
+        ? `<span class="adm-cargo">${esc(r.zh)} ${esc(r.nombre)}</span>`
+        : `<span class="adm-cargo adm-cargo-no">Sin cargo</span>`;
+      // ¿Tendría un cargo mayor si la casa subiera de nivel?
+      const bloqueado = RANGOS.filter(x => (Number(m.puntos) || 0) >= (Number(x.umbral) || 0) && (Number(x.tier) || 1) > tier).slice(-1)[0];
+      const hint = bloqueado
+        ? `<span class="adm-hint">→ ${esc(bloqueado.nombre)} cuando la casa suba</span>` : '';
+      return `
+        <tr data-mid="${esc(m.id)}">
+          <td>${esc(m.nombre)}</td>
+          <td class="adm-pts-cell">
+            <button class="adm-step" data-step="-5">−</button>
+            <input class="adm-pts" type="number" min="0" value="${Number(m.puntos) || 0}">
+            <button class="adm-step" data-step="5">+</button>
+          </td>
+          <td>${cargo}${hint}</td>
+          <td>${esc(m.nota || '')}</td>
+          <td><button class="adm-del" title="Quitar mecenas">✕</button></td>
+        </tr>`;
+    }).join('');
+
+    host.innerHTML = `
+      <div class="adm-detail-head" style="--hac:${esc(h.color || 'var(--gold)')}">
+        <span class="adm-detail-zh">${esc(h.zh || '—')}</span>
+        <div>
+          <h2>${esc(h.nombre)}</h2>
+          <p class="adm-detail-tier">${esc(tInfo.zh)} ${esc(tInfo.nombre)} · ${pts} pts</p>
+        </div>
+      </div>
+
+      <div class="adm-prog"><div class="adm-prog-bar"><span style="width:${prog ? prog.pct : 100}%;background:${esc(h.color || 'var(--gold)')}"></span></div>
+        <p class="adm-prog-lbl">${progTxt}</p></div>
+
+      <details class="adm-edit">
+        <summary>Editar datos de la casa</summary>
+        <form id="form-edit">
+          <div class="adm-grid">
+            <label>Nombre<input name="nombre" value="${esc(h.nombre)}"></label>
+            <label>Caracteres 漢字<input name="zh" value="${esc(h.zh || '')}" maxlength="6"></label>
+            <label>Color<input name="color" type="color" value="${esc(h.color || '#c9a84c')}"></label>
+            <label>Fundada<input name="fundada" value="${esc(h.fundada || '')}"></label>
+            <label>Puntos extra (misiones)<input name="puntosExtra" type="number" min="0" value="${Number(h.puntosExtra) || 0}"></label>
+            <label class="adm-col2">Lema<input name="lema" value="${esc(h.lema || '')}"></label>
+            <label class="adm-col2">Descripción<textarea name="descripcion" rows="2">${esc(h.descripcion || '')}</textarea></label>
+          </div>
+          <div class="adm-edit-actions">
+            <button type="submit" class="adm-btn adm-btn-gold">Guardar cambios</button>
+            <button type="button" class="adm-btn adm-btn-danger" id="btn-del-hac">Borrar hacienda</button>
+          </div>
+        </form>
+      </details>
+
+      <h3 class="adm-members-ttl">Mecenas · cargo según sus puntos</h3>
+      <table class="adm-table">
+        <thead><tr><th>Nombre</th><th>Puntos</th><th>Cargo</th><th>Nota</th><th></th></tr></thead>
+        <tbody>${filas || `<tr><td colspan="5" class="adm-empty">Sin mecenas todavía.</td></tr>`}</tbody>
+      </table>
+
+      <form class="adm-addmember" id="form-addmember">
+        <input name="nombre" placeholder="Nombre del mecenas" required>
+        <input name="puntos" type="number" min="0" value="0" title="Puntos">
+        <input name="nota" placeholder="Nota (opcional)">
+        <button type="submit" class="adm-btn adm-btn-gold">+ Dar de alta</button>
+      </form>
+    `;
+
+    wireDetail(h);
+  }
+
+  // ── Eventos del detalle ──
+  function wireDetail(h) {
+    // Editar puntos de un miembro (input + botones ±).
+    document.querySelectorAll('#adm-detail tr[data-mid]').forEach(tr => {
+      const mid = tr.dataset.mid;
+      const input = tr.querySelector('.adm-pts');
+      const commit = (val) => {
+        const m = h.miembros.find(x => x.id === mid);
+        if (!m) return;
+        m.puntos = Math.max(0, Number(val) || 0);
+        saveHacienda(h);
+        render();
+      };
+      input.addEventListener('change', () => commit(input.value));
+      tr.querySelectorAll('.adm-step').forEach(b =>
+        b.addEventListener('click', () => commit((Number(input.value) || 0) + Number(b.dataset.step))));
+      tr.querySelector('.adm-del').addEventListener('click', () => {
+        if (!confirm('¿Quitar a este mecenas de la hacienda?')) return;
+        h.miembros = h.miembros.filter(x => x.id !== mid);
+        saveHacienda(h);
+        render();
+      });
+    });
+
+    // Guardar datos de la casa.
+    const fe = document.getElementById('form-edit');
+    if (fe) fe.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const f = e.target;
+      h.nombre = f.nombre.value.trim() || h.nombre;
+      h.zh = f.zh.value.trim();
+      h.color = f.color.value;
+      h.fundada = f.fundada.value.trim();
+      h.puntosExtra = Number(f.puntosExtra.value) || 0;
+      h.lema = f.lema.value.trim();
+      h.descripcion = f.descripcion.value.trim();
+      saveHacienda(h);
+      render();
+    });
+
+    // Borrar hacienda.
+    const bd = document.getElementById('btn-del-hac');
+    if (bd) bd.addEventListener('click', () => {
+      if (!confirm(`¿Borrar la hacienda "${h.nombre}" y todos sus mecenas?`)) return;
+      HacStore.remove(h.id);
+      selectedId = null;
+      render();
+    });
+
+    // Alta de mecenas.
+    const fa = document.getElementById('form-addmember');
+    if (fa) fa.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const f = e.target;
+      h.miembros.push({
+        id: uid(),
+        nombre: f.nombre.value.trim(),
+        puntos: Math.max(0, Number(f.puntos.value) || 0),
+        desde: mesActual(),
+        nota: f.nota.value.trim()
+      });
+      saveHacienda(h);
+      render();
+    });
+  }
+
+  function render() { renderList(); renderDetail(); }
+
+  // ── Toolbar ──
+  const formNueva = document.getElementById('form-nueva');
+  document.getElementById('btn-nueva').addEventListener('click', () => {
+    formNueva.hidden = !formNueva.hidden;
+    if (!formNueva.hidden) formNueva.querySelector('[name=nombre]').focus();
+  });
+  document.getElementById('btn-cancela-nueva').addEventListener('click', () => {
+    formNueva.hidden = true; formNueva.reset();
+  });
+  formNueva.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const f = e.target;
+    const nombre = f.nombre.value.trim();
+    if (!nombre) return;
+    const h = norm({
+      id: HacStore.makeId(nombre),
+      nombre,
+      zh: f.zh.value.trim(),
+      color: f.color.value,
+      lema: f.lema.value.trim(),
+      fundada: f.fundada.value.trim() || String(new Date().getFullYear()),
+      descripcion: f.descripcion.value.trim(),
+      puntosExtra: 0,
+      miembros: []
+    });
+    HacStore.upsert(h);
+    selectedId = h.id;
+    formNueva.hidden = true; formNueva.reset();
+    render();
+  });
+
+  document.getElementById('btn-seed').addEventListener('click', () => {
+    if (!confirm('Esto vuelca la hacienda de ejemplo (Sima). Si ya existe, se sobrescribe. ¿Seguir?')) return;
+    HacStore.resetToSeed();
+    render();
+  });
+  document.getElementById('btn-clear').addEventListener('click', () => {
+    if (!confirm('¿Vaciar TODAS las haciendas guardadas? No se puede deshacer.')) return;
+    HacStore.save([]);
+    selectedId = null;
+    render();
+  });
+
+  // Selección inicial: la primera hacienda, si hay.
+  const first = HacStore.all()[0];
+  selectedId = first ? first.id : null;
+  render();
+  }
+
+  // Espera al DOM (y a que localStorage esté disponible) antes de arrancar.
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
+})();
+</script>
+<script src="assets/js/chrome.js"></script>
+</body>
+</html>

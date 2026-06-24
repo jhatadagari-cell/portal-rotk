@@ -83,17 +83,20 @@
     <span class="nav-zh">三國演義</span>
     <span class="nav-en">Romance de los Tres Reinos</span>
   </a>
-  <ul class="nav-links" id="nav-links">
-    <li><a href="${href('periodos.html')}"${isOn('eras')}>Eras</a></li>
-    <li><a href="${href('personajes.html')}"${isOn('personajes')}>Personajes</a></li>
-    <li><a href="${href('reinos.html')}"${isOn('reinos')}>Reinos</a></li>
-    <li><a href="${href('assets/facciones.html')}"${isOn('facciones')}>Facciones</a></li>
-    <li><a href="${href('assets/batallas.html')}"${isOn('batallas')}>Batallas</a></li>
-    <li><a href="${href('assets/mapa.html')}"${isOn('mapa')}>Mapa</a></li>
-  </ul>
-  <button class="hamburger" aria-label="Menú">
-    <span></span><span></span><span></span>
-  </button>
+  <div class="nav-right">
+    <ul class="nav-links" id="nav-links">
+      <li><a href="${href('periodos.html')}"${isOn('eras')}>Eras</a></li>
+      <li><a href="${href('personajes.html')}"${isOn('personajes')}>Personajes</a></li>
+      <li><a href="${href('reinos.html')}"${isOn('reinos')}>Reinos</a></li>
+      <li><a href="${href('assets/facciones.html')}"${isOn('facciones')}>Facciones</a></li>
+      <li><a href="${href('assets/batallas.html')}"${isOn('batallas')}>Batallas</a></li>
+      <li><a href="${href('assets/mapa.html')}"${isOn('mapa')}>Mapa</a></li>
+    </ul>
+    <div class="nav-auth" id="nav-auth"></div>
+    <button class="hamburger" aria-label="Menú">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
 </nav>`.trim();
   }
 
@@ -148,6 +151,81 @@
     });
   }
 
+  // ── Widget de acceso / usuario ───────────────────────────────────────
+  // Carga auth.js bajo demanda (así no hay que añadir el <script> en cada
+  // página) y dibuja "Acceder" o el menú del usuario según la sesión.
+  function ensureAuth(cb) {
+    if (window.Auth) return cb();
+    const s = document.createElement('script');
+    s.src = href('assets/js/auth.js');
+    s.onload = cb;
+    s.onerror = () => cb();          // si falla, dejamos "Acceder"
+    document.head.appendChild(s);
+  }
+
+  function authWidgetHTML() {
+    const u = window.Auth ? Auth.current() : null;
+    if (!u) {
+      return `<a class="nav-access" href="${href('acceder.html')}">Acceder</a>`;
+    }
+    const inicial = (u.nombre || u.email || '?').trim().charAt(0).toUpperCase();
+    const adminLink = (u.role === 'admin')
+      ? `<a class="nav-menu-item" href="${href('admin-haciendas.html')}">Panel de Haciendas</a>`
+      : '';
+    return `
+      <button class="nav-user" id="nav-user-btn" aria-expanded="false">
+        <span class="nav-user-ava">${esc(inicial)}</span>
+        <span class="nav-user-name">${esc(u.nombre || u.email)}</span>
+        ${u.role === 'admin' ? '<span class="nav-user-badge">Admin</span>' : ''}
+        <span class="nav-user-caret">▾</span>
+      </button>
+      <div class="nav-menu" id="nav-menu">
+        ${adminLink}
+        <button class="nav-menu-item nav-logout" id="nav-logout">Cerrar sesión</button>
+      </div>`;
+  }
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"]/g, c => (
+      { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]
+    ));
+  }
+
+  function wireAuthWidget() {
+    const btn  = document.getElementById('nav-user-btn');
+    const menu = document.getElementById('nav-menu');
+    if (btn && menu) {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const open = menu.classList.toggle('open');
+        btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      });
+      document.addEventListener('click', () => {
+        menu.classList.remove('open');
+        btn.setAttribute('aria-expanded', 'false');
+      });
+    }
+    const out = document.getElementById('nav-logout');
+    if (out) out.addEventListener('click', async () => {
+      if (window.Auth) await Auth.logout();
+      location.href = href('index.html');
+    });
+  }
+
+  function mountAuthWidget() {
+    const host = document.getElementById('nav-auth');
+    if (!host) return;
+    ensureAuth(() => {
+      const render = () => { host.innerHTML = authWidgetHTML(); wireAuthWidget(); };
+      render();   // pinta "Acceder" de inmediato (Auth aún sin sesión cargada)
+      // Supabase es asíncrono: re-pintamos cuando la sesión esté lista y en cada cambio.
+      if (window.Auth && Auth.ready) {
+        Auth.ready().then(render);
+        if (Auth.onChange) Auth.onChange(render);
+      }
+    });
+  }
+
   // ── Back to top ──────────────────────────────────────────────────────
   function mountBackToTop() {
     if (!document.getElementById('back-top')) {
@@ -195,6 +273,7 @@
       });
     }
 
+    mountAuthWidget();
     mountBackToTop();
   }
 

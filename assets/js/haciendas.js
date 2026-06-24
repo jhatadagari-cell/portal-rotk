@@ -15,9 +15,10 @@
 
   const TIERS    = (typeof HAC_TIERS     !== 'undefined') ? HAC_TIERS     : [];
   const RANGOS   = (typeof HAC_RANGOS    !== 'undefined') ? HAC_RANGOS    : [];
-  const HACIENDAS = (typeof HAC_HACIENDAS !== 'undefined') ? HAC_HACIENDAS : [];
-
-  const MAX_TIER = TIERS.reduce((m, t) => Math.max(m, t.nivel || 1), 1);
+  // Datos vivos desde el almacén (panel de admin); si no, la semilla estática.
+  const HACIENDAS = (typeof HacStore !== 'undefined')
+    ? HacStore.all()
+    : ((typeof HAC_HACIENDAS !== 'undefined') ? HAC_HACIENDAS : []);
 
   // Índices auxiliares.
   const rangoPorId  = {};
@@ -28,7 +29,13 @@
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, c => (
     { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]
   ));
-  const clampTier = (n) => Math.min(MAX_TIER, Math.max(1, Number(n) || 1));
+
+  // Reglas de puntos/niveles: módulo compartido con el panel de admin.
+  const clampTier      = HacCalc.clampTier;
+  const tierDePuntos   = HacCalc.tierDePuntos;
+  const progresoHacia  = HacCalc.progresoHacia;
+  const haciendaPuntos = HacCalc.haciendaPuntos;
+  const rangoDePuntos  = HacCalc.rangoDePuntos;
 
   // ── Niveles de hacienda ────────────────────────────────────────────────
   function renderTiers() {
@@ -45,6 +52,9 @@
           <div class="tier-head">
             <span class="tier-nombre">${esc(t.nombre)}</span>
             <span class="tier-lvl">Nivel ${t.nivel}</span>
+            <span class="tier-umbral">${(Number(t.umbral) || 0) > 0
+              ? `Desde <b>${Number(t.umbral)} pts</b>`
+              : 'Nivel inicial'}</span>
           </div>
           <p class="tier-desc">${esc(t.desc)}</p>
           ${elite ? `<p class="tier-elite">Estrena el cargo
@@ -82,45 +92,54 @@
   // ── Una hacienda ───────────────────────────────────────────────────────
   function renderHacienda(h) {
     const color = h.color || 'var(--gold)';
-    const tier  = clampTier(h.tier);
-    const tInfo = tierPorNivel[tier] || { zh: '', nombre: 'Nivel ' + tier };
+    const pts   = haciendaPuntos(h);            // suma de puntos de los miembros
+    const tInfo = tierDePuntos(pts);            // nivel DEDUCIDO de la puntuación
+    const tier  = clampTier(tInfo.nivel);
     const total = (h.miembros || []).length;
+    const prog  = progresoHacia(pts, tInfo);
 
-    // Agrupar miembros por rango; avisar de cargos no válidos para el tier.
+    // Agrupar miembros por su cargo DEDUCIDO de los puntos. Los que aún no
+    // alcanzan ningún cargo van a un grupo aparte (pretendientes).
     const grupos = {};
+    const sinCargo = [];
     (h.miembros || []).forEach(m => {
-      const r = rangoPorId[m.rango];
-      if (!r) {
-        console.warn(`[haciendas] rango desconocido "${m.rango}" en ${h.id}`);
-        return;
-      }
-      if (r.tier > tier) {
-        console.warn(`[haciendas] el cargo "${m.rango}" exige nivel ${r.tier}, ` +
-                     `pero la hacienda ${h.id} está en nivel ${tier}`);
-      }
-      (grupos[m.rango] = grupos[m.rango] || []).push(m);
+      const r = rangoDePuntos(m.puntos, tier);
+      if (!r) { sinCargo.push(m); return; }
+      (grupos[r.id] = grupos[r.id] || []).push(m);
     });
 
+    const placaDe = (m) => `
+      <li class="placa">
+        <span class="placa-nombre">${esc(m.nombre || m.mecenas)}</span>
+        <span class="placa-desde">${Number(m.puntos) || 0} pts${m.desde ? ` · desde ${esc(m.desde)}` : ''}</span>
+        ${m.nota ? `<p class="placa-nota">${esc(m.nota)}</p>` : ''}
+      </li>`;
+
     // Bloques por cargo, del más alto al más bajo.
-    const bloques = RANGOS.slice().reverse()
+    let bloques = RANGOS.slice().reverse()
       .filter(r => grupos[r.id] && grupos[r.id].length)
-      .map(r => {
-        const placas = grupos[r.id].map(m => `
-          <li class="placa">
-            <span class="placa-nombre">${esc(m.mecenas)}</span>
-            <span class="placa-desde">desde ${esc(m.desde)}</span>
-            ${m.nota ? `<p class="placa-nota">${esc(m.nota)}</p>` : ''}
-          </li>`).join('');
-        return `
+      .map(r => `
         <div class="hac-rango">
           <div class="hac-rango-band">
             <span class="hac-rango-zh">${esc(r.zh)}</span>
             <span class="hac-rango-nombre">${esc(r.nombre)}</span>
             <span class="hac-rango-sala">${esc(r.sala)}</span>
           </div>
-          <ul class="placa-grid">${placas}</ul>
+          <ul class="placa-grid">${grupos[r.id].map(placaDe).join('')}</ul>
+        </div>`).join('');
+
+    // Pretendientes: miembros sin cargo todavía.
+    if (sinCargo.length) {
+      bloques += `
+        <div class="hac-rango hac-rango-sin">
+          <div class="hac-rango-band">
+            <span class="hac-rango-zh">·</span>
+            <span class="hac-rango-nombre">Sin cargo aún</span>
+            <span class="hac-rango-sala">a la espera de su sitio</span>
+          </div>
+          <ul class="placa-grid">${sinCargo.map(placaDe).join('')}</ul>
         </div>`;
-      }).join('');
+    }
 
     const cuerpo = bloques || `
       <p class="hac-vacia">Esta hacienda aún no tiene mecenas. Su salón
@@ -138,9 +157,19 @@
         }).join('')}
       </p>` : '';
 
-    const ptsHTML = (Number(h.puntuacion) > 0)
-      ? `<span class="hac-dot">·</span><span>${esc(h.puntuacion)} pts</span>`
-      : '';
+    const ptsHTML = `<span class="hac-dot">·</span><span>${pts} pts</span>`;
+
+    // Barra de progreso hacia el siguiente nivel (o aviso de nivel máximo).
+    const progHTML = prog
+      ? `<div class="hac-prog">
+           <div class="hac-prog-bar"><span style="width:${prog.pct}%"></span></div>
+           <p class="hac-prog-lbl">Faltan <b>${prog.faltan} pts</b> para
+             <b>${esc(prog.sig.nombre)} ${esc(prog.sig.zh)}</b></p>
+         </div>`
+      : `<div class="hac-prog">
+           <div class="hac-prog-bar hac-prog-max"><span style="width:100%"></span></div>
+           <p class="hac-prog-lbl">Nivel máximo alcanzado · <b>${esc(tInfo.nombre)} ${esc(tInfo.zh)}</b></p>
+         </div>`;
 
     return `
     <article class="hac-panel" data-bg="${esc(h.zh)}" style="--hac:${esc(color)}">
@@ -162,6 +191,7 @@
           </p>
         </div>
       </header>
+      ${progHTML}
       ${h.descripcion ? `<p class="hac-desc">${esc(h.descripcion)}</p>` : ''}
       <div class="hac-body">${cuerpo}</div>
       ${lockHTML}
@@ -176,10 +206,9 @@
         ninguna hacienda.</p>`;
       return;
     }
-    // Orden: nivel descendente, luego puntuación descendente.
+    // Orden: puntuación descendente (que ya implica el nivel deducido).
     const orden = HACIENDAS.slice().sort((a, b) =>
-      clampTier(b.tier) - clampTier(a.tier) ||
-      (Number(b.puntuacion) || 0) - (Number(a.puntuacion) || 0)
+      haciendaPuntos(b) - haciendaPuntos(a)
     );
     host.innerHTML = orden.map(renderHacienda).join('');
   }

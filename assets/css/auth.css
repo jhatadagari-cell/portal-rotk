@@ -1,0 +1,100 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   auth.css — Página de acceso/registro (acceder.html).
+   Usa la paleta y fuentes globales de main.css.
+   ═══════════════════════════════════════════════════════════════════════ */
+.auth-wrap{
+  min-height:calc(100vh - var(--nav-h));
+  display:flex;align-items:center;justify-content:center;
+  padding:60px 20px;
+}
+.auth-card{
+  width:100%;max-width:420px;
+  border:1px solid rgba(201,168,76,.18);border-top:3px solid var(--gold);
+  border-radius:4px;background:rgba(255,255,255,.018);
+  padding:34px 30px 26px;
+}
+.auth-head{text-align:center;margin-bottom:22px}
+.auth-zh{
+  font-family:'Noto Serif SC',serif;font-size:48px;font-weight:900;
+  color:var(--gold);line-height:1;display:block;
+  text-shadow:0 0 30px rgba(201,168,76,.35);
+}
+.auth-ttl{
+  font-family:'Noto Serif SC',serif;font-size:24px;font-weight:900;
+  color:var(--parch);margin-top:8px;
+}
+.auth-sub{
+  font-family:'Noto Sans SC',sans-serif;font-size:13px;
+  color:var(--parch2);opacity:.66;margin-top:5px;
+}
+
+/* ── Botón de Google ── */
+.auth-google{
+  width:100%;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;
+  font-family:'Noto Sans SC',sans-serif;font-size:14px;font-weight:700;color:#3c4043;
+  background:#fff;border:1px solid rgba(255,255,255,.85);border-radius:3px;padding:11px 14px;
+  transition:filter .18s,transform .1s;
+}
+.auth-google:hover{filter:brightness(.96)}
+.auth-google:active{transform:translateY(1px)}
+.auth-google svg{flex:none}
+
+/* ── Separador "o con tu correo" ── */
+.auth-or{
+  display:flex;align-items:center;gap:12px;margin:18px 0;
+  font-family:'Cinzel Decorative',serif;font-size:10px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--parch2);opacity:.5;
+}
+.auth-or::before,.auth-or::after{content:"";flex:1;height:1px;background:rgba(201,168,76,.18)}
+
+/* ── Pestañas ── */
+.auth-tabs{
+  display:flex;gap:0;margin-bottom:22px;
+  border:1px solid rgba(201,168,76,.2);border-radius:3px;overflow:hidden;
+}
+.auth-tab{
+  flex:1;cursor:pointer;background:none;border:none;
+  font-family:'Cinzel Decorative',serif;font-size:12px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--parch2);opacity:.6;
+  padding:11px 8px;transition:all .18s;
+}
+.auth-tab.on{background:rgba(201,168,76,.12);color:var(--gold);opacity:1}
+
+/* ── Formularios ── */
+.auth-form{display:none;flex-direction:column;gap:15px}
+.auth-form.on{display:flex}
+.auth-field{display:flex;flex-direction:column;gap:6px}
+.auth-field span{
+  font-family:'Cinzel Decorative',serif;font-size:10px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--gold);opacity:.8;
+}
+.auth-field input{
+  font-family:'Noto Sans SC',sans-serif;font-size:14px;color:var(--parch);
+  background:rgba(0,0,0,.25);border:1px solid rgba(201,168,76,.22);
+  border-radius:3px;padding:11px 13px;transition:border-color .18s;
+}
+.auth-field input:focus{outline:none;border-color:var(--gold)}
+.auth-field input::placeholder{color:var(--parch2);opacity:.35}
+
+.auth-btn{
+  margin-top:4px;cursor:pointer;
+  font-family:'Cinzel Decorative',serif;font-size:13px;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--ink);font-weight:700;
+  background:var(--gold);border:none;border-radius:3px;padding:12px;
+  transition:filter .18s,transform .1s;
+}
+.auth-btn:hover{filter:brightness(1.1)}
+.auth-btn:active{transform:translateY(1px)}
+
+.auth-msg{
+  font-family:'Noto Sans SC',sans-serif;font-size:12.5px;line-height:1.5;
+  min-height:1px;margin:-3px 0;
+}
+.auth-msg.err{color:#e09090}
+.auth-msg.ok{color:#9ad0a0}
+
+.auth-note{
+  font-family:'Noto Sans SC',sans-serif;font-size:11px;line-height:1.6;
+  color:var(--parch2);opacity:.45;text-align:center;margin-top:20px;
+  border-top:1px solid rgba(201,168,76,.1);padding-top:14px;
+}

@@ -140,6 +140,36 @@
   border-top:1px solid rgba(201,168,76,.1);padding-top:14px;
 }
 
+/* ── Barra de progreso de nivel ────────────────────────────────────────── */
+.hac-prog{margin-top:15px;position:relative}
+.hac-prog-bar{
+  height:6px;border-radius:4px;overflow:hidden;
+  background:rgba(255,255,255,.06);
+  border:1px solid rgba(201,168,76,.14);
+}
+.hac-prog-bar span{
+  display:block;height:100%;border-radius:4px;
+  background:linear-gradient(90deg,
+    color-mix(in srgb,var(--hac,var(--gold)) 55%,transparent),
+    var(--hac,var(--gold)));
+  box-shadow:0 0 12px color-mix(in srgb,var(--hac,var(--gold)) 45%,transparent);
+  transition:width .8s cubic-bezier(.2,.7,.2,1);
+}
+.hac-prog-max span{opacity:.85}
+.hac-prog-lbl{
+  font-family:'Cinzel Decorative',serif;font-size:9.5px;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--parch2);opacity:.62;margin-top:7px;
+}
+.hac-prog-lbl b{color:var(--gold);font-weight:700;opacity:.95}
+@media(prefers-reduced-motion:reduce){.hac-prog-bar span{transition:none}}
+
+/* ── Umbral en la escalera de niveles ──────────────────────────────────── */
+.tier-umbral{
+  font-family:'Cinzel Decorative',serif;font-size:9.5px;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--parch2);opacity:.5;
+}
+.tier-umbral b{color:var(--gold);opacity:.85;font-weight:700}
+
 .hac-body{margin-top:18px;display:flex;flex-direction:column;gap:20px;position:relative}
 
 /* ── Bloque de un cargo dentro de la hacienda ──────────────────────────── */
