@@ -4,7 +4,7 @@
    ═══════════════════════════════════════════════════════════════════════ */
 
 /* ── Acceso denegado ────────────────────────────────────────────────────── */
-.adm-denied{min-height:calc(100vh - var(--nav-h));display:flex;align-items:center;justify-content:center;padding:40px 20px}
+.adm-denied:not([hidden]){min-height:calc(100vh - var(--nav-h));display:flex;align-items:center;justify-content:center;padding:40px 20px}
 .adm-denied-card{text-align:center;max-width:360px}
 .adm-denied-zh{font-family:'Noto Serif SC',serif;font-size:64px;font-weight:900;color:var(--red);opacity:.8}
 .adm-denied-card h1{font-family:'Noto Serif SC',serif;font-size:26px;color:var(--parch);margin:10px 0 8px}

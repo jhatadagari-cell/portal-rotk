@@ -78,16 +78,27 @@ const Auth = (function () {
     });
   }
 
-  // Arranque: carga SDK, crea cliente, lee la sesión y escucha cambios.
+  // Arranque: carga SDK, crea cliente y espera al primer evento de sesión.
+  // Race entre onAuthStateChange (procesa hash OAuth) y getSession (recupera localStorage).
   async function init() {
     await loadSDK();
     client = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-    const { data } = await client.auth.getSession();
-    cachedUser = toUser(data.session);
-    // onAuthStateChange mantiene la caché al día (login/logout/OAuth de vuelta).
-    client.auth.onAuthStateChange((_event, session) => {
-      cachedUser = toUser(session);
-      listeners.forEach(cb => { try { cb(cachedUser); } catch (e) { /* noop */ } });
+    let resolved = false;
+    await new Promise((resolve) => {
+      // Via onAuthStateChange (fiable para OAuth callback desde hash)
+      client.auth.onAuthStateChange((_event, session) => {
+        cachedUser = toUser(session);
+        listeners.forEach(cb => { try { cb(cachedUser); } catch (e) { /* noop */ } });
+        if (!resolved) { resolved = true; resolve(); }
+      });
+      // Fallback: getSession recupera sesión de localStorage directamente
+      client.auth.getSession().then(({ data }) => {
+        if (!resolved) {
+          resolved = true;
+          cachedUser = toUser(data.session);
+          resolve();
+        }
+      });
     });
     return cachedUser;
   }
