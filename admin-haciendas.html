@@ -9,7 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700;900&family=Cinzel+Decorative:wght@400;700&family=IM+Fell+English:ital@0;1&family=Noto+Sans+SC:wght@300;400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/chrome.css?v=4">
 <link rel="stylesheet" href="assets/css/main.css">
-<link rel="stylesheet" href="assets/css/admin.css?v=11">
+<link rel="stylesheet" href="assets/css/admin.css?v=12">
 </head>
 <body>
 
@@ -78,7 +78,7 @@
 <script src="assets/js/auth.js?v=2"></script>
 <script src="assets/js/haciendas-data.js?v=7"></script>
 <script src="assets/js/hac-calc.js?v=2"></script>
-<script src="assets/js/hac-build.js?v=6"></script>
+<script src="assets/js/hac-build.js?v=10"></script>
 <script src="assets/js/hac-store.js?v=3"></script>
 <script>
 (function () {
@@ -122,6 +122,7 @@
   let boardSel = null;   // casilla [gx,gy] elegida en el tablero para construir
   let boardTipo = null;  // tipo de edificio elegido para colocar
   let boardRot = 0;      // rotación elegida (0..3 = ×90°)
+  let boardMovePos = null; // [gx,gy] ancla del edificio en modo mover, null si inactivo
 
   // Normaliza una hacienda: asegura ids de miembros y campos por defecto.
   function norm(h) {
@@ -181,7 +182,7 @@
         </button>`;
     }).join('');
     host.querySelectorAll('.adm-listitem').forEach(b =>
-      b.addEventListener('click', () => { selectedId = b.dataset.id; boardSel = null; boardRot = 0; render(); }));
+      b.addEventListener('click', () => { selectedId = b.dataset.id; boardSel = null; boardRot = 0; boardMovePos = null; render(); }));
   }
 
   // ── Tablero de construcciones (rejilla HTML editable) ──
@@ -200,7 +201,8 @@
         const f = B.footprintDe(c);
         const due = c.dueno ? (((h.miembros || []).find(m => m.id === c.dueno) || {}).nombre || '¿?') : 'sin dueño';
         const abbr = t.nombre.slice(0, 3);
-        cells += `<div class="adm-cell occ${anchor ? ' anchor' : ''}" data-gx="${gx}" data-gy="${gy}" style="--c:${esc(t.color)}" title="${esc(t.nombre)} ${f[0]}×${f[1]} · ${esc(due)}">${esc(abbr)}</div>`;
+        const moveSrc = boardMovePos && c.pos[0] === boardMovePos[0] && c.pos[1] === boardMovePos[1];
+        cells += `<div class="adm-cell occ${anchor ? ' anchor' : ''}${moveSrc ? ' move-src' : ''}" data-gx="${gx}" data-gy="${gy}" style="--c:${esc(t.color)}" title="${esc(t.nombre)} ${f[0]}×${f[1]} · ${esc(due)}">${esc(abbr)}</div>`;
       } else {
         const sel = boardSel && boardSel[0] === gx && boardSel[1] === gy ? ' on' : '';
         cells += `<button class="adm-cell free${sel}" data-gx="${gx}" data-gy="${gy}">·</button>`;
@@ -220,7 +222,8 @@
     const motivoHTML = (boardSel && !selV.ok) ? `<span class="adm-board-bad">✕ ${esc(selV.motivo)}</span>` : '';
     // Sprite del edificio elegido en su rotación (muestra la PUERTA girada).
     const tdef = B.tipo(boardTipo) || {};
-    const pvFile = 'bld-' + boardTipo + '-' + (((boardRot % 4) + 4) % 4);
+    const pvRot = (((boardRot % 4) + 4) % 4);
+    const pvFile = 'bld-' + boardTipo + '-' + pvRot;
 
     const duenoOpts = (sel) => `<option value=""${sel ? '' : ' selected'}>Sin dueño</option>` +
       (h.miembros || []).map(m => `<option value="${esc(m.id)}"${sel === m.id ? ' selected' : ''}>${esc(m.nombre)}</option>`).join('');
@@ -238,10 +241,20 @@
         </li>`;
     }).join('');
 
+    const movingC = boardMovePos ? lista.find(c => c.pos[0] === boardMovePos[0] && c.pos[1] === boardMovePos[1]) : null;
+    const movingT = movingC ? B.tipo(movingC.tipo) : null;
+    const moveBanner = movingC
+      ? `<div class="adm-board-moving">${esc(movingT ? movingT.zh + ' ' + movingT.nombre : movingC.tipo)} — elige casilla destino <button type="button" class="adm-btn adm-btn-sm" id="btn-cancel-move">✕ Cancelar</button></div>`
+      : '';
+    const boardTip = movingC
+      ? 'Haz clic en una casilla libre para mover el edificio. Pulsa Esc o el botón Cancelar para salir del modo mover.'
+      : 'Pasa el ratón por la rejilla para ver la huella; haz clic en un edificio para moverlo; usa ✕ en la lista para quitarlo.';
+
     return `
       <section class="adm-board">
         <h3 class="adm-members-ttl">Tablero · construcciones <span class="adm-board-hint">rejilla ${GW}×${GH} · nivel ${tier}</span></h3>
         <div class="adm-grid-board" style="grid-template-columns:repeat(${GW},30px)">${cells}</div>
+        ${moveBanner}
         <div class="adm-build-area">
           <form class="adm-build-form" id="form-build">
             <select name="tipo" id="board-tipo">${tipos}</select>
@@ -251,12 +264,12 @@
             ${motivoHTML}
           </form>
           <figure class="adm-build-pv">
-            <img src="assets/img/iso/${pvFile}.png?v=4" alt="${esc(tdef.nombre || '')}">
+            <img src="assets/img/iso/${pvFile}.png?v=8" alt="${esc(tdef.nombre || '')}">
             <figcaption><b>${esc(tdef.zh || '')} ${esc(tdef.nombre || '')}</b> · ${fpSel[0]}×${fpSel[1]}
               <span class="adm-pv-door">┤ el borde dorado en la rejilla = la cara/puerta</span></figcaption>
           </figure>
         </div>
-        <p class="adm-board-tip">Pasa el ratón por la rejilla para ver la huella; sobre un edificio puesto, haz clic para quitarlo.</p>
+        <p class="adm-board-tip">${boardTip}</p>
         <ul class="adm-build-list">${items || '<li class="adm-empty">Sin construcciones todavía. Elige edificio y casilla, y pulsa Construir.</li>'}</ul>
       </section>`;
   }
@@ -450,15 +463,20 @@
       function showPreview(pos) {
         clearMarks();
         if (!pos) return;
-        const c = { pos: pos, tipo: boardTipo, rot: boardRot };
-        const ok = HacBuild.puedeColocar(c, tierNow, h.mapa.construcciones).ok;
+        // En modo mover: usar el tipo/rot del edificio que se está moviendo
+        const mC = boardMovePos ? h.mapa.construcciones.find(x => x.pos[0] === boardMovePos[0] && x.pos[1] === boardMovePos[1]) : null;
+        const useTipo  = mC ? mC.tipo        : boardTipo;
+        const useRot   = mC ? (mC.rot || 0)  : boardRot;
+        const useOtras = mC ? h.mapa.construcciones.filter(x => x !== mC) : h.mapa.construcciones;
+        const c = { pos: pos, tipo: useTipo, rot: useRot };
+        const ok = HacBuild.puedeColocar(c, tierNow, useOtras).ok;
         HacBuild.celdasOcupadas(c).forEach(([gx, gy]) => {
           const el = cellAt(gx, gy); if (el) el.classList.add(ok ? 'pv-ok' : 'pv-bad');
         });
         // CARA/PUERTA según la rotación (4 direcciones): rot0 +x derecha,
         // rot1 +y abajo, rot2 -x izquierda, rot3 -y arriba. Línea + ticks.
         const f = HacBuild.footprintDe(c);
-        const r = ((boardRot % 4) + 4) % 4;
+        const r = ((useRot % 4) + 4) % 4;
         const marca = [];
         if (r === 0) { const fx = pos[0] + f[0] - 1; for (let gy = pos[1]; gy < pos[1] + f[1]; gy++) marca.push([fx, gy, 'pv-front-r']); }
         else if (r === 1) { const fy = pos[1] + f[1] - 1; for (let gx = pos[0]; gx < pos[0] + f[0]; gx++) marca.push([gx, fy, 'pv-front-b']); }
@@ -477,28 +495,48 @@
           const cell = e.target.closest('.adm-cell'); if (!cell) return;
           const gx = Number(cell.dataset.gx), gy = Number(cell.dataset.gy);
           const occ = cubre(gx, gy);
-          if (occ) showDelete(occ); else showPreview([gx, gy]);
+          if (occ) { if (!boardMovePos) showDelete(occ); else clearMarks(); }
+          else showPreview([gx, gy]);
         });
         board.addEventListener('mouseleave', () => showPreview(boardSel));
-        // Clic sobre un edificio puesto → quitarlo.
+        // Clic sobre un edificio puesto → entrar en modo mover (clic de nuevo → cancelar).
         board.querySelectorAll('.adm-cell.occ').forEach(cell =>
           cell.addEventListener('click', () => {
             const c = cubre(Number(cell.dataset.gx), Number(cell.dataset.gy));
             if (!c) return;
-            const t = HacBuild.tipo(c.tipo);
-            if (!confirm('¿Quitar ' + (t ? t.nombre : c.tipo) + ' de la finca?')) return;
-            h.mapa.construcciones = h.mapa.construcciones.filter(x => x !== c);
-            saveHacienda(h);
+            if (boardMovePos && boardMovePos[0] === c.pos[0] && boardMovePos[1] === c.pos[1]) {
+              boardMovePos = null;
+            } else {
+              boardMovePos = [c.pos[0], c.pos[1]];
+              boardSel = null;
+            }
             render();
           }));
       }
       showPreview(boardSel);   // estado inicial: la casilla seleccionada
 
-      // Elegir casilla libre.
+      // Botón cancelar modo mover (en el banner).
+      const cancelMoveBtn = document.getElementById('btn-cancel-move');
+      if (cancelMoveBtn) cancelMoveBtn.addEventListener('click', () => { boardMovePos = null; render(); });
+
+      // Elegir casilla libre (o soltar un edificio en modo mover).
       document.querySelectorAll('#adm-detail .adm-cell.free').forEach(b =>
         b.addEventListener('click', () => {
-          boardSel = [Number(b.dataset.gx), Number(b.dataset.gy)];
-          render();
+          if (boardMovePos) {
+            const mC = h.mapa.construcciones.find(c => c.pos[0] === boardMovePos[0] && c.pos[1] === boardMovePos[1]);
+            if (!mC) { boardMovePos = null; render(); return; }
+            const nuevaPos = [Number(b.dataset.gx), Number(b.dataset.gy)];
+            const otras = h.mapa.construcciones.filter(c => c !== mC);
+            const v = HacBuild.puedeColocar({ pos: nuevaPos, tipo: mC.tipo, rot: mC.rot || 0 }, tierNow, otras);
+            if (!v.ok) { alert('No cabe aquí: ' + v.motivo); return; }
+            mC.pos = nuevaPos;
+            boardMovePos = null;
+            saveHacienda(h);
+            render();
+          } else {
+            boardSel = [Number(b.dataset.gx), Number(b.dataset.gy)];
+            render();
+          }
         }));
 
       // Construir (sin dueño: se asigna después sobre el hall ya construido).
@@ -548,6 +586,11 @@
   }
 
   function render() { renderList(); renderDetail(); }
+
+  // Esc cancela el modo mover desde cualquier punto.
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && boardMovePos) { boardMovePos = null; render(); }
+  });
 
   // ── Toolbar ──
   const formNueva = document.getElementById('form-nueva');

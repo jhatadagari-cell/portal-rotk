@@ -157,6 +157,11 @@
 /* Borrar desde la rejilla: hover resalta todo el edificio; la ✕ va en su ancla. */
 .adm-cell.hov-del{opacity:1!important;box-shadow:inset 0 0 0 2px #e0907a!important;border-color:#e0907a!important;z-index:1}
 .adm-cell.occ.anchor.hov-del::after{content:'✕';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(150,40,36,.82);color:#fff;font-size:14px;font-weight:700;border-radius:2px}
+/* Modo mover: el edificio seleccionado para mover pulsa en dorado. */
+.adm-cell.move-src{outline:2px solid var(--gold);outline-offset:-2px;opacity:1!important;z-index:2;animation:move-pulse 1s ease-in-out infinite}
+@keyframes move-pulse{0%,100%{box-shadow:inset 0 0 0 2px var(--gold)}50%{box-shadow:inset 0 0 0 2px var(--gold),0 0 8px 2px rgba(201,168,76,.35)}}
+.adm-board-moving{display:flex;align-items:center;gap:10px;padding:7px 12px;background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.28);border-radius:4px;margin-bottom:10px;font-family:'Noto Sans SC',sans-serif;font-size:12px;color:var(--gold)}
+.adm-btn-sm{font-size:11px;padding:3px 9px}
 .adm-build-form{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:12px}
 .adm-build-form select{font-family:'Noto Sans SC',sans-serif;font-size:12px;color:var(--parch);background:rgba(0,0,0,.3);border:1px solid rgba(201,168,76,.25);border-radius:3px;padding:6px 8px}
 .adm-board-sel{font-family:'Cinzel Decorative',serif;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);opacity:.8}
@@ -166,7 +171,7 @@
 .adm-build-area{display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap;margin-bottom:6px}
 .adm-build-area .adm-build-form{flex:1;min-width:240px;margin-bottom:0}
 .adm-build-pv{margin:0;flex-shrink:0;width:140px;text-align:center;background:rgba(0,0,0,.28);border:1px solid rgba(201,168,76,.18);border-radius:5px;padding:8px}
-.adm-build-pv img{display:block;width:112px;height:auto;margin:0 auto;image-rendering:pixelated;image-rendering:crisp-edges}
+.adm-build-pv img{display:block;width:112px;height:auto;margin:0 auto}
 .adm-build-pv figcaption{font-family:'Noto Sans SC',sans-serif;font-size:10.5px;color:var(--parch2);opacity:.75;margin-top:5px;line-height:1.4}
 .adm-build-pv b{color:var(--gold);font-weight:700}
 .adm-build-pv .adm-pv-door{display:block;font-size:9.5px;color:var(--gold);opacity:.8;letter-spacing:.04em;margin-top:2px}

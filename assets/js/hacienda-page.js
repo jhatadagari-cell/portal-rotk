@@ -62,8 +62,8 @@
         </div>
       </section>
       <section class="hacp-finca">
-        <h2 class="hacp-finca-ttl">La finca</h2>
-        <p class="hacp-finca-sub">Vista en planta · ${esc(tInfo.nombre)} (rejilla ${dims[0]}×${dims[1]})</p>
+        <h2 class="hacp-finca-ttl">${esc(tInfo.zh)} · ${esc(tInfo.nombre)}</h2>
+        <p class="hacp-finca-sub">El solar de la casa · vista en planta · rejilla ${dims[0]}×${dims[1]}</p>
         <div class="hacp-iso-wrap">
           <canvas class="hacp-iso" id="hacp-iso"
             role="img" aria-label="Plano isométrico de la finca de ${esc(h.nombre)}"></canvas>
@@ -80,7 +80,10 @@
     const iso = document.getElementById('hacp-iso');
     if (iso && window.HacIso) {
       HacIso.draw(iso, { mapa: h.mapa, tier, color });
-      iso.style.maxWidth = (iso.width * 3) + 'px';
+      // El lienzo es SCALE× en píxeles de respaldo (más densidad). El tope de
+      // tamaño en pantalla se calcula sobre el ancho LÓGICO para no agrandarlo.
+      const sc = HacIso.SCALE || 1;
+      iso.style.maxWidth = (iso.width / sc * 3) + 'px';
     }
   }
 

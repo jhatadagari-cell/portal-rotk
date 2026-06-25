@@ -138,7 +138,8 @@
       "Bash(md5 -q /tmp/era-ORIGINAL.png /tmp/era-ACTUAL.png)",
       "Read(//private/tmp/**)",
       "Bash(ls -la haciendas.html assets/js/haciendas*.js assets/css/haciendas.css)",
-      "Bash(ls -la to-do/)"
+      "Bash(ls -la to-do/)",
+      "Skill(run)"
     ]
   },
   "enabledPlugins": {

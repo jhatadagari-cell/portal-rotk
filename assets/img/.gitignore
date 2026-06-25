@@ -1,3 +1,4 @@
 *.png
 !og-default.png
 !Eras/*.png
+!iso/*.png
