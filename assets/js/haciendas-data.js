@@ -19,28 +19,60 @@
    nivel, la hacienda asciende sola.
      · nivel  : 1 en adelante.
      · umbral : puntos necesarios para ALCANZAR este nivel. El primero debe
-                ser 0. Sube estos números para que cueste más ascender.       */
+                ser 0. Sube estos números para que cueste más ascender.
+     · grid   : dimensiones [ancho, alto] de la rejilla isométrica de la finca
+                en ese nivel (alargada: alto > ancho, como las haciendas chinas
+                de patios en hilera). Debe crecer con el nivel; la rejilla está
+                anidada (cada una contiene a la anterior en su esquina [0,0]).
+                También admite un número (rejilla cuadrada).                   */
 const HAC_TIERS = [
   {
     nivel: 1,
     nombre: 'Residencia',
     zh: '宅',
     umbral: 0,
+    grid: [3, 4],
     desc: 'Una casa recién fundada. Muros modestos, pero su nombre ya cuenta.'
   },
   {
     nivel: 2,
     nombre: 'Mansión',
     zh: '府',
-    umbral: 100,
+    umbral: 150,
+    grid: [4, 6],
     desc: 'Una casa establecida, residencia digna de un dignatario.'
   },
   {
     nivel: 3,
     nombre: 'Hacienda Mayor',
     zh: '邸',
-    umbral: 300,
+    umbral: 500,
+    grid: [6, 9],
     desc: 'Una gran finca señorial. Solo las casas más sostenidas la alcanzan.'
+  },
+  {
+    nivel: 4,
+    nombre: 'Casa Solariega',
+    zh: '第',
+    umbral: 1200,
+    grid: [8, 12],
+    desc: 'Un recinto amurallado con varios patios y pabellones de servicio.'
+  },
+  {
+    nivel: 5,
+    nombre: 'Palacio',
+    zh: '宮',
+    umbral: 3000,
+    grid: [10, 16],
+    desc: 'Una residencia palaciega: salones, jardines y torres de vigilancia.'
+  },
+  {
+    nivel: 6,
+    nombre: 'Corte Señorial',
+    zh: '殿',
+    umbral: 6500,
+    grid: [12, 20],
+    desc: 'La cumbre: una corte digna de un rey, alargada patio tras patio.'
   }
 ];
 
@@ -105,9 +137,10 @@ const HAC_RANGOS = [
 
 
 /* ── HACIENDAS (semilla inicial) ──────────────────────────────────────────
-   ESTO ES LA SEMILLA. En cuanto uses el panel de admin (admin-haciendas.html),
-   los datos pasan a guardarse en el navegador (localStorage) y este fichero
-   deja de mandar. Para volver a la semilla: botón "Restaurar ejemplo" del panel.
+   ESTO ES LA SEMILLA. Los datos reales viven en la tabla `haciendas` de
+   Supabase (gestionados desde admin-haciendas.html). Esta semilla se usa como
+   "Restaurar ejemplo (Sima)" del panel y como fallback de solo lectura si
+   Supabase no responde.
 
    La PUNTUACIÓN de la casa = suma de los puntos de sus miembros (+ puntosExtra).
    El NIVEL de la casa se deduce de esa puntuación, y el CARGO de cada miembro
@@ -134,10 +167,21 @@ const HAC_HACIENDAS = [
                  'el destino de un linaje que supo esperar su hora.',
     miembros: [
       // ▼▼▼ EJEMPLOS — bórralos cuando tengas mecenas reales ▼▼▼
-      { nombre: 'Mecenas de ejemplo', puntos: 110, desde: '2026-05', nota: 'Sostuvo la hacienda desde su fundación.' },
-      { nombre: 'Otro ejemplo',       puntos: 20,  desde: '2026-05', nota: '' },
-      { nombre: 'Tercer ejemplo',     puntos: 5,   desde: '2026-05', nota: '' }
+      { id: 'm-ej1', nombre: 'Mecenas de ejemplo', puntos: 110, desde: '2026-05', nota: 'Sostuvo la hacienda desde su fundación.' },
+      { id: 'm-ej2', nombre: 'Otro ejemplo',       puntos: 20,  desde: '2026-05', nota: '' },
+      { id: 'm-ej3', nombre: 'Tercer ejemplo',     puntos: 5,   desde: '2026-05', nota: '' }
       // ▲▲▲ EJEMPLOS ▲▲▲
-    ]
+    ],
+    // TABLERO de construcciones (ver hac-build.js). La rejilla se deduce del
+    // nivel; aquí solo los edificios colocados. pos=[gx,gy] celda ancla,
+    // rot=0..3 (×90°). El dueño es el mecenas que administra el hall.
+    mapa: {
+      v: 1,
+      construcciones: [
+        { pos: [0, 0], tipo: 'salon',    rot: 0, dueno: 'm-ej1', nivel: 1 },
+        { pos: [3, 0], tipo: 'pabellon', rot: 0, dueno: 'm-ej2', nivel: 1 },
+        { pos: [0, 3], tipo: 'galeria',  rot: 1, dueno: null,    nivel: 1 }
+      ]
+    }
   }
 ];

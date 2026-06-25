@@ -9,7 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700;900&family=Cinzel+Decorative:wght@400;700&family=IM+Fell+English:ital@0;1&family=Noto+Sans+SC:wght@300;400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/chrome.css?v=4">
 <link rel="stylesheet" href="assets/css/main.css">
-<link rel="stylesheet" href="assets/css/admin.css">
+<link rel="stylesheet" href="assets/css/admin.css?v=11">
 </head>
 <body>
 
@@ -40,7 +40,7 @@
     </div>
   </header>
 
-  <p class="adm-warn">⚠ Prototipo: los datos se guardan solo en este navegador (localStorage). No se comparten con otros visitantes.</p>
+  <p class="adm-warn adm-info">Los cambios se guardan en <b>Supabase</b> y se ven al instante en la página pública de cada hacienda.</p>
 
   <div class="adm-toolbar">
     <button class="adm-btn adm-btn-gold" id="btn-nueva">+ Nueva hacienda</button>
@@ -53,7 +53,6 @@
     <h3>Nueva hacienda</h3>
     <div class="adm-grid">
       <label>Nombre<input name="nombre" required placeholder="Hacienda Cao"></label>
-      <label>Caracteres 漢字<input name="zh" placeholder="曹莊" maxlength="6"></label>
       <label>Color (acento)<input name="color" type="color" value="#c9a84c"></label>
       <label>Fundada<input name="fundada" placeholder="2026"></label>
       <label class="adm-col2">Lema<input name="lema" placeholder="Un lema para la casa"></label>
@@ -76,10 +75,11 @@
 
 <div id="chrome-footer"></div>
 
-<script src="assets/js/auth.js"></script>
-<script src="assets/js/haciendas-data.js"></script>
-<script src="assets/js/hac-calc.js"></script>
-<script src="assets/js/hac-store.js"></script>
+<script src="assets/js/auth.js?v=2"></script>
+<script src="assets/js/haciendas-data.js?v=7"></script>
+<script src="assets/js/hac-calc.js?v=2"></script>
+<script src="assets/js/hac-build.js?v=6"></script>
+<script src="assets/js/hac-store.js?v=3"></script>
 <script>
 (function () {
   'use strict';
@@ -101,6 +101,14 @@
   }
   document.getElementById('adm').hidden = false;
 
+  // Defensa ante una versión vieja en caché (sin la API nueva del store).
+  if (!window.HacStore || typeof HacStore.ready !== 'function') {
+    throw new Error('Estás viendo una versión antigua en caché. Fuerza recarga con Ctrl+F5 (o Cmd+Shift+R).');
+  }
+
+  // Carga inicial de las haciendas desde Supabase antes de pintar.
+  await HacStore.ready();
+
   const { haciendaPuntos, tierDePuntos, progresoHacia, rangoDePuntos, clampTier } = HacCalc;
   const RANGOS = (typeof HAC_RANGOS !== 'undefined') ? HAC_RANGOS : [];
 
@@ -111,6 +119,9 @@
   const uid = () => 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
 
   let selectedId = null;
+  let boardSel = null;   // casilla [gx,gy] elegida en el tablero para construir
+  let boardTipo = null;  // tipo de edificio elegido para colocar
+  let boardRot = 0;      // rotación elegida (0..3 = ×90°)
 
   // Normaliza una hacienda: asegura ids de miembros y campos por defecto.
   function norm(h) {
@@ -122,10 +133,31 @@
       desde: m.desde || '',
       nota: m.nota || ''
     }));
+    // Tablero: sanea el mapa y quita dueños que ya no son miembros (fantasmas).
+    h.mapa = (typeof HacBuild !== 'undefined')
+      ? HacBuild.normalizaMapa(h.mapa)
+      : (h.mapa && Array.isArray(h.mapa.construcciones) ? h.mapa : { v: 1, construcciones: [] });
+    const ids = new Set(h.miembros.map(m => m.id));
+    h.mapa.construcciones.forEach(c => { if (c.dueno && !ids.has(c.dueno)) c.dueno = null; });
     return h;
   }
 
-  function saveHacienda(h) { HacStore.upsert(norm(h)); }
+  // Si una escritura a Supabase falla, la caché quedó con un cambio optimista
+  // que no persistió: avisamos, recargamos la verdad de Supabase y re-pintamos
+  // para no mostrar un estado falso de la base de datos.
+  function onWriteError(accion) {
+    return (err) => {
+      alert('No se pudo ' + accion + ' en Supabase: ' + (err && err.message || err));
+      HacStore.reload().then(render);
+    };
+  }
+
+  // Persiste en Supabase. La caché se actualiza al instante (parte síncrona de
+  // upsert) por lo que render() ya muestra el cambio; si falla, onWriteError
+  // revierte recargando.
+  function saveHacienda(h) {
+    HacStore.upsert(norm(h)).catch(onWriteError('guardar'));
+  }
 
   // ── Render lista ──
   function renderList() {
@@ -149,17 +181,99 @@
         </button>`;
     }).join('');
     host.querySelectorAll('.adm-listitem').forEach(b =>
-      b.addEventListener('click', () => { selectedId = b.dataset.id; render(); }));
+      b.addEventListener('click', () => { selectedId = b.dataset.id; boardSel = null; boardRot = 0; render(); }));
+  }
+
+  // ── Tablero de construcciones (rejilla HTML editable) ──
+  function boardHTML(h, tier) {
+    const B = window.HacBuild;
+    if (!B) return '';
+    const lista = (h.mapa && h.mapa.construcciones) || [];
+    const [GW, GH] = B.gridDims(tier);
+
+    let cells = '';
+    for (let gy = 0; gy < GH; gy++) for (let gx = 0; gx < GW; gx++) {
+      const c = B.construccionEn(lista, gx, gy);
+      const t = c ? B.tipo(c.tipo) : null;
+      if (t) {
+        const anchor = c.pos[0] === gx && c.pos[1] === gy;
+        const f = B.footprintDe(c);
+        const due = c.dueno ? (((h.miembros || []).find(m => m.id === c.dueno) || {}).nombre || '¿?') : 'sin dueño';
+        const abbr = t.nombre.slice(0, 3);
+        cells += `<div class="adm-cell occ${anchor ? ' anchor' : ''}" data-gx="${gx}" data-gy="${gy}" style="--c:${esc(t.color)}" title="${esc(t.nombre)} ${f[0]}×${f[1]} · ${esc(due)}">${esc(abbr)}</div>`;
+      } else {
+        const sel = boardSel && boardSel[0] === gx && boardSel[1] === gy ? ' on' : '';
+        cells += `<button class="adm-cell free${sel}" data-gx="${gx}" data-gy="${gy}">·</button>`;
+      }
+    }
+
+    const disponibles = B.CONSTRUCCIONES.filter(t => t.tierMin <= tier);
+    if (!boardTipo || !disponibles.some(t => t.id === boardTipo)) boardTipo = disponibles[0] && disponibles[0].id;
+    const tipos = disponibles
+      .map(t => `<option value="${t.id}"${t.id === boardTipo ? ' selected' : ''}>${esc(t.zh)} ${esc(t.nombre)} (${t.footprint[0]}×${t.footprint[1]})</option>`).join('');
+    // Tamaño efectivo del edificio elegido con la rotación actual.
+    const fpSel = B.footprintDe({ tipo: boardTipo, rot: boardRot });
+    const selTxt = boardSel ? `casilla [${boardSel[0]}, ${boardSel[1]}]` : '— elige una casilla libre —';
+    // Validez de la colocación seleccionada (para bloquear "Construir" y avisar).
+    const selV = boardSel ? B.puedeColocar({ pos: boardSel, tipo: boardTipo, rot: boardRot }, tier, lista) : { ok: false };
+    const noConstruible = !boardSel || !selV.ok;
+    const motivoHTML = (boardSel && !selV.ok) ? `<span class="adm-board-bad">✕ ${esc(selV.motivo)}</span>` : '';
+    // Sprite del edificio elegido en su rotación (muestra la PUERTA girada).
+    const tdef = B.tipo(boardTipo) || {};
+    const pvFile = 'bld-' + boardTipo + '-' + (((boardRot % 4) + 4) % 4);
+
+    const duenoOpts = (sel) => `<option value=""${sel ? '' : ' selected'}>Sin dueño</option>` +
+      (h.miembros || []).map(m => `<option value="${esc(m.id)}"${sel === m.id ? ' selected' : ''}>${esc(m.nombre)}</option>`).join('');
+
+    const items = lista.map(c => {
+      const t = B.tipo(c.tipo);
+      const fuera = !B.dentroDeRejilla(c, tier);
+      const f = B.footprintDe(c);
+      return `<li class="adm-build-item${fuera ? ' fuera' : ''}">
+          <span class="adm-build-zh" style="--c:${esc(t ? t.color : '#888')}">${esc(t ? t.zh : '?')}</span>
+          <span class="adm-build-name">${esc(t ? t.nombre : c.tipo)} <i>${f[0]}×${f[1]} · [${c.pos[0]},${c.pos[1]}]</i>${fuera ? ' <em>· fuera de rejilla</em>' : ''}</span>
+          <button class="adm-build-rot" data-gx="${c.pos[0]}" data-gy="${c.pos[1]}" title="Rotar 90°">↻</button>
+          <select class="adm-reasignar" data-gx="${c.pos[0]}" data-gy="${c.pos[1]}" title="Asignar mecenas">${duenoOpts(c.dueno)}</select>
+          <button class="adm-build-del" data-gx="${c.pos[0]}" data-gy="${c.pos[1]}" title="Quitar edificio">✕</button>
+        </li>`;
+    }).join('');
+
+    return `
+      <section class="adm-board">
+        <h3 class="adm-members-ttl">Tablero · construcciones <span class="adm-board-hint">rejilla ${GW}×${GH} · nivel ${tier}</span></h3>
+        <div class="adm-grid-board" style="grid-template-columns:repeat(${GW},30px)">${cells}</div>
+        <div class="adm-build-area">
+          <form class="adm-build-form" id="form-build">
+            <select name="tipo" id="board-tipo">${tipos}</select>
+            <button type="button" class="adm-btn adm-rot-btn" id="btn-rot" title="Rotar 90°">↻ ${fpSel[0]}×${fpSel[1]}</button>
+            <span class="adm-board-sel">${selTxt}</span>
+            <button type="submit" class="adm-btn adm-btn-gold"${noConstruible ? ' disabled' : ''}>Construir</button>
+            ${motivoHTML}
+          </form>
+          <figure class="adm-build-pv">
+            <img src="assets/img/iso/${pvFile}.png?v=4" alt="${esc(tdef.nombre || '')}">
+            <figcaption><b>${esc(tdef.zh || '')} ${esc(tdef.nombre || '')}</b> · ${fpSel[0]}×${fpSel[1]}
+              <span class="adm-pv-door">┤ el borde dorado en la rejilla = la cara/puerta</span></figcaption>
+          </figure>
+        </div>
+        <p class="adm-board-tip">Pasa el ratón por la rejilla para ver la huella; sobre un edificio puesto, haz clic para quitarlo.</p>
+        <ul class="adm-build-list">${items || '<li class="adm-empty">Sin construcciones todavía. Elige edificio y casilla, y pulsa Construir.</li>'}</ul>
+      </section>`;
   }
 
   // ── Render detalle ──
   function renderDetail() {
     const host = document.getElementById('adm-detail');
+    // ¿Estaba abierto el panel "Editar datos"? Lo restauramos tras re-renderizar.
+    const editOpen = !!(host.querySelector('.adm-edit') && host.querySelector('.adm-edit').open);
     const h = selectedId ? HacStore.get(selectedId) : null;
     if (!h) {
       host.innerHTML = `<p class="adm-empty">Selecciona una hacienda de la izquierda, o crea una nueva.</p>`;
       return;
     }
+    // La semilla trae mecenas sin id; sin id, los controles por mecenas
+    // (± puntos, editar, borrar) no saben a quién tocan. Garantizamos ids aquí.
+    norm(h);
     const pts = haciendaPuntos(h);
     const tInfo = tierDePuntos(pts);
     const tier = clampTier(tInfo.nivel);
@@ -181,7 +295,7 @@
         <tr data-mid="${esc(m.id)}">
           <td>${esc(m.nombre)}</td>
           <td class="adm-pts-cell">
-            <button class="adm-step" data-step="-5">−</button>
+            <button class="adm-step" data-step="-5"${(Number(m.puntos) || 0) <= 0 ? ' disabled' : ''}>−</button>
             <input class="adm-pts" type="number" min="0" value="${Number(m.puntos) || 0}">
             <button class="adm-step" data-step="5">+</button>
           </td>
@@ -197,18 +311,22 @@
         <div>
           <h2>${esc(h.nombre)}</h2>
           <p class="adm-detail-tier">${esc(tInfo.zh)} ${esc(tInfo.nombre)} · ${pts} pts</p>
+          <div class="adm-detail-actions">
+            <a class="adm-btn adm-btn-gold" href="hacienda.html?id=${encodeURIComponent(h.id)}">Ver la hacienda ↗</a>
+            <a class="adm-detail-link" href="hacienda.html?id=${encodeURIComponent(h.id)}" target="_blank">Abrir en otra pestaña ↗</a>
+          </div>
         </div>
       </div>
 
       <div class="adm-prog"><div class="adm-prog-bar"><span style="width:${prog ? prog.pct : 100}%;background:${esc(h.color || 'var(--gold)')}"></span></div>
         <p class="adm-prog-lbl">${progTxt}</p></div>
 
-      <details class="adm-edit">
+      <details class="adm-edit"${editOpen ? ' open' : ''}>
         <summary>Editar datos de la casa</summary>
         <form id="form-edit">
           <div class="adm-grid">
             <label>Nombre<input name="nombre" value="${esc(h.nombre)}"></label>
-            <label>Caracteres 漢字<input name="zh" value="${esc(h.zh || '')}" maxlength="6"></label>
+            <label>Sello 漢字 (opcional)<input name="zh" value="${esc(h.zh || '')}" maxlength="6" placeholder="漢字 decorativo"></label>
             <label>Color<input name="color" type="color" value="${esc(h.color || '#c9a84c')}"></label>
             <label>Fundada<input name="fundada" value="${esc(h.fundada || '')}"></label>
             <label>Puntos extra (misiones)<input name="puntosExtra" type="number" min="0" value="${Number(h.puntosExtra) || 0}"></label>
@@ -234,6 +352,8 @@
         <input name="nota" placeholder="Nota (opcional)">
         <button type="submit" class="adm-btn adm-btn-gold">+ Dar de alta</button>
       </form>
+
+      ${boardHTML(h, tier)}
     `;
 
     wireDetail(h);
@@ -283,7 +403,7 @@
     const bd = document.getElementById('btn-del-hac');
     if (bd) bd.addEventListener('click', () => {
       if (!confirm(`¿Borrar la hacienda "${h.nombre}" y todos sus mecenas?`)) return;
-      HacStore.remove(h.id);
+      HacStore.remove(h.id).catch(onWriteError('borrar'));
       selectedId = null;
       render();
     });
@@ -303,6 +423,128 @@
       saveHacienda(h);
       render();
     });
+
+    // ── Tablero de construcciones ──
+    if (window.HacBuild) {
+      if (!h.mapa) h.mapa = { v: 1, construcciones: [] };
+      const tierNow = clampTier(tierDePuntos(haciendaPuntos(h)).nivel);
+      const enPos = (gx, gy) => h.mapa.construcciones.find(c => c.pos[0] === gx && c.pos[1] === gy);
+
+      // Elegir tipo de edificio (preview de tamaño se actualiza al re-render).
+      const ts = document.getElementById('board-tipo');
+      if (ts) ts.addEventListener('change', () => { boardTipo = ts.value; render(); });
+
+      // Rotar el edificio a colocar.
+      const rb = document.getElementById('btn-rot');
+      if (rb) rb.addEventListener('click', () => { boardRot = (boardRot + 1) % 4; render(); });
+
+      // Preview de colocación (huella verde/roja + puerta) y de borrado (hover
+      // sobre un edificio puesto lo resalta; clic lo quita).
+      const board = document.querySelector('#adm-detail .adm-grid-board');
+      const cellAt = (gx, gy) => board && board.querySelector('.adm-cell[data-gx="' + gx + '"][data-gy="' + gy + '"]');
+      const cubre = (gx, gy) => HacBuild.construccionEn(h.mapa.construcciones, gx, gy);
+      function clearMarks() {
+        if (board) board.querySelectorAll('.pv-ok,.pv-bad,.pv-front-r,.pv-front-b,.pv-front-l,.pv-front-t,.hov-del').forEach(el =>
+          el.classList.remove('pv-ok', 'pv-bad', 'pv-front-r', 'pv-front-b', 'pv-front-l', 'pv-front-t', 'hov-del'));
+      }
+      function showPreview(pos) {
+        clearMarks();
+        if (!pos) return;
+        const c = { pos: pos, tipo: boardTipo, rot: boardRot };
+        const ok = HacBuild.puedeColocar(c, tierNow, h.mapa.construcciones).ok;
+        HacBuild.celdasOcupadas(c).forEach(([gx, gy]) => {
+          const el = cellAt(gx, gy); if (el) el.classList.add(ok ? 'pv-ok' : 'pv-bad');
+        });
+        // CARA/PUERTA según la rotación (4 direcciones): rot0 +x derecha,
+        // rot1 +y abajo, rot2 -x izquierda, rot3 -y arriba. Línea + ticks.
+        const f = HacBuild.footprintDe(c);
+        const r = ((boardRot % 4) + 4) % 4;
+        const marca = [];
+        if (r === 0) { const fx = pos[0] + f[0] - 1; for (let gy = pos[1]; gy < pos[1] + f[1]; gy++) marca.push([fx, gy, 'pv-front-r']); }
+        else if (r === 1) { const fy = pos[1] + f[1] - 1; for (let gx = pos[0]; gx < pos[0] + f[0]; gx++) marca.push([gx, fy, 'pv-front-b']); }
+        else if (r === 2) { const fx = pos[0]; for (let gy = pos[1]; gy < pos[1] + f[1]; gy++) marca.push([fx, gy, 'pv-front-l']); }
+        else { const fy = pos[1]; for (let gx = pos[0]; gx < pos[0] + f[0]; gx++) marca.push([gx, fy, 'pv-front-t']); }
+        marca.forEach(([gx, gy, cls]) => { const el = cellAt(gx, gy); if (el) el.classList.add(cls); });
+      }
+      function showDelete(c) {
+        clearMarks();
+        HacBuild.celdasOcupadas(c).forEach(([gx, gy]) => {
+          const el = cellAt(gx, gy); if (el) el.classList.add('hov-del');
+        });
+      }
+      if (board) {
+        board.addEventListener('mousemove', (e) => {
+          const cell = e.target.closest('.adm-cell'); if (!cell) return;
+          const gx = Number(cell.dataset.gx), gy = Number(cell.dataset.gy);
+          const occ = cubre(gx, gy);
+          if (occ) showDelete(occ); else showPreview([gx, gy]);
+        });
+        board.addEventListener('mouseleave', () => showPreview(boardSel));
+        // Clic sobre un edificio puesto → quitarlo.
+        board.querySelectorAll('.adm-cell.occ').forEach(cell =>
+          cell.addEventListener('click', () => {
+            const c = cubre(Number(cell.dataset.gx), Number(cell.dataset.gy));
+            if (!c) return;
+            const t = HacBuild.tipo(c.tipo);
+            if (!confirm('¿Quitar ' + (t ? t.nombre : c.tipo) + ' de la finca?')) return;
+            h.mapa.construcciones = h.mapa.construcciones.filter(x => x !== c);
+            saveHacienda(h);
+            render();
+          }));
+      }
+      showPreview(boardSel);   // estado inicial: la casilla seleccionada
+
+      // Elegir casilla libre.
+      document.querySelectorAll('#adm-detail .adm-cell.free').forEach(b =>
+        b.addEventListener('click', () => {
+          boardSel = [Number(b.dataset.gx), Number(b.dataset.gy)];
+          render();
+        }));
+
+      // Construir (sin dueño: se asigna después sobre el hall ya construido).
+      const fb = document.getElementById('form-build');
+      if (fb) fb.addEventListener('submit', (e) => {
+        e.preventDefault();
+        if (!boardSel) { alert('Elige primero una casilla libre en la rejilla.'); return; }
+        const c = { pos: [boardSel[0], boardSel[1]], tipo: boardTipo, rot: boardRot, dueno: null, nivel: 1 };
+        const v = HacBuild.puedeColocar(c, tierNow, h.mapa.construcciones);
+        if (!v.ok) { alert(v.motivo); return; }
+        h.mapa.construcciones.push(c);
+        boardSel = null;
+        saveHacienda(h);
+        render();
+      });
+
+      // Rotar un edificio ya construido (valida; revierte si no cabe).
+      document.querySelectorAll('#adm-detail .adm-build-rot').forEach(b =>
+        b.addEventListener('click', () => {
+          const c = enPos(Number(b.dataset.gx), Number(b.dataset.gy));
+          if (!c) return;
+          const giro = { pos: c.pos, tipo: c.tipo, rot: ((c.rot || 0) + 1) % 4, dueno: c.dueno, nivel: c.nivel };
+          const otras = h.mapa.construcciones.filter(x => x !== c);
+          const v = HacBuild.puedeColocar(giro, tierNow, otras);
+          if (!v.ok) { alert('No se puede rotar aquí: ' + v.motivo); return; }
+          c.rot = giro.rot;
+          saveHacienda(h);
+          render();
+        }));
+
+      // Quitar edificio.
+      document.querySelectorAll('#adm-detail .adm-build-del').forEach(b =>
+        b.addEventListener('click', () => {
+          const gx = Number(b.dataset.gx), gy = Number(b.dataset.gy);
+          h.mapa.construcciones = h.mapa.construcciones.filter(c => !(c.pos[0] === gx && c.pos[1] === gy));
+          saveHacienda(h);
+          render();
+        }));
+
+      // Asignar mecenas (dueño) a un hall construido.
+      document.querySelectorAll('#adm-detail .adm-reasignar').forEach(sel =>
+        sel.addEventListener('change', () => {
+          const c = enPos(Number(sel.dataset.gx), Number(sel.dataset.gy));
+          if (c) { c.dueno = sel.value || null; saveHacienda(h); render(); }
+        }));
+    }
   }
 
   function render() { renderList(); renderDetail(); }
@@ -324,7 +566,7 @@
     const h = norm({
       id: HacStore.makeId(nombre),
       nombre,
-      zh: f.zh.value.trim(),
+      zh: '',                       // sello 漢字 opcional: se añade luego al editar
       color: f.color.value,
       lema: f.lema.value.trim(),
       fundada: f.fundada.value.trim() || String(new Date().getFullYear()),
@@ -332,7 +574,7 @@
       puntosExtra: 0,
       miembros: []
     });
-    HacStore.upsert(h);
+    HacStore.upsert(h).catch(onWriteError('crear'));
     selectedId = h.id;
     formNueva.hidden = true; formNueva.reset();
     render();
@@ -340,25 +582,44 @@
 
   document.getElementById('btn-seed').addEventListener('click', () => {
     if (!confirm('Esto vuelca la hacienda de ejemplo (Sima). Si ya existe, se sobrescribe. ¿Seguir?')) return;
-    HacStore.resetToSeed();
+    HacStore.resetToSeed().catch(onWriteError('restaurar'));
     render();
   });
   document.getElementById('btn-clear').addEventListener('click', () => {
     if (!confirm('¿Vaciar TODAS las haciendas guardadas? No se puede deshacer.')) return;
-    HacStore.save([]);
+    HacStore.clear().catch(onWriteError('vaciar'));
     selectedId = null;
     render();
   });
 
-  // Selección inicial: la primera hacienda, si hay.
+  // Selección inicial: la hacienda del ?id= (enlace desde su ficha), o la primera.
+  const qId = new URLSearchParams(location.search).get('id');
   const first = HacStore.all()[0];
-  selectedId = first ? first.id : null;
+  selectedId = (qId && HacStore.get(qId)) ? qId : (first ? first.id : null);
   render();
   }
 
-  // Espera al DOM (y a que localStorage esté disponible) antes de arrancar.
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
-  else boot();
+  // Si el arranque falla (red, sesión, caché vieja…), mostramos el error en
+  // pantalla en vez de dejar el panel mudo y sin botones que respondan.
+  function showFatal(err) {
+    console.error('[admin-haciendas]', err);
+    const adm = document.getElementById('adm');
+    if (adm && !adm.hidden) {
+      const box = document.createElement('div');
+      box.className = 'adm-fatal';
+      box.innerHTML = '<b>No se pudo cargar el panel.</b><br>' +
+        String((err && err.message) || err) +
+        '<br><button class="adm-btn" onclick="location.reload()">Recargar</button>';
+      adm.prepend(box);
+    } else {
+      alert('No se pudo cargar el panel: ' + ((err && err.message) || err));
+    }
+  }
+  function start() { boot().catch(showFatal); }
+
+  // Espera al DOM antes de arrancar.
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
+  else start();
 })();
 </script>
 <script src="assets/js/chrome.js"></script>

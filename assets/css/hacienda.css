@@ -1,0 +1,131 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   hacienda.css — Página individual de una hacienda (hacienda.html?id=…).
+   Reaprovecha el panel de haciendas.css y añade el HERO de pixel art.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.hacp{max-width:880px;margin:0 auto;padding:26px 20px 70px}
+
+/* ── Volver ──────────────────────────────────────────────────────────── */
+.hacp-back{
+  display:inline-flex;align-items:center;gap:7px;
+  font-family:'Cinzel Decorative',serif;font-size:11px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--gold);opacity:.7;text-decoration:none;
+  margin-bottom:18px;transition:opacity .2s,transform .2s;
+}
+.hacp-back:hover{opacity:1;transform:translateX(-3px)}
+
+/* ── Barra de admin (configurar hacienda) ────────────────────────────── */
+.hacp-admin{display:flex;justify-content:flex-end;margin-bottom:12px}
+.hacp-cfg{
+  display:inline-flex;align-items:center;gap:7px;
+  font-family:'Cinzel Decorative',serif;font-size:11px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--ink);background:var(--gold);
+  padding:9px 16px;border-radius:3px;text-decoration:none;font-weight:700;
+  transition:background .2s,transform .2s,box-shadow .2s;
+}
+.hacp-cfg:hover{background:var(--parch2);transform:translateY(-1px);box-shadow:0 5px 16px rgba(201,168,76,.28)}
+@media(prefers-reduced-motion:reduce){.hacp-cfg{transition:none}}
+
+/* ── Hero de pixel art ───────────────────────────────────────────────── */
+.hacp-hero{
+  position:relative;border-radius:6px;overflow:hidden;
+  border:1px solid rgba(255,255,255,.07);
+  border-top:3px solid var(--hac,var(--gold));
+  background:#0a0602;
+  box-shadow:0 18px 50px rgba(0,0,0,.5),
+             0 0 0 1px color-mix(in srgb,var(--hac,var(--gold)) 12%,transparent);
+}
+.hacp-art{
+  display:block;width:100%;height:auto;
+  image-rendering:pixelated;image-rendering:crisp-edges;
+}
+.hacp-fade{
+  position:absolute;left:0;right:0;bottom:0;height:46%;pointer-events:none;
+  background:linear-gradient(transparent,rgba(8,5,2,.4) 38%,rgba(8,5,2,.92));
+}
+.hacp-cap{
+  position:absolute;left:0;right:0;bottom:0;
+  display:flex;align-items:flex-end;justify-content:space-between;
+  gap:16px;flex-wrap:wrap;padding:18px 22px;
+}
+.hacp-cap-main{min-width:0}
+.hacp-eyebrow{
+  font-family:'Cinzel Decorative',serif;font-size:10px;letter-spacing:.2em;
+  text-transform:uppercase;color:var(--hac,var(--gold));opacity:.9;
+  margin-bottom:6px;text-shadow:0 1px 6px rgba(0,0,0,.8);
+}
+.hacp-eyebrow b{font-family:'Noto Serif SC',serif;font-weight:900;opacity:1}
+.hacp-name{
+  font-family:'Noto Serif SC',serif;font-size:clamp(26px,5vw,42px);
+  font-weight:900;color:var(--parch);line-height:1.05;
+  text-shadow:0 2px 16px rgba(0,0,0,.85);
+}
+.hacp-zh-big{
+  font-family:'Noto Serif SC',serif;font-weight:900;
+  font-size:clamp(34px,8vw,72px);line-height:1;
+  color:var(--hac,var(--gold));flex-shrink:0;align-self:flex-end;
+  text-shadow:0 0 30px color-mix(in srgb,var(--hac,var(--gold)) 45%,transparent),
+              0 2px 14px rgba(0,0,0,.7);
+}
+.hacp-lema{
+  font-family:'IM Fell English',serif;font-style:italic;
+  font-size:clamp(13px,1.8vw,16px);color:var(--parch);opacity:.82;
+  margin-top:6px;text-shadow:0 1px 8px rgba(0,0,0,.9);
+}
+
+/* ── La finca (plano isométrico) ─────────────────────────────────────── */
+/* Se ensancha más allá de la columna de texto para que las fincas grandes
+   quepan SIN scroll horizontal. Centrada sobre el eje de la página. */
+.hacp-finca{
+  margin-top:34px;text-align:center;
+  width:min(94vw,1180px);margin-left:50%;transform:translateX(-50%);
+}
+.hacp-finca-ttl{
+  font-family:'Cinzel Decorative',serif;font-size:clamp(18px,3vw,24px);
+  color:var(--parch);letter-spacing:.04em;
+}
+.hacp-finca-sub{
+  font-family:'Cinzel Decorative',serif;font-size:10px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--hac,var(--gold));opacity:.7;margin-top:5px;
+}
+/* La finca se muestra a escala FIJA de tesela (no encogida al ancho): así una
+   hacienda grande se ve grande. Si excede el ancho, el contenedor hace scroll. */
+.hacp-iso-wrap{margin:18px auto 0}
+.hacp-iso{
+  display:block;margin:0 auto;width:100%;height:auto;
+  image-rendering:pixelated;image-rendering:crisp-edges;
+}
+
+/* ── Panel de detalle (reusa .hac-panel de haciendas.css) ─────────────── */
+.hacp-detail{margin-top:30px}
+/* En la página individual el panel ya no necesita su propio borde-marco. */
+.hacp-detail .hac-panel{background:transparent;border:none;padding:0}
+.hacp-detail .hac-panel::before{display:none}
+
+/* ── Estado: hacienda no encontrada ──────────────────────────────────── */
+.hacp-404{text-align:center;padding:60px 20px}
+.hacp-404-zh{
+  font-family:'Noto Serif SC',serif;font-size:72px;font-weight:900;
+  color:var(--gold);opacity:.5;line-height:1;
+}
+.hacp-404 h1{
+  font-family:'Cinzel Decorative',serif;font-size:22px;color:var(--parch);
+  margin:14px 0 8px;
+}
+.hacp-404 p{
+  font-family:'IM Fell English',serif;font-style:italic;font-size:16px;
+  color:var(--parch2);opacity:.7;
+}
+.hacp-404 a{color:var(--gold);text-decoration:none;border-bottom:1px solid var(--goldf)}
+.hacp-loading{
+  font-family:'IM Fell English',serif;font-style:italic;font-size:16px;
+  color:var(--parch2);opacity:.55;text-align:center;padding:80px 0;
+}
+
+@media(max-width:560px){
+  .hacp{padding:18px 14px 50px}
+  .hacp-cap{padding:14px 16px}
+}
+@media(prefers-reduced-motion:reduce){
+  .hacp-back{transition:none}
+}

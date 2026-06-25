@@ -116,6 +116,18 @@
   font-family:'Noto Serif SC',serif;font-size:22px;font-weight:900;
   color:var(--parch);
 }
+.hac-nombre-link{
+  font-family:'Noto Serif SC',serif;font-size:22px;font-weight:900;
+  color:var(--parch);text-decoration:none;
+  display:inline-flex;align-items:center;gap:7px;transition:color .2s;
+}
+.hac-nombre-link:hover{color:var(--hac,var(--gold))}
+.hac-go{
+  font-size:14px;color:var(--hac,var(--gold));opacity:0;
+  transform:translateX(-4px);transition:opacity .2s,transform .2s;
+}
+.hac-nombre-link:hover .hac-go{opacity:.9;transform:translateX(0)}
+@media(prefers-reduced-motion:reduce){.hac-nombre-link,.hac-go{transition:none}}
 .hac-tier{
   display:inline-flex;align-items:center;gap:5px;
   font-family:'Cinzel Decorative',serif;font-size:10px;letter-spacing:.1em;

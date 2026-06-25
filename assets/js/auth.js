@@ -108,6 +108,9 @@ const Auth = (function () {
   function current() { return cachedUser; }
   function isAdmin() { return !!cachedUser && cachedUser.role === 'admin'; }
   function onChange(cb) { listeners.add(cb); return () => listeners.delete(cb); }
+  // Cliente Supabase compartido (p.ej. HacStore lo usa para leer/escribir
+  // haciendas). Disponible tras ready(). Así no se crean clientes duplicados.
+  function getClient() { return client; }
 
   // ── Google OAuth ──
   async function loginWithGoogle(redirectTo) {
@@ -151,7 +154,7 @@ const Auth = (function () {
   }
 
   return {
-    ready, current, isAdmin, onChange,
+    ready, current, isAdmin, onChange, client: getClient,
     loginWithGoogle, login, register, logout,
     ADMIN_EMAIL
   };

@@ -18,6 +18,11 @@
 .adm-ttl{font-family:'Noto Serif SC',serif;font-size:clamp(26px,4vw,38px);font-weight:900;color:var(--parch);margin-top:4px}
 
 .adm-warn{font-family:'Noto Sans SC',sans-serif;font-size:12px;color:#e0c08a;opacity:.8;background:rgba(201,168,76,.06);border:1px solid rgba(201,168,76,.18);border-radius:3px;padding:10px 14px;margin:18px 0}
+.adm-info{color:var(--parch2);opacity:.7}
+.adm-info b{color:var(--gold)}
+.adm-fatal{font-family:'Noto Sans SC',sans-serif;font-size:13px;line-height:1.6;color:#f0c0a0;background:rgba(160,80,80,.12);border:1px solid rgba(180,90,90,.4);border-radius:4px;padding:14px 16px;margin:0 0 18px}
+.adm-fatal b{color:#e89090}
+.adm-fatal .adm-btn{margin-top:10px}
 
 /* ── Botones ────────────────────────────────────────────────────────────── */
 .adm-btn{
@@ -93,6 +98,10 @@
 .adm-pts:focus{outline:none;border-color:var(--gold)}
 .adm-step{cursor:pointer;width:24px;height:24px;border-radius:3px;border:1px solid rgba(201,168,76,.3);background:rgba(255,255,255,.03);color:var(--gold);font-size:14px;line-height:1;transition:all .14s}
 .adm-step:hover{background:rgba(201,168,76,.12)}
+.adm-step:disabled{opacity:.3;cursor:not-allowed;background:rgba(255,255,255,.03)}
+.adm-detail-actions{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:9px}
+.adm-detail-link{display:inline-block;font-family:'Cinzel Decorative',serif;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);opacity:.72;text-decoration:none;transition:opacity .2s}
+.adm-detail-link:hover{opacity:1}
 .adm-cargo{font-family:'Noto Serif SC',serif;font-size:13px;color:var(--gold);font-weight:700;display:inline-block}
 .adm-cargo-no{color:var(--parch2);opacity:.45;font-weight:400}
 .adm-hint{display:block;font-family:'Noto Sans SC',sans-serif;font-size:10px;color:var(--parch2);opacity:.5;margin-top:2px}
@@ -118,3 +127,60 @@
   .adm-grid{grid-template-columns:1fr}
   .adm-list{flex-direction:column}
 }
+
+/* ── Tablero de construcciones ──────────────────────────────────────────── */
+.adm-board{margin-top:26px;border-top:1px solid rgba(201,168,76,.16);padding-top:18px}
+.adm-board-hint{font-family:'Noto Sans SC',sans-serif;font-size:11px;font-weight:400;color:var(--parch2);opacity:.5;margin-left:8px;text-transform:none;letter-spacing:0}
+.adm-grid-board{display:grid;gap:3px;justify-content:start;margin:4px 0 14px}
+.adm-cell{position:relative;width:30px;height:30px;border-radius:3px;display:flex;align-items:center;justify-content:center;line-height:1;padding:0;border:1px solid rgba(201,168,76,.18)}
+.adm-cell.free{background:rgba(255,255,255,.02);color:var(--parch2);opacity:.4;cursor:pointer;transition:all .14s;font-family:'Noto Serif SC',serif;font-size:14px}
+.adm-cell.free:hover{opacity:.9;background:rgba(201,168,76,.12);border-color:rgba(201,168,76,.4)}
+.adm-cell.free.on{opacity:1;background:rgba(201,168,76,.22);border-color:var(--gold);box-shadow:0 0 0 1px var(--gold)}
+.adm-cell.occ{background:color-mix(in srgb,var(--c,#888) 38%,transparent);border-color:color-mix(in srgb,var(--c,#888) 65%,transparent);color:#fff;font-family:'Noto Sans SC',sans-serif;font-weight:700;font-size:9px;letter-spacing:-.2px}
+.adm-cell.occ{cursor:pointer}
+.adm-cell.occ.anchor{box-shadow:inset 0 0 0 1px rgba(255,255,255,.45)}
+/* Preview de colocación: huella completa (forzamos opacidad por encima del
+   atenuado de las celdas libres) en verde (cabe) o rojo (no cabe). */
+.adm-cell.pv-ok{opacity:1!important;background:rgba(76,175,80,.30)!important;box-shadow:inset 0 0 0 2px #4caf50!important;border-color:#4caf50!important;z-index:1}
+.adm-cell.pv-bad{opacity:1!important;background:rgba(208,90,82,.32)!important;box-shadow:inset 0 0 0 2px #d05a52!important;border-color:#d05a52!important;z-index:1}
+/* CARA/PUERTA del edificio a colocar: línea dorada + marquita perpendicular en
+   el centro de cada tesela de la cara frontal, en uno de los 4 bordes según la
+   rotación (derecha/abajo/izquierda/arriba). Así se ve hacia dónde mira. */
+.adm-cell.pv-front-r::before{content:'';position:absolute;right:-1px;top:2px;bottom:2px;width:3px;background:var(--gold);border-radius:2px;z-index:2;box-shadow:0 0 4px rgba(201,168,76,.75)}
+.adm-cell.pv-front-r::after{content:'';position:absolute;right:-5px;top:50%;transform:translateY(-50%);width:8px;height:3px;background:var(--gold);border-radius:2px;z-index:2;box-shadow:0 0 4px rgba(201,168,76,.75)}
+.adm-cell.pv-front-b::before{content:'';position:absolute;bottom:-1px;left:2px;right:2px;height:3px;background:var(--gold);border-radius:2px;z-index:2;box-shadow:0 0 4px rgba(201,168,76,.75)}
+.adm-cell.pv-front-b::after{content:'';position:absolute;bottom:-5px;left:50%;transform:translateX(-50%);width:3px;height:8px;background:var(--gold);border-radius:2px;z-index:2;box-shadow:0 0 4px rgba(201,168,76,.75)}
+.adm-cell.pv-front-l::before{content:'';position:absolute;left:-1px;top:2px;bottom:2px;width:3px;background:var(--gold);border-radius:2px;z-index:2;box-shadow:0 0 4px rgba(201,168,76,.75)}
+.adm-cell.pv-front-l::after{content:'';position:absolute;left:-5px;top:50%;transform:translateY(-50%);width:8px;height:3px;background:var(--gold);border-radius:2px;z-index:2;box-shadow:0 0 4px rgba(201,168,76,.75)}
+.adm-cell.pv-front-t::before{content:'';position:absolute;top:-1px;left:2px;right:2px;height:3px;background:var(--gold);border-radius:2px;z-index:2;box-shadow:0 0 4px rgba(201,168,76,.75)}
+.adm-cell.pv-front-t::after{content:'';position:absolute;top:-5px;left:50%;transform:translateX(-50%);width:3px;height:8px;background:var(--gold);border-radius:2px;z-index:2;box-shadow:0 0 4px rgba(201,168,76,.75)}
+/* Borrar desde la rejilla: hover resalta todo el edificio; la ✕ va en su ancla. */
+.adm-cell.hov-del{opacity:1!important;box-shadow:inset 0 0 0 2px #e0907a!important;border-color:#e0907a!important;z-index:1}
+.adm-cell.occ.anchor.hov-del::after{content:'✕';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(150,40,36,.82);color:#fff;font-size:14px;font-weight:700;border-radius:2px}
+.adm-build-form{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:12px}
+.adm-build-form select{font-family:'Noto Sans SC',sans-serif;font-size:12px;color:var(--parch);background:rgba(0,0,0,.3);border:1px solid rgba(201,168,76,.25);border-radius:3px;padding:6px 8px}
+.adm-board-sel{font-family:'Cinzel Decorative',serif;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);opacity:.8}
+.adm-rot-btn{font-family:'Noto Sans SC',sans-serif;font-size:12px;padding:6px 10px;letter-spacing:.04em}
+.adm-board-tip{font-family:'Noto Sans SC',sans-serif;font-size:11px;color:var(--parch2);opacity:.55;margin:0 0 12px}
+/* Form de construir + preview del edificio elegido (con su puerta visible). */
+.adm-build-area{display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap;margin-bottom:6px}
+.adm-build-area .adm-build-form{flex:1;min-width:240px;margin-bottom:0}
+.adm-build-pv{margin:0;flex-shrink:0;width:140px;text-align:center;background:rgba(0,0,0,.28);border:1px solid rgba(201,168,76,.18);border-radius:5px;padding:8px}
+.adm-build-pv img{display:block;width:112px;height:auto;margin:0 auto;image-rendering:pixelated;image-rendering:crisp-edges}
+.adm-build-pv figcaption{font-family:'Noto Sans SC',sans-serif;font-size:10.5px;color:var(--parch2);opacity:.75;margin-top:5px;line-height:1.4}
+.adm-build-pv b{color:var(--gold);font-weight:700}
+.adm-build-pv .adm-pv-door{display:block;font-size:9.5px;color:var(--gold);opacity:.8;letter-spacing:.04em;margin-top:2px}
+.adm-board-bad{font-family:'Noto Sans SC',sans-serif;font-size:11px;color:#e09088;align-self:center}
+.adm-btn:disabled{opacity:.4;cursor:not-allowed}
+.adm-build-rot{cursor:pointer;background:none;border:1px solid rgba(201,168,76,.25);border-radius:3px;color:var(--gold);font-size:13px;line-height:1;padding:3px 6px;transition:all .14s;flex-shrink:0}
+.adm-build-rot:hover{background:rgba(201,168,76,.12);border-color:rgba(201,168,76,.5)}
+.adm-build-list{list-style:none;display:flex;flex-direction:column;gap:6px}
+.adm-build-item{display:flex;align-items:center;gap:10px;padding:7px 10px;background:rgba(255,255,255,.022);border:1px solid rgba(255,255,255,.06);border-left:2px solid var(--c,var(--gold));border-radius:2px}
+.adm-build-item.fuera{opacity:.6;border-left-color:#a05050}
+.adm-build-zh{font-family:'Noto Serif SC',serif;font-size:18px;font-weight:900;color:var(--c,var(--gold));line-height:1;width:24px;text-align:center;flex-shrink:0}
+.adm-build-name{flex:1;min-width:0;font-family:'Cinzel Decorative',serif;font-size:12px;color:var(--parch)}
+.adm-build-name i{font-style:normal;font-family:'Noto Sans SC',sans-serif;font-size:11px;color:var(--parch2);opacity:.5}
+.adm-build-name em{font-style:normal;color:#c98080;font-size:10px}
+.adm-reasignar{font-family:'Noto Sans SC',sans-serif;font-size:11px;color:var(--parch);background:rgba(0,0,0,.3);border:1px solid rgba(201,168,76,.22);border-radius:3px;padding:4px 6px;max-width:140px}
+.adm-build-del{cursor:pointer;background:none;border:none;color:#a05050;font-size:14px;transition:color .14s;flex-shrink:0}
+.adm-build-del:hover{color:#e09090}
