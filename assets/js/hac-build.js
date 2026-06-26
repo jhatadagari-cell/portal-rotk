@@ -66,6 +66,14 @@ const HacBuild = (function () {
     { id: 'salon-banquete',    nombre: 'Salón de Banquetes', zh: '宴殿', capa: 'edificio', footprint: [3, 7], tierMin: 4, unico: false, cargoMin: null,    color: '#b83a1c', altura: 48, desc: 'Largo salón donde la casa celebra sus grandes banquetes.' },
     { id: 'cuartel',           nombre: 'Cuartel',            zh: '营房', capa: 'edificio', footprint: [4, 5], tierMin: 3, unico: false, cargoMin: null,    color: '#6a6a5a', altura: 28, desc: 'Barracones de la guarnición: tropa, oficiales y pertrechos.' },
     { id: 'gran-palacio',      nombre: 'Gran Palacio',       zh: '大宮', capa: 'edificio', footprint: [4, 7], tierMin: 6, unico: true,  cargoMin: null,    color: '#c43c1a', altura: 70, desc: 'El palacio mayor: triple alero sobre el eje ceremonial de la casa.' },
+    // ── Compuestos (huella en L, U o anillo · campo `mask`) ────────────────
+    { id: 'ala-l',             nombre: 'Ala en Escuadra',    zh: '曲尺', capa: 'edificio', footprint: [3, 3], mask: [[0,0],[0,1],[0,2],[1,2],[2,2]], tierMin: 2, unico: false, cargoMin: null, color: '#a85a30', altura: 28, desc: 'Dos crujías en ángulo recto que cierran la esquina de un patio.' },
+    { id: 'ala-l-mayor',       nombre: 'Ala en L Mayor',     zh: '大曲尺', capa: 'edificio', footprint: [4, 4], mask: [[0,0],[1,0],[0,1],[1,1],[0,2],[1,2],[2,2],[3,2],[0,3],[1,3],[2,3],[3,3]], tierMin: 3, unico: false, cargoMin: null, color: '#a85a2e', altura: 30, desc: 'Amplia ala en escuadra de doble crujía para flanquear un patio señorial.' },
+    { id: 'patio-u',           nombre: 'Patio en U',         zh: '三合院', capa: 'edificio', footprint: [5, 3], mask: [[0,0],[1,0],[2,0],[3,0],[4,0],[0,1],[4,1],[0,2],[4,2]], tierMin: 3, unico: false, cargoMin: null, color: '#b34528', altura: 30, desc: 'Salón con dos alas laterales que abrazan un patio (三合院).' },
+    { id: 'patio-o',           nombre: 'Patio Cerrado',      zh: '四合院', capa: 'edificio', footprint: [4, 4], mask: [[0,0],[1,0],[2,0],[3,0],[0,1],[3,1],[0,2],[3,2],[0,3],[1,3],[2,3],[3,3]], tierMin: 4, unico: false, cargoMin: null, color: '#b03c1c', altura: 30, desc: 'Recinto de cuatro crujías en torno a un patio central (四合院).' },
+    // ── Rectángulos monumentales ──────────────────────────────────────────
+    { id: 'salon-doble',       nombre: 'Salón Doble',        zh: '重殿', capa: 'edificio', footprint: [4, 8], tierMin: 5, unico: false, cargoMin: null, color: '#bb3c1e', altura: 48, desc: 'Doble salón corrido para las grandes audiencias de la casa.' },
+    { id: 'gran-recinto',      nombre: 'Gran Recinto',       zh: '大院', capa: 'edificio', footprint: [5, 8], tierMin: 6, unico: true,  cargoMin: null, color: '#c43c1a', altura: 56, desc: 'Bloque palaciego monumental: la mayor construcción de la finca.' },
     { id: 'pabellon-te',       nombre: 'Pabellón de Té',     zh: '茶亭', capa: 'edificio', footprint: [1, 1], tierMin: 1, unico: false, cargoMin: null,    color: '#9a6b3a', altura: 26, desc: 'Quiosco abierto para el té, la lectura y la caligrafía.' },
     { id: 'yingbi',            nombre: 'Muro de los Espíritus', zh: '影壁', capa: 'edificio', footprint: [1, 3], tierMin: 2, unico: false, cargoMin: null, color: '#8a6a4a', altura: 20, desc: 'Pantalla ornamentada tras la puerta; da privacidad y detiene a los malos espíritus.' },
     { id: 'chuihuamen',        nombre: 'Puerta Floral',      zh: '垂花門', capa: 'edificio', footprint: [1, 2], tierMin: 3, unico: false, cargoMin: null, color: '#a85a2e', altura: 30, puerta: true, desc: 'Puerta interior tallada que separa el patio público del privado.' },
@@ -82,7 +90,9 @@ const HacBuild = (function () {
     { id: 'jardin',            nombre: 'Jardín',             zh: '园',   capa: 'suelo',    footprint: [2, 3], tierMin: 1, unico: false, cargoMin: null,    color: '#4a7040', altura:  4, desc: 'Jardín de piedras, bambú y sendero de gravilla.' },
     { id: 'jardin-flores',     nombre: 'Jardín de Flores',   zh: '花苑', capa: 'suelo',    footprint: [2, 4], tierMin: 2, unico: false, cargoMin: null,    color: '#7a4a60', altura:  4, desc: 'Macizos de ciruelo, peonías y begonias.' },
     { id: 'estanque',          nombre: 'Estanque de Loto',   zh: '荷池', capa: 'suelo',    footprint: [3, 3], tierMin: 2, unico: false, cargoMin: null,    color: '#2a6070', altura:  2, desc: 'Estanque con flores de loto y carpas doradas.' },
-    { id: 'lago',              nombre: 'Jardín del Lago',    zh: '湖苑', capa: 'suelo',    footprint: [4, 4], tierMin: 3, unico: false, cargoMin: null,    color: '#1a4a6a', altura:  2, desc: 'Gran lago de palacio con puente en zigzag y pabellón sobre el agua.' }
+    { id: 'lago',              nombre: 'Jardín del Lago',    zh: '湖苑', capa: 'suelo',    footprint: [4, 4], tierMin: 3, unico: false, cargoMin: null,    color: '#1a4a6a', altura:  2, desc: 'Gran lago de palacio con puente en zigzag y pabellón sobre el agua.' },
+    // ── Caminos (suelo pavimentado autoconectado · se traza de inicio a fin) ──
+    { id: 'camino',            nombre: 'Camino',             zh: '路',   capa: 'suelo',    footprint: [1, 1], tierMin: 1, unico: false, cargoMin: null,    color: '#cdc2a6', altura:  1, linea: true, desc: 'Sendero enlosado que une patios y pabellones. Traza el inicio y el final como una muralla.' }
   ].map(Object.freeze));
 
   const byId = {};
@@ -93,6 +103,10 @@ const HacBuild = (function () {
   // ¿La construcción es de capa SUELO (plana)? Si no se declara `capa`, se asume
   // 'edificio' (volumétrico). El render usa esto para pintar el suelo por debajo.
   const esSuelo = (id) => { const t = byId[id]; return !!t && t.capa === 'suelo'; };
+  // ¿Se construye con la herramienta de LÍNEA (dos clics: inicio→fin)? Murallas,
+  // portones (sobre muro) y caminos. Lo declara el catálogo con `linea:true`.
+  const _lineaIds = new Set(['muralla', 'camino']);
+  const esLinea = (id) => { const t = byId[id]; return _lineaIds.has(id) || !!(t && t.linea); };
   // ── Categorías para AGRUPAR el selector del admin ─────────────────────────
   // En orden de aparición. La categoría se DERIVA de capa/puerta/tipo, así que
   // toda construcción nueva cae sola en su grupo (suelos, muros, decoración…).
@@ -133,12 +147,33 @@ const HacBuild = (function () {
     return (((c && c.rot) || 0) % 2) ? [base[1], base[0]] : [base[0], base[1]];
   }
 
+  // Rota una celda (dx,dy) DENTRO de la caja base [w,h] según rot (0..3, ×90° en
+  // sentido horario). Las rotaciones impares devuelven coords en una caja [h,w].
+  // La usan tanto celdasOcupadas (lógica) como el generador de sprites (arte): si
+  // ambos rotan igual, el sprite cae exactamente sobre las celdas que ocupa.
+  function rotaCelda(dx, dy, w, h, rot) {
+    rot = ((rot % 4) + 4) % 4;
+    if (rot === 1) return [h - 1 - dy, dx];
+    if (rot === 2) return [w - 1 - dx, h - 1 - dy];
+    if (rot === 3) return [dy, w - 1 - dx];
+    return [dx, dy];
+  }
+
   // Celdas que ocupa una construcción dado su footprint (rotado) y su pos ancla.
+  // Si el tipo declara una `mask` (huella NO rectangular: L, U, anillo…), se usan
+  // esas celdas relativas rotadas; si no, se rellena la caja rectangular entera.
   function celdasOcupadas(c) {
-    const fp = footprintDe(c);
+    const t = tipo(c && c.tipo);
+    const base = t ? t.footprint : [1, 1];
     const gx = (c && c.pos && Number(c.pos[0])) || 0;
     const gy = (c && c.pos && Number(c.pos[1])) || 0;
+    const rot = (c && c.rot) || 0;
     const out = [];
+    if (t && Array.isArray(t.mask)) {
+      t.mask.forEach(m => { const r = rotaCelda(m[0], m[1], base[0], base[1], rot); out.push([gx + r[0], gy + r[1]]); });
+      return out;
+    }
+    const fp = footprintDe(c);
     for (let dx = 0; dx < fp[0]; dx++)
       for (let dy = 0; dy < fp[1]; dy++) out.push([gx + dx, gy + dy]);
     return out;
@@ -310,7 +345,7 @@ const HacBuild = (function () {
   }
 
   return {
-    CONSTRUCCIONES, tipo, esSuelo, CATEGORIAS, categoriaDe, gridDims, slotsDesbloqueados, footprintDe, celdasOcupadas,
+    CONSTRUCCIONES, tipo, esSuelo, esLinea, CATEGORIAS, categoriaDe, gridDims, slotsDesbloqueados, footprintDe, celdasOcupadas,
     dentroDeRejilla, colisiona, construccionEn, puedeColocar, patios, enMuro,
     construccionesValidas, normalizaMapa, MAX_TIER,
     ROLES_PABELLON, rolPabellon, maxPabellones, MIN_PABELLON, regionPabellon, regionValidaPabellon

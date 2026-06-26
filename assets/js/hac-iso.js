@@ -20,7 +20,7 @@ const HacIso = (function () {
   const TOP_MARGIN = 132;             // hueco arriba para edificios altos, murallas y torres
   const PAD_X = 40;                   // margen lateral para murallas y paseo de ronda
   const SPRITE_BASE = 'assets/img/iso/';
-  const SPRITE_VER = '20';  // súbelo al regenerar los PNG (cache-busting)
+  const SPRITE_VER = '21';  // súbelo al regenerar los PNG (cache-busting)
 
   // ── Color helpers (para el placeholder) ─────────────────────────────────
   function hexToRgb(h) {
@@ -358,7 +358,32 @@ const HacIso = (function () {
       const d = B && B.tipo(c.tipo); return !!d && (d.altura || 24) <= 8;
     };
     const flatSort = (c) => { const f = fp(c); return (c.pos[0] + f[0] - 1) + (c.pos[1] + f[1] - 1); };
-    lista.filter(isFlat).sort((a, b) => flatSort(a) - flatSort(b) || a.pos[0] - b.pos[0]).forEach(drawC);
+    // Los caminos NO son sprites: se pintan abajo, como enlosado autoconectado.
+    lista.filter(c => isFlat(c) && c.tipo !== 'camino').sort((a, b) => flatSort(a) - flatSort(b) || a.pos[0] - b.pos[0]).forEach(drawC);
+
+    // ── Caminos (suelo pavimentado que se autoconecta, trazado inicio→fin) ──
+    // Cada celda de camino es una losa-rombo; los bordes que NO lindan con otro
+    // camino llevan bordillo (curb) → el sendero se dibuja con sus orillas y se
+    // une solo en rectas, esquinas, T y cruces, como las murallas pero plano.
+    {
+      const cam = lista.filter(c => c.tipo === 'camino');
+      if (cam.length) {
+        const set = new Set(cam.map(c => c.pos[0] + ',' + c.pos[1]));
+        const isCam = (x, y) => set.has(x + ',' + y);
+        const pave = mix('#cdc2a6', casa, .05), curb = dark(pave, .34), joint = dark(pave, .16);
+        cam.forEach(c => {
+          const gx = c.pos[0], gy = c.pos[1], cx = X(gx, gy), cy = Y(gx, gy);
+          const N = [cx, cy - TILE_H / 2], E = [cx + TILE_W / 2, cy], S = [cx, cy + TILE_H / 2], Wp = [cx - TILE_W / 2, cy];
+          const t = ((gx + gy) & 1) ? -0.025 : 0.025;            // enlosado a damero sutil
+          poly([N, E, S, Wp], t >= 0 ? light(pave, t) : dark(pave, -t));
+          edge(Wp, E, joint);                                    // junta diagonal tenue
+          if (!isCam(gx, gy - 1)) edge(N, E, curb);              // bordillo NE
+          if (!isCam(gx + 1, gy)) edge(E, S, curb);              // bordillo SE
+          if (!isCam(gx, gy + 1)) edge(S, Wp, curb);             // bordillo SO
+          if (!isCam(gx - 1, gy)) edge(Wp, N, curb);             // bordillo NO
+        });
+      }
+    }
 
     // ── Muros interiores autoconectados (院墙) ─────────────────────────────
     // Se dibujan PROCEDURALMENTE (no por sprite) para que se COMBINEN entre sí
@@ -464,6 +489,20 @@ const HacIso = (function () {
       g.putImageData(id, 0, 0);
     } catch (e) { /* getImageData podría fallar por CORS; en ese caso, sin grano */ }
 
+    // ── Escena cacheada para la capa de animación (mecenas paseando) ───────
+    // Guarda el FONDO ya pintado + la lista de estructuras (con su orden de
+    // profundidad) para que HacFolk recomponga por frame: pinta el fondo y
+    // reinserta a los caminantes en el orden correcto, de modo que los muros y
+    // edificios que tienen DELANTE los ocultan (oclusión real, no overlay plano).
+    try {
+      let bg = canvas._hacBgCanvas;
+      if (!bg) { bg = document.createElement('canvas'); canvas._hacBgCanvas = bg; }
+      bg.width = canvas.width; bg.height = canvas.height;
+      bg.getContext('2d').drawImage(canvas, 0, 0);
+      canvas._hacScene = { bg, drawList, before, X, Y, SCALE };
+    } catch (e) { canvas._hacScene = null; }
+    g.setTransform(1, 0, 0, 1, 0, 0);
+
     // Clave de sprite: tipo + rotación 0..3 (cada una con la puerta en su cara).
     function spriteKey(c) {
       const def = B && B.tipo(c.tipo);
@@ -519,7 +558,41 @@ const HacIso = (function () {
     return [gx, gy];
   }
 
-  return { draw, cellAt, TILE_W, TILE_H, SCALE };
+  // ── Frame de animación: repinta el fondo cacheado y reinserta a los ACTORES
+  // (mecenas) en el orden de profundidad, recomponiendo SOLO las estructuras que
+  // tienen delante (las que solapan su caja ampliada) → oclusión correcta sin
+  // redibujar toda la finca. actors = [{ fx, fy, draw(g, lx, ly, SCALE) }].
+  function frame(canvas, actors, overlays) {
+    const sc = canvas && canvas._hacScene;
+    if (!sc || !sc.bg) return;
+    const g = canvas.getContext('2d'); if (!g) return;
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.imageSmoothingEnabled = false;
+    g.drawImage(sc.bg, 0, 0);
+    g.setTransform(sc.SCALE, 0, 0, sc.SCALE, 0, 0);
+    // Caja real (celda) para ORDENAR; caja ampliada hacia delante (+x/+y) para
+    // FILTRAR qué estructuras altas pueden taparlo (un muro alto en la celda de
+    // delante no solapa la celda del actor, pero sí lo cubre en pantalla).
+    const acts = (actors || []).map(a => {
+      const cx = Math.round(a.fx), cy = Math.round(a.fy);
+      return {
+        box: [cx, cy, cx + 1, cy + 1],
+        fbox: [cx - 0.6, cy - 0.6, cx + 3.5, cy + 3.5],
+        draw: () => a.draw(g, sc.X(a.fx, a.fy), sc.Y(a.fx, a.fy), sc.SCALE)
+      };
+    });
+    const ov = (A, B) => !(A[2] <= B[0] || B[2] <= A[0] || A[3] <= B[1] || B[3] <= A[1]);
+    const occ = acts.length ? sc.drawList.filter(d => acts.some(a => ov(d.box, a.fbox))) : [];
+    const all = occ.map(d => ({ box: d.box, draw: d.draw })).concat(acts);
+    all.sort((p, q) => sc.before(p.box, q.box) ? -1 : (sc.before(q.box, p.box) ? 1 : 0));
+    all.forEach(d => d.draw());
+    // Capa SIEMPRE encima (banners de edificio + mecenas seleccionado): se pinta
+    // sin oclusión, en coords lógicas. draw(g, sc) → puede usar sc.X/sc.Y.
+    if (overlays) overlays.forEach(o => o && o.draw && o.draw(g, sc));
+    g.setTransform(1, 0, 0, 1, 0, 0);
+  }
+
+  return { draw, frame, cellAt, TILE_W, TILE_H, SCALE };
 })();
 
 if (typeof window !== 'undefined') window.HacIso = HacIso;

@@ -237,8 +237,107 @@ function drawBuilding(cfg) {
     orn(r0,1); orn(r1,-1);
   }
 
+  // ── Terraza imperial de mármol (须弥座) para edificios grandes ───────────
+  // Sustituye al zócalo de piedra: plinto de MÁRMOL claro, escalinatas con
+  // peldaños tallados (huella + contrahuella) y rampa central (御路), y una
+  // BALAUSTRADA de pilares (望柱) rodeando las caras frontales. Estilo Ciudad
+  // Prohibida (太和殿): el edificio no arranca a ras de suelo, se sube por la terraza.
+  const MB = { t:'#ece7dc', l:'#d3ccbd', r:'#c0b9a8', d:'#a59d8b', edge:'#8f8775', j:'#b3ab99' };
+  const tov = 0.34;                                  // vuelo del plinto (cornisa)
+  const swS = Math.max(0.75, (w-1)*0.30), swE = Math.max(0.75, (h-1)*0.30);
+  const cxS = (w-1)/2, cyE = (h-1)/2;
+  function marbleCourses(yb, xb) {
+    const courses = Math.max(2, Math.round(baseH / 3.5));
+    for (let i = 1; i < courses; i++) { const z = baseH * i / courses;
+      lineP(buf, P(-tov, yb, z), P(w-1+tov, yb, z), MB.j);
+      lineP(buf, P(xb, -tov, z), P(xb, h-1+tov, z), MB.j);
+    }
+    for (let gx = 0; gx <= w-1; gx++) lineP(buf, P(gx, yb, 0), P(gx, yb, baseH), dark(MB.r,.06));
+    for (let gy = 0; gy <= h-1; gy++) lineP(buf, P(xb, gy, 0), P(xb, gy, baseH), dark(MB.r,.06));
+  }
+  function stairFlight(face) {
+    const n = Math.max(4, Math.round(baseH / 1.5)), stepH = baseH / n, dRun = 0.12, D = n * dRun;
+    if (face === 'S') {
+      const sw = swS, cx = cxS, yb = (h-1)+tov;
+      [-1,1].forEach(s => { const xx = cx + s*sw;                    // mejillones laterales
+        fillPoly(buf, [P(xx, yb, baseH), P(xx, yb+D, 0), P(xx, yb, 0)], s>0?MB.r:MB.l);
+        lineP(buf, P(xx, yb, baseH), P(xx, yb+D, 0), MB.edge); });
+      for (let k = n-1; k >= 0; k--) {                              // peldaños (atrás→delante)
+        const yf = yb + D - k*dRun, z1 = (k+1)*stepH, z0 = k*stepH;
+        fillPoly(buf, [P(cx-sw, yf, z0), P(cx+sw, yf, z0), P(cx+sw, yf, z1), P(cx-sw, yf, z1)], MB.r);          // contrahuella
+        fillPoly(buf, [P(cx-sw, yf, z1), P(cx+sw, yf, z1), P(cx+sw, yf-dRun, z1), P(cx-sw, yf-dRun, z1)], MB.t); // huella
+        lineP(buf, P(cx-sw, yf, z1), P(cx+sw, yf, z1), light(MB.t,.12));                                        // mamperlán
+      }
+      const rw = sw*0.32;                                           // rampa central tallada (御路)
+      fillPoly(buf, [P(cx-rw, yb, baseH), P(cx+rw, yb, baseH), P(cx+rw, yb+D, 0), P(cx-rw, yb+D, 0)], mix(MB.t,'#d8c5a4',.28));
+      lineP(buf, P(cx-rw, yb, baseH), P(cx-rw, yb+D, 0), MB.edge);
+      lineP(buf, P(cx+rw, yb, baseH), P(cx+rw, yb+D, 0), MB.edge);
+      for (let k=1;k<n;k++){ const t=k/n; lineP(buf, P(cx-rw, yb+t*D, baseH*(1-t)), P(cx+rw, yb+t*D, baseH*(1-t)), dark(MB.j,.08)); }
+    } else {
+      const sw = swE, cy = cyE, xb = (w-1)+tov;
+      [-1,1].forEach(s => { const yy = cy + s*sw;
+        fillPoly(buf, [P(xb, yy, baseH), P(xb+D, yy, 0), P(xb, yy, 0)], s>0?MB.r:MB.l);
+        lineP(buf, P(xb, yy, baseH), P(xb+D, yy, 0), MB.edge); });
+      for (let k = n-1; k >= 0; k--) {
+        const xf = xb + D - k*dRun, z1 = (k+1)*stepH, z0 = k*stepH;
+        fillPoly(buf, [P(xf, cy-sw, z0), P(xf, cy+sw, z0), P(xf, cy+sw, z1), P(xf, cy-sw, z1)], MB.l);
+        fillPoly(buf, [P(xf, cy-sw, z1), P(xf, cy+sw, z1), P(xf-dRun, cy+sw, z1), P(xf-dRun, cy-sw, z1)], MB.t);
+        lineP(buf, P(xf, cy-sw, z1), P(xf, cy+sw, z1), light(MB.t,.12));
+      }
+      const rw = sw*0.32;
+      fillPoly(buf, [P(xb, cy-rw, baseH), P(xb, cy+rw, baseH), P(xb+D, cy+rw, 0), P(xb+D, cy-rw, 0)], mix(MB.t,'#d8c5a4',.28));
+      lineP(buf, P(xb, cy-rw, baseH), P(xb+D, cy-rw, 0), MB.edge);
+      lineP(buf, P(xb, cy+rw, baseH), P(xb+D, cy+rw, 0), MB.edge);
+      for (let k=1;k<n;k++){ const t=k/n; lineP(buf, P(xb+t*D, cy-rw, baseH*(1-t)), P(xb+t*D, cy+rw, baseH*(1-t)), dark(MB.j,.08)); }
+    }
+  }
+  // Balaustrada (栏杆): hilera de pilares (望柱) con remate redondeado y dos
+  // pasamanos, recorriendo las dos caras frontales (saltando el hueco de la
+  // escalera). Se dibuja la ÚLTIMA (en primer plano, sobre el edificio).
+  function balustrade() {
+    const ph = 5.5, pw = 0.085, yb = (h-1)+tov, xb = (w-1)+tov;
+    const panel = (a, b, fixed, face) => {
+      const pt = (u,z) => face==='S' ? P(u,fixed,z) : P(fixed,u,z);
+      fillPoly(buf, [pt(a,baseH+0.5), pt(b,baseH+0.5), pt(b,baseH+ph-0.9), pt(a,baseH+ph-0.9)], MB.t);
+      lineP(buf, pt(a,baseH+ph-0.9), pt(b,baseH+ph-0.9), light(MB.t,.10));   // pasamanos superior
+      lineP(buf, pt(a,baseH+ph*0.42), pt(b,baseH+ph*0.42), MB.d);            // larguero inferior
+    };
+    const post = (gx,gy) => {
+      prism(gx-pw, gy-pw, gx+pw, gy+pw, 0, baseH, baseH+ph, light(MB.t,.07), MB.l, MB.r, MB.edge);
+      const c = P(gx, gy, baseH+ph);
+      fillEllipse(buf, c[0], c[1]-0.4, 1.5, 1.2, light(MB.t,.13));           // cabeza (望柱头)
+      px(buf, Math.round(c[0]), Math.round(c[1]-1.4), hexToRgb(MB.d), 255);
+    };
+    const run = (n, fixed, face, cx, sw) => {
+      const posts = [];
+      for (let u=0; u<=n+1e-6; u+=0.5) { const gap = u>cx-sw-0.2 && u<cx+sw+0.2; if(!gap) posts.push(u); }
+      for (let i=1;i<posts.length;i++) if (posts[i]-posts[i-1] < 0.75) panel(posts[i-1], posts[i], fixed, face);
+      posts.forEach(u => face==='S' ? post(u, fixed) : post(fixed, u));
+    };
+    run(w-1, yb, 'S', cxS, swS);
+    run(h-1, xb, 'E', cyE, swE);
+  }
+
+  // Compuesto: varias alas rectangulares (L, U, anillo) en un mismo lienzo,
+  // pintadas de atrás hacia delante. Reutiliza base+cuerpo+tejado del edificio.
+  if (cfg.wings) {
+    const order = cfg.wings.slice().sort((a,b)=>(a.x1+a.y1)-(b.x1+b.y1)||(a.x0+a.y0)-(b.x0+b.y0));
+    order.forEach(wg=>{
+      prism(wg.x0,wg.y0,wg.x1,wg.y1, ovB, 0, baseH, PAL.stoneT, dark(PAL.stone,.06), PAL.stone, PAL.stoneD, 'stone');
+      body(wg.x0,wg.y0,wg.x1,wg.y1, baseH, bodyH, wg.door);
+      hipRoof(wg.x0,wg.y0,wg.x1,wg.y1, baseH+bodyH, roofH, roof);
+    });
+    return { buf, ox: OX, oy: OY };
+  }
+
   let z = 0;
-  prism(0,0,w-1,h-1, ovB, z, z+baseH, PAL.stoneT, dark(PAL.stone,.06), PAL.stone, PAL.stoneD, 'stone');
+  if (cfg.stairs) {
+    prism(0,0,w-1,h-1, tov, 0, baseH, MB.t, MB.l, MB.r, MB.edge);   // plinto de mármol
+    marbleCourses((h-1)+tov, (w-1)+tov);
+    stairFlight('S'); stairFlight('E');
+  } else {
+    prism(0,0,w-1,h-1, ovB, z, z+baseH, PAL.stoneT, dark(PAL.stone,.06), PAL.stone, PAL.stoneD, 'stone');
+  }
   z += baseH;
 
   // door: 'x' = puerta en la cara +x (derecha/SE); 'y' = cara +y (izq/SW);
@@ -301,6 +400,7 @@ function drawBuilding(cfg) {
     ins += tierIns;
   });
 
+  if (cfg.stairs) balustrade();      // balaustrada de mármol en primer plano
   return { buf, ox: OX, oy: OY };
 }
 
@@ -319,13 +419,36 @@ const EDIFICIOS = [
   { id:'templo-ancestral', w:3, h:4, roof:'#7a2818', baseH:7, bodyH:18, roofH:15, stories:true, bodyH2:10, roofH2:12 },
   { id:'salon-gran',       w:4, h:3, roof:'#b03818', baseH:7, bodyH:19, roofH:16, stories:true, bodyH2:9,  roofH2:12 },
   { id:'pabellon-gran',    w:3, h:4, roof:'#a85a2e', baseH:6, bodyH:18, roofH:16 },
-  { id:'salon-corte',      w:3, h:6, roof:'#bb3c1e', baseH:7, bodyH:20, roofH:17, stories:true, bodyH2:10, roofH2:13 },
-  { id:'palacio',          w:4, h:6, roof:'#c43c1a', baseH:8, bodyH:22, roofH:18, stories:true, bodyH2:12, roofH2:15 },
+  { id:'salon-corte',      w:3, h:6, roof:'#bb3c1e', baseH:8, bodyH:20, roofH:17, stairs:true, stories:true, bodyH2:10, roofH2:13 },
+  { id:'palacio',          w:4, h:6, roof:'#c43c1a', baseH:9, bodyH:22, roofH:18, stairs:true, stories:true, bodyH2:12, roofH2:15 },
   { id:'salon-largo',      w:3, h:5, roof:'#bb3c1e', baseH:7, bodyH:20, roofH:17, stories:true, bodyH2:10, roofH2:13 },
-  { id:'salon-banquete',   w:3, h:7, roof:'#b83a1c', baseH:7, bodyH:21, roofH:18, stories:true, bodyH2:11, roofH2:14 },
+  { id:'salon-banquete',   w:3, h:7, roof:'#b83a1c', baseH:8, bodyH:21, roofH:18, stairs:true, stories:true, bodyH2:11, roofH2:14 },
   { id:'cuartel',          w:4, h:5, roof:'#6a6a5a', baseH:6, bodyH:15, roofH:12 },
-  { id:'gran-palacio',     w:4, h:7, roof:'#c43c1a', baseH:9, bodyH:24, roofH:19, tier0Ins:0.6, tierIns:0.5,
+  { id:'gran-palacio',     w:4, h:7, roof:'#c43c1a', baseH:10, bodyH:24, roofH:19, stairs:true, tier0Ins:0.6, tierIns:0.5,
+    tiers:[{bodyH:14,roofH:13},{bodyH:11,roofH:11}] },
+  { id:'salon-doble',      w:4, h:8, roof:'#bb3c1e', baseH:9, bodyH:21, roofH:18, stairs:true, stories:true, bodyH2:11, roofH2:14 },
+  { id:'gran-recinto',     w:5, h:8, roof:'#c43c1a', baseH:10, bodyH:24, roofH:20, stairs:true, tier0Ins:0.55, tierIns:0.5,
     tiers:[{bodyH:14,roofH:13},{bodyH:11,roofH:11}] }
+];
+
+// ── Compuestos: L, U y anillo (alas rectangulares unidas en escuadra) ─────
+// `wings` = rectángulos [x0,y0,x1,y1] + cara con puerta. La rotación gira las
+// alas con la MISMA rotaCelda que hac-build, para que el sprite cuadre con la
+// huella. doorParam: 'E'(+x)→'x', 'S'(+y)→'y'; caras traseras (W/N) → ventanas.
+function rotCell(dx,dy,w,h,rot){ rot=((rot%4)+4)%4;
+  if(rot===1)return[h-1-dy,dx]; if(rot===2)return[w-1-dx,h-1-dy]; if(rot===3)return[dy,w-1-dx]; return[dx,dy]; }
+function rotDoorDir(dir,rot){ if(!dir)return null; const s=['E','S','W','N']; return s[(s.indexOf(dir)+rot)%4]; }
+function doorParam(dir){ return dir==='E'?'x':dir==='S'?'y':null; }
+const COMPUESTOS = [
+  { id:'ala-l',       w:3, h:3, roof:'#a85a30', baseH:5, bodyH:16, roofH:13,
+    wings:[ {x0:0,y0:0,x1:0,y1:2,door:'E'}, {x0:0,y0:2,x1:2,y1:2,door:'S'} ] },
+  { id:'ala-l-mayor', w:4, h:4, roof:'#a85a2e', baseH:6, bodyH:17, roofH:14,
+    wings:[ {x0:0,y0:0,x1:1,y1:3,door:'E'}, {x0:2,y0:2,x1:3,y1:3,door:'S'} ] },
+  { id:'patio-u',     w:5, h:3, roof:'#b34528', baseH:6, bodyH:17, roofH:14,
+    wings:[ {x0:0,y0:0,x1:4,y1:0,door:'S'}, {x0:0,y0:0,x1:0,y1:2,door:'E'}, {x0:4,y0:0,x1:4,y1:2,door:null} ] },
+  { id:'patio-o',     w:4, h:4, roof:'#b03c1c', baseH:7, bodyH:18, roofH:15,
+    wings:[ {x0:0,y0:0,x1:3,y1:0,door:'S'}, {x0:0,y0:3,x1:3,y1:3,door:'S'},
+            {x0:0,y0:1,x1:0,y1:2,door:'E'}, {x0:3,y0:1,x1:3,y1:2,door:null} ] }
 ];
 
 // ── Decoración 1×1 (faroles, antorchas, braseros, calderos, estandartes) ──
@@ -815,6 +938,19 @@ EDIFICIOS.forEach(e=>{
     { w:e.h, h:e.w, door:null }   // rot 3: puerta arriba (-y, de espaldas)
   ];
   variants.forEach((v,r)=> save('bld-'+e.id+'-'+r, drawBuilding({ ...e, ...v })));
+});
+
+// Compuestos (L/U/anillo): rota las alas por las 4 orientaciones y hornea.
+COMPUESTOS.forEach(e=>{
+  for (let r=0;r<4;r++){
+    const bw = r%2 ? e.h : e.w, bh = r%2 ? e.w : e.h;
+    const wings = e.wings.map(wg=>{
+      const a=rotCell(wg.x0,wg.y0,e.w,e.h,r), b=rotCell(wg.x1,wg.y1,e.w,e.h,r);
+      return { x0:Math.min(a[0],b[0]), y0:Math.min(a[1],b[1]), x1:Math.max(a[0],b[0]), y1:Math.max(a[1],b[1]),
+               door: doorParam(rotDoorDir(wg.door,r)) };
+    });
+    save('bld-'+e.id+'-'+r, drawBuilding({ ...e, w:bw, h:bh, wings }));
+  }
 });
 
 // Jardines: planos, sin puerta. Las rotaciones impares intercambian w/h

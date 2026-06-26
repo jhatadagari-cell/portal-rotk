@@ -9,7 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700;900&family=Cinzel+Decorative:wght@400;700&family=IM+Fell+English:ital@0;1&family=Noto+Sans+SC:wght@300;400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/chrome.css?v=4">
 <link rel="stylesheet" href="assets/css/main.css">
-<link rel="stylesheet" href="assets/css/admin.css?v=20">
+<link rel="stylesheet" href="assets/css/admin.css?v=21">
 </head>
 <body>
 
@@ -78,7 +78,7 @@
 <script src="assets/js/auth.js?v=2"></script>
 <script src="assets/js/haciendas-data.js?v=8"></script>
 <script src="assets/js/hac-calc.js?v=2"></script>
-<script src="assets/js/hac-build.js?v=18"></script>
+<script src="assets/js/hac-build.js?v=19"></script>
 <script src="assets/js/hac-store.js?v=5"></script>
 <script>
 (function () {
@@ -231,17 +231,18 @@
     }).join('');
     // Tamaño efectivo del edificio elegido con la rotación actual.
     const fpSel = B.footprintDe({ tipo: boardTipo, rot: boardRot });
-    // Herramienta de muro en línea (solo para 'muralla'): dos clics → hilera recta.
-    const muroMode = boardTipo === 'muralla';
+    // Herramienta de LÍNEA (murallas y caminos): dos clics → hilera recta.
+    const muroMode = B.esLinea(boardTipo);
+    const lineaNoun = boardTipo === 'camino' ? 'camino' : 'muro';
     const selTxt = muroMode
-      ? (wallStart ? `inicio del muro [${wallStart[0]}, ${wallStart[1]}]` : '— elige el inicio del muro —')
+      ? (wallStart ? `inicio del ${lineaNoun} [${wallStart[0]}, ${wallStart[1]}]` : `— elige el inicio del ${lineaNoun} —`)
       : (boardSel ? `casilla [${boardSel[0]}, ${boardSel[1]}]` : '— elige una casilla libre —');
     // Validez de la colocación seleccionada (para bloquear "Construir" y avisar).
     const selV = boardSel ? B.puedeColocar({ pos: boardSel, tipo: boardTipo, rot: boardRot }, tier, lista) : { ok: false };
     const noConstruible = !boardSel || !selV.ok;
     const motivoHTML = (!muroMode && boardSel && !selV.ok) ? `<span class="adm-board-bad">✕ ${esc(selV.motivo)}</span>` : '';
-    const buildLabel = muroMode ? (wallStart ? 'Coloca el final de la muralla' : 'Elige el inicio del muro') : 'Construir';
-    const buildDisabled = muroMode || noConstruible;   // el muro se construye con el 2º clic, no con el botón
+    const buildLabel = muroMode ? (wallStart ? `Coloca el final del ${lineaNoun}` : `Elige el inicio del ${lineaNoun}`) : 'Construir';
+    const buildDisabled = muroMode || noConstruible;   // la línea se construye con el 2º clic, no con el botón
     // Sprite del edificio elegido en su rotación (muestra la PUERTA girada).
     const tdef = B.tipo(boardTipo) || {};
     const pvRot = (((boardRot % 4) + 4) % 4);
@@ -250,9 +251,10 @@
     const duenoOpts = (sel) => `<option value=""${sel ? '' : ' selected'}>Sin dueño</option>` +
       (h.miembros || []).map(m => `<option value="${esc(m.id)}"${sel === m.id ? ' selected' : ''}>${esc(m.nombre)}</option>`).join('');
 
-    // Las murallas (que pueden ser muchas) se agrupan en una sola fila resumen.
+    // Murallas y caminos (que pueden ser muchos) se agrupan en filas resumen.
     const murallas = lista.filter(c => c.tipo === 'muralla');
-    const items = lista.filter(c => c.tipo !== 'muralla').map(c => {
+    const caminos = lista.filter(c => c.tipo === 'camino');
+    const items = lista.filter(c => c.tipo !== 'muralla' && c.tipo !== 'camino').map(c => {
       const t = B.tipo(c.tipo);
       const fuera = !B.dentroDeRejilla(c, tier);
       const f = B.footprintDe(c);
@@ -268,6 +270,11 @@
           <span class="adm-build-zh" style="--c:#8a8070">院墙</span>
           <span class="adm-build-name">Muro Interior <i>×${murallas.length}</i></span>
           <button class="adm-build-delall" title="Borrar todas las murallas">✕ todas</button>
+        </li>` : '')
+    + (caminos.length ? `<li class="adm-build-item">
+          <span class="adm-build-zh" style="--c:#cdc2a6">路</span>
+          <span class="adm-build-name">Camino <i>×${caminos.length}</i></span>
+          <button class="adm-build-delall-cam" title="Borrar todos los caminos">✕ todos</button>
         </li>` : '');
 
     const movingC = boardMovePos ? lista.find(c => c.pos[0] === boardMovePos[0] && c.pos[1] === boardMovePos[1]) : null;
@@ -284,7 +291,7 @@
       : deleteMode
       ? 'Clic en cualquier construcción para quitarla (sin confirmar). Pulsa Esc o «Salir» para terminar.'
       : muroMode
-      ? 'Muro en línea: clic en el INICIO y luego clic en el FINAL (recto, sin diagonal) → se construye la hilera. Esc para cancelar.'
+      ? `${lineaNoun === 'camino' ? 'Camino' : 'Muro'} en línea: clic en el INICIO y luego clic en el FINAL (recto, sin diagonal) → se traza la hilera. Esc para cancelar.`
       : 'Pasa el ratón por la rejilla para ver la huella; haz clic en un edificio para moverlo; usa ✕ en la lista para quitarlo.';
 
     // ── Pabellones (patios temáticos cerrados por murallas) ──
@@ -333,9 +340,11 @@
             ${motivoHTML}
           </form>
           <figure class="adm-build-pv">
-            <img src="assets/img/iso/${pvFile}.png?v=20" alt="${esc(tdef.nombre || '')}">
+            ${tdef.linea
+              ? `<div class="adm-pv-swatch" style="--c:${esc(tdef.color || '#cdc2a6')}" aria-hidden="true"></div>`
+              : `<img src="assets/img/iso/${pvFile}.png?v=21" alt="${esc(tdef.nombre || '')}">`}
             <figcaption><b>${esc(tdef.zh || '')} ${esc(tdef.nombre || '')}</b> · ${fpSel[0]}×${fpSel[1]}
-              <span class="adm-pv-door">┤ el borde dorado en la rejilla = la cara/puerta</span></figcaption>
+              <span class="adm-pv-door">${tdef.linea ? 'se traza de inicio a fin, como una muralla' : '┤ el borde dorado en la rejilla = la cara/puerta'}</span></figcaption>
           </figure>
         </div>
         <p class="adm-board-tip">${boardTip}</p>
@@ -516,7 +525,7 @@
       // Elegir tipo de edificio (preview de tamaño se actualiza al re-render).
       const ts = document.getElementById('board-tipo');
       if (ts) ts.addEventListener('change', () => { boardTipo = ts.value; wallStart = null; boardSel = null; pabMode = false; pabPending = null; render(); });
-      const muroMode = boardTipo === 'muralla';
+      const muroMode = HacBuild.esLinea(boardTipo);
       // Celdas de una línea recta ortogonal a→b (sin diagonal) + su rotación.
       const lineCells = (a, b) => {
         const dx = b[0] - a[0], dy = b[1] - a[1], out = [];
@@ -590,7 +599,7 @@
         clearMarks();
         if (!wallStart) return;
         lineCells(wallStart, end).cells.forEach(([gx, gy]) => {
-          const ok = HacBuild.puedeColocar({ pos: [gx, gy], tipo: 'muralla', rot: 0 }, tierNow, h.mapa.construcciones).ok;
+          const ok = HacBuild.puedeColocar({ pos: [gx, gy], tipo: boardTipo, rot: 0 }, tierNow, h.mapa.construcciones).ok;
           const el = cellAt(gx, gy); if (el) el.classList.add(ok ? 'pv-ok' : 'pv-bad');
         });
       }
@@ -720,6 +729,12 @@
         h.mapa.construcciones = h.mapa.construcciones.filter(c => c.tipo !== 'muralla');
         saveHacienda(h); render();
       });
+      const delAllCam = document.querySelector('#adm-detail .adm-build-delall-cam');
+      if (delAllCam) delAllCam.addEventListener('click', () => {
+        if (!confirm('¿Borrar todos los caminos de la finca?')) return;
+        h.mapa.construcciones = h.mapa.construcciones.filter(c => c.tipo !== 'camino');
+        saveHacienda(h); render();
+      });
 
       // Elegir casilla libre · soltar en modo mover · trazar muralla en línea.
       document.querySelectorAll('#adm-detail .adm-cell.free').forEach(b =>
@@ -739,7 +754,7 @@
             const { cells, rot } = lineCells(wallStart, [gx, gy]);          // 2º clic: hilera recta
             let n = 0;
             cells.forEach(([cx, cy]) => {
-              const c = { pos: [cx, cy], tipo: 'muralla', rot, dueno: null, nivel: 1 };
+              const c = { pos: [cx, cy], tipo: boardTipo, rot, dueno: null, nivel: 1 };
               if (HacBuild.puedeColocar(c, tierNow, h.mapa.construcciones).ok) { h.mapa.construcciones.push(c); n++; }
             });
             wallStart = null;

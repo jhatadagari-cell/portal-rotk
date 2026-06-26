@@ -1,0 +1,50 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+body{background:#222;margin:0;padding:20px;font-family:sans-serif;color:#ccc}
+canvas{image-rendering:pixelated;display:block;margin:10px 0;background:#333}
+button{margin:4px;padding:6px 10px}
+</style></head><body>
+<div id="ctrls"></div>
+<canvas id="c"></canvas>
+<script src="assets/js/haciendas-data.js"></script>
+<script src="assets/js/hac-build.js"></script>
+<script src="assets/js/iso-sprites-meta.js"></script>
+<script src="assets/js/hac-iso.js"></script>
+<script>
+const tier = 3, color = '#c9a84c';
+// Escena: un salón grande (3x3) y una muralla interior E-W con portón al SE.
+const scenes = {
+  'muro por delante (sur) del edificio': [
+    {pos:[4,4], tipo:'salon', rot:0},   // ocupa 4-6 x 4-6
+    {pos:[3,7], tipo:'muralla'},{pos:[4,7], tipo:'muralla'},{pos:[5,7], tipo:'porton'},
+    {pos:[6,7], tipo:'muralla'},{pos:[7,7], tipo:'muralla'},{pos:[8,7], tipo:'muralla'},
+  ],
+  'muro al ESTE del edificio (col adyacente)': [
+    {pos:[4,4], tipo:'salon', rot:0},   // ocupa 4-6 x 4-6
+    {pos:[7,3], tipo:'muralla'},{pos:[7,4], tipo:'muralla'},{pos:[7,5], tipo:'porton'},
+    {pos:[7,6], tipo:'muralla'},{pos:[7,7], tipo:'muralla'},
+  ],
+  'muro pegado al edificio (N,S,E,O)': [
+    {pos:[5,5], tipo:'salon', rot:0},
+    {pos:[3,5], tipo:'muralla'},{pos:[4,5], tipo:'muralla'},   // oeste
+    {pos:[8,6], tipo:'muralla'},{pos:[9,6], tipo:'muralla'},   // este
+    {pos:[6,3], tipo:'muralla'},{pos:[6,4], tipo:'muralla'},   // norte
+    {pos:[6,8], tipo:'muralla'},{pos:[6,9], tipo:'muralla'},   // sur
+  ],
+  'palacio grande + muro delante (sur)': [
+    {pos:[3,3], tipo:'cuartel', rot:0},  // 4x5 ocupa 3-6 x 3-7
+    {pos:[2,8], tipo:'muralla'},{pos:[3,8], tipo:'muralla'},{pos:[4,8], tipo:'porton'},
+    {pos:[5,8], tipo:'muralla'},{pos:[6,8], tipo:'muralla'},{pos:[7,8], tipo:'muralla'},
+  ],
+};
+function showScene(name){
+  const mapa = {v:1, construcciones: scenes[name]};
+  HacIso.draw(document.getElementById('c'), {mapa, tier, color, pabellones:[]});
+}
+const ctr = document.getElementById('ctrls');
+Object.keys(scenes).forEach(n=>{
+  const b=document.createElement('button'); b.textContent=n; b.onclick=()=>showScene(n); ctr.appendChild(b);
+});
+showScene(Object.keys(scenes)[0]);
+window._show = showScene;
+</script>
+</body></html>

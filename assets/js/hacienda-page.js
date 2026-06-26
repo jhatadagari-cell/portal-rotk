@@ -64,10 +64,16 @@
       <section class="hacp-finca">
         <h2 class="hacp-finca-ttl">${esc(tInfo.zh)} · ${esc(tInfo.nombre)}</h2>
         <p class="hacp-finca-sub">El solar de la casa · vista en planta · rejilla ${dims[0]}×${dims[1]}</p>
-        <div class="hacp-iso-wrap" id="hacp-iso-wrap">
-          <canvas class="hacp-iso" id="hacp-iso"
-            role="img" aria-label="Plano isométrico de la finca de ${esc(h.nombre)}"></canvas>
-          <span class="hacp-iso-hint">arrastra para mover · pellizca o ctrl+rueda para zoom</span>
+        <div class="hacp-iso-area">
+          <div class="hacp-iso-wrap" id="hacp-iso-wrap">
+            <canvas class="hacp-iso" id="hacp-iso"
+              role="img" aria-label="Plano isométrico de la finca de ${esc(h.nombre)}"></canvas>
+            <span class="hacp-iso-hint">arrastra para mover · pellizca o ctrl+rueda para zoom</span>
+          </div>
+          <aside class="hacp-folk-panel" id="hacp-folk-panel" hidden>
+            <h3 class="hacp-folk-ttl">Mecenas en la finca</h3>
+            <ul class="hacp-folk-list" id="hacp-folk-list"></ul>
+          </aside>
         </div>
       </section>
       <div class="hacp-detail">${HacRender.panelHTML(h)}</div>`;
@@ -82,10 +88,12 @@
     if (iso && window.HacIso) {
       const pabellones = (window.HacStore && HacStore.pabellones) ? HacStore.pabellones(h.id) : [];
       HacIso.draw(iso, { mapa: h.mapa, tier, color, pabellones });
+      const vp = document.getElementById('hacp-iso-wrap');
       // Visor navegable: arrastrar (pan) + pellizco/ctrl-rueda (zoom). Las fincas
       // grandes ya no caben en pantalla, así que se exploran moviéndose dentro.
-      const vp = document.getElementById('hacp-iso-wrap');
-      enablePanZoom(vp, iso);
+      const cam = enablePanZoom(vp, iso);
+      // Mecenas paseando + listado lateral con cámara y banners de edificio.
+      if (window.HacFolk) setupFolk(iso, vp, cam, h, tier, color);
       // Nombre del pabellón al pasar el ratón (mapa celda→pabellón en vivo).
       const pabPorCelda = {};
       if (window.HacBuild) pabellones.forEach(p => {
@@ -131,6 +139,21 @@
     vp.addEventListener('pointerup', end); vp.addEventListener('pointercancel', end);
     fitView();
     window.addEventListener('resize', fitView);
+
+    // Lleva la cámara a un punto LÓGICO (lx,ly) del plano, centrándolo en el
+    // visor con una transición suave. Lo usa el listado de mecenas.
+    const S = (window.HacIso && HacIso.SCALE) || 2;
+    function centerOn(lx, ly) {
+      const vw = vp.clientWidth, vh = vp.clientHeight;
+      const tgX = vw / 2 - lx * S * scale, tgY = vh / 2 - ly * S * scale;
+      const x0 = tx, y0 = ty, t0 = performance.now(), dur = 420;
+      (function anim(t) {
+        const k = Math.min(1, (t - t0) / dur), e = k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+        tx = x0 + (tgX - x0) * e; ty = y0 + (tgY - y0) * e; apply();
+        if (k < 1) requestAnimationFrame(anim);
+      })(t0);
+    }
+    return { centerOn };
   }
 
   // Tooltip con el nombre del pabellón al pasar el ratón por su patio. Mapea el
@@ -152,6 +175,76 @@
       tip.style.top = (e.clientY + 16) + 'px';
     });
     vp.addEventListener('mouseleave', hide);
+  }
+
+  // Mecenas paseando + panel lateral. Arranca HacFolk, pinta el listado (al
+  // hacer clic en un nombre la cámara va a él y lo resalta) y gestiona el clic
+  // en los banners 匾額 de los edificios (popup con quién hay dentro).
+  function setupFolk(iso, vp, cam, h, tier, color) {
+    const panel = document.getElementById('hacp-folk-panel');
+    const listEl = document.getElementById('hacp-folk-list');
+    if (!panel || !listEl) return;
+    let pop = null;
+    const hidePop = () => { if (pop) { pop.remove(); pop = null; } };
+
+    function gotoMember(id) {
+      hidePop();
+      HacFolk.select(id);
+      const p = HacFolk.position(id);
+      if (p && cam && cam.centerOn) cam.centerOn(p[0], p[1]);
+      renderList();
+    }
+
+    function renderList() {
+      const items = HacFolk.list();
+      if (!items.length) { panel.hidden = true; return; }
+      panel.hidden = false;
+      const sel = HacFolk.selected();
+      listEl.innerHTML = items.map(m => `
+        <li><button class="hacp-folk-item${m.id === sel ? ' on' : ''}" data-id="${esc(m.id)}">
+          <span class="hacp-folk-dot" style="--c:${esc(m.color)}"></span>
+          <span class="hacp-folk-info">
+            <span class="hacp-folk-name">${esc(m.name)}</span>
+            <span class="hacp-folk-state">${m.inside ? '⌂ en ' + esc(m.inside) : 'paseando'}</span>
+          </span>
+        </button></li>`).join('');
+      listEl.querySelectorAll('.hacp-folk-item').forEach(b =>
+        b.addEventListener('click', () => gotoMember(b.dataset.id)));
+    }
+
+    HacFolk.start(iso, { mapa: h.mapa, tier, color, miembros: h.miembros, onState: renderList });
+    renderList();
+
+    // Popup con la gente que hay dentro de un edificio (al pulsar su banner).
+    function showPop(x, y, sign) {
+      hidePop();
+      pop = document.createElement('div');
+      pop.className = 'hacp-folk-pop';
+      pop.innerHTML = `<div class="hacp-folk-pop-ttl">${esc(sign.label)} · ${sign.ids.length}</div>` +
+        sign.ids.map((id, i) => `<button class="hacp-folk-pop-name" data-id="${esc(id)}">${esc(sign.names[i])}</button>`).join('');
+      document.body.appendChild(pop);
+      pop.style.left = Math.min(x + 12, window.innerWidth - pop.offsetWidth - 8) + 'px';
+      pop.style.top = (y + 12) + 'px';
+      pop.querySelectorAll('.hacp-folk-pop-name').forEach(b => b.addEventListener('click', () => gotoMember(b.dataset.id)));
+    }
+
+    // Distinguimos TAP (clic) de arrastre (pan) por el desplazamiento del puntero.
+    const S = (window.HacIso && HacIso.SCALE) || 2;
+    let downAt = null, moved = false;
+    vp.addEventListener('pointerdown', (e) => { downAt = [e.clientX, e.clientY]; moved = false; });
+    vp.addEventListener('pointermove', (e) => { if (downAt && Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 5) moved = true; });
+    vp.addEventListener('pointerup', (e) => {
+      const was = downAt; downAt = null;
+      if (!was || moved) return;
+      const r = iso.getBoundingClientRect();
+      if (!r.width || !r.height) return;
+      const lx = (e.clientX - r.left) / r.width * iso.width / S;
+      const ly = (e.clientY - r.top) / r.height * iso.height / S;
+      const hit = (iso._hacSigns || []).find(s => lx >= s.lx && lx <= s.lx + s.w && ly >= s.ly && ly <= s.ly + s.h);
+      if (hit) showPop(e.clientX, e.clientY, hit);
+      else { hidePop(); HacFolk.select(null); renderList(); }
+    });
+    document.addEventListener('pointerdown', (e) => { if (pop && !pop.contains(e.target) && !vp.contains(e.target)) hidePop(); });
   }
 
   // Espera a la carga de Supabase (HacStore.ready) y al DOM antes de pintar.

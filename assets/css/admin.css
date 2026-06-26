@@ -221,6 +221,9 @@
 .adm-build-pv figcaption{font-family:'Noto Sans SC',sans-serif;font-size:10.5px;color:var(--parch2);opacity:.75;margin-top:5px;line-height:1.4}
 .adm-build-pv b{color:var(--gold);font-weight:700}
 .adm-build-pv .adm-pv-door{display:block;font-size:9.5px;color:var(--gold);opacity:.8;letter-spacing:.04em;margin-top:2px}
+.adm-build-pv .adm-pv-swatch{width:96px;height:48px;margin:8px auto 0;border-radius:3px;
+  background:repeating-linear-gradient(135deg,var(--c) 0 8px,rgba(0,0,0,.16) 8px 10px);
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.3)}
 .adm-board-bad{font-family:'Noto Sans SC',sans-serif;font-size:11px;color:#e09088;align-self:center}
 .adm-btn:disabled{opacity:.4;cursor:not-allowed}
 .adm-build-rot{cursor:pointer;background:none;border:1px solid rgba(201,168,76,.25);border-radius:3px;color:var(--gold);font-size:13px;line-height:1;padding:3px 6px;transition:all .14s;flex-shrink:0}

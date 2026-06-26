@@ -106,6 +106,48 @@
   font-family:'Noto Sans SC',sans-serif; font-size:10.5px; color:var(--parch2);
   background:rgba(0,0,0,.45); padding:3px 7px; border-radius:10px; opacity:.7;
 }
+/* ── Plano + panel lateral de mecenas paseando ────────────────────────── */
+.hacp-iso-area{ display:flex; gap:12px; align-items:stretch; margin:18px auto 0; text-align:left; }
+.hacp-iso-area .hacp-iso-wrap{ flex:1 1 auto; margin:0; }
+.hacp-folk-panel{
+  flex:0 0 196px; width:196px; align-self:stretch;
+  max-height:clamp(360px,70vh,820px); overflow-y:auto;
+  background:rgba(14,11,7,.6); border:1px solid rgba(201,168,76,.18); border-radius:6px; padding:10px 9px;
+}
+.hacp-folk-ttl{
+  font-family:'Cinzel Decorative',serif; font-size:11px; letter-spacing:.08em;
+  text-transform:uppercase; color:var(--hac,var(--gold)); opacity:.85; margin:0 0 8px; text-align:center;
+}
+.hacp-folk-list{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:4px; }
+.hacp-folk-item{
+  width:100%; display:flex; align-items:center; gap:8px; cursor:pointer; text-align:left;
+  background:rgba(255,255,255,.02); border:1px solid transparent; border-radius:5px; padding:6px 8px;
+  color:var(--parch); font-family:'Noto Sans SC',sans-serif;
+}
+.hacp-folk-item:hover{ background:rgba(201,168,76,.10); border-color:rgba(201,168,76,.22); }
+.hacp-folk-item.on{ background:rgba(201,168,76,.16); border-color:var(--hac,var(--gold)); }
+.hacp-folk-dot{ flex:none; width:10px; height:10px; border-radius:50%; background:var(--c,#c9a84c); box-shadow:0 0 0 1px rgba(0,0,0,.4); }
+.hacp-folk-info{ display:flex; flex-direction:column; min-width:0; }
+.hacp-folk-name{ font-size:12.5px; color:var(--parch); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.hacp-folk-state{ font-size:10px; color:var(--parch2); opacity:.7; }
+.hacp-folk-pop{
+  position:fixed; z-index:70; min-width:120px; max-width:220px;
+  background:rgba(18,14,9,.96); border:1px solid rgba(201,168,76,.4); border-radius:5px;
+  box-shadow:0 4px 14px rgba(0,0,0,.5); padding:6px; display:flex; flex-direction:column; gap:2px;
+}
+.hacp-folk-pop-ttl{
+  font-family:'Noto Serif SC',serif; font-size:11px; color:var(--gold); font-weight:700;
+  padding:2px 6px 5px; border-bottom:1px solid rgba(201,168,76,.2); margin-bottom:2px;
+}
+.hacp-folk-pop-name{
+  text-align:left; background:none; border:0; cursor:pointer; color:var(--parch);
+  font-family:'Noto Sans SC',sans-serif; font-size:12px; padding:5px 6px; border-radius:4px;
+}
+.hacp-folk-pop-name:hover{ background:rgba(201,168,76,.14); color:#fff; }
+@media (max-width:720px){
+  .hacp-iso-area{ flex-direction:column; }
+  .hacp-folk-panel{ flex:none; width:auto; max-height:200px; }
+}
 /* Tooltip con el nombre del pabellón al pasar el ratón por su patio. */
 .hacp-pab-tip{
   position:fixed; z-index:60; display:none; pointer-events:none;
