@@ -238,3 +238,32 @@
 .adm-reasignar{font-family:'Noto Sans SC',sans-serif;font-size:11px;color:var(--parch);background:rgba(0,0,0,.3);border:1px solid rgba(201,168,76,.22);border-radius:3px;padding:4px 6px;max-width:140px}
 .adm-build-del{cursor:pointer;background:none;border:none;color:#a05050;font-size:14px;transition:color .14s;flex-shrink:0}
 .adm-build-del:hover{color:#e09090}
+
+/* ── Pestañas del panel (Haciendas / Tareas) ─────────────────────────────── */
+.adm-tabs{display:flex;gap:4px;margin:18px 0 0;border-bottom:1px solid rgba(201,168,76,.2)}
+.adm-tab{cursor:pointer;background:none;border:1px solid transparent;border-bottom:none;border-radius:5px 5px 0 0;
+  font-family:'Cinzel Decorative',serif;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--parch2);opacity:.7;padding:9px 16px;transition:all .14s}
+.adm-tab:hover{color:var(--gold);opacity:1}
+.adm-tab.on{color:var(--gold);opacity:1;background:rgba(201,168,76,.08);border-color:rgba(201,168,76,.25);border-bottom:1px solid var(--ink);margin-bottom:-1px}
+.adm-tabpanel[hidden]{display:none}
+
+/* ── Pestaña Tareas ──────────────────────────────────────────────────────── */
+.adm-tareas{max-width:760px}
+.adm-tareas-seed{font-family:'Noto Sans SC',sans-serif;font-size:12px;color:#e0c08a;background:rgba(201,168,76,.07);border:1px solid rgba(201,168,76,.25);border-radius:4px;padding:12px 14px;margin-bottom:16px;line-height:1.6}
+.adm-tareas-seed code{font-family:monospace;color:var(--gold);background:rgba(0,0,0,.3);padding:1px 5px;border-radius:3px}
+.adm-tareas-seed .adm-btn{margin-left:8px}
+.adm-tareas-pick{display:flex;align-items:center;gap:10px;font-family:'Cinzel Decorative',serif;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+.adm-tareas-pick select{font-family:'Noto Sans SC',sans-serif;font-size:13px;text-transform:none;letter-spacing:normal;color:var(--parch);background:rgba(0,0,0,.3);border:1px solid rgba(201,168,76,.25);border-radius:3px;padding:7px 9px}
+.adm-tareas-lugar{font-family:'Noto Sans SC',sans-serif;font-size:11px;text-transform:none;letter-spacing:normal;color:var(--parch2);opacity:.75}
+.adm-tareas-lugar b{color:var(--gold)}
+.adm-tareas-note{font-family:'Noto Sans SC',sans-serif;font-size:11px;color:var(--parch2);opacity:.65;margin:10px 0 14px}
+.adm-tareas-note i{color:var(--gold);opacity:.85;font-style:italic}
+.adm-tarea-list{list-style:none;display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.adm-tarea-head{display:grid;grid-template-columns:1fr 1.3fr 90px 30px;gap:10px;font-family:'Cinzel Decorative',serif;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);opacity:.55;padding:0 4px}
+.adm-tarea-row,.adm-tarea-add{display:grid;grid-template-columns:1fr 1.3fr 90px 30px;gap:10px;align-items:center;background:rgba(255,255,255,.022);border:1px solid rgba(255,255,255,.06);border-left:2px solid var(--gold);border-radius:2px;padding:7px 10px}
+.adm-tarea-add{margin-top:10px;border-left-color:rgba(201,168,76,.5);background:rgba(201,168,76,.04)}
+.adm-tarea-row input,.adm-tarea-add input{font-family:'Noto Sans SC',sans-serif;font-size:12px;color:var(--parch);background:rgba(0,0,0,.3);border:1px solid rgba(201,168,76,.2);border-radius:3px;padding:6px 8px;width:100%}
+.adm-tarea-row input:focus,.adm-tarea-add input:focus{outline:none;border-color:var(--gold)}
+.adm-tarea-dur{display:flex;align-items:center;gap:5px;font-family:'Noto Sans SC',sans-serif;font-size:11px;color:var(--parch2)}
+.adm-tarea-dur input{width:54px;text-align:right}
+.t-del{padding:3px 0;width:28px}

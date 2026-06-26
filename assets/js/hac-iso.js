@@ -582,10 +582,21 @@ const HacIso = (function () {
       };
     });
     const ov = (A, B) => !(A[2] <= B[0] || B[2] <= A[0] || A[3] <= B[1] || B[3] <= A[1]);
+    // occ conserva el ORDEN GLOBAL de drawList (filter preserva el orden), que es
+    // EXACTAMENTE el del fondo cacheado. NO se re-ordena: hacerlo sobre un
+    // subconjunto distinto cada frame reordenaba los muros adyacentes (su caja
+    // empata bajo `before`, que no es orden total) → parpadeo/solape en las
+    // murallas y patios. En su lugar, insertamos a cada actor en su hueco de
+    // profundidad SIN tocar el orden de las estructuras.
     const occ = acts.length ? sc.drawList.filter(d => acts.some(a => ov(d.box, a.fbox))) : [];
-    const all = occ.map(d => ({ box: d.box, draw: d.draw })).concat(acts);
-    all.sort((p, q) => sc.before(p.box, q.box) ? -1 : (sc.before(q.box, p.box) ? 1 : 0));
-    all.forEach(d => d.draw());
+    const render = occ.slice();
+    acts.sort((p, q) => sc.before(p.box, q.box) ? -1 : (sc.before(q.box, p.box) ? 1 : 0));
+    acts.forEach(a => {
+      let idx = render.length;
+      for (let i = 0; i < render.length; i++) { if (sc.before(a.box, render[i].box)) { idx = i; break; } }
+      render.splice(idx, 0, a);
+    });
+    render.forEach(d => d.draw());
     // Capa SIEMPRE encima (banners de edificio + mecenas seleccionado): se pinta
     // sin oclusión, en coords lógicas. draw(g, sc) → puede usar sc.X/sc.Y.
     if (overlays) overlays.forEach(o => o && o.draw && o.draw(g, sc));

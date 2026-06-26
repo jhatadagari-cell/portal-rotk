@@ -125,6 +125,57 @@ const HacBuild = (function () {
     if (_decorIds.has(id)) return 'decoracion';
     return 'edificio';
   };
+
+  // ── Tareas de los edificios ─────────────────────────────────────────────
+  // Una TAREA por tipo de edificio: la actividad que un mecenas "va a hacer"
+  // cuando entra (los muros, puertas, suelos y decoración NO tienen tarea).
+  // De momento es FLAVOR puramente VISUAL (no da puntos); cuando se añada la
+  // gamificación de misiones, esto migrará a una tabla en Supabase.
+  //   verbo → gerundio para la línea de actividad ("Entrenando").
+  //   lugar → nombre con artículo en minúscula ("el cuartel"), para componer
+  //           "de camino al cuartel" / "Entrenando en el cuartel".
+  const TAREAS = Object.freeze({
+    pabellon:           { verbo: 'Departiendo',             lugar: 'el pabellón' },
+    torre:              { verbo: 'Vigilando',               lugar: 'la torre de guarda' },
+    pagoda:             { verbo: 'Contemplando las vistas', lugar: 'la pagoda' },
+    galeria:            { verbo: 'Conversando',             lugar: 'la galería' },
+    armeria:            { verbo: 'Revisando el armamento',  lugar: 'la armería' },
+    ala:                { verbo: 'Deliberando',             lugar: 'el ala señorial' },
+    templo:             { verbo: 'Orando',                  lugar: 'el templo' },
+    'gran-pagoda':      { verbo: 'Contemplando las vistas', lugar: 'la gran pagoda' },
+    salon:              { verbo: 'Presidiendo audiencia',   lugar: 'el salón principal' },
+    'templo-ancestral': { verbo: 'Honrando a los ancestros',lugar: 'el salón de los ancestros' },
+    'salon-gran':       { verbo: 'En audiencia',            lugar: 'el gran salón' },
+    'pabellon-gran':    { verbo: 'En el banquete',          lugar: 'el gran pabellón' },
+    'salon-corte':      { verbo: 'En audiencia de corte',   lugar: 'el salón de la corte' },
+    palacio:            { verbo: 'En ceremonia',            lugar: 'el palacio' },
+    'salon-largo':      { verbo: 'En audiencia',            lugar: 'el salón alargado' },
+    'salon-banquete':   { verbo: 'En el banquete',          lugar: 'el salón de banquetes' },
+    cuartel:            { verbo: 'Entrenando',              lugar: 'el cuartel' },
+    'gran-palacio':     { verbo: 'En ceremonia',            lugar: 'el gran palacio' },
+    'ala-l':            { verbo: 'Deliberando',             lugar: 'el ala en escuadra' },
+    'ala-l-mayor':      { verbo: 'Deliberando',             lugar: 'el ala en L' },
+    'patio-u':          { verbo: 'Descansando',             lugar: 'el patio' },
+    'patio-o':          { verbo: 'Descansando',             lugar: 'el patio' },
+    'salon-doble':      { verbo: 'En audiencia',            lugar: 'el salón doble' },
+    'gran-recinto':     { verbo: 'En ceremonia',            lugar: 'el gran recinto' },
+    'pabellon-te':      { verbo: 'Tomando el té',           lugar: 'el pabellón de té' }
+  });
+  // Tarea de un tipo de edificio | null si no es un edificio "visitable".
+  // Fallback genérico para edificios nuevos sin entrada explícita. (El catálogo
+  // TAREAS es la SEMILLA; las tareas vivas se administran en BD vía HacTareas.)
+  const tareaDe = (id) => {
+    if (categoriaDe(id) !== 'edificio') return null;
+    return TAREAS[id] || { verbo: 'Atendiendo sus asuntos', lugar: 'el ' + ((byId[id] && byId[id].nombre || 'edificio').toLowerCase()) };
+  };
+  // "Lugar" articulado de un edificio para la línea de actividad ("el cuartel"):
+  // se queda SIEMPRE en cliente (deriva del nombre); solo el verbo/duración de
+  // cada tarea viven en BD. null si el tipo no es un edificio.
+  const lugarDe = (id) => {
+    if (categoriaDe(id) !== 'edificio') return null;
+    return (TAREAS[id] && TAREAS[id].lugar) || ('el ' + ((byId[id] && byId[id].nombre || 'edificio').toLowerCase()));
+  };
+
   // Dimensiones [ancho, alto] de la rejilla de un nivel: del campo `grid` de
   // HAC_TIERS, que puede ser [w,h] (rectangular) o un número (cuadrado); si
   // falta, fallback cuadrado 2+nivel. Las haciendas son ALARGADAS (h>w).
@@ -345,7 +396,7 @@ const HacBuild = (function () {
   }
 
   return {
-    CONSTRUCCIONES, tipo, esSuelo, esLinea, CATEGORIAS, categoriaDe, gridDims, slotsDesbloqueados, footprintDe, celdasOcupadas,
+    CONSTRUCCIONES, tipo, esSuelo, esLinea, CATEGORIAS, categoriaDe, TAREAS, tareaDe, lugarDe, gridDims, slotsDesbloqueados, footprintDe, celdasOcupadas,
     dentroDeRejilla, colisiona, construccionEn, puedeColocar, patios, enMuro,
     construccionesValidas, normalizaMapa, MAX_TIER,
     ROLES_PABELLON, rolPabellon, maxPabellones, MIN_PABELLON, regionPabellon, regionValidaPabellon

@@ -205,7 +205,7 @@
           <span class="hacp-folk-dot" style="--c:${esc(m.color)}"></span>
           <span class="hacp-folk-info">
             <span class="hacp-folk-name">${esc(m.name)}</span>
-            <span class="hacp-folk-state">${m.inside ? '⌂ en ' + esc(m.inside) : 'paseando'}</span>
+            <span class="hacp-folk-state${m.inside ? ' inside' : ''}">${m.inside ? '⌂ ' : ''}${esc(m.activity || 'Paseando por la finca')}</span>
           </span>
         </button></li>`).join('');
       listEl.querySelectorAll('.hacp-folk-item').forEach(b =>
@@ -251,6 +251,9 @@
   function init() {
     const host = document.getElementById('hacp-content');
     if (host) host.innerHTML = `<p class="hacp-loading">Cargando hacienda…</p>`;
+    // Precarga el catálogo de tareas (en paralelo) para que las actividades de
+    // los mecenas usen el verbo/duración configurados desde el primer momento.
+    if (window.HacTareas) HacTareas.ready();
     HacStore.ready().then(render);
   }
 

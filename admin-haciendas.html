@@ -9,7 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700;900&family=Cinzel+Decorative:wght@400;700&family=IM+Fell+English:ital@0;1&family=Noto+Sans+SC:wght@300;400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/chrome.css?v=4">
 <link rel="stylesheet" href="assets/css/main.css">
-<link rel="stylesheet" href="assets/css/admin.css?v=21">
+<link rel="stylesheet" href="assets/css/admin.css?v=22">
 </head>
 <body>
 
@@ -40,6 +40,13 @@
     </div>
   </header>
 
+  <nav class="adm-tabs" id="adm-tabs">
+    <button class="adm-tab on" data-tab="haciendas">Haciendas</button>
+    <button class="adm-tab" data-tab="tareas">Tareas de edificios</button>
+  </nav>
+
+  <!-- ══ Pestaña: Haciendas ══ -->
+  <div class="adm-tabpanel" id="tab-haciendas">
   <p class="adm-warn adm-info">Los cambios se guardan en <b>Supabase</b> y se ven al instante en la página pública de cada hacienda.</p>
 
   <div class="adm-toolbar">
@@ -71,6 +78,13 @@
     <!-- Detalle de la hacienda seleccionada -->
     <section class="adm-detail" id="adm-detail"></section>
   </div>
+  </div><!-- /tab-haciendas -->
+
+  <!-- ══ Pestaña: Tareas de edificios ══ -->
+  <div class="adm-tabpanel" id="tab-tareas" hidden>
+    <p class="adm-warn adm-info">Catálogo <b>global</b> de tareas: lo que hace un mecenas dentro de cada tipo de edificio y cuánto tarda. Igual para todas las haciendas. Varias tareas por edificio (al entrar, elige una al azar).</p>
+    <div class="adm-tareas" id="adm-tareas"></div>
+  </div>
 </main>
 
 <div id="chrome-footer"></div>
@@ -78,8 +92,9 @@
 <script src="assets/js/auth.js?v=2"></script>
 <script src="assets/js/haciendas-data.js?v=8"></script>
 <script src="assets/js/hac-calc.js?v=2"></script>
-<script src="assets/js/hac-build.js?v=19"></script>
+<script src="assets/js/hac-build.js?v=21"></script>
 <script src="assets/js/hac-store.js?v=5"></script>
+<script src="assets/js/hac-tareas.js?v=1"></script>
 <script>
 (function () {
   'use strict';
@@ -108,6 +123,8 @@
 
   // Carga inicial de las haciendas desde Supabase antes de pintar.
   await HacStore.ready();
+  // Catálogo global de tareas (para la pestaña «Tareas»). Degrada a semilla.
+  if (window.HacTareas) await HacTareas.ready();
 
   const { haciendaPuntos, tierDePuntos, progresoHacia, rangoDePuntos, clampTier } = HacCalc;
   const RANGOS = (typeof HAC_RANGOS !== 'undefined') ? HAC_RANGOS : [];
@@ -127,6 +144,7 @@
   let deleteMode = false; // modo borrar: clic en una construcción la elimina al instante
   let pabMode = false;   // modo delimitar pabellón: hover resalta el área cerrada
   let pabPending = null; // { cells:[[gx,gy],…] } área elegida pendiente de bautizar
+  let tareaTipoSel = null; // tipo de edificio elegido en la pestaña «Tareas»
 
   // Normaliza una hacienda: asegura ids de miembros y campos por defecto.
   function norm(h) {
@@ -816,6 +834,115 @@
 
   function render() { renderList(); renderDetail(); }
 
+  // ════════════════════════════════════════════════════════════════════════
+  // Pestaña «Tareas de edificios» — CRUD del catálogo global (HacTareas)
+  // ════════════════════════════════════════════════════════════════════════
+  function onTareaError(accion) {
+    return (err) => {
+      alert('No se pudo ' + accion + ' la tarea en Supabase: ' + (err && err.message || err));
+      HacTareas.reload().then(renderTareas);
+    };
+  }
+
+  function renderTareas() {
+    const host = document.getElementById('adm-tareas');
+    if (!host || !window.HacTareas || !window.HacBuild) return;
+    const B = HacBuild;
+    const tipos = B.CONSTRUCCIONES.filter(t => B.categoriaDe(t.id) === 'edificio');
+    if (!tareaTipoSel || !tipos.some(t => t.id === tareaTipoSel)) tareaTipoSel = tipos[0] && tipos[0].id;
+    const isSeed = HacTareas.isSeed();
+    const dis = isSeed ? ' disabled' : '';
+
+    const seedWarn = isSeed
+      ? `<div class="adm-tareas-seed">⚠ La tabla <b>edificio_tareas</b> está vacía o no existe. Ejecuta <code>supabase/edificio-tareas.sql</code> en Supabase (recomendado), o vuelca aquí el catálogo de ejemplo:
+          <button class="adm-btn adm-btn-gold adm-btn-sm" id="btn-tareas-seed">Volcar catálogo a la BD</button></div>`
+      : '';
+
+    const sel = `<label class="adm-tareas-pick">Edificio
+      <select id="tareas-tipo">${tipos.map(t => `<option value="${esc(t.id)}"${t.id === tareaTipoSel ? ' selected' : ''}>${esc(t.zh)} ${esc(t.nombre)}</option>`).join('')}</select>
+      <span class="adm-tareas-lugar">· lugar: <b>${esc(B.lugarDe(tareaTipoSel) || '')}</b></span></label>`;
+
+    const tareas = HacTareas.byTipo(tareaTipoSel);
+    const rows = tareas.map(t => `
+      <li class="adm-tarea-row" data-id="${esc(t.id)}">
+        <input class="t-nombre" value="${esc(t.nombre)}" placeholder="Nombre (Entrenar)"${dis}>
+        <input class="t-verbo" value="${esc(t.verbo)}" placeholder="Verbo · gerundio (Entrenando)"${dis}>
+        <span class="adm-tarea-dur"><input class="t-dur" type="number" min="1" max="600" value="${t.duracionSeg}"${dis}> seg</span>
+        <button class="adm-btn adm-btn-danger adm-btn-sm t-del" title="Borrar tarea"${dis}>✕</button>
+      </li>`).join('');
+
+    const lugar = B.lugarDe(tareaTipoSel) || 'el edificio';
+    const ejemplo = tareas[0] ? `${esc(tareas[0].verbo)} en ${esc(lugar)}` : 'Verbo + en ' + esc(lugar);
+
+    host.innerHTML = `${seedWarn}${sel}
+      <p class="adm-tareas-note">Al entrar, el mecenas elige una de estas tareas y se queda dentro su duración. Vista de actividad: «<i>${ejemplo}</i>».</p>
+      <ul class="adm-tarea-list">
+        <li class="adm-tarea-head"><span>Nombre</span><span>Verbo (línea de actividad)</span><span>Duración</span><span></span></li>
+        ${rows || '<li class="adm-empty">Sin tareas para este edificio. Añade una abajo.</li>'}
+      </ul>
+      <form class="adm-tarea-add" id="form-tarea-add">
+        <input name="nombre" placeholder="Nombre (Entrenar)" required${dis}>
+        <input name="verbo" placeholder="Verbo · gerundio (Entrenando)" required${dis}>
+        <span class="adm-tarea-dur"><input name="dur" type="number" min="1" max="600" value="30"${dis}> seg</span>
+        <button type="submit" class="adm-btn adm-btn-gold adm-btn-sm"${dis}>+ Añadir</button>
+      </form>`;
+
+    wireTareas();
+  }
+
+  function wireTareas() {
+    const ts = document.getElementById('tareas-tipo');
+    if (ts) ts.addEventListener('change', () => { tareaTipoSel = ts.value; renderTareas(); });
+
+    const seedBtn = document.getElementById('btn-tareas-seed');
+    if (seedBtn) seedBtn.addEventListener('click', () => {
+      seedBtn.disabled = true;
+      HacTareas.seedToDb().then(renderTareas).catch(onTareaError('volcar el catálogo'));
+    });
+
+    document.querySelectorAll('#adm-tareas .adm-tarea-row').forEach(row => {
+      const id = row.dataset.id;
+      const commit = () => {
+        HacTareas.update({
+          id,
+          nombre: row.querySelector('.t-nombre').value.trim(),
+          verbo: row.querySelector('.t-verbo').value.trim(),
+          duracionSeg: Math.max(1, Number(row.querySelector('.t-dur').value) || 30)
+        }).catch(onTareaError('guardar'));
+      };
+      row.querySelectorAll('input').forEach(inp => inp.addEventListener('change', commit));
+      row.querySelector('.t-del').addEventListener('click', () => {
+        if (!confirm('¿Borrar esta tarea?')) return;
+        HacTareas.remove(id).catch(onTareaError('borrar'));
+        renderTareas();
+      });
+    });
+
+    const fa = document.getElementById('form-tarea-add');
+    if (fa) fa.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const f = e.target;
+      const nombre = f.nombre.value.trim(), verbo = f.verbo.value.trim();
+      if (!nombre || !verbo) return;
+      HacTareas.add({ tipo: tareaTipoSel, nombre, verbo, duracionSeg: Math.max(1, Number(f.dur.value) || 30), orden: HacTareas.byTipo(tareaTipoSel).length })
+        .catch(onTareaError('crear'));
+      renderTareas();
+    });
+  }
+
+  // Conmutación de pestañas (Haciendas / Tareas).
+  function wireTabs() {
+    const tabs = document.getElementById('adm-tabs');
+    if (!tabs) return;
+    tabs.querySelectorAll('.adm-tab').forEach(b => b.addEventListener('click', () => {
+      tabs.querySelectorAll('.adm-tab').forEach(x => x.classList.toggle('on', x === b));
+      const which = b.dataset.tab;
+      document.getElementById('tab-haciendas').hidden = which !== 'haciendas';
+      document.getElementById('tab-tareas').hidden = which !== 'tareas';
+      if (which === 'tareas') renderTareas();
+    }));
+  }
+
   // Esc cancela el modo mover desde cualquier punto.
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
@@ -874,6 +1001,7 @@
   const first = HacStore.all()[0];
   selectedId = (qId && HacStore.get(qId)) ? qId : (first ? first.id : null);
   render();
+  wireTabs();
   }
 
   // Si el arranque falla (red, sesión, caché vieja…), mostramos el error en
