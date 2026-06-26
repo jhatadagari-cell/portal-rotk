@@ -33,6 +33,22 @@ const HacIso = (function () {
   // ── Precarga de sprites ─────────────────────────────────────────────────
   const META = (typeof window !== 'undefined' && window.ISO_SPRITES_META) || null;
   const SPRITES = {};
+  let _NT = null;
+  function noiseT() {
+    if (!_NT) { _NT = new Int8Array(4096); for (let k = 0; k < 4096; k++) { const s = Math.sin((k & 63) * 12.9898 + (k >> 6) * 78.233) * 43758.5453; _NT[k] = Math.round(((s - Math.floor(s)) - 0.5) * 6); } }
+    return _NT;
+  }
+  function applyNoise(g, x0, y0, w, h, W2, H2) {
+    x0 = Math.max(0, x0 | 0); y0 = Math.max(0, y0 | 0);
+    w = Math.min(W2 - x0, w | 0); h = Math.min(H2 - y0, h | 0);
+    if (w <= 0 || h <= 0) return;
+    const NT = noiseT(), id = g.getImageData(x0, y0, w, h), d = id.data;
+    for (let y = 0; y < h; y++) { const row = ((y0 + y) & 63) << 6; for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 4; if (d[i + 3] < 16) continue;
+      const j = NT[row | ((x0 + x) & 63)]; d[i] += j; d[i + 1] += j; d[i + 2] += j;
+    } }
+    g.putImageData(id, x0, y0);
+  }
   let spritesReady = false, preloadStarted = false;
   const pending = new Map();   // canvas → opts (para re-render al cargar)
 
@@ -574,6 +590,13 @@ const HacIso = (function () {
       .sort((a, b) => flatSort(a) - flatSort(b) || a.pos[0] - b.pos[0])
       .forEach(drawBaseSprite);
 
+    let bgFloor = null;
+    try {
+      bgFloor = canvas._hacBgFloor || (canvas._hacBgFloor = document.createElement('canvas'));
+      bgFloor.width = canvas.width; bgFloor.height = canvas.height;
+      bgFloor.getContext('2d').drawImage(canvas, 0, 0);
+    } catch (e) { bgFloor = null; }
+
     drawList.sort((p, q) => before(p.box, q.box) ? -1 : (before(q.box, p.box) ? 1 : 0));
     drawList.forEach(d => d.draw());
 
@@ -585,16 +608,7 @@ const HacIso = (function () {
     // reciben un grano leve que unifica el conjunto.
     try {
       g.setTransform(1, 0, 0, 1, 0, 0);
-      // Tabla de ruido 64×64 (evita un sin() por píxel → rápido en fincas grandes).
-      const NT = new Int8Array(4096);
-      for (let k = 0; k < 4096; k++) { const s = Math.sin((k & 63) * 12.9898 + (k >> 6) * 78.233) * 43758.5453; NT[k] = Math.round(((s - Math.floor(s)) - 0.5) * 6); }
-      const id = g.getImageData(0, 0, canvas.width, canvas.height), d = id.data, CW = canvas.width, CH = canvas.height;
-      for (let y = 0; y < CH; y++) { const row = (y & 63) << 6; for (let x = 0; x < CW; x++) {
-        const i = (y * CW + x) * 4; if (d[i + 3] < 16) continue;
-        const j = NT[row | (x & 63)];
-        d[i] += j; d[i + 1] += j; d[i + 2] += j;                  // (clamp implícito Uint8ClampedArray)
-      } }
-      g.putImageData(id, 0, 0);
+      applyNoise(g, 0, 0, canvas.width, canvas.height, canvas.width, canvas.height);
     } catch (e) { /* getImageData podría fallar por CORS; en ese caso, sin grano */ }
 
     // ── Escena cacheada para la capa de animación (mecenas paseando) ───────
@@ -607,7 +621,7 @@ const HacIso = (function () {
       if (!bg) { bg = document.createElement('canvas'); canvas._hacBgCanvas = bg; }
       bg.width = canvas.width; bg.height = canvas.height;
       bg.getContext('2d').drawImage(canvas, 0, 0);
-      canvas._hacScene = { bg, drawList, before, X, Y, SCALE };
+      canvas._hacScene = { bg, bgFloor, drawList, before, X, Y, SCALE };
     } catch (e) { canvas._hacScene = null; }
     g.setTransform(1, 0, 0, 1, 0, 0);
 
@@ -695,29 +709,40 @@ const HacIso = (function () {
       return {
         box: [cx, cy, cx + 1, cy + 1],
         fbox: [cx - 0.6, cy - 0.6, cx + 3.5, cy + 3.5],
+        lx: sc.X(a.fx, a.fy), ly: sc.Y(a.fx, a.fy),
         draw: () => a.draw(g, sc.X(a.fx, a.fy), sc.Y(a.fx, a.fy), sc.SCALE)
       };
     });
     const ov = (A, B) => !(A[2] <= B[0] || B[2] <= A[0] || A[3] <= B[1] || B[3] <= A[1]);
-    // occ conserva el ORDEN GLOBAL de drawList (filter preserva el orden), que es
-    // EXACTAMENTE el del fondo cacheado. NO se re-ordena: hacerlo sobre un
-    // subconjunto distinto cada frame reordenaba los muros adyacentes (su caja
-    // empata bajo `before`, que no es orden total) → parpadeo/solape en las
-    // murallas y patios. En su lugar, insertamos a cada actor en su hueco de
-    // profundidad SIN tocar el orden de las estructuras.
-    // Solo se repintan estructuras DELANTE de algún actor; repintar las de detrás
-    // las dibujaba sobre su vecina delantera (glitch de muros/edificios).
-    const occ = acts.length ? sc.drawList.filter(d => acts.some(a => sc.before(a.box, d.box) && ov(d.box, a.fbox))) : [];
-    const render = occ.slice();
-    acts.sort((p, q) => sc.before(p.box, q.box) ? -1 : (sc.before(q.box, p.box) ? 1 : 0));
-    acts.forEach(a => {
-      let idx = render.length;
-      for (let i = 0; i < render.length; i++) { if (sc.before(a.box, render[i].box)) { idx = i; break; } }
-      render.splice(idx, 0, a);
-    });
-    render.forEach(d => d.draw());
-    // Capa SIEMPRE encima (banners de edificio + mecenas seleccionado): se pinta
-    // sin oclusión, en coords lógicas. draw(g, sc) → puede usar sc.X/sc.Y.
+    // Recompón SOLO la zona alrededor de cada actor: restaura suelo+zócalos
+    // limpios (sin estructuras), repinta las estructuras CERCANAS una vez (back y
+    // front) + el actor en su profundidad, y reaplica el grano. Así no se repinta
+    // ninguna estructura sobre su propia copia (lo que acumulaba bordes y hacía que
+    // los muros se vieran "raros" al pasar un mecenas).
+    if (acts.length && sc.bgFloor) {
+      const S = sc.SCALE;
+      const rects = acts.map(a => [Math.floor((a.lx - 18) * S), Math.floor((a.ly - 36) * S), Math.ceil(36 * S), Math.ceil(44 * S)]);
+      const near = sc.drawList.filter(d => acts.some(a => ov(d.box, [a.box[0] - 3, a.box[1] - 3, a.box[2] + 3, a.box[3] + 3])));
+      const render = near.slice();
+      acts.sort((p, q) => sc.before(p.box, q.box) ? -1 : (sc.before(q.box, p.box) ? 1 : 0));
+      acts.forEach(a => {
+        let idx = render.length;
+        for (let i = 0; i < render.length; i++) { if (sc.before(a.box, render[i].box)) { idx = i; break; } }
+        render.splice(idx, 0, a);
+      });
+      g.save();
+      g.setTransform(1, 0, 0, 1, 0, 0);
+      g.beginPath();
+      rects.forEach(r => g.rect(r[0], r[1], r[2], r[3]));
+      g.clip();
+      g.drawImage(sc.bgFloor, 0, 0);
+      g.setTransform(S, 0, 0, S, 0, 0);
+      render.forEach(d => d.draw());
+      g.restore();
+      g.setTransform(1, 0, 0, 1, 0, 0);
+      rects.forEach(r => applyNoise(g, r[0], r[1], r[2], r[3], canvas.width, canvas.height));
+      g.setTransform(S, 0, 0, S, 0, 0);
+    }
     if (overlays) overlays.forEach(o => o && o.draw && o.draw(g, sc));
     g.setTransform(1, 0, 0, 1, 0, 0);
   }
