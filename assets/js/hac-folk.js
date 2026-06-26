@@ -622,9 +622,12 @@ const HacFolk = (function () {
     walkers.forEach(w => { if (w.insideId) (inside[w.insideId] = inside[w.insideId] || []).push(w); });
 
     const actors = [], overlays = [], signs = [];
+    const FEET = HacChar ? HacChar.H - 5 : 51, bannerDy = Math.round(FEET * SPRITE_DISP / SCALE) - 1;
     walkers.forEach(w => {
       if (w.id === selectedId) return;                 // el seleccionado va en overlay (encima)
-      actors.push({ fx: w.fx, fy: w.fy, draw: (g, lx, ly) => drawWalker(g, lx, ly, w, { banner: !w.insideId }) });
+      actors.push({ fx: w.fx, fy: w.fy, draw: (g, lx, ly) => drawWalker(g, lx, ly, w, { banner: false }) });
+      // El nombre va en overlay (siempre encima, sin recorte de región).
+      if (!w.insideId) overlays.push({ draw: (g) => { const p = logic(w.fx, w.fy); banner(g, p[0], p[1] - bannerDy, w.name, false); } });
     });
 
     // Banners 匾額 de los edificios ocupados (capa overlay) + rects para hit-test.
