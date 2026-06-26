@@ -139,7 +139,9 @@
       "Read(//private/tmp/**)",
       "Bash(ls -la haciendas.html assets/js/haciendas*.js assets/css/haciendas.css)",
       "Bash(ls -la to-do/)",
-      "Skill(run)"
+      "Skill(run)",
+      "Bash(python --version)",
+      "Bash(py --version)"
     ]
   },
   "enabledPlugins": {
