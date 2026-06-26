@@ -39,7 +39,7 @@ const HAC_TIERS = [
     nivel: 2,
     nombre: 'Mansión',
     zh: '府',
-    umbral: 150,
+    umbral: 15000,
     grid: [12, 20],
     maxMiembros: 12,
     desc: 'Una casa establecida, residencia digna de un dignatario.'
@@ -48,7 +48,7 @@ const HAC_TIERS = [
     nivel: 3,
     nombre: 'Hacienda Mayor',
     zh: '邸',
-    umbral: 500,
+    umbral: 50000,
     grid: [24, 20],
     maxMiembros: 20,
     desc: 'Una gran finca señorial. Solo las casas más sostenidas la alcanzan.'
@@ -57,7 +57,7 @@ const HAC_TIERS = [
     nivel: 4,
     nombre: 'Casa Solariega',
     zh: '第',
-    umbral: 1200,
+    umbral: 120000,
     grid: [28, 30],
     maxMiembros: 32,
     desc: 'Un recinto amurallado con varios patios y pabellones de servicio.'
@@ -66,7 +66,7 @@ const HAC_TIERS = [
     nivel: 5,
     nombre: 'Palacio',
     zh: '宮',
-    umbral: 3000,
+    umbral: 300000,
     grid: [34, 40],
     maxMiembros: 48,
     desc: 'Una residencia palaciega: salones, jardines y torres de vigilancia.'
@@ -75,7 +75,7 @@ const HAC_TIERS = [
     nivel: 6,
     nombre: 'Corte Señorial',
     zh: '殿',
-    umbral: 6500,
+    umbral: 650000,
     grid: [42, 52],
     maxMiembros: 72,
     desc: 'La cumbre: una corte digna de un rey, alargada patio tras patio.'
@@ -99,7 +99,7 @@ const HAC_RANGOS = [
     nombre: 'Comensal',
     zh: '食客',
     tier: 1,
-    umbral: 1,
+    umbral: 100,
     sala: 'La mesa de la casa',
     desc: 'Recibido en la hacienda: come de su mesa y porta su nombre.'
   },
@@ -108,7 +108,7 @@ const HAC_RANGOS = [
     nombre: 'Discípulo',
     zh: '門生',
     tier: 1,
-    umbral: 5,
+    umbral: 500,
     sala: 'Patio de los discípulos',
     desc: 'Formado bajo el estandarte de la hacienda.'
   },
@@ -117,7 +117,7 @@ const HAC_RANGOS = [
     nombre: 'Vasallo',
     zh: '家臣',
     tier: 1,
-    umbral: 15,
+    umbral: 1500,
     sala: 'Ala de los vasallos',
     desc: 'Jura servicio a la casa y cumple una función en ella.'
   },
@@ -126,7 +126,7 @@ const HAC_RANGOS = [
     nombre: 'Consejero',
     zh: '幕賓',
     tier: 2,
-    umbral: 30,
+    umbral: 3000,
     sala: 'Pabellón del consejero',
     desc: 'Su voz pesa en las decisiones de la hacienda.'
   },
@@ -135,7 +135,7 @@ const HAC_RANGOS = [
     nombre: 'Intendente',
     zh: '主簿',
     tier: 2,
-    umbral: 45,
+    umbral: 4500,
     sala: 'Despacho del intendente',
     desc: 'Lleva los registros, las cuentas y la intendencia de la casa.'
   },
@@ -144,7 +144,7 @@ const HAC_RANGOS = [
     nombre: 'Pilar de la Casa',
     zh: '棟梁',
     tier: 3,
-    umbral: 60,
+    umbral: 6000,
     sala: 'Salón principal',
     desc: 'Sostiene el linaje: su nombre se graba en el salón principal.'
   },
@@ -153,7 +153,7 @@ const HAC_RANGOS = [
     nombre: 'Mayordomo Mayor',
     zh: '長史',
     tier: 3,
-    umbral: 100,
+    umbral: 10000,
     sala: 'Cámara del mayordomo',
     desc: 'Dirige al servicio y la administración diaria de la hacienda.'
   },
@@ -162,7 +162,7 @@ const HAC_RANGOS = [
     nombre: 'Comandante',
     zh: '都督',
     tier: 4,
-    umbral: 150,
+    umbral: 15000,
     sala: 'Sala de mando',
     desc: 'Manda la guardia y las tropas al servicio de la casa.'
   },
@@ -171,7 +171,7 @@ const HAC_RANGOS = [
     nombre: 'Gobernador',
     zh: '太守',
     tier: 4,
-    umbral: 210,
+    umbral: 21000,
     sala: 'Pabellón del gobernador',
     desc: 'Administra los dominios y territorios de la hacienda.'
   },
@@ -180,7 +180,7 @@ const HAC_RANGOS = [
     nombre: 'Ministro',
     zh: '九卿',
     tier: 5,
-    umbral: 300,
+    umbral: 30000,
     sala: 'Salón de los ministros',
     desc: 'Voz de peso en el gobierno de la casa, par de la corte.'
   },
@@ -189,7 +189,7 @@ const HAC_RANGOS = [
     nombre: 'Marqués',
     zh: '列侯',
     tier: 5,
-    umbral: 430,
+    umbral: 43000,
     sala: 'Ala del marqués',
     desc: 'Ennoblecido por la casa; porta título y feudo propios.'
   },
@@ -198,7 +198,7 @@ const HAC_RANGOS = [
     nombre: 'Gran Excelencia',
     zh: '三公',
     tier: 6,
-    umbral: 620,
+    umbral: 62000,
     sala: 'Salón de la corte',
     desc: 'Una de las tres dignidades supremas de la casa.'
   },
@@ -207,7 +207,7 @@ const HAC_RANGOS = [
     nombre: 'Duque del Reino',
     zh: '國公',
     tier: 6,
-    umbral: 850,
+    umbral: 85000,
     sala: 'Salón ducal',
     desc: 'La cumbre del escalafón: pilar y sangre del reino.'
   }

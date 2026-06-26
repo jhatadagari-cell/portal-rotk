@@ -180,8 +180,12 @@ const HacFolk = (function () {
       const pj = (m.personajeId && window.HacPersonajes && HacPersonajes.get) ? HacPersonajes.get(m.personajeId) : null;
       const aptitud = pj ? pj.aptitud : '';
       const aspecto = pj ? (pj.aspecto || {}) : { robe: color };
+      const cargo = (window.HacCalc && HacCalc.rangoDePuntos) ? HacCalc.rangoDePuntos(Number(m.puntos) || 0, tier) : null;
+      const aptDef = (aptitud && window.HacPersonajeDefs) ? HacPersonajeDefs.aptitud(aptitud) : null;
       return {
         id: m.id, name: m.nombre || '', color, aptitud, aspecto,
+        cargoZh: cargo ? cargo.zh : '', cargoNombre: cargo ? cargo.nombre : '', cargoTier: cargo ? (cargo.tier || 1) : 0,
+        aptZh: aptDef ? aptDef.zh : '',
         fx: start[0], fy: start[1], tx: start[0], ty: start[1], moving: false, dir: 'S',
         state: 'paseando', path: null, goalBid: null, insideId: null, task: null,
         homeBid, home, taskTimer: 0, strollTimer: rng(2, 6), wait: Math.random() * 1.2,
@@ -193,11 +197,31 @@ const HacFolk = (function () {
     });
   }
 
-  // Elige un edificio a visitar: con frecuencia el propio; si no, uno al azar.
+  // Edificios afines a cada aptitud y edificios "nobles" (para cargos altos).
+  const APT_PREF = {
+    guerrero: ['cuartel', 'armeria', 'torre'],
+    caudillo: ['cuartel', 'armeria', 'torre', 'salon-corte'],
+    erudito: ['templo', 'pabellon-te', 'galeria', 'templo-ancestral'],
+    administrador: ['salon', 'ala', 'galeria', 'ala-l'],
+    estratega: ['torre', 'pabellon-te', 'templo'],
+    canciller: ['salon', 'salon-corte', 'templo-ancestral', 'palacio']
+  };
+  const NOBLE = new Set(['salon', 'salon-gran', 'salon-corte', 'salon-largo', 'salon-banquete', 'salon-doble', 'palacio', 'gran-palacio', 'gran-recinto', 'templo-ancestral', 'ala', 'ala-l', 'ala-l-mayor', 'patio-u', 'patio-o']);
+
+  // Elige un edificio a visitar, sesgado por su aptitud (edificio temático) y su
+  // cargo (los altos frecuentan los salones nobles). Con frecuencia, el propio.
   function chooseBuilding(w) {
     if (!wk.visitable.length) return null;
-    if (w.homeBid && Math.random() < 0.6) { const b = wk.buildings.get(w.homeBid); if (b && b.visitable) return b; }
-    return wk.visitable[rnd(wk.visitable.length)];
+    if (w.homeBid && Math.random() < 0.5) { const b = wk.buildings.get(w.homeBid); if (b && b.visitable) return b; }
+    const pref = APT_PREF[w.aptitud] || [], noble = (w.cargoTier || 0) >= 2;
+    const weighted = [];
+    wk.visitable.forEach(b => {
+      let wt = 1;
+      if (pref.indexOf(b.tipo) >= 0) wt += 4;
+      if (noble && NOBLE.has(b.tipo)) wt += 3;
+      for (let i = 0; i < wt; i++) weighted.push(b);
+    });
+    return weighted.length ? weighted[rnd(weighted.length)] : wk.visitable[rnd(wk.visitable.length)];
   }
 
   // Intenta arrancar una visita: traza el camino a la puerta y entra en 'yendo'.
@@ -539,7 +563,7 @@ const HacFolk = (function () {
       g.drawImage(cv, dx, dy, Math.round(HacChar.W * disp), Math.round(HacChar.H * disp));
       g.restore();
     }
-    if (o.banner !== false) banner(g, lx, ly - Math.round(FEET * disp / SCALE) + 1, w.name, o.highlight);
+    if (o.banner !== false) banner(g, lx, ly - Math.round(FEET * disp / SCALE) + 1, w, o.highlight);
   }
 
   // Rectángulo redondeado (coords lógicas).
@@ -573,10 +597,13 @@ const HacFolk = (function () {
     for (let i = 0; i < lines.length; i++) g.fillText(lines[i], lx, by + padY + lh * i + lh / 2);
   }
 
-  function banner(g, cx, topY, name, hot) {
-    name = String(name || '').slice(0, 16);
+  function banner(g, cx, topY, w, hot) {
+    const name = String(w.name || '').slice(0, 16);
+    const cargo = w.cargoZh || '', apt = w.aptZh || '';
     g.font = '700 7.5px "Noto Serif SC","Noto Sans SC",serif';
-    const padX = 4, tw = g.measureText(name).width, bw = Math.max(14, tw + padX * 2), bh = 11;
+    const cw = cargo ? g.measureText(cargo + ' ').width : 0, nw = g.measureText(name).width;
+    const padX = 4, aptW = apt ? 11 : 0, bh = 12;
+    const bw = Math.max(16, aptW + cw + nw + padX * 2);
     const bx = cx - bw / 2, by = topY - bh - 7;
     g.strokeStyle = '#6a4a28'; g.lineWidth = 1.4; g.beginPath(); g.moveTo(cx, topY); g.lineTo(cx, by); g.stroke();
     g.fillStyle = hot ? '#b8331f' : '#9c2b1e';
@@ -586,8 +613,17 @@ const HacFolk = (function () {
     g.closePath(); g.fill();
     g.strokeStyle = hot ? '#ffe082' : '#741c12'; g.lineWidth = 1; g.stroke();
     g.strokeStyle = '#d8b65a'; g.lineWidth = 1; g.strokeRect(bx + 1.3, by + 1.3, bw - 2.6, bh - 2.6);
-    g.fillStyle = '#f6ecd6'; g.textAlign = 'center'; g.textBaseline = 'middle';
-    g.fillText(name, cx, by + bh / 2 + 0.4);
+    let tx = bx + padX;
+    g.textBaseline = 'middle';
+    const ty = by + bh / 2 + 0.4;
+    if (apt) {                                   // chip del sello de aptitud
+      g.fillStyle = '#241a12'; g.fillRect(bx + 1.8, by + 1.8, aptW - 1, bh - 3.6);
+      g.fillStyle = '#7fc9a0'; g.textAlign = 'center'; g.fillText(apt, bx + 1.8 + (aptW - 1) / 2, ty);
+      tx = bx + aptW + padX - 2;
+    }
+    g.textAlign = 'left';
+    if (cargo) { g.fillStyle = '#f0d98a'; g.fillText(cargo + ' ', tx, ty); }   // cargo en oro
+    g.fillStyle = '#f6ecd6'; g.fillText(name, tx + cw, ty);                     // nombre en crema
   }
 
   // Banner 匾額 (placa horizontal) sobre un edificio ocupado. Devuelve el rect
@@ -627,7 +663,7 @@ const HacFolk = (function () {
       if (w.id === selectedId) return;                 // el seleccionado va en overlay (encima)
       actors.push({ fx: w.fx, fy: w.fy, draw: (g, lx, ly) => drawWalker(g, lx, ly, w, { banner: false }) });
       // El nombre va en overlay (siempre encima, sin recorte de región).
-      if (!w.insideId) overlays.push({ draw: (g) => { const p = logic(w.fx, w.fy); banner(g, p[0], p[1] - bannerDy, w.name, false); } });
+      if (!w.insideId) overlays.push({ draw: (g) => { const p = logic(w.fx, w.fy); banner(g, p[0], p[1] - bannerDy, w, false); } });
     });
 
     // Banners 匾額 de los edificios ocupados (capa overlay) + rects para hit-test.
