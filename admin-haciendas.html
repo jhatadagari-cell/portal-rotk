@@ -9,7 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700;900&family=Cinzel+Decorative:wght@400;700&family=IM+Fell+English:ital@0;1&family=Noto+Sans+SC:wght@300;400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/chrome.css?v=4">
 <link rel="stylesheet" href="assets/css/main.css">
-<link rel="stylesheet" href="assets/css/admin.css?v=22">
+<link rel="stylesheet" href="assets/css/admin.css?v=29">
 </head>
 <body>
 
@@ -32,7 +32,7 @@
 <main class="adm" id="adm" hidden>
   <header class="adm-head">
     <div>
-      <p class="adm-eyebrow">Mecenazgo · Administración</p>
+      <p class="adm-eyebrow">Administración</p>
       <h1 class="adm-ttl">Panel de Haciendas</h1>
     </div>
     <div class="adm-head-actions">
@@ -42,6 +42,7 @@
 
   <nav class="adm-tabs" id="adm-tabs">
     <button class="adm-tab on" data-tab="haciendas">Haciendas</button>
+    <button class="adm-tab" data-tab="personajes">Personajes</button>
     <button class="adm-tab" data-tab="tareas">Tareas de edificios</button>
   </nav>
 
@@ -51,8 +52,6 @@
 
   <div class="adm-toolbar">
     <button class="adm-btn adm-btn-gold" id="btn-nueva">+ Nueva hacienda</button>
-    <button class="adm-btn" id="btn-seed">Restaurar ejemplo (Sima)</button>
-    <button class="adm-btn adm-btn-danger" id="btn-clear">Vaciar todo</button>
   </div>
 
   <!-- Formulario de nueva hacienda (oculto por defecto) -->
@@ -78,11 +77,29 @@
     <!-- Detalle de la hacienda seleccionada -->
     <section class="adm-detail" id="adm-detail"></section>
   </div>
+
+  <!-- Mantenimiento: acciones raras y destructivas, recogidas al pie. -->
+  <details class="adm-maint">
+    <summary>Mantenimiento</summary>
+    <div class="adm-maint-body">
+      <p>Acciones poco habituales sobre <b>todas</b> las haciendas. Úsalas con cuidado: «Vaciar todo» no se puede deshacer.</p>
+      <div class="adm-maint-actions">
+        <button class="adm-btn" id="btn-seed">Restaurar hacienda de ejemplo (Sima)</button>
+        <button class="adm-btn adm-btn-danger" id="btn-clear">Vaciar todas las haciendas</button>
+      </div>
+    </div>
+  </details>
   </div><!-- /tab-haciendas -->
+
+  <!-- ══ Pestaña: Personajes ══ -->
+  <div class="adm-tabpanel" id="tab-personajes" hidden>
+    <p class="adm-warn adm-info">Registro <b>global</b> de personajes. Crea aquí a cada personaje (nombre, personalidad y aptitud); luego podrás añadirlo como mecenas a cualquier hacienda desde su pestaña.</p>
+    <div class="adm-pj" id="adm-pj"></div>
+  </div>
 
   <!-- ══ Pestaña: Tareas de edificios ══ -->
   <div class="adm-tabpanel" id="tab-tareas" hidden>
-    <p class="adm-warn adm-info">Catálogo <b>global</b> de tareas: lo que hace un mecenas dentro de cada tipo de edificio y cuánto tarda. Igual para todas las haciendas. Varias tareas por edificio (al entrar, elige una al azar).</p>
+    <p class="adm-warn adm-info">Catálogo <b>global</b> de tareas: lo que hace un mecenas dentro de cada tipo de edificio y cuánto tarda. Es igual para todas las haciendas.</p>
     <div class="adm-tareas" id="adm-tareas"></div>
   </div>
 </main>
@@ -91,10 +108,13 @@
 
 <script src="assets/js/auth.js?v=2"></script>
 <script src="assets/js/haciendas-data.js?v=8"></script>
-<script src="assets/js/hac-calc.js?v=2"></script>
-<script src="assets/js/hac-build.js?v=21"></script>
+<script src="assets/js/hac-calc.js?v=3"></script>
+<script src="assets/js/hac-build.js?v=22"></script>
 <script src="assets/js/hac-store.js?v=5"></script>
 <script src="assets/js/hac-tareas.js?v=1"></script>
+<script src="assets/js/personajes-data.js?v=1"></script>
+<script src="assets/js/hac-char.js?v=4"></script>
+<script src="assets/js/hac-personajes.js?v=1"></script>
 <script>
 (function () {
   'use strict';
@@ -125,8 +145,11 @@
   await HacStore.ready();
   // Catálogo global de tareas (para la pestaña «Tareas»). Degrada a semilla.
   if (window.HacTareas) await HacTareas.ready();
+  // Registro global de personajes (para la pestaña «Personajes» y el alta de
+  // mecenas). Degrada a vacío si falta la tabla.
+  if (window.HacPersonajes) await HacPersonajes.ready();
 
-  const { haciendaPuntos, tierDePuntos, progresoHacia, rangoDePuntos, clampTier } = HacCalc;
+  const { haciendaPuntos, tierDePuntos, progresoHacia, rangoDePuntos, clampTier, nivelEfectivo, tierPorNivel } = HacCalc;
   const RANGOS = (typeof HAC_RANGOS !== 'undefined') ? HAC_RANGOS : [];
 
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, c => (
@@ -145,12 +168,18 @@
   let pabMode = false;   // modo delimitar pabellón: hover resalta el área cerrada
   let pabPending = null; // { cells:[[gx,gy],…] } área elegida pendiente de bautizar
   let tareaTipoSel = null; // tipo de edificio elegido en la pestaña «Tareas»
+  // ── Estado de la pestaña «Personajes» ──
+  let pjEditId = null;                                  // id en edición (null = creando)
+  let pjAspecto = { robe: '', piel: 0, pelo: 0 };       // aspecto del formulario
+  let pjAnim = null;                                    // intervalo de animación del preview
+  const pjPv = { dir: 'S', dirIdx: 0, frame: 0, tick: 0, auto: true };  // estado del preview
 
   // Normaliza una hacienda: asegura ids de miembros y campos por defecto.
   function norm(h) {
     h.puntosExtra = Number(h.puntosExtra) || 0;
     h.miembros = (h.miembros || []).map(m => ({
       id: m.id || uid(),
+      personajeId: m.personajeId || null,   // vínculo al registro de personajes
       nombre: m.nombre || m.mecenas || 'Sin nombre',
       puntos: Number(m.puntos) || 0,
       desde: m.desde || '',
@@ -192,7 +221,7 @@
     }
     host.innerHTML = all.map(h => {
       const pts = haciendaPuntos(h);
-      const t = tierDePuntos(pts);
+      const t = tierPorNivel(nivelEfectivo(h));
       const on = h.id === selectedId ? ' on' : '';
       return `
         <button class="adm-listitem${on}" data-id="${esc(h.id)}" style="--hac:${esc(h.color || 'var(--gold)')}">
@@ -213,8 +242,9 @@
     if (!B) return '';
     const lista = (h.mapa && h.mapa.construcciones) || [];
     const [GW, GH] = B.gridDims(tier);
-    // Tamaño de celda adaptativo: la rejilla ancha cabe sin scroll horizontal.
-    const cellPx = Math.max(13, Math.min(30, Math.floor(760 / GW)));
+    // Tamaño de celda adaptativo: la rejilla ocupa el escenario (izquierda) sin
+    // scroll; el raíl de controles vive a su derecha.
+    const cellPx = Math.max(13, Math.min(46, Math.floor(880 / GW)));
 
     let cells = '';
     for (let gy = 0; gy < GH; gy++) for (let gx = 0; gx < GW; gx++) {
@@ -346,26 +376,32 @@
     return `
       <section class="adm-board">
         <h3 class="adm-members-ttl">Tablero · construcciones <span class="adm-board-hint">rejilla ${GW}×${GH} · nivel ${tier}</span> <button type="button" class="adm-btn adm-btn-sm adm-trash${deleteMode ? ' on' : ''}" id="btn-delmode" title="Modo borrar">${deleteMode ? 'Borrando…' : '🗑 Borrar'}</button></h3>
-        <div class="adm-grid-board" style="grid-template-columns:repeat(${GW},${cellPx}px);--cell:${cellPx}px">${cells}</div>
-        ${moveBanner}
-        ${pabBanner}
-        <div class="adm-build-area">
-          <form class="adm-build-form" id="form-build">
-            <select name="tipo" id="board-tipo">${tipos}</select>
-            <button type="button" class="adm-btn adm-rot-btn" id="btn-rot" title="Rotar 90°">↻ ${fpSel[0]}×${fpSel[1]}</button>
-            <span class="adm-board-sel">${selTxt}</span>
-            <button type="submit" class="adm-btn adm-btn-gold"${buildDisabled ? ' disabled' : ''}>${buildLabel}</button>
-            ${motivoHTML}
-          </form>
-          <figure class="adm-build-pv">
-            ${tdef.linea
-              ? `<div class="adm-pv-swatch" style="--c:${esc(tdef.color || '#cdc2a6')}" aria-hidden="true"></div>`
-              : `<img src="assets/img/iso/${pvFile}.png?v=21" alt="${esc(tdef.nombre || '')}">`}
-            <figcaption><b>${esc(tdef.zh || '')} ${esc(tdef.nombre || '')}</b> · ${fpSel[0]}×${fpSel[1]}
-              <span class="adm-pv-door">${tdef.linea ? 'se traza de inicio a fin, como una muralla' : '┤ el borde dorado en la rejilla = la cara/puerta'}</span></figcaption>
-          </figure>
+        <div class="adm-board-main">
+          <div class="adm-board-stage">
+            ${moveBanner}
+            ${pabBanner}
+            <div class="adm-grid-board" style="grid-template-columns:repeat(${GW},${cellPx}px);--cell:${cellPx}px">${cells}</div>
+            <p class="adm-board-tip">${boardTip}</p>
+          </div>
+          <aside class="adm-board-rail">
+            <form class="adm-build-form" id="form-build">
+              <select name="tipo" id="board-tipo">${tipos}</select>
+              <div class="adm-build-row">
+                <button type="button" class="adm-btn adm-rot-btn" id="btn-rot" title="Rotar 90°">↻ ${fpSel[0]}×${fpSel[1]}</button>
+                <span class="adm-board-sel">${selTxt}</span>
+              </div>
+              <button type="submit" class="adm-btn adm-btn-gold"${buildDisabled ? ' disabled' : ''}>${buildLabel}</button>
+              ${motivoHTML}
+            </form>
+            <figure class="adm-build-pv">
+              ${tdef.linea
+                ? `<div class="adm-pv-swatch" style="--c:${esc(tdef.color || '#cdc2a6')}" aria-hidden="true"></div>`
+                : `<img src="assets/img/iso/${pvFile}.png?v=21" alt="${esc(tdef.nombre || '')}">`}
+              <figcaption><b>${esc(tdef.zh || '')} ${esc(tdef.nombre || '')}</b> · ${fpSel[0]}×${fpSel[1]}
+                <span class="adm-pv-door">${tdef.linea ? 'se traza de inicio a fin, como una muralla' : '┤ el borde dorado en la rejilla = la cara/puerta'}</span></figcaption>
+            </figure>
+          </aside>
         </div>
-        <p class="adm-board-tip">${boardTip}</p>
         <ul class="adm-build-list">${items || '<li class="adm-empty">Sin construcciones todavía. Elige edificio y casilla, y pulsa Construir.</li>'}</ul>
         ${pabSection}
       </section>`;
@@ -385,8 +421,15 @@
     // (± puntos, editar, borrar) no saben a quién tocan. Garantizamos ids aquí.
     norm(h);
     const pts = haciendaPuntos(h);
-    const tInfo = tierDePuntos(pts);
-    const tier = clampTier(tInfo.nivel);
+    // Nivel de la finca = TRINQUETE (no baja por puntos). Persistimos el ascenso
+    // en mapa.tier para que sobreviva a recargas y a la página pública.
+    const tier = nivelEfectivo(h);
+    if ((Number(h.mapa && h.mapa.tier) || 1) < tier) {
+      h.mapa = h.mapa || { v: 1, construcciones: [] };
+      h.mapa.tier = tier;
+      saveHacienda(h);
+    }
+    const tInfo = tierPorNivel(tier);
     const prog = progresoHacia(pts, tInfo);
     const progTxt = prog
       ? `Faltan <b>${prog.faltan} pts</b> para ${esc(prog.sig.zh)} ${esc(prog.sig.nombre)}`
@@ -401,9 +444,16 @@
       const bloqueado = RANGOS.filter(x => (Number(m.puntos) || 0) >= (Number(x.umbral) || 0) && (Number(x.tier) || 1) > tier).slice(-1)[0];
       const hint = bloqueado
         ? `<span class="adm-hint">→ ${esc(bloqueado.nombre)} cuando la casa suba</span>` : '';
+      // Aptitud/personalidad del personaje vinculado (si lo está).
+      const pj = (m.personajeId && window.HacPersonajes) ? HacPersonajes.get(m.personajeId) : null;
+      const apt = pj ? HacPersonajeDefs.aptitud(pj.aptitud) : null;
+      const per = pj ? HacPersonajeDefs.personalidad(pj.personalidad) : null;
+      const sello = apt
+        ? ` <span class="adm-mini-apt" title="${esc(apt.nombre + (per ? ' · ' + per.nombre : ''))}">${esc(apt.zh)}</span>`
+        : '';
       return `
         <tr data-mid="${esc(m.id)}">
-          <td>${esc(m.nombre)}</td>
+          <td>${esc(m.nombre)}${sello}</td>
           <td class="adm-pts-cell">
             <button class="adm-step" data-step="-5"${(Number(m.puntos) || 0) <= 0 ? ' disabled' : ''}>−</button>
             <input class="adm-pts" type="number" min="0" value="${Number(m.puntos) || 0}">
@@ -414,6 +464,25 @@
           <td><button class="adm-del" title="Quitar mecenas">✕</button></td>
         </tr>`;
     }).join('');
+
+    // Alta de mecenas: SOLO personajes ya registrados (y no añadidos aún a esta
+    // casa). La creación de personajes vive en la pestaña «Personajes».
+    const yaMiembros = new Set((h.miembros || []).map(m => m.personajeId).filter(Boolean));
+    const pjAll = window.HacPersonajes ? HacPersonajes.all() : [];
+    const pjLibres = pjAll.filter(p => !yaMiembros.has(p.id));
+    const addMemberForm = pjLibres.length
+      ? `<form class="adm-addmember" id="form-addmember">
+          <select name="personajeId" required>${pjLibres.map(p => {
+            const apt = HacPersonajeDefs.aptitud(p.aptitud);
+            return `<option value="${esc(p.id)}">${esc(p.nombre)}${apt ? ' · ' + esc(apt.nombre) : ''}</option>`;
+          }).join('')}</select>
+          <input name="puntos" type="number" min="0" value="0" title="Puntos de salida">
+          <input name="nota" placeholder="Nota (opcional)">
+          <button type="submit" class="adm-btn adm-btn-gold">+ Añadir mecenas</button>
+        </form>`
+      : `<p class="adm-addmember-empty">${pjAll.length
+            ? 'Todos los personajes del registro ya son mecenas de esta hacienda.'
+            : 'No hay personajes en el registro. Crea alguno en la pestaña <b>Personajes</b> para poder añadirlo como mecenas.'}</p>`;
 
     host.innerHTML = `
       <div class="adm-detail-head" style="--hac:${esc(h.color || 'var(--gold)')}">
@@ -440,6 +509,11 @@
             <label>Color<input name="color" type="color" value="${esc(h.color || '#c9a84c')}"></label>
             <label>Fundada<input name="fundada" value="${esc(h.fundada || '')}"></label>
             <label>Puntos extra (misiones)<input name="puntosExtra" type="number" min="0" value="${Number(h.puntosExtra) || 0}"></label>
+            <label>Nivel de la finca <i class="adm-lbl-note">no baja por puntos</i>
+              <select name="nivelFinca">${Array.from({ length: HacCalc.maxTier() }, (_, i) => i + 1).map(n => {
+                const tt = tierPorNivel(n);
+                return `<option value="${n}"${n === tier ? ' selected' : ''}>Nivel ${n} · ${esc(tt.zh)} ${esc(tt.nombre)}</option>`;
+              }).join('')}</select></label>
             <label class="adm-col2">Lema<input name="lema" value="${esc(h.lema || '')}"></label>
             <label class="adm-col2">Descripción<textarea name="descripcion" rows="2">${esc(h.descripcion || '')}</textarea></label>
           </div>
@@ -456,12 +530,7 @@
         <tbody>${filas || `<tr><td colspan="5" class="adm-empty">Sin mecenas todavía.</td></tr>`}</tbody>
       </table>
 
-      <form class="adm-addmember" id="form-addmember">
-        <input name="nombre" placeholder="Nombre del mecenas" required>
-        <input name="puntos" type="number" min="0" value="0" title="Puntos">
-        <input name="nota" placeholder="Nota (opcional)">
-        <button type="submit" class="adm-btn adm-btn-gold">+ Dar de alta</button>
-      </form>
+      ${addMemberForm}
 
       ${boardHTML(h, tier)}
     `;
@@ -505,6 +574,9 @@
       h.puntosExtra = Number(f.puntosExtra.value) || 0;
       h.lema = f.lema.value.trim();
       h.descripcion = f.descripcion.value.trim();
+      // Nivel de la finca (trinquete): se guarda en mapa.tier. El nivel real
+      // efectivo nunca será menor que el que dan los puntos.
+      if (f.nivelFinca) { h.mapa = h.mapa || { v: 1, construcciones: [] }; h.mapa.tier = clampTier(Number(f.nivelFinca.value) || 1); }
       saveHacienda(h);
       render();
     });
@@ -518,14 +590,19 @@
       render();
     });
 
-    // Alta de mecenas.
+    // Alta de mecenas: a partir de un personaje YA registrado.
     const fa = document.getElementById('form-addmember');
     if (fa) fa.addEventListener('submit', (e) => {
       e.preventDefault();
       const f = e.target;
+      const pid = f.personajeId.value;
+      const pj = window.HacPersonajes ? HacPersonajes.get(pid) : null;
+      if (!pj) { alert('Elige un personaje del registro.'); return; }
+      if ((h.miembros || []).some(m => m.personajeId === pid)) { alert('Ese personaje ya es mecenas de esta hacienda.'); return; }
       h.miembros.push({
         id: uid(),
-        nombre: f.nombre.value.trim(),
+        personajeId: pid,
+        nombre: pj.nombre,
         puntos: Math.max(0, Number(f.puntos.value) || 0),
         desde: mesActual(),
         nota: f.nota.value.trim()
@@ -537,7 +614,7 @@
     // ── Tablero de construcciones ──
     if (window.HacBuild) {
       if (!h.mapa) h.mapa = { v: 1, construcciones: [] };
-      const tierNow = clampTier(tierDePuntos(haciendaPuntos(h)).nivel);
+      const tierNow = nivelEfectivo(h);   // nivel de la finca (trinquete), igual que la rejilla pintada
       const enPos = (gx, gy) => h.mapa.construcciones.find(c => c.pos[0] === gx && c.pos[1] === gy);
 
       // Elegir tipo de edificio (preview de tamaño se actualiza al re-render).
@@ -875,9 +952,9 @@
     const ejemplo = tareas[0] ? `${esc(tareas[0].verbo)} en ${esc(lugar)}` : 'Verbo + en ' + esc(lugar);
 
     host.innerHTML = `${seedWarn}${sel}
-      <p class="adm-tareas-note">Al entrar, el mecenas elige una de estas tareas y se queda dentro su duración. Vista de actividad: «<i>${ejemplo}</i>».</p>
+      <p class="adm-tareas-note">Al entrar en este edificio, el mecenas elige una de estas tareas al azar y se queda dentro su duración. El verbo en gerundio es la línea de actividad que se ve en la finca: «<i>${ejemplo}</i>».</p>
       <ul class="adm-tarea-list">
-        <li class="adm-tarea-head"><span>Nombre</span><span>Verbo (línea de actividad)</span><span>Duración</span><span></span></li>
+        <li class="adm-tarea-head"><span>Nombre</span><span>Verbo · gerundio</span><span>Duración</span><span></span></li>
         ${rows || '<li class="adm-empty">Sin tareas para este edificio. Añade una abajo.</li>'}
       </ul>
       <form class="adm-tarea-add" id="form-tarea-add">
@@ -930,16 +1007,233 @@
     });
   }
 
-  // Conmutación de pestañas (Haciendas / Tareas).
+  // ════════════════════════════════════════════════════════════════════════
+  // Pestaña «Personajes» — registro global (HacPersonajes)
+  // ════════════════════════════════════════════════════════════════════════
+  function renderPersonajes() {
+    const host = document.getElementById('adm-pj');
+    if (!host || !window.HacPersonajes || !window.HacPersonajeDefs) return;
+    const D = HacPersonajeDefs;
+    const dbOk = HacPersonajes.dbOk();
+    const dis = dbOk ? '' : ' disabled';
+    if (pjAnim) { clearInterval(pjAnim); pjAnim = null; }
+
+    const editing = pjEditId ? HacPersonajes.get(pjEditId) : null;
+    const curPer = editing ? editing.personalidad : 'audaz';
+    const curApt = editing ? editing.aptitud : 'guerrero';
+
+    const dbWarn = !dbOk
+      ? `<div class="adm-tareas-seed">⚠ La tabla <b>personajes</b> no existe o no responde. Ejecuta <code>supabase/personajes.sql</code> en Supabase (SQL Editor) para crear y guardar personajes.</div>`
+      : '';
+
+    const persoChips = D.PERSONALIDADES.map(p => `
+      <label class="adm-pj-chip" title="${esc(p.desc)}">
+        <input type="radio" name="personalidad" value="${esc(p.id)}"${p.id === curPer ? ' checked' : ''}${dis}>
+        <span class="adm-pj-chip-zh">${esc(p.zh)}</span>
+        <span class="adm-pj-chip-name">${esc(p.nombre)}</span>
+        <span class="adm-pj-chip-desc">${esc(p.desc)}</span>
+      </label>`).join('');
+
+    const aptChips = D.APTITUDES.map(a => {
+      const doms = a.dominios.map(d => esc((D.dominio(d) || {}).nombre || d)).join(' + ');
+      return `
+      <label class="adm-pj-chip adm-pj-chip-apt" title="${esc(a.desc)}">
+        <input type="radio" name="aptitud" value="${esc(a.id)}"${a.id === curApt ? ' checked' : ''}${dis}>
+        <span class="adm-pj-chip-zh">${esc(a.zh)}</span>
+        <span class="adm-pj-chip-name">${esc(a.nombre)}</span>
+        <span class="adm-pj-chip-dom">${doms}</span>
+      </label>`;
+    }).join('');
+
+    // Aspecto: color de túnica + tonos de piel/pelo.
+    const robeDefault = (HacChar.OUTFIT[curApt] || {}).robe || '#5b4a8a';
+    const robeVal = pjAspecto.robe || robeDefault;
+    const skinSw = HacChar.SKINS.map((c, i) => `<button type="button" class="adm-pj-sw${i === (Number(pjAspecto.piel) || 0) ? ' on' : ''}" data-piel="${i}" style="--sw:${c}" title="Piel"${dis}></button>`).join('');
+    const hairSw = HacChar.HAIRS.map((c, i) => `<button type="button" class="adm-pj-sw${i === (Number(pjAspecto.pelo) || 0) ? ' on' : ''}" data-pelo="${i}" style="--sw:${c}" title="Pelo"${dis}></button>`).join('');
+
+    // Brújula de 8 direcciones (centro = auto-girar).
+    const dbtn = (d, glyph) => `<button type="button" class="adm-pj-dir${(!pjPv.auto && d === pjPv.dir) ? ' on' : ''}" data-dir="${d}">${glyph}</button>`;
+    const compass = `<div class="adm-pj-compass">
+      ${dbtn('NW', '↖')}${dbtn('N', '↑')}${dbtn('NE', '↗')}
+      ${dbtn('W', '←')}<button type="button" class="adm-pj-dir adm-pj-auto${pjPv.auto ? ' on' : ''}" id="pj-auto" title="Girar solo">↻</button>${dbtn('E', '→')}
+      ${dbtn('SW', '↙')}${dbtn('S', '↓')}${dbtn('SE', '↘')}
+    </div>`;
+
+    const lista = HacPersonajes.all();
+    const rows = lista.map(pj => {
+      const per = D.personalidad(pj.personalidad);
+      const apt = D.aptitud(pj.aptitud);
+      const doms = apt ? apt.dominios.map(d => {
+        const dd = D.dominio(d) || {};
+        return `<span class="adm-pj-dom">${esc(dd.zh || '')} ${esc(dd.nombre || d)}</span>`;
+      }).join('') : '';
+      return `<li class="adm-pj-item${pj.id === pjEditId ? ' on' : ''}" data-id="${esc(pj.id)}">
+        <span class="adm-pj-body" data-edit="${esc(pj.id)}" title="Editar">
+          <span class="adm-pj-sello">${esc(apt ? apt.zh : '?')}</span>
+          <span class="adm-pj-info">
+            <span class="adm-pj-name">${esc(pj.nombre)}</span>
+            <span class="adm-pj-tags">
+              <span class="adm-pj-tag adm-pj-tag-per">${esc(per ? per.zh + ' ' + per.nombre : 'sin personalidad')}</span>
+              <span class="adm-pj-tag adm-pj-tag-apt">${esc(apt ? apt.nombre : 'sin aptitud')}</span>
+              ${doms}
+            </span>
+          </span>
+        </span>
+        <button class="adm-pj-del" title="Borrar personaje"${dis}>✕</button>
+      </li>`;
+    }).join('');
+
+    host.innerHTML = `${dbWarn}
+      <form class="adm-pj-form" id="form-pj-add">
+        <div class="adm-pj-grid">
+          <div class="adm-pj-fields">
+            <label class="adm-pj-namefield">Nombre del personaje
+              <input name="nombre" required maxlength="40" placeholder="p. ej. Sima Yi" autocomplete="off" value="${esc(editing ? editing.nombre : '')}"${dis}>
+            </label>
+            <div class="adm-pj-pick">
+              <span class="adm-pj-picklbl">Personalidad <i>· patrón de conducta (futuro)</i></span>
+              <div class="adm-pj-chips">${persoChips}</div>
+            </div>
+            <div class="adm-pj-pick">
+              <span class="adm-pj-picklbl">Aptitud <i>· dominios en que destaca</i></span>
+              <div class="adm-pj-chips adm-pj-chips-apt">${aptChips}</div>
+            </div>
+            <div class="adm-pj-pick adm-pj-appearance">
+              <span class="adm-pj-picklbl">Aspecto</span>
+              <div class="adm-pj-asp">
+                <label class="adm-pj-asp-row">Túnica <input type="color" id="pj-robe" value="${esc(robeVal)}"${dis}></label>
+                <span class="adm-pj-asp-row">Piel <span class="adm-pj-sws">${skinSw}</span></span>
+                <span class="adm-pj-asp-row">Pelo <span class="adm-pj-sws">${hairSw}</span></span>
+              </div>
+            </div>
+          </div>
+          <div class="adm-pj-preview">
+            <canvas id="pj-canvas" class="adm-pj-canvas" width="200" height="280"></canvas>
+            ${compass}
+            <span class="adm-pj-preview-hint">Vista previa · ${editing ? 'editando' : 'nuevo'}</span>
+          </div>
+        </div>
+        <div class="adm-pj-form-actions">
+          <button type="submit" class="adm-btn adm-btn-gold"${dis}>${editing ? 'Guardar cambios' : 'Crear personaje'}</button>
+          ${editing ? '<button type="button" class="adm-btn" id="btn-pj-cancel">Cancelar</button>' : ''}
+        </div>
+      </form>
+      <h3 class="adm-members-ttl">Personajes registrados <span class="adm-board-hint">${lista.length}</span></h3>
+      <ul class="adm-pj-list">${rows || '<li class="adm-empty">Aún no hay personajes. Crea el primero arriba.</li>'}</ul>`;
+
+    wirePersonajes();
+
+    // Animación del preview (lee el estado del formulario en cada fotograma).
+    pjPv.frame = 0;
+    pjDrawPreview();
+    pjAnim = setInterval(() => {
+      pjPv.frame = (pjPv.frame + 1) % HacChar.FRAMES;
+      pjPv.tick++;
+      if (pjPv.auto && pjPv.tick % 8 === 0) {
+        pjPv.dirIdx = (pjPv.dirIdx + 1) % HacChar.DIRS.length;
+        pjPv.dir = HacChar.DIRS[pjPv.dirIdx];
+      }
+      pjDrawPreview();
+    }, 140);
+  }
+
+  // Dibuja el preview leyendo aptitud (radio marcado) + aspecto del formulario.
+  function pjDrawPreview() {
+    const cv = document.getElementById('pj-canvas');
+    if (!cv || !window.HacChar) return;
+    const apt = (document.querySelector('#form-pj-add input[name=aptitud]:checked') || {}).value || 'guerrero';
+    HacChar.draw(cv, { aptitud: apt, aspecto: pjAspecto, dir: pjPv.dir, frame: pjPv.frame, scale: 5 });
+  }
+
+  function onPjError(accion) {
+    return (err) => {
+      alert('No se pudo ' + accion + ' el personaje en Supabase: ' + (err && err.message || err));
+      HacPersonajes.reload().then(renderPersonajes);
+    };
+  }
+
+  function pjResetForm() { pjEditId = null; pjAspecto = { robe: '', piel: 0, pelo: 0 }; }
+
+  function wirePersonajes() {
+    const f = document.getElementById('form-pj-add');
+
+    // Color de la túnica.
+    const robe = document.getElementById('pj-robe');
+    if (robe) robe.addEventListener('input', () => { pjAspecto.robe = robe.value; pjDrawPreview(); });
+
+    // Al cambiar de aptitud, si no se ha tocado el color, refleja el nuevo por defecto.
+    if (f) f.querySelectorAll('input[name=aptitud]').forEach(r => r.addEventListener('change', () => {
+      if (!pjAspecto.robe && robe) { const def = (HacChar.OUTFIT[r.value] || {}).robe; if (def) robe.value = def; }
+      pjDrawPreview();
+    }));
+
+    // Swatches de piel/pelo.
+    document.querySelectorAll('#adm-pj .adm-pj-sw').forEach(b => b.addEventListener('click', () => {
+      if (b.dataset.piel != null) { pjAspecto.piel = Number(b.dataset.piel); b.parentNode.querySelectorAll('.adm-pj-sw').forEach(x => x.classList.toggle('on', x === b)); }
+      if (b.dataset.pelo != null) { pjAspecto.pelo = Number(b.dataset.pelo); b.parentNode.querySelectorAll('.adm-pj-sw').forEach(x => x.classList.toggle('on', x === b)); }
+      pjDrawPreview();
+    }));
+
+    // Brújula de direcciones + auto-girar.
+    document.querySelectorAll('#adm-pj .adm-pj-dir[data-dir]').forEach(b => b.addEventListener('click', () => {
+      pjPv.auto = false; pjPv.dir = b.dataset.dir; pjPv.dirIdx = HacChar.DIRS.indexOf(b.dataset.dir);
+      document.querySelectorAll('#adm-pj .adm-pj-dir').forEach(x => x.classList.toggle('on', x === b));
+      pjDrawPreview();
+    }));
+    const auto = document.getElementById('pj-auto');
+    if (auto) auto.addEventListener('click', () => {
+      pjPv.auto = !pjPv.auto;
+      auto.classList.toggle('on', pjPv.auto);
+      if (pjPv.auto) document.querySelectorAll('#adm-pj .adm-pj-dir[data-dir]').forEach(x => x.classList.remove('on'));
+    });
+
+    // Crear / Guardar.
+    if (f) f.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const nombre = f.nombre.value.trim();
+      if (!nombre) { alert('Pon un nombre al personaje.'); return; }
+      const personalidad = (f.querySelector('input[name=personalidad]:checked') || {}).value || '';
+      const aptitud = (f.querySelector('input[name=aptitud]:checked') || {}).value || '';
+      const aspecto = { robe: pjAspecto.robe || '', piel: Number(pjAspecto.piel) || 0, pelo: Number(pjAspecto.pelo) || 0 };
+      if (pjEditId) HacPersonajes.update({ id: pjEditId, nombre, personalidad, aptitud, aspecto }).catch(onPjError('guardar'));
+      else HacPersonajes.add({ nombre, personalidad, aptitud, aspecto }).catch(onPjError('crear'));
+      pjResetForm();
+      renderPersonajes();
+    });
+    const cancel = document.getElementById('btn-pj-cancel');
+    if (cancel) cancel.addEventListener('click', () => { pjResetForm(); renderPersonajes(); });
+
+    // Editar (clic en el cuerpo del item) y borrar.
+    document.querySelectorAll('#adm-pj .adm-pj-body[data-edit]').forEach(el => el.addEventListener('click', () => {
+      const pj = HacPersonajes.get(el.dataset.edit); if (!pj) return;
+      pjEditId = pj.id;
+      pjAspecto = { robe: (pj.aspecto && pj.aspecto.robe) || '', piel: (pj.aspecto && Number(pj.aspecto.piel)) || 0, pelo: (pj.aspecto && Number(pj.aspecto.pelo)) || 0 };
+      renderPersonajes();
+      const host = document.getElementById('adm-pj'); if (host) host.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }));
+    document.querySelectorAll('#adm-pj .adm-pj-item').forEach(li => {
+      li.querySelector('.adm-pj-del').addEventListener('click', () => {
+        if (!confirm('¿Borrar este personaje del registro? (No se quita de las haciendas donde ya sea mecenas.)')) return;
+        if (li.dataset.id === pjEditId) pjResetForm();
+        HacPersonajes.remove(li.dataset.id).catch(onPjError('borrar'));
+        renderPersonajes();
+      });
+    });
+  }
+
+  // Conmutación de pestañas (Haciendas / Personajes / Tareas).
   function wireTabs() {
     const tabs = document.getElementById('adm-tabs');
     if (!tabs) return;
+    const panels = { haciendas: 'tab-haciendas', personajes: 'tab-personajes', tareas: 'tab-tareas' };
     tabs.querySelectorAll('.adm-tab').forEach(b => b.addEventListener('click', () => {
       tabs.querySelectorAll('.adm-tab').forEach(x => x.classList.toggle('on', x === b));
       const which = b.dataset.tab;
-      document.getElementById('tab-haciendas').hidden = which !== 'haciendas';
-      document.getElementById('tab-tareas').hidden = which !== 'tareas';
+      Object.keys(panels).forEach(k => { const el = document.getElementById(panels[k]); if (el) el.hidden = which !== k; });
+      // Detén la animación del preview al salir de «Personajes».
+      if (which !== 'personajes' && pjAnim) { clearInterval(pjAnim); pjAnim = null; }
       if (which === 'tareas') renderTareas();
+      if (which === 'personajes') renderPersonajes();
     }));
   }
 

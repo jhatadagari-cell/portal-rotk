@@ -29,8 +29,8 @@ const HacRender = (function () {
     // Solo aceptamos un hex válido; cualquier otra cosa cae al dorado global.
     const color = /^#[0-9a-fA-F]{3,6}$/.test(String(h.color || '')) ? h.color : 'var(--gold)';
     const pts   = C.haciendaPuntos(h);
-    const tInfo = C.tierDePuntos(pts);
-    const tier  = C.clampTier(tInfo.nivel);
+    const tier  = C.nivelEfectivo(h);          // trinquete: no baja por puntos
+    const tInfo = C.tierPorNivel(tier);
     const total = (h.miembros || []).length;
     const prog  = C.progresoHacia(pts, tInfo);
     const tpn   = tierPorNivel();

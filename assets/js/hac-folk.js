@@ -49,6 +49,33 @@ const HacFolk = (function () {
   const rnd = (n) => Math.floor(Math.random() * n);
   const rng = (a, b) => a + Math.random() * (b - a);
 
+  // ── Modelo pixel-art (HacChar) ────────────────────────────────────────────
+  const SCALE = (window.HacIso && HacIso.SCALE) || 2;   // px de dispositivo por px lógico
+  const SPRITE_DISP = 1;                                // px de dispositivo por px del sprite (1 = ratio entero, nítido)
+  const spriteCache = new Map();                        // key → canvas ya con contorno
+  // Dirección de 8 según el vector de movimiento en pantalla (no en la rejilla):
+  // +gx va a la derecha-abajo, +gy a la izquierda-abajo en el isométrico.
+  const DIRS8 = ['E', 'SE', 'S', 'SW', 'W', 'NW', 'N', 'NE'];
+  function faceFromGrid(gdx, gdy) {
+    if (!gdx && !gdy) return null;
+    const sdx = gdx - gdy, sdy = gdx + gdy;
+    const deg = (Math.atan2(sdy, sdx) * 180 / Math.PI + 360) % 360;
+    return DIRS8[Math.round(deg / 45) % 8];
+  }
+  // Sprite cacheado para (aptitud+aspecto, dir, frame). Evita rehacer el contorno
+  // cada fotograma; muchos walkers comparten combinaciones.
+  function spriteFor(w, dir, frame, pose) {
+    const a = w.aspecto || {};
+    const key = (w.aptitud || '_') + '|' + (a.robe || '') + '|' + (a.piel || 0) + '|' + (a.pelo || 0) + '|' + dir + '|' + frame + '|' + (pose || 's');
+    let cv = spriteCache.get(key);
+    if (!cv && window.HacChar) {
+      cv = document.createElement('canvas');
+      HacChar.draw(cv, { aptitud: w.aptitud, aspecto: a, dir: dir, frame: frame, scale: 1, pose: pose });
+      spriteCache.set(key, cv);
+    }
+    return cv;
+  }
+
   // Composición de la línea de actividad ("de camino al cuartel" / "Entrenando
   // en el cuartel"). lugar viene con artículo en minúscula ("el cuartel").
   const aLugar = (l) => { l = l || 'el edificio'; return l.slice(0, 3) === 'el ' ? 'al ' + l.slice(3) : 'a ' + l; };
@@ -65,7 +92,9 @@ const HacFolk = (function () {
     const GW = dims[0], GH = dims[1];
     const lista = B ? B.construccionesValidas(mapa, tier) : ((mapa && mapa.construcciones) || []);
     const PASS = new Set(['porton', 'chuihuamen']);   // se cruzan
-    const blocked = new Set(), cam = new Set(), ownByMember = {};
+    const PLANT = new Set(['jardin', 'jardin-flores', 'bonsai']);   // jardines PISABLES (plantas)
+    const WATER = new Set(['estanque', 'lago']);                     // agua: NO pisable
+    const blocked = new Set(), cam = new Set(), garden = new Set(), water = new Set(), ownByMember = {};
     const buildings = new Map();
     lista.forEach(c => {
       const cells = (B && B.celdasOcupadas) ? B.celdasOcupadas(c) : [[c.pos[0], c.pos[1]]];
@@ -78,7 +107,12 @@ const HacFolk = (function () {
         buildings.set(id, { id, tipo: c.tipo, cx, cy, cells, altura: def.altura || 24, dueno: c.dueno || null, nombre: def.nombre || 'Edificio' });
       }
       if (PASS.has(c.tipo)) return;
-      if (B && B.esSuelo && B.esSuelo(c.tipo)) { if (c.tipo === 'camino') cells.forEach(p => cam.add(p[0] + ',' + p[1])); return; }
+      if (B && B.esSuelo && B.esSuelo(c.tipo)) {
+        if (c.tipo === 'camino') cells.forEach(p => cam.add(p[0] + ',' + p[1]));
+        else if (PLANT.has(c.tipo)) cells.forEach(p => garden.add(p[0] + ',' + p[1]));
+        else if (WATER.has(c.tipo)) cells.forEach(p => { const k = p[0] + ',' + p[1]; blocked.add(k); water.add(k); });
+        return;
+      }
       cells.forEach(p => blocked.add(p[0] + ',' + p[1]));
     });
     // Celdas transitables (no bloqueadas y dentro de la rejilla).
@@ -106,7 +140,7 @@ const HacFolk = (function () {
       }
       if (chosen) { b.spotCell = chosen.spot; b.approach = chosen.app; b.approachKey = chosen.app[0] + ',' + chosen.app[1]; b.visitable = true; visitable.push(b); }
     });
-    return { set, cells, cam, camCells, GW, GH, ownByMember, buildings, visitable };
+    return { set, cells, cam, camCells, garden, water, GW, GH, ownByMember, buildings, visitable };
   }
 
   // BFS sobre celdas transitables: de `start` a la primera celda de `goalKeys`.
@@ -146,11 +180,17 @@ const HacFolk = (function () {
       wk.buildings.forEach(b => { if (b.dueno === m.id && b.visitable) homeBid = b.id; });
       if (homeBid) { const b = wk.buildings.get(homeBid); home = b.spotCell; start = b.approach; }
       if (!start) start = (wk.camCells.length && Math.random() < 0.7) ? wk.camCells[rnd(wk.camCells.length)] : wk.cells[rnd(wk.cells.length)];
+      // Modelo del mecenas: aptitud/aspecto de su personaje registrado. Si no
+      // tiene personaje vinculado, modelo por defecto con el color de la casa.
+      const pj = (m.personajeId && window.HacPersonajes && HacPersonajes.get) ? HacPersonajes.get(m.personajeId) : null;
+      const aptitud = pj ? pj.aptitud : '';
+      const aspecto = pj ? (pj.aspecto || {}) : { robe: color };
       return {
-        id: m.id, name: m.nombre || '', color,
-        fx: start[0], fy: start[1], tx: start[0], ty: start[1], moving: false,
+        id: m.id, name: m.nombre || '', color, aptitud, aspecto,
+        fx: start[0], fy: start[1], tx: start[0], ty: start[1], moving: false, dir: 'S',
         state: 'paseando', path: null, goalBid: null, insideId: null, task: null,
         homeBid, home, taskTimer: 0, strollTimer: rng(2, 6), wait: Math.random() * 1.2,
+        idleTimer: 0, gardenCd: rng(4, 12), socialCd: rng(4, 12), chatWith: null,
         phase: Math.random() * 6.28
       };
     });
@@ -206,6 +246,7 @@ const HacFolk = (function () {
       else { onPathDone(w); return; }
     }
     const dx = w.tx - w.fx, dy = w.ty - w.fy, d = Math.hypot(dx, dy), adv = SPD * dt;
+    const fd = faceFromGrid(dx, dy); if (fd) w.dir = fd;
     if (d <= adv) { w.fx = w.tx; w.fy = w.ty; w.moving = false; w.phase += dt * 8; if (!(w.path && w.path.length)) onPathDone(w); }
     else { w.fx += dx / d * adv; w.fy += dy / d * adv; w.phase += dt * 8; }
   }
@@ -232,7 +273,8 @@ const HacFolk = (function () {
   function wander(w, dt, SPD) {
     if (w.moving) {
       const dx = w.tx - w.fx, dy = w.ty - w.fy, d = Math.hypot(dx, dy), adv = SPD * dt;
-      if (d <= adv) { w.fx = w.tx; w.fy = w.ty; w.moving = false; w.wait = rng(0.3, 1.9); }
+      const fd = faceFromGrid(dx, dy); if (fd) w.dir = fd;
+      if (d <= adv) { w.fx = w.tx; w.fy = w.ty; w.moving = false; w.wait = rng(0.3, 1.9); maybeGarden(w); }
       else { w.fx += dx / d * adv; w.fy += dy / d * adv; }
       w.phase += dt * 8;
       return;
@@ -243,36 +285,104 @@ const HacFolk = (function () {
     wanderPick(w);
   }
 
+  // ── Reacciones al entorno ──────────────────────────────────────────────────
+  // Al pisar un jardín (con cooldown): a veces nada, a veces se para a contemplar,
+  // a veces se sienta a descansar entre las plantas.
+  function faceTowards(w, cx, cy, set) {
+    const t = neigh(cx, cy).find(([x, y]) => set.has(x + ',' + y));
+    if (t) { const fd = faceFromGrid(t[0] - cx, t[1] - cy); if (fd) w.dir = fd; }
+  }
+  function maybeGarden(w) {
+    if (w.state !== 'paseando' || w.gardenCd > 0) return;
+    const cx = Math.round(w.fx), cy = Math.round(w.fy);
+    const onGarden = wk.garden.has(cx + ',' + cy);
+    // El agua no es pisable: solo se contempla desde una celda contigua.
+    const nearWater = !onGarden && neigh(cx, cy).some(([x, y]) => wk.water.has(x + ',' + y));
+    if (!onGarden && !nearWater) return;
+    const r = Math.random();
+    if (onGarden) {
+      if (r < 0.40) { w.state = 'contemplando'; w.idleTimer = rng(5, 11); w.gardenCd = rng(25, 50); faceTowards(w, cx, cy, wk.garden); }
+      else if (r < 0.68) { w.state = 'tumbado'; w.idleTimer = rng(10, 20); w.gardenCd = rng(40, 80); }   // se sienta a descansar (solo sobre plantas)
+      else { w.gardenCd = rng(8, 16); }                                                                    // esta vez nada
+    } else {                                  // junto al agua: solo contemplar
+      if (r < 0.55) { w.state = 'contemplando'; w.idleTimer = rng(6, 12); w.gardenCd = rng(25, 50); faceTowards(w, cx, cy, wk.water); }
+      else { w.gardenCd = rng(10, 20); }
+    }
+  }
+
+  // Si dos mecenas paseando se cruzan, con cierta probabilidad se saludan y se
+  // quedan conversando un rato, mirándose. Cooldown para no encadenar charlas.
+  function startChat(a, b) {
+    const t = rng(22, 38);
+    a.state = b.state = 'charlando'; a.idleTimer = b.idleTimer = t;
+    a.moving = b.moving = false; a.path = b.path = null;
+    a.chatWith = b.id; b.chatWith = a.id;
+    const fa = faceFromGrid(b.fx - a.fx, b.fy - a.fy); if (fa) a.dir = fa;
+    const fb = faceFromGrid(a.fx - b.fx, a.fy - b.fy); if (fb) b.dir = fb;
+  }
+  function endChat(w) {
+    const o = walkers.find(x => x.id === w.chatWith);
+    w.state = 'paseando'; w.strollTimer = rng(2, 6); w.wait = rng(0.2, 0.8); w.chatWith = null; w.socialCd = rng(20, 50);
+    if (o && o.state === 'charlando') { o.state = 'paseando'; o.strollTimer = rng(2, 6); o.wait = rng(0.2, 0.8); o.chatWith = null; o.socialCd = rng(20, 50); }
+  }
+  function encounters() {
+    for (let i = 0; i < walkers.length; i++) {
+      const a = walkers[i]; if (a.state !== 'paseando' || a.socialCd > 0) continue;
+      for (let j = i + 1; j < walkers.length; j++) {
+        const b = walkers[j]; if (b.state !== 'paseando' || b.socialCd > 0) continue;
+        const dx = a.fx - b.fx, dy = a.fy - b.fy;
+        if (dx * dx + dy * dy > 1.7) continue;          // ~1.3 tiles
+        if (Math.random() < 0.5) startChat(a, b);
+        else { a.socialCd = b.socialCd = rng(6, 14); }  // este cruce no; reintenta luego
+        break;
+      }
+    }
+  }
+
   function step(dt) {
     const SPD = 1.1;
     walkers.forEach(w => {
+      if (w.gardenCd > 0) w.gardenCd -= dt;
+      if (w.socialCd > 0) w.socialCd -= dt;
       switch (w.state) {
         case 'tarea': w.taskTimer -= dt; w.phase += dt * 1.2; if (w.taskTimer <= 0) startLeave(w); break;
         case 'yendo':
         case 'saliendo': followPath(w, dt, SPD); break;
+        case 'contemplando':
+        case 'tumbado': w.idleTimer -= dt; w.phase += dt * 0.4; if (w.idleTimer <= 0) { w.state = 'paseando'; w.strollTimer = rng(2, 6); w.wait = rng(0.2, 0.8); } break;
+        case 'charlando': w.idleTimer -= dt; w.phase += dt * 0.6; if (w.idleTimer <= 0) endChat(w); break;
         default: wander(w, dt, SPD); break;
       }
     });
+    encounters();
   }
 
   // ── Dibujo (coords LÓGICAS; el ctx ya está a escala SCALE) ────────────────
   function drawWalker(g, lx, ly, w, o) {
     o = o || {};
+    // Glow del seleccionado (en coords lógicas, bajo los pies).
     if (o.highlight) {
-      const r = 7 + Math.sin(w.phase * 0.5) * 1.3;
+      const r = 8 + Math.sin(w.phase * 0.5) * 1.4;
       g.fillStyle = 'rgba(255,224,130,0.22)'; g.beginPath(); g.ellipse(lx, ly, r, r * 0.5, 0, 0, 6.2832); g.fill();
       g.strokeStyle = 'rgba(255,224,130,0.95)'; g.lineWidth = 1.4; g.beginPath(); g.ellipse(lx, ly, r, r * 0.5, 0, 0, 6.2832); g.stroke();
     }
     const moving = w.moving && w.state !== 'tarea';
-    const bob = Math.sin(w.phase) * (moving ? 1.2 : 0.3);
-    g.fillStyle = 'rgba(0,0,0,0.30)'; g.beginPath(); g.ellipse(lx, ly, 4, 2, 0, 0, 6.2832); g.fill();
-    const rgb = hexToRgb(w.color);
-    const bx = lx, by = ly - 6 + bob;
-    g.fillStyle = 'rgb(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ')';
-    g.beginPath(); g.moveTo(bx - 2.4, by + 6); g.lineTo(bx + 2.4, by + 6); g.lineTo(bx + 1.6, by); g.lineTo(bx - 1.6, by); g.closePath(); g.fill();
-    g.fillStyle = '#f0d9b8'; g.beginPath(); g.arc(bx, by - 1.2, 1.8, 0, 6.2832); g.fill();
-    g.fillStyle = '#2a2018'; g.beginPath(); g.arc(bx, by - 2.2, 1.9, Math.PI, 0); g.fill();
-    if (o.banner !== false) banner(g, bx, by - 4, w.name, o.highlight);
+    const frame = moving ? (Math.floor(w.phase * 1.2) % HacChar.FRAMES) : 0;
+    const pose = (w.state === 'tumbado') ? 'sit' : 'stand';
+    const cv = window.HacChar ? spriteFor(w, w.dir || 'S', frame, pose) : null;
+    const disp = SPRITE_DISP, FEET = HacChar ? HacChar.H - 5 : 51;
+    if (cv) {
+      // Blit en espacio de DISPOSITIVO (transform identidad) para que el pixel-art
+      // quede nítido (igual que los sprites de edificio). Pies del sprite sobre (lx,ly).
+      g.save();
+      g.setTransform(1, 0, 0, 1, 0, 0);
+      g.imageSmoothingEnabled = false;
+      const dx = Math.round(lx * SCALE - HacChar.W * 0.5 * disp);
+      const dy = Math.round(ly * SCALE - FEET * disp);
+      g.drawImage(cv, dx, dy, Math.round(HacChar.W * disp), Math.round(HacChar.H * disp));
+      g.restore();
+    }
+    if (o.banner !== false) banner(g, lx, ly - Math.round(FEET * disp / SCALE) + 1, w.name, o.highlight);
   }
 
   function banner(g, cx, topY, name, hot) {
@@ -333,7 +443,9 @@ const HacFolk = (function () {
     Object.keys(inside).forEach(bid => {
       const b = wk.buildings.get(bid); if (!b) return;
       const people = inside[bid];
-      const label = b.dueno ? memberName(b.dueno) : b.nombre;
+      // El banner rotula el EDIFICIO (quien entra puede no ser su dueño), no al
+      // mecenas asignado.
+      const label = b.nombre || 'Edificio';
       const [lx, lyBase] = logic(b.cx, b.cy);
       const ly = lyBase - b.altura - 12;
       overlays.push({ draw: (g) => { const r = buildingSign(g, lx, ly, label, people.length); signs.push({ lx: r[0], ly: r[1], w: r[2], h: r[3], label, names: people.map(p => p.name), ids: people.map(p => p.id), buildingId: bid }); } });
@@ -396,6 +508,9 @@ const HacFolk = (function () {
   // ── API para la página ────────────────────────────────────────────────────
   // Texto de lo que está haciendo un mecenas ahora mismo.
   function activityText(w) {
+    if (w.state === 'contemplando') return 'Contemplando el jardín';
+    if (w.state === 'tumbado') return 'Descansando entre las plantas';
+    if (w.state === 'charlando') { const o = walkers.find(x => x.id === w.chatWith); return 'Conversando' + (o && o.name ? ' con ' + o.name : ''); }
     if (w.state === 'tarea') {
       const b = wk.buildings.get(w.insideId);
       const lugar = b ? lugarDe(b.tipo) : null;

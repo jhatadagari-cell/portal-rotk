@@ -27,8 +27,8 @@
     if (!h) { notFound(host); return; }
 
     const pts   = HacCalc.haciendaPuntos(h);
-    const tInfo = HacCalc.tierDePuntos(pts);
-    const tier  = HacCalc.clampTier(tInfo.nivel);
+    const tier  = HacCalc.nivelEfectivo(h);          // trinquete: no baja por puntos
+    const tInfo = HacCalc.tierPorNivel(tier);
     const color = h.color || '#c9a84c';
 
     document.title = `${h.nombre} · Haciendas · Portal ROTK`;
@@ -254,6 +254,9 @@
     // Precarga el catálogo de tareas (en paralelo) para que las actividades de
     // los mecenas usen el verbo/duración configurados desde el primer momento.
     if (window.HacTareas) HacTareas.ready();
+    // Registro de personajes: los modelos de los mecenas que pasean por la finca
+    // sacan su aptitud/aspecto de aquí. Degrada a vacío si falta la tabla.
+    if (window.HacPersonajes) HacPersonajes.ready();
     HacStore.ready().then(render);
   }
 

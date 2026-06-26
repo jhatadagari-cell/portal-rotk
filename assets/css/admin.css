@@ -12,6 +12,10 @@
 .adm-denied-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
 
 /* ── Contenedor ─────────────────────────────────────────────────────────── */
+/* La barra de scroll está estilizada (main.css ::-webkit-scrollbar = 5px) y por
+   tanto OCUPA layout: al crecer el detalle aparece y desplaza 5px el panel
+   centrado. Reservamos su hueco siempre para que nada salte al seleccionar. */
+html{scrollbar-gutter:stable}
 .adm{max-width:1560px;margin:0 auto;padding:34px clamp(12px,2.2vw,26px) 80px}
 .adm-head{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;flex-wrap:wrap}
 .adm-eyebrow{font-family:'Cinzel Decorative',serif;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);opacity:.7}
@@ -40,6 +44,16 @@
 
 .adm-toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}
 
+/* Zona de mantenimiento (acciones raras y destructivas), recogida al pie. */
+.adm-maint{margin-top:34px;border:1px solid rgba(160,80,80,.22);border-radius:4px;background:rgba(160,80,80,.035)}
+.adm-maint summary{cursor:pointer;list-style:none;font-family:'Cinzel Decorative',serif;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#c98a8a;padding:12px 16px}
+.adm-maint summary::-webkit-details-marker{display:none}
+.adm-maint summary::before{content:'⚙ ';opacity:.7}
+.adm-maint[open] summary{border-bottom:1px solid rgba(160,80,80,.18)}
+.adm-maint-body{padding:14px 16px;display:flex;flex-direction:column;gap:12px}
+.adm-maint-body p{font-family:'Noto Sans SC',sans-serif;font-size:12px;color:var(--parch2);opacity:.7;line-height:1.55;margin:0}
+.adm-maint-actions{display:flex;gap:10px;flex-wrap:wrap}
+
 /* ── Formularios (nueva + edición) ──────────────────────────────────────── */
 .adm-newform{border:1px solid rgba(201,168,76,.2);border-radius:4px;background:rgba(255,255,255,.018);padding:20px;margin-bottom:22px}
 .adm-newform h3,.adm-members-ttl{font-family:'Cinzel Decorative',serif;font-size:14px;letter-spacing:.08em;color:var(--gold);margin-bottom:14px}
@@ -53,13 +67,16 @@
 }
 .adm-grid input:focus,.adm-grid textarea:focus{outline:none;border-color:var(--gold)}
 .adm-grid input[type=color]{padding:3px;height:38px;cursor:pointer}
+.adm-grid select{font-family:'Noto Sans SC',sans-serif;font-size:13px;color:var(--parch);background:rgba(0,0,0,.25);border:1px solid rgba(201,168,76,.22);border-radius:3px;padding:9px 11px}
+.adm-grid select:focus{outline:none;border-color:var(--gold)}
+.adm-lbl-note{font-style:normal;font-family:'Noto Sans SC',sans-serif;font-size:9px;letter-spacing:0;text-transform:none;color:var(--parch2);opacity:.55;margin-left:5px}
 .adm-newform-actions,.adm-edit-actions{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}
 
 /* ── Cuerpo: lista + detalle ────────────────────────────────────────────── */
 /* La CONFIG (adm-detail) es lo importante: la lista de haciendas queda a la
    izquierda, estrecha, y el detalle ocupa TODO el ancho restante (sin scroll
    lateral en el tablero). */
-.adm-body{display:grid;grid-template-columns:215px minmax(0,1fr);gap:22px;align-items:start}
+.adm-body{display:grid;grid-template-columns:240px minmax(0,1fr);gap:22px;align-items:start}
 .adm-list{grid-column:1}
 .adm-detail{grid-column:2}
 @media (max-width:720px){
@@ -75,7 +92,7 @@
 }
 .adm-listitem:hover{background:rgba(201,168,76,.06)}
 .adm-listitem.on{background:rgba(201,168,76,.1);border-color:rgba(201,168,76,.4);border-left-color:var(--hac,var(--gold))}
-.adm-li-zh{font-family:'Noto Serif SC',serif;font-size:26px;font-weight:900;color:var(--hac,var(--gold));line-height:1;flex-shrink:0}
+.adm-li-zh{font-family:'Noto Serif SC',serif;font-size:22px;font-weight:900;color:var(--hac,var(--gold));line-height:1;flex-shrink:0}
 .adm-li-body{display:flex;flex-direction:column;gap:3px;min-width:0}
 .adm-li-name{font-family:'Noto Serif SC',serif;font-size:15px;font-weight:700;color:var(--parch);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .adm-li-meta{font-family:'Noto Sans SC',sans-serif;font-size:11px;color:var(--parch2);opacity:.6}
@@ -139,7 +156,24 @@
 /* ── Tablero de construcciones ──────────────────────────────────────────── */
 .adm-board{margin-top:26px;border-top:1px solid rgba(201,168,76,.16);padding-top:18px}
 .adm-board-hint{font-family:'Noto Sans SC',sans-serif;font-size:11px;font-weight:400;color:var(--parch2);opacity:.5;margin-left:8px;text-transform:none;letter-spacing:0}
-.adm-grid-board{display:grid;gap:3px;justify-content:center;margin:4px auto 14px;max-width:100%;overflow:auto}
+/* Tablero: escenario (rejilla, izquierda) + raíl de controles (derecha) para
+   aprovechar el ancho y agrupar los controles en un solo sitio. */
+.adm-board-main{display:grid;grid-template-columns:minmax(0,1fr) 264px;gap:24px;align-items:start;margin-bottom:14px}
+.adm-board-stage{min-width:0}
+.adm-board-rail{display:flex;flex-direction:column;gap:14px}
+.adm-grid-board{display:grid;gap:3px;justify-content:start;margin:0 0 12px;max-width:100%;overflow:auto}
+/* El form de construir, apilado dentro del raíl. */
+.adm-board-rail .adm-build-form{flex-direction:column;align-items:stretch;gap:9px;margin-bottom:0}
+.adm-board-rail .adm-build-form select{width:100%}
+.adm-board-rail .adm-build-form .adm-btn-gold{justify-content:center}
+.adm-board-rail .adm-build-pv{width:100%;box-sizing:border-box}
+.adm-build-row{display:flex;align-items:center;gap:10px}
+@media(max-width:980px){
+  .adm-board-main{grid-template-columns:1fr}
+  .adm-board-rail{flex-direction:row;flex-wrap:wrap;align-items:flex-start}
+  .adm-board-rail .adm-build-form{flex:1;min-width:240px}
+  .adm-board-rail .adm-build-pv{width:160px}
+}
 /* Tooltip de coordenadas (x,y) que sigue al cursor al construir en el tablero. */
 .adm-coord-tip{position:fixed;z-index:60;display:none;pointer-events:none;
   font-family:'Noto Sans SC',sans-serif;font-size:12px;font-weight:700;letter-spacing:.02em;
@@ -181,7 +215,7 @@
 .adm-board-del{background:rgba(160,70,60,.14);border-color:rgba(190,90,80,.5);color:#e0a090}
 .adm-trash{margin-left:10px;vertical-align:middle}
 .adm-trash.on{background:#7a2a24;border-color:#b04a40;color:#ffd8cc}
-.adm-build-delall{cursor:pointer;background:rgba(160,70,60,.18);border:1px solid rgba(190,90,80,.4);color:#e0a090;font-size:10px;padding:2px 8px;border-radius:3px;flex-shrink:0}
+.adm-build-delall,.adm-build-delall-cam{cursor:pointer;background:rgba(160,70,60,.18);border:1px solid rgba(190,90,80,.4);color:#e0a090;font-size:10px;padding:2px 8px;border-radius:3px;flex-shrink:0}
 
 /* ── Delimitar pabellón ─────────────────────────────────────────────────── */
 /* Resaltado del área cerrada bajo el cursor: válida (jade) / inválida (rojo). */
@@ -207,7 +241,7 @@
 .adm-pab-lost .adm-pab-name i{color:#e0907a;opacity:.9}
 /* Tinte base de la región de cada pabellón ya delimitado (color del rol). */
 .adm-cell.pab-region::before{content:'';position:absolute;inset:0;background:var(--pc,#888);opacity:.2;pointer-events:none}
-.adm-build-delall:hover{background:#7a2a24;color:#ffd8cc}
+.adm-build-delall:hover,.adm-build-delall-cam:hover{background:#7a2a24;color:#ffd8cc}
 .adm-build-form{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:12px}
 .adm-build-form select{font-family:'Noto Sans SC',sans-serif;font-size:12px;color:var(--parch);background:rgba(0,0,0,.3);border:1px solid rgba(201,168,76,.25);border-radius:3px;padding:6px 8px}
 .adm-board-sel{font-family:'Cinzel Decorative',serif;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);opacity:.8}
@@ -261,9 +295,88 @@
 .adm-tarea-list{list-style:none;display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
 .adm-tarea-head{display:grid;grid-template-columns:1fr 1.3fr 90px 30px;gap:10px;font-family:'Cinzel Decorative',serif;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);opacity:.55;padding:0 4px}
 .adm-tarea-row,.adm-tarea-add{display:grid;grid-template-columns:1fr 1.3fr 90px 30px;gap:10px;align-items:center;background:rgba(255,255,255,.022);border:1px solid rgba(255,255,255,.06);border-left:2px solid var(--gold);border-radius:2px;padding:7px 10px}
-.adm-tarea-add{margin-top:10px;border-left-color:rgba(201,168,76,.5);background:rgba(201,168,76,.04)}
+.adm-tarea-add{grid-template-columns:1fr 1.3fr 90px auto;margin-top:10px;border-left-color:rgba(201,168,76,.5);background:rgba(201,168,76,.04)}
+.adm-tarea-add .adm-btn{white-space:nowrap}
 .adm-tarea-row input,.adm-tarea-add input{font-family:'Noto Sans SC',sans-serif;font-size:12px;color:var(--parch);background:rgba(0,0,0,.3);border:1px solid rgba(201,168,76,.2);border-radius:3px;padding:6px 8px;width:100%}
 .adm-tarea-row input:focus,.adm-tarea-add input:focus{outline:none;border-color:var(--gold)}
 .adm-tarea-dur{display:flex;align-items:center;gap:5px;font-family:'Noto Sans SC',sans-serif;font-size:11px;color:var(--parch2)}
 .adm-tarea-dur input{width:54px;text-align:right}
 .t-del{padding:3px 0;width:28px}
+
+/* ── Pestaña Personajes ──────────────────────────────────────────────────── */
+.adm-pj{max-width:920px}
+/* Formulario de creación */
+.adm-pj-form{border:1px solid rgba(201,168,76,.2);border-radius:5px;background:rgba(255,255,255,.018);padding:20px;margin-bottom:26px;display:flex;flex-direction:column;gap:18px}
+.adm-pj-namefield{display:flex;flex-direction:column;gap:6px;font-family:'Cinzel Decorative',serif;font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);opacity:.85;max-width:340px}
+.adm-pj-namefield input{font-family:'Noto Sans SC',sans-serif;font-size:14px;color:var(--parch);background:rgba(0,0,0,.25);border:1px solid rgba(201,168,76,.22);border-radius:3px;padding:9px 11px;letter-spacing:normal;text-transform:none}
+.adm-pj-namefield input:focus{outline:none;border-color:var(--gold)}
+.adm-pj-pick{display:flex;flex-direction:column;gap:9px}
+.adm-pj-picklbl{font-family:'Cinzel Decorative',serif;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+.adm-pj-picklbl i{font-style:normal;font-family:'Noto Sans SC',sans-serif;font-size:10px;letter-spacing:0;text-transform:none;color:var(--parch2);opacity:.6;margin-left:4px}
+.adm-pj-chips{display:flex;flex-wrap:wrap;gap:10px}
+.adm-pj-chips-apt{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+/* Cada opción es una tarjeta seleccionable; el radio va oculto. */
+.adm-pj-chip{position:relative;cursor:pointer;display:flex;flex-direction:column;gap:3px;
+  min-width:120px;flex:1;background:rgba(255,255,255,.022);border:1px solid rgba(201,168,76,.2);
+  border-radius:5px;padding:11px 13px;transition:all .15s}
+.adm-pj-chip input{position:absolute;opacity:0;pointer-events:none}
+.adm-pj-chip:hover{border-color:rgba(201,168,76,.5);background:rgba(201,168,76,.06)}
+.adm-pj-chip:has(input:checked){border-color:var(--gold);background:rgba(201,168,76,.12);box-shadow:inset 0 0 0 1px var(--gold)}
+.adm-pj-chip:has(input:disabled){opacity:.45;cursor:not-allowed}
+.adm-pj-chip-zh{font-family:'Noto Serif SC',serif;font-size:22px;font-weight:900;color:var(--gold);line-height:1}
+.adm-pj-chip-name{font-family:'Cinzel Decorative',serif;font-size:12px;color:var(--parch)}
+.adm-pj-chip-desc{font-family:'Noto Sans SC',sans-serif;font-size:10.5px;color:var(--parch2);opacity:.6;line-height:1.4}
+.adm-pj-chip-dom{font-family:'Noto Sans SC',sans-serif;font-size:10px;color:var(--parch2);opacity:.7;letter-spacing:.02em}
+.adm-pj-chip-apt .adm-pj-chip-zh{font-size:24px}
+.adm-pj-form-actions{display:flex;gap:10px}
+/* Lista de personajes registrados */
+.adm-pj-list{list-style:none;display:flex;flex-direction:column;gap:7px}
+.adm-pj-item{display:flex;align-items:center;gap:13px;background:rgba(255,255,255,.022);border:1px solid rgba(255,255,255,.06);border-left:3px solid var(--gold);border-radius:3px;padding:9px 13px}
+.adm-pj-sello{font-family:'Noto Serif SC',serif;font-size:24px;font-weight:900;color:var(--gold);line-height:1;flex-shrink:0;width:30px;text-align:center}
+.adm-pj-body{display:flex;flex-direction:row;align-items:center;justify-content:flex-start;gap:13px;min-width:0;flex:1;cursor:pointer;background:none;border:none;text-align:left;padding:0;font:inherit;color:inherit}
+.adm-pj-name{font-family:'Noto Serif SC',serif;font-size:15px;font-weight:700;color:var(--parch)}
+.adm-pj-tags{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.adm-pj-tag{font-family:'Noto Sans SC',sans-serif;font-size:10.5px;padding:1px 8px;border-radius:10px;border:1px solid rgba(201,168,76,.25);color:var(--parch2)}
+.adm-pj-tag-apt{color:var(--gold);border-color:rgba(201,168,76,.4)}
+.adm-pj-dom{font-family:'Noto Sans SC',sans-serif;font-size:10px;color:var(--parch2);opacity:.6}
+.adm-pj-del{cursor:pointer;background:none;border:none;color:#a05050;font-size:15px;transition:color .14s;flex-shrink:0}
+.adm-pj-del:hover{color:#e09090}
+.adm-pj-del:disabled{opacity:.3;cursor:not-allowed}
+@media(max-width:620px){ .adm-pj-chips-apt{grid-template-columns:repeat(2,1fr)} }
+
+/* Sello de aptitud junto al nombre del mecenas (tabla de la hacienda). */
+.adm-mini-apt{font-family:'Noto Serif SC',serif;font-size:13px;font-weight:900;color:var(--gold);margin-left:5px;cursor:help}
+/* Alta de mecenas: selector de personaje + aviso si no hay ninguno. */
+.adm-addmember select{font-family:'Noto Sans SC',sans-serif;font-size:13px;color:var(--parch);background:rgba(0,0,0,.25);border:1px solid rgba(201,168,76,.22);border-radius:3px;padding:9px 11px;flex:1;min-width:180px}
+.adm-addmember select:focus{outline:none;border-color:var(--gold)}
+.adm-addmember-empty{font-family:'Noto Sans SC',sans-serif;font-size:12.5px;color:var(--parch2);opacity:.7;padding:12px 14px;border:1px dashed rgba(201,168,76,.22);border-radius:3px;line-height:1.5}
+.adm-addmember-empty b{color:var(--gold)}
+
+/* ── Personajes: formulario con preview del modelo ──────────────────────── */
+.adm-pj-grid{display:grid;grid-template-columns:1fr 224px;gap:24px;align-items:start}
+.adm-pj-fields{display:flex;flex-direction:column;gap:18px;min-width:0}
+/* Preview del modelo pixel-art */
+.adm-pj-preview{display:flex;flex-direction:column;align-items:center;gap:8px;background:rgba(0,0,0,.30);border:1px solid rgba(201,168,76,.18);border-radius:6px;padding:14px;position:sticky;top:78px}
+.adm-pj-canvas{image-rendering:pixelated;width:200px;height:280px;border-radius:4px;background:linear-gradient(180deg,#241a10 0%,#15100a 100%)}
+.adm-pj-preview-hint{font-family:'Cinzel Decorative',serif;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--parch2);opacity:.6}
+/* Brújula de 8 direcciones (centro = auto-girar) */
+.adm-pj-compass{display:grid;grid-template-columns:repeat(3,34px);gap:4px}
+.adm-pj-dir{cursor:pointer;font-size:14px;line-height:1;padding:6px 0;border-radius:3px;border:1px solid rgba(201,168,76,.22);background:rgba(255,255,255,.03);color:var(--parch2);transition:all .13s}
+.adm-pj-dir:hover{border-color:var(--gold);color:var(--gold)}
+.adm-pj-dir.on{background:rgba(201,168,76,.2);border-color:var(--gold);color:var(--gold)}
+.adm-pj-auto{color:var(--gold);opacity:.8}
+.adm-pj-auto.on{background:rgba(201,168,76,.22);opacity:1}
+/* Aspecto: color de túnica + swatches de piel/pelo */
+.adm-pj-appearance .adm-pj-asp{display:flex;flex-direction:column;gap:9px}
+.adm-pj-asp-row{display:flex;align-items:center;gap:9px;font-family:'Noto Sans SC',sans-serif;font-size:11.5px;color:var(--parch2);text-transform:none;letter-spacing:0}
+.adm-pj-asp-row input[type=color]{width:36px;height:24px;padding:2px;border:1px solid rgba(201,168,76,.3);border-radius:3px;background:rgba(0,0,0,.3);cursor:pointer}
+.adm-pj-sws{display:flex;gap:6px}
+.adm-pj-sw{width:20px;height:20px;border-radius:50%;border:2px solid rgba(255,255,255,.14);background:var(--sw);cursor:pointer;padding:0;transition:all .13s}
+.adm-pj-sw:hover{border-color:rgba(201,168,76,.6)}
+.adm-pj-sw.on{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold)}
+.adm-pj-sw:disabled{cursor:not-allowed;opacity:.5}
+/* Item de la lista: cuerpo clicable para editar + resalte del que se edita */
+.adm-pj-body:hover .adm-pj-name{color:var(--gold)}
+.adm-pj-info{display:flex;flex-direction:column;gap:4px;min-width:0;align-items:flex-start}
+.adm-pj-item.on{border-left-color:var(--gold);background:rgba(201,168,76,.09)}
+@media(max-width:680px){ .adm-pj-grid{grid-template-columns:1fr} .adm-pj-preview{position:static;flex-direction:row;flex-wrap:wrap;justify-content:flex-start} }

@@ -50,7 +50,28 @@ const HacCalc = (function () {
     return r;
   }
 
-  return { haciendaPuntos, tierDePuntos, progresoHacia, rangoDePuntos, clampTier, tiersAsc, maxTier };
+  // El tier objeto correspondiente a un nivel concreto (1..maxTier).
+  function tierPorNivel(n) {
+    const nn = clampTier(n);
+    return tiers().find(t => (Number(t.nivel) || 1) === nn) || tierDePuntos(0);
+  }
+
+  // ── Nivel de la FINCA (separado de los puntos) ───────────────────────────
+  // El nivel de la finca es un TRINQUETE: sube cuando los puntos cruzan un
+  // umbral, pero NO baja al perder puntos (la rejilla/layout no encoge). El
+  // nivel alcanzado se persiste en `mapa.tier`; el efectivo es el mayor entre
+  // ese y el que darían los puntos actuales.
+  function nivelAlcanzado(h) {
+    const t = h && h.mapa && Number(h.mapa.tier);
+    return t > 0 ? clampTier(t) : 1;
+  }
+  function nivelEfectivo(h) {
+    const derivado = tierDePuntos(haciendaPuntos(h)).nivel;
+    return clampTier(Math.max(Number(derivado) || 1, nivelAlcanzado(h)));
+  }
+
+  return { haciendaPuntos, tierDePuntos, progresoHacia, rangoDePuntos, clampTier, tiersAsc, maxTier,
+    tierPorNivel, nivelAlcanzado, nivelEfectivo };
 })();
 
 if (typeof window !== 'undefined') window.HacCalc = HacCalc;

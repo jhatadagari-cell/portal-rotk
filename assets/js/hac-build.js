@@ -392,7 +392,11 @@ const HacBuild = (function () {
       });
       return acc;
     }, []);
-    return { v: 1, construcciones };
+    const out = { v: 1, construcciones };
+    // Nivel ALCANZADO de la finca (trinquete): la rejilla no encoge aunque
+    // bajen los puntos. Se conserva si viene en el mapa.
+    if (mapa && mapa.tier != null) out.tier = clampTier(mapa.tier);
+    return out;
   }
 
   return {
