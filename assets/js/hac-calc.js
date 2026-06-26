@@ -69,9 +69,14 @@ const HacCalc = (function () {
     const derivado = tierDePuntos(haciendaPuntos(h)).nivel;
     return clampTier(Math.max(Number(derivado) || 1, nivelAlcanzado(h)));
   }
+  // Cupo de mecenas según el nivel efectivo de la finca.
+  function maxMiembros(h) {
+    const t = tierPorNivel(nivelEfectivo(h));
+    return (t && Number(t.maxMiembros)) || Infinity;
+  }
 
   return { haciendaPuntos, tierDePuntos, progresoHacia, rangoDePuntos, clampTier, tiersAsc, maxTier,
-    tierPorNivel, nivelAlcanzado, nivelEfectivo };
+    tierPorNivel, nivelAlcanzado, nivelEfectivo, maxMiembros };
 })();
 
 if (typeof window !== 'undefined') window.HacCalc = HacCalc;

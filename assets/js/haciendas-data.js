@@ -32,6 +32,7 @@ const HAC_TIERS = [
     zh: '宅',
     umbral: 0,
     grid: [8, 12],
+    maxMiembros: 6,
     desc: 'Una casa recién fundada. Muros modestos, pero su nombre ya cuenta.'
   },
   {
@@ -40,6 +41,7 @@ const HAC_TIERS = [
     zh: '府',
     umbral: 150,
     grid: [12, 20],
+    maxMiembros: 12,
     desc: 'Una casa establecida, residencia digna de un dignatario.'
   },
   {
@@ -48,6 +50,7 @@ const HAC_TIERS = [
     zh: '邸',
     umbral: 500,
     grid: [24, 20],
+    maxMiembros: 20,
     desc: 'Una gran finca señorial. Solo las casas más sostenidas la alcanzan.'
   },
   {
@@ -56,6 +59,7 @@ const HAC_TIERS = [
     zh: '第',
     umbral: 1200,
     grid: [28, 30],
+    maxMiembros: 32,
     desc: 'Un recinto amurallado con varios patios y pabellones de servicio.'
   },
   {
@@ -64,6 +68,7 @@ const HAC_TIERS = [
     zh: '宮',
     umbral: 3000,
     grid: [34, 40],
+    maxMiembros: 48,
     desc: 'Una residencia palaciega: salones, jardines y torres de vigilancia.'
   },
   {
@@ -72,6 +77,7 @@ const HAC_TIERS = [
     zh: '殿',
     umbral: 6500,
     grid: [42, 52],
+    maxMiembros: 72,
     desc: 'La cumbre: una corte digna de un rey, alargada patio tras patio.'
   }
 ];
@@ -125,6 +131,15 @@ const HAC_RANGOS = [
     desc: 'Su voz pesa en las decisiones de la hacienda.'
   },
   {
+    id: 'intendente',
+    nombre: 'Intendente',
+    zh: '主簿',
+    tier: 2,
+    umbral: 45,
+    sala: 'Despacho del intendente',
+    desc: 'Lleva los registros, las cuentas y la intendencia de la casa.'
+  },
+  {
     id: 'pilar',
     nombre: 'Pilar de la Casa',
     zh: '棟梁',
@@ -132,6 +147,69 @@ const HAC_RANGOS = [
     umbral: 60,
     sala: 'Salón principal',
     desc: 'Sostiene el linaje: su nombre se graba en el salón principal.'
+  },
+  {
+    id: 'mayordomo',
+    nombre: 'Mayordomo Mayor',
+    zh: '長史',
+    tier: 3,
+    umbral: 100,
+    sala: 'Cámara del mayordomo',
+    desc: 'Dirige al servicio y la administración diaria de la hacienda.'
+  },
+  {
+    id: 'comandante',
+    nombre: 'Comandante',
+    zh: '都督',
+    tier: 4,
+    umbral: 150,
+    sala: 'Sala de mando',
+    desc: 'Manda la guardia y las tropas al servicio de la casa.'
+  },
+  {
+    id: 'gobernador',
+    nombre: 'Gobernador',
+    zh: '太守',
+    tier: 4,
+    umbral: 210,
+    sala: 'Pabellón del gobernador',
+    desc: 'Administra los dominios y territorios de la hacienda.'
+  },
+  {
+    id: 'ministro',
+    nombre: 'Ministro',
+    zh: '九卿',
+    tier: 5,
+    umbral: 300,
+    sala: 'Salón de los ministros',
+    desc: 'Voz de peso en el gobierno de la casa, par de la corte.'
+  },
+  {
+    id: 'marques',
+    nombre: 'Marqués',
+    zh: '列侯',
+    tier: 5,
+    umbral: 430,
+    sala: 'Ala del marqués',
+    desc: 'Ennoblecido por la casa; porta título y feudo propios.'
+  },
+  {
+    id: 'excelencia',
+    nombre: 'Gran Excelencia',
+    zh: '三公',
+    tier: 6,
+    umbral: 620,
+    sala: 'Salón de la corte',
+    desc: 'Una de las tres dignidades supremas de la casa.'
+  },
+  {
+    id: 'duque',
+    nombre: 'Duque del Reino',
+    zh: '國公',
+    tier: 6,
+    umbral: 850,
+    sala: 'Salón ducal',
+    desc: 'La cumbre del escalafón: pilar y sangre del reino.'
   }
 ];
 

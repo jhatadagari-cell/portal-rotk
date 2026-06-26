@@ -108,8 +108,8 @@
 
 <script src="assets/js/auth.js?v=2"></script>
 <script src="assets/js/hac-util.js?v=1"></script>
-<script src="assets/js/haciendas-data.js?v=8"></script>
-<script src="assets/js/hac-calc.js?v=3"></script>
+<script src="assets/js/haciendas-data.js?v=9"></script>
+<script src="assets/js/hac-calc.js?v=4"></script>
 <script src="assets/js/hac-build.js?v=23"></script>
 <script src="assets/js/hac-store.js?v=5"></script>
 <script src="assets/js/hac-tareas.js?v=1"></script>
@@ -150,7 +150,7 @@
   // mecenas). Degrada a vacío si falta la tabla.
   if (window.HacPersonajes) await HacPersonajes.ready();
 
-  const { haciendaPuntos, tierDePuntos, progresoHacia, rangoDePuntos, clampTier, nivelEfectivo, tierPorNivel } = HacCalc;
+  const { haciendaPuntos, tierDePuntos, progresoHacia, rangoDePuntos, clampTier, nivelEfectivo, tierPorNivel, maxMiembros } = HacCalc;
   const RANGOS = (typeof HAC_RANGOS !== 'undefined') ? HAC_RANGOS : [];
 
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, c => (
@@ -471,7 +471,10 @@
     const yaMiembros = new Set((h.miembros || []).map(m => m.personajeId).filter(Boolean));
     const pjAll = window.HacPersonajes ? HacPersonajes.all() : [];
     const pjLibres = pjAll.filter(p => !yaMiembros.has(p.id));
-    const addMemberForm = pjLibres.length
+    const cupo = maxMiembros(h), nMiembros = (h.miembros || []).length, lleno = nMiembros >= cupo;
+    const addMemberForm = lleno
+      ? `<p class="adm-addmember-empty">Cupo de mecenas completo (<b>${nMiembros}/${cupo}</b>). Sube de nivel la finca para admitir más.</p>`
+      : pjLibres.length
       ? `<form class="adm-addmember" id="form-addmember">
           <select name="personajeId" required>${pjLibres.map(p => {
             const apt = HacPersonajeDefs.aptitud(p.aptitud);
@@ -530,7 +533,7 @@
         </form>
       </details>
 
-      <h3 class="adm-members-ttl">Mecenas · cargo según sus puntos</h3>
+      <h3 class="adm-members-ttl">Mecenas · cargo según sus puntos <span class="adm-board-hint">${nMiembros}/${cupo === Infinity ? '∞' : cupo} · cupo nivel ${tier}</span></h3>
       <table class="adm-table">
         <thead><tr><th>Nombre</th><th>Puntos</th><th>Cargo</th><th>Nota</th><th></th></tr></thead>
         <tbody>${filas || `<tr><td colspan="5" class="adm-empty">Sin mecenas todavía.</td></tr>`}</tbody>
@@ -607,6 +610,7 @@
       const pj = window.HacPersonajes ? HacPersonajes.get(pid) : null;
       if (!pj) { alert('Elige un personaje del registro.'); return; }
       if ((h.miembros || []).some(m => m.personajeId === pid)) { alert('Ese personaje ya es mecenas de esta hacienda.'); return; }
+      if ((h.miembros || []).length >= maxMiembros(h)) { alert('Cupo de mecenas completo para el nivel de la finca.'); return; }
       h.miembros.push({
         id: uid(),
         personajeId: pid,
