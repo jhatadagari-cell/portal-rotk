@@ -97,6 +97,7 @@ const HAC_RANGOS = [
   {
     id: 'comensal',
     nombre: 'Comensal',
+    icon: '🍚',
     zh: '食客',
     tier: 1,
     umbral: 100,
@@ -106,6 +107,7 @@ const HAC_RANGOS = [
   {
     id: 'discipulo',
     nombre: 'Discípulo',
+    icon: '📖',
     zh: '門生',
     tier: 1,
     umbral: 500,
@@ -115,6 +117,7 @@ const HAC_RANGOS = [
   {
     id: 'vasallo',
     nombre: 'Vasallo',
+    icon: '🤝',
     zh: '家臣',
     tier: 1,
     umbral: 1500,
@@ -124,6 +127,7 @@ const HAC_RANGOS = [
   {
     id: 'consejero',
     nombre: 'Consejero',
+    icon: '💬',
     zh: '幕賓',
     tier: 2,
     umbral: 3000,
@@ -133,6 +137,7 @@ const HAC_RANGOS = [
   {
     id: 'intendente',
     nombre: 'Intendente',
+    icon: '🧾',
     zh: '主簿',
     tier: 2,
     umbral: 4500,
@@ -142,6 +147,7 @@ const HAC_RANGOS = [
   {
     id: 'pilar',
     nombre: 'Pilar de la Casa',
+    icon: '🏯',
     zh: '棟梁',
     tier: 3,
     umbral: 6000,
@@ -151,6 +157,7 @@ const HAC_RANGOS = [
   {
     id: 'mayordomo',
     nombre: 'Mayordomo Mayor',
+    icon: '🗝️',
     zh: '長史',
     tier: 3,
     umbral: 10000,
@@ -160,6 +167,7 @@ const HAC_RANGOS = [
   {
     id: 'comandante',
     nombre: 'Comandante',
+    icon: '🎖️',
     zh: '都督',
     tier: 4,
     umbral: 15000,
@@ -169,6 +177,7 @@ const HAC_RANGOS = [
   {
     id: 'gobernador',
     nombre: 'Gobernador',
+    icon: '🗺️',
     zh: '太守',
     tier: 4,
     umbral: 21000,
@@ -178,6 +187,7 @@ const HAC_RANGOS = [
   {
     id: 'ministro',
     nombre: 'Ministro',
+    icon: '⚖️',
     zh: '九卿',
     tier: 5,
     umbral: 30000,
@@ -187,6 +197,7 @@ const HAC_RANGOS = [
   {
     id: 'marques',
     nombre: 'Marqués',
+    icon: '🏅',
     zh: '列侯',
     tier: 5,
     umbral: 43000,
@@ -196,6 +207,7 @@ const HAC_RANGOS = [
   {
     id: 'excelencia',
     nombre: 'Gran Excelencia',
+    icon: '⭐',
     zh: '三公',
     tier: 6,
     umbral: 62000,
@@ -205,6 +217,7 @@ const HAC_RANGOS = [
   {
     id: 'duque',
     nombre: 'Duque del Reino',
+    icon: '👑',
     zh: '國公',
     tier: 6,
     umbral: 85000,

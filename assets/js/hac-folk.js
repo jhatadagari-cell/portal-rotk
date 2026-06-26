@@ -95,7 +95,7 @@ const HacFolk = (function () {
         const id = c.pos[0] + ',' + c.pos[1], def = (B && B.tipo(c.tipo)) || {};
         let sx = 0, sy = 0; cells.forEach(p => { sx += p[0]; sy += p[1]; });
         const cx = Math.round(sx / cells.length), cy = Math.round(sy / cells.length);
-        buildings.set(id, { id, tipo: c.tipo, cx, cy, cells, altura: def.altura || 24, dueno: c.dueno || null, nombre: def.nombre || 'Edificio' });
+        buildings.set(id, { id, tipo: c.tipo, cx, cy, cells, altura: def.altura || 24, dueno: c.dueno || null, nombre: def.nombre || 'Edificio', dominio: def.dominio || null });
       }
       if (PASS.has(c.tipo)) return;
       if (B && B.esSuelo && B.esSuelo(c.tipo)) {
@@ -184,8 +184,8 @@ const HacFolk = (function () {
       const aptDef = (aptitud && window.HacPersonajeDefs) ? HacPersonajeDefs.aptitud(aptitud) : null;
       return {
         id: m.id, name: m.nombre || '', color, aptitud, aspecto,
-        cargoZh: cargo ? cargo.zh : '', cargoNombre: cargo ? cargo.nombre : '', cargoTier: cargo ? (cargo.tier || 1) : 0,
-        aptZh: aptDef ? aptDef.zh : '',
+        cargoIcon: cargo ? (cargo.icon || '') : '', cargoNombre: cargo ? cargo.nombre : '', cargoTier: cargo ? (cargo.tier || 1) : 0,
+        aptIcon: aptDef ? (aptDef.icon || '') : '', dominios: aptDef ? (aptDef.dominios || []) : [],
         fx: start[0], fy: start[1], tx: start[0], ty: start[1], moving: false, dir: 'S',
         state: 'paseando', path: null, goalBid: null, insideId: null, task: null,
         homeBid, home, taskTimer: 0, strollTimer: rng(2, 6), wait: Math.random() * 1.2,
@@ -197,28 +197,18 @@ const HacFolk = (function () {
     });
   }
 
-  // Edificios afines a cada aptitud y edificios "nobles" (para cargos altos).
-  const APT_PREF = {
-    guerrero: ['cuartel', 'armeria', 'torre'],
-    caudillo: ['cuartel', 'armeria', 'torre', 'salon-corte'],
-    erudito: ['templo', 'pabellon-te', 'galeria', 'templo-ancestral'],
-    administrador: ['salon', 'ala', 'galeria', 'ala-l'],
-    estratega: ['torre', 'pabellon-te', 'templo'],
-    canciller: ['salon', 'salon-corte', 'templo-ancestral', 'palacio']
-  };
-  const NOBLE = new Set(['salon', 'salon-gran', 'salon-corte', 'salon-largo', 'salon-banquete', 'salon-doble', 'palacio', 'gran-palacio', 'gran-recinto', 'templo-ancestral', 'ala', 'ala-l', 'ala-l-mayor', 'patio-u', 'patio-o']);
-
-  // Elige un edificio a visitar, sesgado por su aptitud (edificio temático) y su
-  // cargo (los altos frecuentan los salones nobles). Con frecuencia, el propio.
+  // Elige un edificio a visitar, sesgado por el DOMINIO del mecenas (militar va
+  // a edificios militares, etc.) y por su cargo (los altos frecuentan los salones
+  // administrativos/nobles). Con frecuencia, el propio.
   function chooseBuilding(w) {
     if (!wk.visitable.length) return null;
     if (w.homeBid && Math.random() < 0.5) { const b = wk.buildings.get(w.homeBid); if (b && b.visitable) return b; }
-    const pref = APT_PREF[w.aptitud] || [], noble = (w.cargoTier || 0) >= 2;
+    const doms = w.dominios || [], noble = (w.cargoTier || 0) >= 2;
     const weighted = [];
     wk.visitable.forEach(b => {
       let wt = 1;
-      if (pref.indexOf(b.tipo) >= 0) wt += 4;
-      if (noble && NOBLE.has(b.tipo)) wt += 3;
+      if (b.dominio && doms.indexOf(b.dominio) >= 0) wt += 4;
+      if (noble && b.dominio === 'administrativo') wt += 2;
       for (let i = 0; i < wt; i++) weighted.push(b);
     });
     return weighted.length ? weighted[rnd(weighted.length)] : wk.visitable[rnd(wk.visitable.length)];
@@ -599,11 +589,10 @@ const HacFolk = (function () {
 
   function banner(g, cx, topY, w, hot) {
     const name = String(w.name || '').slice(0, 16);
-    const cargo = w.cargoZh || '', apt = w.aptZh || '';
-    g.font = '700 7.5px "Noto Serif SC","Noto Sans SC",serif';
-    const cw = cargo ? g.measureText(cargo + ' ').width : 0, nw = g.measureText(name).width;
-    const padX = 4, aptW = apt ? 11 : 0, bh = 12;
-    const bw = Math.max(16, aptW + cw + nw + padX * 2);
+    const pre = (w.cargoIcon ? w.cargoIcon + ' ' : '') + (w.aptIcon ? w.aptIcon + ' ' : '');
+    const label = pre + name;
+    g.font = '700 8px "Noto Serif SC","Noto Sans SC",sans-serif';
+    const padX = 5, tw = g.measureText(label).width, bw = Math.max(16, tw + padX * 2), bh = 13;
     const bx = cx - bw / 2, by = topY - bh - 7;
     g.strokeStyle = '#6a4a28'; g.lineWidth = 1.4; g.beginPath(); g.moveTo(cx, topY); g.lineTo(cx, by); g.stroke();
     g.fillStyle = hot ? '#b8331f' : '#9c2b1e';
@@ -613,17 +602,8 @@ const HacFolk = (function () {
     g.closePath(); g.fill();
     g.strokeStyle = hot ? '#ffe082' : '#741c12'; g.lineWidth = 1; g.stroke();
     g.strokeStyle = '#d8b65a'; g.lineWidth = 1; g.strokeRect(bx + 1.3, by + 1.3, bw - 2.6, bh - 2.6);
-    let tx = bx + padX;
-    g.textBaseline = 'middle';
-    const ty = by + bh / 2 + 0.4;
-    if (apt) {                                   // chip del sello de aptitud
-      g.fillStyle = '#241a12'; g.fillRect(bx + 1.8, by + 1.8, aptW - 1, bh - 3.6);
-      g.fillStyle = '#7fc9a0'; g.textAlign = 'center'; g.fillText(apt, bx + 1.8 + (aptW - 1) / 2, ty);
-      tx = bx + aptW + padX - 2;
-    }
-    g.textAlign = 'left';
-    if (cargo) { g.fillStyle = '#f0d98a'; g.fillText(cargo + ' ', tx, ty); }   // cargo en oro
-    g.fillStyle = '#f6ecd6'; g.fillText(name, tx + cw, ty);                     // nombre en crema
+    g.fillStyle = '#f6ecd6'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText(label, cx, by + bh / 2 + 0.4);
   }
 
   // Banner 匾額 (placa horizontal) sobre un edificio ocupado. Devuelve el rect

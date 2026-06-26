@@ -23,21 +23,21 @@ const HAC_PERSONALIDADES = [
 /* ── DOMINIOS (ejes de aptitud) ───────────────────────────────────────────
    Los tres pilares clásicos: armas (武), letras (文) y gobierno (政). */
 const HAC_DOMINIOS = {
-  militar:        { nombre: 'Militar',        zh: '武' },
-  cultural:       { nombre: 'Cultural',       zh: '文' },
-  administrativo: { nombre: 'Administrativo', zh: '政' }
+  militar:        { nombre: 'Militar',        zh: '武', icon: '⚔️' },
+  cultural:       { nombre: 'Cultural',       zh: '文', icon: '📜' },
+  administrativo: { nombre: 'Administrativo', zh: '政', icon: '🏛️' }
 };
 
 /* ── APTITUDES ────────────────────────────────────────────────────────────
    `dominios` = ejes en los que destaca el personaje. 3 puras + 3 mixtas.
    Determinarán sus estadísticas/uso futuro. */
 const HAC_APTITUDES = [
-  { id: 'guerrero',      nombre: 'Guerrero',      zh: '武', dominios: ['militar'],                    desc: 'Fuerza y arrojo: nace para el campo de batalla.' },
-  { id: 'erudito',       nombre: 'Erudito',       zh: '文', dominios: ['cultural'],                   desc: 'Letras, música y saber clásico.' },
-  { id: 'administrador', nombre: 'Administrador', zh: '政', dominios: ['administrativo'],             desc: 'Gobierno, finanzas y logística de la casa.' },
-  { id: 'estratega',     nombre: 'Estratega',     zh: '略', dominios: ['militar', 'cultural'],        desc: 'El genio militar culto: une el arte de la guerra y el del saber.' },
-  { id: 'caudillo',      nombre: 'Caudillo',      zh: '霸', dominios: ['militar', 'administrativo'],  desc: 'Manda tropas y gobierna el territorio que conquista.' },
-  { id: 'canciller',     nombre: 'Canciller',     zh: '相', dominios: ['cultural', 'administrativo'], desc: 'El sabio que administra el Estado.' }
+  { id: 'guerrero',      nombre: 'Guerrero',      zh: '武', icon: '⚔️',  dominios: ['militar'],                    desc: 'Fuerza y arrojo: nace para el campo de batalla.' },
+  { id: 'erudito',       nombre: 'Erudito',       zh: '文', icon: '📜',  dominios: ['cultural'],                   desc: 'Letras, música y saber clásico.' },
+  { id: 'administrador', nombre: 'Administrador', zh: '政', icon: '🧮',  dominios: ['administrativo'],             desc: 'Gobierno, finanzas y logística de la casa.' },
+  { id: 'estratega',     nombre: 'Estratega',     zh: '略', icon: '🪶',  dominios: ['militar', 'cultural'],        desc: 'El genio militar culto: une el arte de la guerra y el del saber.' },
+  { id: 'caudillo',      nombre: 'Caudillo',      zh: '霸', icon: '🐎',  dominios: ['militar', 'administrativo'],  desc: 'Manda tropas y gobierna el territorio que conquista.' },
+  { id: 'canciller',     nombre: 'Canciller',     zh: '相', icon: '🐉',  dominios: ['cultural', 'administrativo'], desc: 'El sabio que administra el Estado.' }
 ];
 
 /* ── Helpers de búsqueda (por id) ─────────────────────────────────────────*/
