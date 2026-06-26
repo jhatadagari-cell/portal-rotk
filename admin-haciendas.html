@@ -9,7 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700;900&family=Cinzel+Decorative:wght@400;700&family=IM+Fell+English:ital@0;1&family=Noto+Sans+SC:wght@300;400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/chrome.css?v=4">
 <link rel="stylesheet" href="assets/css/main.css">
-<link rel="stylesheet" href="assets/css/admin.css?v=12">
+<link rel="stylesheet" href="assets/css/admin.css?v=20">
 </head>
 <body>
 
@@ -76,10 +76,10 @@
 <div id="chrome-footer"></div>
 
 <script src="assets/js/auth.js?v=2"></script>
-<script src="assets/js/haciendas-data.js?v=7"></script>
+<script src="assets/js/haciendas-data.js?v=8"></script>
 <script src="assets/js/hac-calc.js?v=2"></script>
-<script src="assets/js/hac-build.js?v=10"></script>
-<script src="assets/js/hac-store.js?v=3"></script>
+<script src="assets/js/hac-build.js?v=18"></script>
+<script src="assets/js/hac-store.js?v=5"></script>
 <script>
 (function () {
   'use strict';
@@ -123,6 +123,10 @@
   let boardTipo = null;  // tipo de edificio elegido para colocar
   let boardRot = 0;      // rotación elegida (0..3 = ×90°)
   let boardMovePos = null; // [gx,gy] ancla del edificio en modo mover, null si inactivo
+  let wallStart = null;  // [gx,gy] inicio de una muralla en línea (herramienta de muro)
+  let deleteMode = false; // modo borrar: clic en una construcción la elimina al instante
+  let pabMode = false;   // modo delimitar pabellón: hover resalta el área cerrada
+  let pabPending = null; // { cells:[[gx,gy],…] } área elegida pendiente de bautizar
 
   // Normaliza una hacienda: asegura ids de miembros y campos por defecto.
   function norm(h) {
@@ -182,7 +186,7 @@
         </button>`;
     }).join('');
     host.querySelectorAll('.adm-listitem').forEach(b =>
-      b.addEventListener('click', () => { selectedId = b.dataset.id; boardSel = null; boardRot = 0; boardMovePos = null; render(); }));
+      b.addEventListener('click', () => { selectedId = b.dataset.id; boardSel = null; boardRot = 0; boardMovePos = null; wallStart = null; deleteMode = false; render(); }));
   }
 
   // ── Tablero de construcciones (rejilla HTML editable) ──
@@ -191,6 +195,8 @@
     if (!B) return '';
     const lista = (h.mapa && h.mapa.construcciones) || [];
     const [GW, GH] = B.gridDims(tier);
+    // Tamaño de celda adaptativo: la rejilla ancha cabe sin scroll horizontal.
+    const cellPx = Math.max(13, Math.min(30, Math.floor(760 / GW)));
 
     let cells = '';
     for (let gy = 0; gy < GH; gy++) for (let gx = 0; gx < GW; gx++) {
@@ -209,17 +215,33 @@
       }
     }
 
+    // Huella normalizada (1×2 y 2×1 son lo mismo). Orden: por lado menor, luego
+    // mayor, luego tier. Mostramos la huella normalizada + el tier mínimo.
+    const norm = (f) => [Math.min(f[0], f[1]), Math.max(f[0], f[1])];
     const disponibles = B.CONSTRUCCIONES.filter(t => t.tierMin <= tier);
     if (!boardTipo || !disponibles.some(t => t.id === boardTipo)) boardTipo = disponibles[0] && disponibles[0].id;
-    const tipos = disponibles
-      .map(t => `<option value="${t.id}"${t.id === boardTipo ? ' selected' : ''}>${esc(t.zh)} ${esc(t.nombre)} (${t.footprint[0]}×${t.footprint[1]})</option>`).join('');
+    // Agrupado por categoría (suelos, muros, edificios, decoración) con <optgroup>
+    // para encontrar rápido cada tipo. Dentro de cada grupo, por huella y tier.
+    const optOf = (t) => { const n = norm(t.footprint);
+      return `<option value="${t.id}"${t.id === boardTipo ? ' selected' : ''}>${esc(t.zh)} ${esc(t.nombre)} · ${n[0]}×${n[1]} · tier ${t.tierMin}</option>`; };
+    const tipos = B.CATEGORIAS.map(cat => {
+      const items = disponibles.filter(t => B.categoriaDe(t.id) === cat.key)
+        .sort((a, b) => { const na = norm(a.footprint), nb = norm(b.footprint); return na[0] - nb[0] || na[1] - nb[1] || a.tierMin - b.tierMin; });
+      return items.length ? `<optgroup label="${esc(cat.label)}">${items.map(optOf).join('')}</optgroup>` : '';
+    }).join('');
     // Tamaño efectivo del edificio elegido con la rotación actual.
     const fpSel = B.footprintDe({ tipo: boardTipo, rot: boardRot });
-    const selTxt = boardSel ? `casilla [${boardSel[0]}, ${boardSel[1]}]` : '— elige una casilla libre —';
+    // Herramienta de muro en línea (solo para 'muralla'): dos clics → hilera recta.
+    const muroMode = boardTipo === 'muralla';
+    const selTxt = muroMode
+      ? (wallStart ? `inicio del muro [${wallStart[0]}, ${wallStart[1]}]` : '— elige el inicio del muro —')
+      : (boardSel ? `casilla [${boardSel[0]}, ${boardSel[1]}]` : '— elige una casilla libre —');
     // Validez de la colocación seleccionada (para bloquear "Construir" y avisar).
     const selV = boardSel ? B.puedeColocar({ pos: boardSel, tipo: boardTipo, rot: boardRot }, tier, lista) : { ok: false };
     const noConstruible = !boardSel || !selV.ok;
-    const motivoHTML = (boardSel && !selV.ok) ? `<span class="adm-board-bad">✕ ${esc(selV.motivo)}</span>` : '';
+    const motivoHTML = (!muroMode && boardSel && !selV.ok) ? `<span class="adm-board-bad">✕ ${esc(selV.motivo)}</span>` : '';
+    const buildLabel = muroMode ? (wallStart ? 'Coloca el final de la muralla' : 'Elige el inicio del muro') : 'Construir';
+    const buildDisabled = muroMode || noConstruible;   // el muro se construye con el 2º clic, no con el botón
     // Sprite del edificio elegido en su rotación (muestra la PUERTA girada).
     const tdef = B.tipo(boardTipo) || {};
     const pvRot = (((boardRot % 4) + 4) % 4);
@@ -228,7 +250,9 @@
     const duenoOpts = (sel) => `<option value=""${sel ? '' : ' selected'}>Sin dueño</option>` +
       (h.miembros || []).map(m => `<option value="${esc(m.id)}"${sel === m.id ? ' selected' : ''}>${esc(m.nombre)}</option>`).join('');
 
-    const items = lista.map(c => {
+    // Las murallas (que pueden ser muchas) se agrupan en una sola fila resumen.
+    const murallas = lista.filter(c => c.tipo === 'muralla');
+    const items = lista.filter(c => c.tipo !== 'muralla').map(c => {
       const t = B.tipo(c.tipo);
       const fuera = !B.dentroDeRejilla(c, tier);
       const f = B.footprintDe(c);
@@ -239,38 +263,84 @@
           <select class="adm-reasignar" data-gx="${c.pos[0]}" data-gy="${c.pos[1]}" title="Asignar mecenas">${duenoOpts(c.dueno)}</select>
           <button class="adm-build-del" data-gx="${c.pos[0]}" data-gy="${c.pos[1]}" title="Quitar edificio">✕</button>
         </li>`;
-    }).join('');
+    }).join('')
+    + (murallas.length ? `<li class="adm-build-item">
+          <span class="adm-build-zh" style="--c:#8a8070">院墙</span>
+          <span class="adm-build-name">Muro Interior <i>×${murallas.length}</i></span>
+          <button class="adm-build-delall" title="Borrar todas las murallas">✕ todas</button>
+        </li>` : '');
 
     const movingC = boardMovePos ? lista.find(c => c.pos[0] === boardMovePos[0] && c.pos[1] === boardMovePos[1]) : null;
     const movingT = movingC ? B.tipo(movingC.tipo) : null;
     const moveBanner = movingC
       ? `<div class="adm-board-moving">${esc(movingT ? movingT.zh + ' ' + movingT.nombre : movingC.tipo)} — elige casilla destino <button type="button" class="adm-btn adm-btn-sm" id="btn-cancel-move">✕ Cancelar</button></div>`
+      : deleteMode
+      ? `<div class="adm-board-moving adm-board-del">Modo borrar — clic en una construcción para eliminarla <button type="button" class="adm-btn adm-btn-sm" id="btn-cancel-del">Salir</button></div>`
       : '';
-    const boardTip = movingC
+    const boardTip = pabMode
+      ? 'Delimitar pabellón: pasa el ratón por un área cerrada por murallas interiores (resaltado verde = válida) y haz clic para ponerle nombre y rol. Esc para salir.'
+      : movingC
       ? 'Haz clic en una casilla libre para mover el edificio. Pulsa Esc o el botón Cancelar para salir del modo mover.'
+      : deleteMode
+      ? 'Clic en cualquier construcción para quitarla (sin confirmar). Pulsa Esc o «Salir» para terminar.'
+      : muroMode
+      ? 'Muro en línea: clic en el INICIO y luego clic en el FINAL (recto, sin diagonal) → se construye la hilera. Esc para cancelar.'
       : 'Pasa el ratón por la rejilla para ver la huella; haz clic en un edificio para moverlo; usa ✕ en la lista para quitarlo.';
+
+    // ── Pabellones (patios temáticos cerrados por murallas) ──
+    const pabs = (window.HacStore && HacStore.pabellones) ? HacStore.pabellones(h.id) : [];
+    const maxPab = B.maxPabellones(tier);
+    const pabAtMax = pabs.length >= maxPab;
+    const pabItems = pabs.map(p => {
+      const r = B.rolPabellon(p.rol);
+      const cells = p.seed ? B.regionPabellon(h.mapa, tier, p.seed[0], p.seed[1]) : [];
+      const lost = cells.length === 0;
+      const meta = lost ? 'área perdida — mueve el muro o bórralo' : (cells.length + ' celdas · ' + (r ? r.nombre : p.rol));
+      return `<li class="adm-pab-item${lost ? ' adm-pab-lost' : ''}">
+        <span class="adm-pab-chip" style="--c:${esc(r ? r.color : '#888')}">${esc(r ? r.zh : '?')}</span>
+        <span class="adm-pab-name">${esc(p.nombre)} <i>${esc(meta)}</i></span>
+        <button class="adm-pab-del" data-pabid="${esc(p.id)}" title="Borrar pabellón">✕</button>
+      </li>`;
+    }).join('');
+    const pabBanner = pabPending
+      ? `<form class="adm-pab-form" id="form-pab">
+           <span class="adm-pab-formttl">⬚ Nuevo pabellón · ${pabPending.cells.length} celdas</span>
+           <input name="nombre" placeholder="Nombre del pabellón" required maxlength="40" autocomplete="off">
+           <select name="rol">${B.ROLES_PABELLON.map(r => `<option value="${esc(r.id)}">${esc(r.zh)} ${esc(r.nombre)}</option>`).join('')}</select>
+           <button type="submit" class="adm-btn adm-btn-gold adm-btn-sm">Crear</button>
+           <button type="button" class="adm-btn adm-btn-sm" id="btn-pab-cancel">Cancelar</button>
+         </form>`
+      : pabMode
+      ? `<div class="adm-board-moving adm-board-pab">⬚ Delimitar pabellón — pasa el ratón por un área cerrada por murallas y haz clic para nombrarla <button type="button" class="adm-btn adm-btn-sm" id="btn-pab-exit">Salir</button></div>`
+      : '';
+    const pabSection = `
+      <h3 class="adm-members-ttl adm-pab-head">Pabellones <span class="adm-board-hint">${pabs.length}/${maxPab} · nivel ${tier}</span>
+        <button type="button" class="adm-btn adm-btn-sm adm-pabbtn${pabMode ? ' on' : ''}" id="btn-pabmode"${(pabAtMax && !pabMode) ? ' disabled title="Máximo de pabellones para este nivel"' : ''}>${pabMode ? 'Delimitando…' : '⬚ Delimitar pabellón'}</button></h3>
+      <ul class="adm-pab-list">${pabItems || '<li class="adm-empty">Sin pabellones. Cierra un área con murallas interiores y pulsa «Delimitar pabellón».</li>'}</ul>`;
 
     return `
       <section class="adm-board">
-        <h3 class="adm-members-ttl">Tablero · construcciones <span class="adm-board-hint">rejilla ${GW}×${GH} · nivel ${tier}</span></h3>
-        <div class="adm-grid-board" style="grid-template-columns:repeat(${GW},30px)">${cells}</div>
+        <h3 class="adm-members-ttl">Tablero · construcciones <span class="adm-board-hint">rejilla ${GW}×${GH} · nivel ${tier}</span> <button type="button" class="adm-btn adm-btn-sm adm-trash${deleteMode ? ' on' : ''}" id="btn-delmode" title="Modo borrar">${deleteMode ? 'Borrando…' : '🗑 Borrar'}</button></h3>
+        <div class="adm-grid-board" style="grid-template-columns:repeat(${GW},${cellPx}px);--cell:${cellPx}px">${cells}</div>
         ${moveBanner}
+        ${pabBanner}
         <div class="adm-build-area">
           <form class="adm-build-form" id="form-build">
             <select name="tipo" id="board-tipo">${tipos}</select>
             <button type="button" class="adm-btn adm-rot-btn" id="btn-rot" title="Rotar 90°">↻ ${fpSel[0]}×${fpSel[1]}</button>
             <span class="adm-board-sel">${selTxt}</span>
-            <button type="submit" class="adm-btn adm-btn-gold"${noConstruible ? ' disabled' : ''}>Construir</button>
+            <button type="submit" class="adm-btn adm-btn-gold"${buildDisabled ? ' disabled' : ''}>${buildLabel}</button>
             ${motivoHTML}
           </form>
           <figure class="adm-build-pv">
-            <img src="assets/img/iso/${pvFile}.png?v=8" alt="${esc(tdef.nombre || '')}">
+            <img src="assets/img/iso/${pvFile}.png?v=20" alt="${esc(tdef.nombre || '')}">
             <figcaption><b>${esc(tdef.zh || '')} ${esc(tdef.nombre || '')}</b> · ${fpSel[0]}×${fpSel[1]}
               <span class="adm-pv-door">┤ el borde dorado en la rejilla = la cara/puerta</span></figcaption>
           </figure>
         </div>
         <p class="adm-board-tip">${boardTip}</p>
         <ul class="adm-build-list">${items || '<li class="adm-empty">Sin construcciones todavía. Elige edificio y casilla, y pulsa Construir.</li>'}</ul>
+        ${pabSection}
       </section>`;
   }
 
@@ -445,7 +515,14 @@
 
       // Elegir tipo de edificio (preview de tamaño se actualiza al re-render).
       const ts = document.getElementById('board-tipo');
-      if (ts) ts.addEventListener('change', () => { boardTipo = ts.value; render(); });
+      if (ts) ts.addEventListener('change', () => { boardTipo = ts.value; wallStart = null; boardSel = null; pabMode = false; pabPending = null; render(); });
+      const muroMode = boardTipo === 'muralla';
+      // Celdas de una línea recta ortogonal a→b (sin diagonal) + su rotación.
+      const lineCells = (a, b) => {
+        const dx = b[0] - a[0], dy = b[1] - a[1], out = [];
+        if (Math.abs(dx) >= Math.abs(dy)) { const s = Math.sign(dx) || 1; for (let x = a[0]; x !== b[0] + s; x += s) out.push([x, a[1]]); return { cells: out, rot: 0 }; }
+        const s = Math.sign(dy) || 1; for (let y = a[1]; y !== b[1] + s; y += s) out.push([a[0], y]); return { cells: out, rot: 1 };
+      };
 
       // Rotar el edificio a colocar.
       const rb = document.getElementById('btn-rot');
@@ -457,8 +534,26 @@
       const cellAt = (gx, gy) => board && board.querySelector('.adm-cell[data-gx="' + gx + '"][data-gy="' + gy + '"]');
       const cubre = (gx, gy) => HacBuild.construccionEn(h.mapa.construcciones, gx, gy);
       function clearMarks() {
-        if (board) board.querySelectorAll('.pv-ok,.pv-bad,.pv-front-r,.pv-front-b,.pv-front-l,.pv-front-t,.hov-del').forEach(el =>
-          el.classList.remove('pv-ok', 'pv-bad', 'pv-front-r', 'pv-front-b', 'pv-front-l', 'pv-front-t', 'hov-del'));
+        if (board) board.querySelectorAll('.pv-ok,.pv-bad,.pv-front-r,.pv-front-b,.pv-front-l,.pv-front-t,.hov-del,.pv-pab,.pv-pab-bad').forEach(el =>
+          el.classList.remove('pv-ok', 'pv-bad', 'pv-front-r', 'pv-front-b', 'pv-front-l', 'pv-front-t', 'hov-del', 'pv-pab', 'pv-pab-bad'));
+      }
+      // Resalta el área de pabellón (región cerrada) bajo el cursor o la pendiente.
+      function showPabRegion(cells, ok) {
+        clearMarks();
+        (cells || []).forEach(([rx, ry]) => { const el = cellAt(rx, ry); if (el) el.classList.add(ok ? 'pv-pab' : 'pv-pab-bad'); });
+      }
+      // Tinte permanente de las regiones de los pabellones ya delimitados (en vivo
+      // desde su semilla → se mueven con las murallas). Solo fuera del modo delimitar.
+      function paintPabellones() {
+        if (!board || pabMode) return;
+        (window.HacStore && HacStore.pabellones ? HacStore.pabellones(h.id) : []).forEach(p => {
+          if (!p.seed) return;
+          const r = HacBuild.rolPabellon(p.rol);
+          HacBuild.regionPabellon(h.mapa, tierNow, p.seed[0], p.seed[1]).forEach(([rx, ry]) => {
+            const el = cellAt(rx, ry);
+            if (el) { el.classList.add('pab-region'); el.style.setProperty('--pc', r ? r.color : '#888'); }
+          });
+        });
       }
       function showPreview(pos) {
         clearMarks();
@@ -490,51 +585,168 @@
           const el = cellAt(gx, gy); if (el) el.classList.add('hov-del');
         });
       }
+      // Resalta la hilera recta de muralla desde wallStart hasta `end`.
+      function showWallPreview(end) {
+        clearMarks();
+        if (!wallStart) return;
+        lineCells(wallStart, end).cells.forEach(([gx, gy]) => {
+          const ok = HacBuild.puedeColocar({ pos: [gx, gy], tipo: 'muralla', rot: 0 }, tierNow, h.mapa.construcciones).ok;
+          const el = cellAt(gx, gy); if (el) el.classList.add(ok ? 'pv-ok' : 'pv-bad');
+        });
+      }
+      // Tooltip de coordenadas que sigue al cursor mientras se construye.
+      let coordTip = document.getElementById('adm-coord-tip');
+      if (!coordTip) { coordTip = document.createElement('div'); coordTip.id = 'adm-coord-tip'; coordTip.className = 'adm-coord-tip'; document.body.appendChild(coordTip); }
+      const hideCoord = () => { coordTip.style.display = 'none'; };
+      const showCoord = (gx, gy, e) => {
+        coordTip.textContent = gx + ', ' + gy;
+        coordTip.style.display = 'block';
+        coordTip.style.left = (e.clientX + 14) + 'px';
+        coordTip.style.top = (e.clientY + 16) + 'px';
+      };
       if (board) {
         board.addEventListener('mousemove', (e) => {
-          const cell = e.target.closest('.adm-cell'); if (!cell) return;
+          const cell = e.target.closest('.adm-cell'); if (!cell) { hideCoord(); return; }
           const gx = Number(cell.dataset.gx), gy = Number(cell.dataset.gy);
+          showCoord(gx, gy, e);
+          if (pabMode) {
+            if (pabPending) { showPabRegion(pabPending.cells, true); return; }
+            const region = HacBuild.regionPabellon(h.mapa, tierNow, gx, gy);
+            showPabRegion(region, HacBuild.regionValidaPabellon(h.mapa, tierNow, region));
+            return;
+          }
+          if (muroMode && wallStart) { showWallPreview([gx, gy]); return; }
           const occ = cubre(gx, gy);
+          if (deleteMode) { if (occ) showDelete(occ); else clearMarks(); return; }
           if (occ) { if (!boardMovePos) showDelete(occ); else clearMarks(); }
           else showPreview([gx, gy]);
         });
-        board.addEventListener('mouseleave', () => showPreview(boardSel));
-        // Clic sobre un edificio puesto → entrar en modo mover (clic de nuevo → cancelar).
+        board.addEventListener('mouseleave', () => {
+          hideCoord();
+          if (pabMode) { if (pabPending) showPabRegion(pabPending.cells, true); else clearMarks(); return; }
+          if (muroMode && wallStart) showWallPreview(wallStart); else showPreview(boardSel);
+        });
+        // Clic en modo delimitar pabellón: elige el área cerrada bajo el cursor.
+        board.addEventListener('click', (e) => {
+          if (!pabMode || pabPending) return;
+          const cell = e.target.closest('.adm-cell'); if (!cell) return;
+          const gx = Number(cell.dataset.gx), gy = Number(cell.dataset.gy);
+          const region = HacBuild.regionPabellon(h.mapa, tierNow, gx, gy);
+          if (!HacBuild.regionValidaPabellon(h.mapa, tierNow, region)) {
+            alert('Esa área no es válida: debe estar cerrada por murallas interiores y tener al menos ' + HacBuild.MIN_PABELLON + ' celdas.');
+            return;
+          }
+          const inSet = new Set(region.map(c => c[0] + ',' + c[1]));
+          if (HacStore.pabellones(h.id).some(p => p.seed && inSet.has(p.seed[0] + ',' + p.seed[1]))) {
+            alert('Aquí ya hay un pabellón delimitado.');
+            return;
+          }
+          if (HacStore.pabellones(h.id).length >= HacBuild.maxPabellones(tierNow)) {
+            alert('Has alcanzado el máximo de pabellones para este nivel.');
+            return;
+          }
+          pabPending = { cells: region, seed: [gx, gy] };
+          render();
+        });
+        // Clic sobre una construcción: borrar (modo borrar) · sustituir muro por
+        // puerta (puerta seleccionada sobre muralla) · si no, entrar en modo mover.
+        const selDef = HacBuild.tipo(boardTipo);
         board.querySelectorAll('.adm-cell.occ').forEach(cell =>
           cell.addEventListener('click', () => {
+            if (pabMode) return;   // en modo delimitar lo gestiona el listener del tablero
             const c = cubre(Number(cell.dataset.gx), Number(cell.dataset.gy));
             if (!c) return;
-            if (boardMovePos && boardMovePos[0] === c.pos[0] && boardMovePos[1] === c.pos[1]) {
-              boardMovePos = null;
-            } else {
-              boardMovePos = [c.pos[0], c.pos[1]];
-              boardSel = null;
+            if (deleteMode) {
+              h.mapa.construcciones = h.mapa.construcciones.filter(x => x !== c);
+              saveHacienda(h); render(); return;     // sigue en modo borrar
             }
+            if (selDef && selDef.puerta && c.tipo === 'muralla') {
+              const g2 = { pos: [c.pos[0], c.pos[1]], tipo: boardTipo, rot: c.rot || 0, dueno: null, nivel: 1 };
+              const foot = HacBuild.celdasOcupadas(g2);
+              const after = h.mapa.construcciones.filter(x => !(x.tipo === 'muralla' && foot.some(([fx, fy]) => fx === x.pos[0] && fy === x.pos[1])));
+              if (HacBuild.puedeColocar(g2, tierNow, after).ok) { h.mapa.construcciones = after.concat([g2]); saveHacienda(h); render(); }
+              else alert('No cabe la puerta aquí.');
+              return;
+            }
+            if (boardMovePos && boardMovePos[0] === c.pos[0] && boardMovePos[1] === c.pos[1]) boardMovePos = null;
+            else { boardMovePos = [c.pos[0], c.pos[1]]; boardSel = null; }
             render();
           }));
       }
-      showPreview(boardSel);   // estado inicial: la casilla seleccionada
+      paintPabellones();   // tinte base de los pabellones existentes
+      if (pabMode) { if (pabPending) showPabRegion(pabPending.cells, true); }
+      else if (muroMode && wallStart) showWallPreview(wallStart); else showPreview(boardSel);   // estado inicial
 
       // Botón cancelar modo mover (en el banner).
       const cancelMoveBtn = document.getElementById('btn-cancel-move');
       if (cancelMoveBtn) cancelMoveBtn.addEventListener('click', () => { boardMovePos = null; render(); });
 
-      // Elegir casilla libre (o soltar un edificio en modo mover).
+      // Modo borrar: alternar / salir.
+      const delBtn = document.getElementById('btn-delmode');
+      if (delBtn) delBtn.addEventListener('click', () => { deleteMode = !deleteMode; boardMovePos = null; wallStart = null; boardSel = null; pabMode = false; pabPending = null; render(); });
+
+      // ── Delimitar pabellones ──
+      const pabBtn = document.getElementById('btn-pabmode');
+      if (pabBtn) pabBtn.addEventListener('click', () => { pabMode = !pabMode; pabPending = null; deleteMode = false; boardMovePos = null; wallStart = null; boardSel = null; render(); });
+      const pabExit = document.getElementById('btn-pab-exit');
+      if (pabExit) pabExit.addEventListener('click', () => { pabMode = false; pabPending = null; render(); });
+      const pabCancel = document.getElementById('btn-pab-cancel');
+      if (pabCancel) pabCancel.addEventListener('click', () => { pabPending = null; render(); });   // sigue en modo delimitar
+      const formPab = document.getElementById('form-pab');
+      if (formPab) formPab.addEventListener('submit', (e) => {
+        e.preventDefault();
+        if (!pabPending) return;
+        const nombre = e.target.nombre.value.trim();
+        if (!nombre) { alert('Pon un nombre al pabellón.'); return; }
+        const rol = e.target.rol.value;
+        const id = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : (uid() + '-' + uid());
+        HacStore.addPabellon({ id, haciendaId: h.id, nombre, rol, seed: pabPending.seed })
+          .catch(onWriteError('crear el pabellón'));
+        pabPending = null; pabMode = false; render();
+      });
+      document.querySelectorAll('#adm-detail .adm-pab-del').forEach(b =>
+        b.addEventListener('click', () => {
+          if (!confirm('¿Borrar este pabellón?')) return;
+          HacStore.removePabellon(b.dataset.pabid).catch(onWriteError('borrar el pabellón'));
+          render();
+        }));
+      const cancelDelBtn = document.getElementById('btn-cancel-del');
+      if (cancelDelBtn) cancelDelBtn.addEventListener('click', () => { deleteMode = false; render(); });
+
+      // Borrar TODAS las murallas de golpe (fila resumen de la lista).
+      const delAll = document.querySelector('#adm-detail .adm-build-delall');
+      if (delAll) delAll.addEventListener('click', () => {
+        if (!confirm('¿Borrar todas las murallas de la finca?')) return;
+        h.mapa.construcciones = h.mapa.construcciones.filter(c => c.tipo !== 'muralla');
+        saveHacienda(h); render();
+      });
+
+      // Elegir casilla libre · soltar en modo mover · trazar muralla en línea.
       document.querySelectorAll('#adm-detail .adm-cell.free').forEach(b =>
         b.addEventListener('click', () => {
+          if (pabMode) return;      // en modo delimitar lo gestiona el listener del tablero
+          if (deleteMode) return;   // en modo borrar, las casillas vacías no hacen nada
+          const gx = Number(b.dataset.gx), gy = Number(b.dataset.gy);
           if (boardMovePos) {
             const mC = h.mapa.construcciones.find(c => c.pos[0] === boardMovePos[0] && c.pos[1] === boardMovePos[1]);
             if (!mC) { boardMovePos = null; render(); return; }
-            const nuevaPos = [Number(b.dataset.gx), Number(b.dataset.gy)];
             const otras = h.mapa.construcciones.filter(c => c !== mC);
-            const v = HacBuild.puedeColocar({ pos: nuevaPos, tipo: mC.tipo, rot: mC.rot || 0 }, tierNow, otras);
+            const v = HacBuild.puedeColocar({ pos: [gx, gy], tipo: mC.tipo, rot: mC.rot || 0 }, tierNow, otras);
             if (!v.ok) { alert('No cabe aquí: ' + v.motivo); return; }
-            mC.pos = nuevaPos;
-            boardMovePos = null;
-            saveHacienda(h);
+            mC.pos = [gx, gy]; boardMovePos = null; saveHacienda(h); render();
+          } else if (muroMode) {
+            if (!wallStart) { wallStart = [gx, gy]; render(); return; }   // 1er clic: inicio
+            const { cells, rot } = lineCells(wallStart, [gx, gy]);          // 2º clic: hilera recta
+            let n = 0;
+            cells.forEach(([cx, cy]) => {
+              const c = { pos: [cx, cy], tipo: 'muralla', rot, dueno: null, nivel: 1 };
+              if (HacBuild.puedeColocar(c, tierNow, h.mapa.construcciones).ok) { h.mapa.construcciones.push(c); n++; }
+            });
+            wallStart = null;
+            if (n) saveHacienda(h);
             render();
           } else {
-            boardSel = [Number(b.dataset.gx), Number(b.dataset.gy)];
+            boardSel = [gx, gy];
             render();
           }
         }));
@@ -543,6 +755,8 @@
       const fb = document.getElementById('form-build');
       if (fb) fb.addEventListener('submit', (e) => {
         e.preventDefault();
+        if (pabMode) return;    // en modo delimitar no se construye
+        if (muroMode) return;   // el muro se traza con dos clics, no con el botón
         if (!boardSel) { alert('Elige primero una casilla libre en la rejilla.'); return; }
         const c = { pos: [boardSel[0], boardSel[1]], tipo: boardTipo, rot: boardRot, dueno: null, nivel: 1 };
         const v = HacBuild.puedeColocar(c, tierNow, h.mapa.construcciones);
@@ -589,7 +803,12 @@
 
   // Esc cancela el modo mover desde cualquier punto.
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && boardMovePos) { boardMovePos = null; render(); }
+    if (e.key !== 'Escape') return;
+    if (pabPending) { pabPending = null; render(); }
+    else if (pabMode) { pabMode = false; render(); }
+    else if (boardMovePos) { boardMovePos = null; render(); }
+    else if (wallStart) { wallStart = null; render(); }
+    else if (deleteMode) { deleteMode = false; render(); }
   });
 
   // ── Toolbar ──

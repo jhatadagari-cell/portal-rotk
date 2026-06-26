@@ -18,8 +18,10 @@
 const HacStore = (function () {
   'use strict';
   const TABLE = 'haciendas';
+  const PAB_TABLE = 'pabellones';   // patios temáticos, 1 hacienda ↔ N pabellones
 
   let cache = [];          // lista viva en memoria
+  let pabCache = [];       // pabellones de todas las haciendas
   let readyPromise = null; // carga inicial (una sola vez)
 
   const seed = () => (typeof HAC_HACIENDAS !== 'undefined')
@@ -63,6 +65,19 @@ const HacStore = (function () {
     };
   }
 
+  // ── Pabellones (tabla aparte, FK hacienda_id) ───────────────────────────
+  // DINÁMICO: se guarda la celda-SEMILLA [gx,gy]; la región (celdas) se recalcula
+  // en vivo a partir de las murallas (HacBuild.regionPabellon). Así el patio se
+  // adapta solo cuando se mueven los muros.
+  function rowToPab(r) {
+    return { id: r.id, haciendaId: r.hacienda_id, nombre: r.nombre || '', rol: r.rol || '',
+      seed: Array.isArray(r.seed) ? [Number(r.seed[0]) || 0, Number(r.seed[1]) || 0] : [0, 0] };
+  }
+  function pabToRow(p) {
+    return { id: p.id, hacienda_id: p.haciendaId, nombre: p.nombre || '', rol: p.rol || '',
+      seed: Array.isArray(p.seed) ? [Number(p.seed[0]) || 0, Number(p.seed[1]) || 0] : [0, 0] };
+  }
+
   // Cliente Supabase compartido con Auth (espera a la sesión inicial).
   async function sb() {
     if (typeof Auth === 'undefined') throw new Error('Auth no está cargado');
@@ -80,6 +95,16 @@ const HacStore = (function () {
         .select('*').order('updated_at', { ascending: true });
       if (error) throw error;
       cache = (data || []).map(rowToHac);
+      // Pabellones: tabla aparte. Si aún no existe, degrada (caché vacía) sin
+      // romper la carga de haciendas.
+      try {
+        const { data: pdata, error: perr } = await client.from(PAB_TABLE).select('*');
+        if (perr) throw perr;
+        pabCache = (pdata || []).map(rowToPab);
+      } catch (pe) {
+        console.warn('[HacStore] pabellones no disponibles (¿falta la tabla?):', pe && pe.message || pe);
+        pabCache = [];
+      }
     } catch (e) {
       console.error('[HacStore] No se pudo cargar de Supabase:', e);
       // Resiliencia: si falla la red, mostramos la semilla estática (solo lectura).
@@ -95,6 +120,33 @@ const HacStore = (function () {
   // ── Lectores SÍNCRONOS (tras ready) ─────────────────────────────────────
   function all() { return cache.slice(); }
   function get(id) { return cache.find(h => h.id === id) || null; }
+  // Pabellones de una hacienda (o todos si no se pasa id).
+  function pabellones(hacId) {
+    return hacId == null ? pabCache.slice() : pabCache.filter(p => p.haciendaId === hacId);
+  }
+
+  // ── Escritores de pabellones (admin) ────────────────────────────────────
+  async function addPabellon(p) {
+    pabCache.push(p);                                   // refleja en UI al instante
+    const client = await sb();
+    const { error } = await client.from(PAB_TABLE).insert(pabToRow(p));
+    if (error) { console.error('[HacStore] addPabellon', error); throw error; }
+    return p;
+  }
+  async function updatePabellon(p) {
+    const i = pabCache.findIndex(x => x.id === p.id);
+    if (i >= 0) pabCache[i] = p; else pabCache.push(p);
+    const client = await sb();
+    const { error } = await client.from(PAB_TABLE).upsert(pabToRow(p));
+    if (error) { console.error('[HacStore] updatePabellon', error); throw error; }
+    return p;
+  }
+  async function removePabellon(id) {
+    pabCache = pabCache.filter(p => p.id !== id);
+    const client = await sb();
+    const { error } = await client.from(PAB_TABLE).delete().eq('id', id);
+    if (error) { console.error('[HacStore] removePabellon', error); throw error; }
+  }
 
   // ── Escritores (admin) — actualizan caché y persisten ───────────────────
   async function upsert(h) {
@@ -107,6 +159,7 @@ const HacStore = (function () {
   }
   async function remove(id) {
     cache = cache.filter(h => h.id !== id);
+    pabCache = pabCache.filter(p => p.haciendaId !== id);   // la BD cae en cascada (FK)
     const client = await sb();
     const { error } = await client.from(TABLE).delete().eq('id', id);
     if (error) { console.error('[HacStore] remove', error); throw error; }
@@ -138,7 +191,8 @@ const HacStore = (function () {
     return base + '-' + n;
   }
 
-  return { ready, reload, all, get, upsert, remove, clear, resetToSeed, makeId, TABLE };
+  return { ready, reload, all, get, upsert, remove, clear, resetToSeed, makeId, TABLE,
+    pabellones, addPabellon, updatePabellon, removePabellon, PAB_TABLE };
 })();
 
 if (typeof window !== 'undefined') window.HacStore = HacStore;

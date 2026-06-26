@@ -142,7 +142,7 @@ function drawBuilding(cfg) {
   const tierIns = cfg.tierIns ?? 0.5;          // cuánto encoge cada piso por lado
   const tier0Ins = cfg.tier0Ins ?? 0.55;       // encogido del primer piso superior
   const tiersExtra = tierList.reduce((s, t) => s + t.bodyH + t.roofH - 1, 0);
-  const totalH = baseH + bodyH + roofH + tiersExtra + 8;
+  const totalH = baseH + bodyH + roofH + tiersExtra + 11;
   const W = Math.ceil((w + h - 2 + 4 * ovR) * TW / 2) + 6;
   const OX = Math.round((h - 1 + 2 * ovR) * TW / 2) + 3;
   const OY = Math.round(totalH) + 2;
@@ -172,6 +172,7 @@ function drawBuilding(cfg) {
     const courseL=dark(c,.10), courseR=dark(c,.22);   // líneas de teja
     const lerp=(a,b,t)=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t];
     const dx=x1-x0, dy=y1-y0;
+    const flyUp=Math.max(3, Math.round(rh*0.4));       // vuelo del alero en las esquinas (起翘)
     const N=P(x0-ovR,y0-ovR,zEave), E=P(x1+ovR,y0-ovR,zEave), S=P(x1+ovR,y1+ovR,zEave), Wc=P(x0-ovR,y1+ovR,zEave);
     const cx=(x0+x1)/2, cy=(y0+y1)/2;
     let r0,r1;
@@ -179,55 +180,60 @@ function drawBuilding(cfg) {
     const insL = (dx>=dy ? (dx>dy?0.12:0.2) : (dy>dx?0.12:0.2));
     if(dx>=dy){ r0=P(x0+insL*dx,cy,zEave+rh); r1=P(x1-insL*dx,cy,zEave+rh); if(dx===0){r0=P(cx,cy,zEave+rh);r1=r0;} }
     else      { r0=P(cx,y0+insL*dy,zEave+rh); r1=P(cx,y1-insL*dy,zEave+rh); }
-    // Cursos de teja paralelos al alero sobre un faldón cuadrilátero
-    // (borde alero ea-eb abajo, cumbrera ra-rb arriba).
+    // Esquinas con el alero ELEVADO (vuelo) y curva CÓNCAVA (反宇): entre dos
+    // esquinas elevadas, el borde del alero se comba hacia abajo en el centro.
+    const up=p=>[p[0],p[1]-flyUp];
+    const Su=up(S), Eu=up(E), Wu=up(Wc), Nu=up(N);
+    const eaveCurve=(A,B,seg)=>{ const o=[]; for(let i=0;i<=seg;i++){ const t=i/seg, p=lerp(A,B,t); o.push([p[0],p[1]+flyUp*4*t*(1-t)]); } return o; };
     const courseQuad=(ea,eb,ra,rb,col)=>{ for(const t of [.16,.32,.48,.64,.80,.92]) lineP(buf,lerp(ea,ra,t),lerp(eb,rb,t),col); };
     const courseHip =(ba,bb,ap,col)=>{ for(const t of [.25,.5,.72,.9]) lineP(buf,lerp(ba,ap,t),lerp(bb,ap,t),col); };
-    // Hiladas VERTICALES de teja (filas cilíndricas que bajan por el faldón):
-    // el rasgo más característico del tejado chino. ea-eb alero, ra-rb cumbrera.
     const ribQuad=(ea,eb,ra,rb,col)=>{ const n=Math.max(3,Math.round(Math.hypot(eb[0]-ea[0],eb[1]-ea[1])/5));
       for(let i=1;i<n;i++){ const u=i/n; lineP(buf,lerp(ea,eb,u),lerp(ra,rb,u),col); } };
-
+    const polyline=(pts,col)=>{ for(let i=0;i<pts.length-1;i++) lineP(buf,pts[i],pts[i+1],col); };
     const drop=p=>[p[0],p[1]+2];
-    fillPoly(buf,[Wc,S,drop(S),drop(Wc)],fascia);
-    fillPoly(buf,[S,E,drop(E),drop(S)],fascia);
+    const fasciaOf=(cv)=>{ for(let i=0;i<cv.length-1;i++) fillPoly(buf,[cv[i],cv[i+1],drop(cv[i+1]),drop(cv[i])],fascia); };
+    const teeth=(cv)=>{ for(let i=0;i<cv.length;i++) fillEllipse(buf,cv[i][0],cv[i][1]+1,1.3,1,eave); };
+    // Cuerno de alero volado (起翘): la punta sube y se curva hacia afuera.
+    const horn=(Cu,ox)=>{ fillPoly(buf,[[Cu[0],Cu[1]+1],[Cu[0]+ox*0.4,Cu[1]-2],[Cu[0]+ox*1.5,Cu[1]-4],[Cu[0]+ox*1.8,Cu[1]-2.4],[Cu[0]+ox*0.7,Cu[1]+1]],eave);
+      px(buf,Math.round(Cu[0]+ox*1.6),Math.round(Cu[1]-4),hexToRgb(PAL.finial),255); };
 
     if(dx>=dy){
-      fillPoly(buf,[r0,r1,E,N],roofBack);
-      fillPoly(buf,[r0,N,Wc],roofBack);
-      roofFill(buf,[r1,E,S],roofR);
-      roofFill(buf,[r0,r1,S,Wc],roofL);
-      // cursos sobre faldón sur (grande) e hip este + hiladas verticales.
-      courseQuad(Wc,S,r0,r1,courseL);
-      ribQuad(Wc,S,r0,r1,dark(roofL,.12));
-      courseHip(E,S,r1,courseR);
-      // limatesas (aristas de los hips frontales).
-      lineP(buf,r0,Wc,ridge); lineP(buf,r1,S,ridge); lineP(buf,r1,E,ridge);
+      const swC=eaveCurve(Su,Wu,7), seC=eaveCurve(Eu,Su,4);
+      fasciaOf(swC); fasciaOf(seC);
+      fillPoly(buf,[r0,r1,Eu,Nu],roofBack);                 // norte (atrás)
+      fillPoly(buf,[r0,Nu,Wu],roofBack);                    // hip oeste (atrás)
+      roofFill(buf,[r1].concat(seC),roofR);                 // hip este (frente-der)
+      roofFill(buf,[r0,r1].concat(swC),roofL);              // faldón sur (frente)
+      courseQuad(Wu,Su,r0,r1,courseL);
+      ribQuad(Wu,Su,r0,r1,dark(roofL,.12));
+      courseHip(Eu,Su,r1,courseR);
+      lineP(buf,r0,Wu,ridge); lineP(buf,r1,Su,ridge); lineP(buf,r1,Eu,ridge);
+      polyline(swC,eave); polyline(seC,eave);
+      teeth(swC); teeth(seC);
+      horn(Su,1.7); horn(Wu,-2.4); horn(Eu,2.4);
     } else {
-      roofFill(buf,[r0,r1,S,E],roofR);
-      fillPoly(buf,[r0,E,N],roofBack);
-      roofFill(buf,[r1,S,Wc],roofL);
-      fillPoly(buf,[r0,r1,Wc,N],roofBack);
-      courseQuad(E,S,r0,r1,courseR);
-      ribQuad(E,S,r0,r1,dark(roofR,.12));
-      courseHip(Wc,S,r1,courseL);
-      lineP(buf,r0,E,ridge); lineP(buf,r1,S,ridge); lineP(buf,r1,Wc,ridge);
+      const seC=eaveCurve(Su,Eu,4), swC=eaveCurve(Su,Wu,7);
+      fasciaOf(seC); fasciaOf(swC);
+      fillPoly(buf,[r0,Eu,Nu],roofBack);
+      fillPoly(buf,[r0,r1,Wu,Nu],roofBack);
+      roofFill(buf,[r0,r1].concat(seC),roofR);              // faldón este (frente)
+      roofFill(buf,[r1].concat(swC),roofL);                 // hip oeste (frente-izq)
+      courseQuad(Eu,Su,r0,r1,courseR);
+      ribQuad(Eu,Su,r0,r1,dark(roofR,.12));
+      courseHip(Wu,Su,r1,courseL);
+      lineP(buf,r0,Eu,ridge); lineP(buf,r1,Su,ridge); lineP(buf,r1,Wu,ridge);
+      polyline(seC,eave); polyline(swC,eave);
+      teeth(seC); teeth(swC);
+      horn(Su,1.7); horn(Eu,2.4); horn(Wu,-2.4);
     }
-    // Cumbrera engrosada, caballete claro y alero resaltado.
+    // Cumbrera engrosada y caballete claro.
     lineP(buf,r0,r1,ridge); lineP(buf,[r0[0],r0[1]-1],[r1[0],r1[1]-1],ridge);
     lineP(buf,[r0[0],r0[1]-2],[r1[0],r1[1]-2],ridgeCap);
-    lineP(buf,S,Wc,eave); lineP(buf,E,S,eave);
-    // Aleros levantados (puntas curvas en las esquinas).
-    [S,Wc,E].forEach(p=>{ fillPoly(buf,[[p[0]-1,p[1]],[p[0]+1,p[1]],[p[0],p[1]-3]],eave); });
-    // Goterón: hilera de teja-cabeza a lo largo de los dos aleros frontales.
-    const teeth=(a,b)=>{ const n=Math.max(2,Math.round(Math.hypot(b[0]-a[0],b[1]-a[1])/3.2));
-      for(let i=0;i<=n;i++){ const p=lerp(a,b,i/n); fillEllipse(buf,p[0],p[1]+1,1.3,1,eave); } };
-    teeth(Wc,S); teeth(S,E);
-    // Remates de cumbrera (colas 鴟尾) curvados hacia el centro, con punta dorada.
+    // Remates de cumbrera 鴟吻 (las "dos puntas"): cola curva hacia dentro + perla dorada.
     const orn=(p,dir)=>{ const o=PAL.ridgeOrn;
-      fillPoly(buf,[[p[0],p[1]+1],[p[0],p[1]-4],[p[0]+dir*3,p[1]-5],[p[0]+dir*2,p[1]-2],[p[0]+dir,p[1]+1]],o);
-      px(buf,Math.round(p[0]+dir*2),Math.round(p[1]-5),hexToRgb(PAL.finial),255);
-      px(buf,Math.round(p[0]+dir*3),Math.round(p[1]-5),hexToRgb(PAL.finial),255); };
+      fillPoly(buf,[[p[0],p[1]+1],[p[0],p[1]-5],[p[0]+dir*2,p[1]-7],[p[0]+dir*4,p[1]-6],[p[0]+dir*3,p[1]-2],[p[0]+dir*1.5,p[1]+1]],o);
+      px(buf,Math.round(p[0]+dir*3),Math.round(p[1]-6),hexToRgb(PAL.finial),255);
+      px(buf,Math.round(p[0]+dir*4),Math.round(p[1]-6),hexToRgb(PAL.finial),255); };
     orn(r0,1); orn(r1,-1);
   }
 
@@ -314,7 +320,12 @@ const EDIFICIOS = [
   { id:'salon-gran',       w:4, h:3, roof:'#b03818', baseH:7, bodyH:19, roofH:16, stories:true, bodyH2:9,  roofH2:12 },
   { id:'pabellon-gran',    w:3, h:4, roof:'#a85a2e', baseH:6, bodyH:18, roofH:16 },
   { id:'salon-corte',      w:3, h:6, roof:'#bb3c1e', baseH:7, bodyH:20, roofH:17, stories:true, bodyH2:10, roofH2:13 },
-  { id:'palacio',          w:4, h:6, roof:'#c43c1a', baseH:8, bodyH:22, roofH:18, stories:true, bodyH2:12, roofH2:15 }
+  { id:'palacio',          w:4, h:6, roof:'#c43c1a', baseH:8, bodyH:22, roofH:18, stories:true, bodyH2:12, roofH2:15 },
+  { id:'salon-largo',      w:3, h:5, roof:'#bb3c1e', baseH:7, bodyH:20, roofH:17, stories:true, bodyH2:10, roofH2:13 },
+  { id:'salon-banquete',   w:3, h:7, roof:'#b83a1c', baseH:7, bodyH:21, roofH:18, stories:true, bodyH2:11, roofH2:14 },
+  { id:'cuartel',          w:4, h:5, roof:'#6a6a5a', baseH:6, bodyH:15, roofH:12 },
+  { id:'gran-palacio',     w:4, h:7, roof:'#c43c1a', baseH:9, bodyH:24, roofH:19, tier0Ins:0.6, tierIns:0.5,
+    tiers:[{bodyH:14,roofH:13},{bodyH:11,roofH:11}] }
 ];
 
 // ── Decoración 1×1 (faroles, antorchas, braseros, calderos, estandartes) ──
@@ -714,6 +725,40 @@ function drawGateArch(cfg){
   isoHip(buf,P,w,h, postH+2.5, 9, tile);
   return { buf, ox:OX, oy:OY };
 }
+// Pieza 1×1 de MURO INTERIOR (orient 'x'/'y') o PORTÓN (gate=true), cohesionados.
+function drawWallPiece(cfg){
+  const orient=cfg.orient, gate=cfg.gate;
+  const wallH=16, iwt=0.34, brick='#8a8070', tile=mix('#933c22','#000',.02), red='#9c3c22', redD='#6a2614';
+  const { buf, P, OX, OY } = isoBuf(1, 1, wallH + (gate ? 17 : 8));
+  const aX = orient === 'x';
+  const a = aX ? -0.5 : -iwt/2, c = aX ? 0.5 : iwt/2, b = aX ? -iwt/2 : -0.5, d = aX ? iwt/2 : 0.5;
+  // cuerpo del muro (sillería)
+  isoPrism(buf, P, a, b, c, d, 0, wallH, light(brick,.10), dark(brick,.20), dark(brick,.32), 'stone');
+  if (gate) {
+    // vano + dos hojas rojas con tachones en la cara vista
+    const dz = wallH*0.66, doorCol = mix('#7a241a','#000',.02);
+    if (aX) {
+      fillPoly(buf,[P(-0.30,d,0),P(0.30,d,0),P(0.30,d,dz+0.4),P(-0.30,d,dz+0.4)], '#1a120a');
+      fillPoly(buf,[P(-0.26,d,0),P(-0.02,d,0),P(-0.02,d,dz),P(-0.26,d,dz)], doorCol);
+      fillPoly(buf,[P(0.02,d,0),P(0.26,d,0),P(0.26,d,dz),P(0.02,d,dz)], doorCol);
+      for(const lf of[-1,1])for(let r=0;r<3;r++){const p=P(lf*0.13,d,dz*(0.3+r*0.26));px(buf,Math.round(p[0]),Math.round(p[1]),hexToRgb('#d0a84a'),255);}
+    } else {
+      fillPoly(buf,[P(c,-0.30,0),P(c,0.30,0),P(c,0.30,dz+0.4),P(c,-0.30,dz+0.4)], '#1a120a');
+      fillPoly(buf,[P(c,-0.26,0),P(c,-0.02,0),P(c,-0.02,dz),P(c,-0.26,dz)], doorCol);
+      fillPoly(buf,[P(c,0.02,0),P(c,0.26,0),P(c,0.26,dz),P(c,0.02,dz)], doorCol);
+      for(const lf of[-1,1])for(let r=0;r<3;r++){const p=P(c,lf*0.13,dz*(0.3+r*0.26));px(buf,Math.round(p[0]),Math.round(p[1]),hexToRgb('#d0a84a'),255);}
+    }
+    // columnas rojas + tejadito a cuatro aguas (gatehouse)
+    isoPrism(buf, P, a-.06, b-.06, c+.06, d+.06, wallH, wallH+3, light(tile,.1), dark(tile,.16), dark(tile,.04));
+    isoHip(buf, P, 1, 1, wallH+3, 9, tile);
+  } else {
+    // coronación de teja + remate del muro
+    isoPrism(buf, P, a-.1, b-.1, c+.1, d+.1, wallH, wallH+3, light(tile,.12), dark(tile,.16), dark(tile,.04));
+    if (aX) lineP(buf, P(a,d,wallH+3), P(c,d,wallH+3), light(tile,.3));
+    else    lineP(buf, P(c,b,wallH+3), P(c,d,wallH+3), light(tile,.3));
+  }
+  return { buf, ox: OX, oy: OY };
+}
 
 // Tile de suelo (rombo de hierba) con variante.
 function drawTile(hex){
@@ -800,6 +845,13 @@ const SCREENS = [
 SCREENS.forEach(e=>{
   const variants = [ {w:e.w,h:e.h}, {w:e.h,h:e.w}, {w:e.w,h:e.h}, {w:e.h,h:e.w} ];
   variants.forEach((v,r)=> save('bld-'+e.id+'-'+r, e.fn({ ...e, ...v })));
+});
+
+// Muro interior y portón (1×1): rot 0/2 = a lo largo de x, rot 1/3 = a lo largo de y.
+[['muralla', false], ['porton', true]].forEach(([id, gate]) => {
+  const sx = drawWallPiece({ orient: 'x', gate }), sy = drawWallPiece({ orient: 'y', gate });
+  save('bld-' + id + '-0', sx); save('bld-' + id + '-1', sy);
+  save('bld-' + id + '-2', sx); save('bld-' + id + '-3', sy);
 });
 
 save('tile-grass',  drawTile('#3a5a2c'));

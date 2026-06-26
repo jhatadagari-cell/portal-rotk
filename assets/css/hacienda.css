@@ -90,11 +90,31 @@
 }
 /* La finca se muestra a escala FIJA de tesela (no encogida al ancho): así una
    hacienda grande se ve grande. Si excede el ancho, el contenedor hace scroll. */
-.hacp-iso-wrap{margin:18px auto 0}
-.hacp-iso{
-  display:block;margin:0 auto;width:100%;height:auto;
-  image-rendering:pixelated;image-rendering:crisp-edges;
+/* Visor navegable: arrastra para mover, pellizca (o ctrl+rueda) para zoom. */
+.hacp-iso-wrap{
+  position:relative; overflow:hidden; margin:18px auto 0;
+  height:clamp(360px,70vh,820px);
+  border:1px solid rgba(201,168,76,.18); border-radius:6px;
+  background:#0b0a07; cursor:grab; touch-action:none;
 }
+.hacp-iso-wrap:active{cursor:grabbing}
+.hacp-iso{
+  position:absolute; top:0; left:0; transform-origin:0 0; will-change:transform;
+}
+.hacp-iso-hint{
+  position:absolute; right:8px; bottom:6px; z-index:2; pointer-events:none;
+  font-family:'Noto Sans SC',sans-serif; font-size:10.5px; color:var(--parch2);
+  background:rgba(0,0,0,.45); padding:3px 7px; border-radius:10px; opacity:.7;
+}
+/* Tooltip con el nombre del pabellón al pasar el ratón por su patio. */
+.hacp-pab-tip{
+  position:fixed; z-index:60; display:none; pointer-events:none;
+  font-family:'Noto Serif SC','Noto Sans SC',serif; font-size:13px; color:#f4eee2;
+  background:rgba(18,14,9,.92); border:1px solid rgba(201,168,76,.4);
+  padding:5px 10px; border-radius:4px; box-shadow:0 3px 10px rgba(0,0,0,.5); white-space:nowrap;
+}
+.hacp-pab-tip b{font-weight:900; margin-right:2px}
+.hacp-pab-tip .hacp-pab-rol{color:var(--parch2); opacity:.7; font-size:11px}
 
 /* ── Panel de detalle (reusa .hac-panel de haciendas.css) ─────────────── */
 .hacp-detail{margin-top:30px}

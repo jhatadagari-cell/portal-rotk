@@ -31,7 +31,7 @@ const HAC_TIERS = [
     nombre: 'Residencia',
     zh: '宅',
     umbral: 0,
-    grid: [3, 4],
+    grid: [8, 12],
     desc: 'Una casa recién fundada. Muros modestos, pero su nombre ya cuenta.'
   },
   {
@@ -39,7 +39,7 @@ const HAC_TIERS = [
     nombre: 'Mansión',
     zh: '府',
     umbral: 150,
-    grid: [4, 6],
+    grid: [12, 20],
     desc: 'Una casa establecida, residencia digna de un dignatario.'
   },
   {
@@ -47,7 +47,7 @@ const HAC_TIERS = [
     nombre: 'Hacienda Mayor',
     zh: '邸',
     umbral: 500,
-    grid: [6, 9],
+    grid: [24, 20],
     desc: 'Una gran finca señorial. Solo las casas más sostenidas la alcanzan.'
   },
   {
@@ -55,7 +55,7 @@ const HAC_TIERS = [
     nombre: 'Casa Solariega',
     zh: '第',
     umbral: 1200,
-    grid: [8, 12],
+    grid: [28, 30],
     desc: 'Un recinto amurallado con varios patios y pabellones de servicio.'
   },
   {
@@ -63,7 +63,7 @@ const HAC_TIERS = [
     nombre: 'Palacio',
     zh: '宮',
     umbral: 3000,
-    grid: [10, 16],
+    grid: [34, 40],
     desc: 'Una residencia palaciega: salones, jardines y torres de vigilancia.'
   },
   {
@@ -71,7 +71,7 @@ const HAC_TIERS = [
     nombre: 'Corte Señorial',
     zh: '殿',
     umbral: 6500,
-    grid: [12, 20],
+    grid: [42, 52],
     desc: 'La cumbre: una corte digna de un rey, alargada patio tras patio.'
   }
 ];

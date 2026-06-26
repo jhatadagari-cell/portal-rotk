@@ -20,7 +20,7 @@ const HacIso = (function () {
   const TOP_MARGIN = 132;             // hueco arriba para edificios altos, murallas y torres
   const PAD_X = 40;                   // margen lateral para murallas y paseo de ronda
   const SPRITE_BASE = 'assets/img/iso/';
-  const SPRITE_VER = '17';  // súbelo al regenerar los PNG (cache-busting)
+  const SPRITE_VER = '20';  // súbelo al regenerar los PNG (cache-busting)
 
   // ── Color helpers (para el placeholder) ─────────────────────────────────
   function hexToRgb(h) {
@@ -81,10 +81,10 @@ const HacIso = (function () {
 
     // Murallas: datos del nivel (necesarios para dimensionar el lienzo).
     const WALLS = {
-      1: { h: 12, wt: 0.26, base: mix('#7d6b48', casa, .04), cap: false,   cren: false, towers: false, tex: 'rammed', gate: false },
-      2: { h: 18, wt: 0.32, base: mix('#867c6b', casa, .04), cap: 'stone', cren: false, towers: false, tex: 'block',  gate: false },
-      3: { h: 24, wt: 0.36, base: mix('#8f8674', casa, .04), cap: 'tile',  cren: true,  towers: false, tex: 'block',  gate: true },
-      4: { h: 31, wt: 0.42, base: mix('#9a8f7e', casa, .04), cap: 'tile',  cren: true,  towers: true,  tex: 'block',  gate: true }
+      1: { h: 12, wt: 0.26, base: mix('#bcae90', casa, .04), cap: false,   cren: false, towers: false, tex: 'rammed', gate: false },
+      2: { h: 18, wt: 0.32, base: mix('#d2cab6', casa, .04), cap: 'stone', cren: false, towers: false, tex: 'block',  gate: false },
+      3: { h: 24, wt: 0.36, base: mix('#dfd8c6', casa, .04), cap: 'tile',  cren: true,  towers: false, tex: 'block',  gate: true },
+      4: { h: 31, wt: 0.42, base: mix('#e8e1d0', casa, .04), cap: 'tile',  cren: true,  towers: true,  tex: 'block',  gate: true }
     };
     const wallLvl = ({ 1: 1, 2: 2, 3: 3, 4: 4, 5: 4, 6: 4 })[tier] || 1;
     const WD = WALLS[wallLvl];
@@ -125,23 +125,19 @@ const HacIso = (function () {
       poly([T(N), T(E), T(S), T(Wc)], cTop, dark(cTop, 0.42));
     };
 
-    // ── Suelo: losas de piedra estilo Ciudad Prohibida ───────────────────
-    // Cada celda = una baldosa rectangular sobre una junta de mortero: se pinta
-    // primero el rombo completo (mortero) y encima un rombo encogido (la losa),
-    // con variación tonal sutil por baldosa. Anillo exterior = paseo de ronda.
+    // ── Suelo: grandes losas de piedra clara talladas (estilo palacio) ──────
+    // No es un ajedrez de celdas: el solar se embaldosa con LOSAS GRANDES (2×2
+    // celdas) de caliza pálida, con junta fina recogida y bisel tallado (aristas
+    // traseras iluminadas, delanteras en sombra). La variación tonal entre losas
+    // es mínima para que el conjunto sea cohesivo y blanco, no manchado.
     const frac = (n) => n - Math.floor(n);
     const hash = (gx, gy) => frac(Math.sin(gx * 127.1 + gy * 311.7) * 43758.5453);
-    const stoneBase = mix('#6f675b', casa, 0.05);
-    const stoneVars = ['#746c5e', '#6b6357', '#776f60', '#675f54', '#716b5c']
-      .map(c => mix(c, casa, 0.05));
-    const mortar = dark(stoneBase, 0.42);
-    const ringStone = mix(stoneBase, '#000', 0.05);
-    const moss = mix('#46582a', stoneBase, 0.35);     // musgo verdoso
-    const grass = mix('#3f5a2c', casa, 0.04);
-    const inset = (cx, cy, k) => ([                       // rombo encogido (baldosa)
-      [cx, cy - TILE_H / 2 * k], [cx + TILE_W / 2 * k, cy],
-      [cx, cy + TILE_H / 2 * k], [cx - TILE_W / 2 * k, cy]
-    ]);
+    const stoneBase = mix('#d8d2c3', casa, 0.04);     // caliza blanco hueso, apenas teñida
+    const jointCol  = dark(stoneBase, 0.30);          // junta fina entre losas
+    const moss      = mix('#5c6b3a', stoneBase, 0.5); // musgo verdoso (parcos)
+    const grass     = mix('#3f5a2c', casa, 0.04);
+    const edge = (p, q, col) => { g.strokeStyle = col; g.lineWidth = 1; g.beginPath(); g.moveTo(p[0], p[1]); g.lineTo(q[0], q[1]); g.stroke(); };
+    const lerp2 = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
     // Matita de hierba que crece en una junta (briznas verdes).
     const grassTuft = (cx, cy) => {
       g.lineWidth = 1;
@@ -150,29 +146,59 @@ const HacIso = (function () {
         g.beginPath(); g.moveTo(cx + i * 1.7, cy + 1.5); g.lineTo(cx + i * 2.3, cy - 3); g.stroke();
       }
     };
-    for (let gy = -M; gy < GH + M; gy++) {
-      for (let gx = -M; gx < GW + M; gx++) {
-        const cx = X(gx, gy), cy = Y(gx, gy);
-        const n = hash(gx + 31, gy + 17);
-        const mp = hash((gx >> 1) * 1.7 + 5, (gy >> 1) * 1.7 + 9);   // musgo en parches (2×2)
-        const t2 = hash(gx * 2.3 + 7, gy * 2.3 + 3);
-        const ring = (gx < 0 || gy < 0 || gx >= GW || gy >= GH);
-        let col, mossy = false;
-        if (ring) {
-          const t = (n - 0.5) * 0.12; col = t >= 0 ? light(ringStone, t) : dark(ringStone, -t);
-          if (mp > 0.66) { mossy = true; col = mix(col, moss, 0.4 + (mp - 0.66)); }   // musgo al pie del muro
-        } else {
-          col = stoneVars[((gx * 7 + gy * 13) % stoneVars.length + stoneVars.length) % stoneVars.length];
-          if (mp > 0.76) { mossy = true; col = mix(col, moss, 0.35 + (mp - 0.76) * 1.6); }
-          const t = (n - 0.5) * 0.14; col = t >= 0 ? light(col, t) : dark(col, -t);
-        }
-        // mortero (verdoso si hay musgo) + losa (rombo encogido)
-        poly([[cx, cy - TILE_H / 2], [cx + TILE_W / 2, cy], [cx, cy + TILE_H / 2], [cx - TILE_W / 2, cy]], mossy ? mix(mortar, moss, .55) : mortar);
-        poly(inset(cx, cy, 0.88), col, dark(col, 0.18));
-        // hierba en las juntas: abundante en musgo y al pie del muro, rara en el patio
-        if (mossy ? t2 > 0.45 : (ring ? t2 > 0.80 : t2 > 0.94)) grassTuft(cx, cy + TILE_H * 0.22);
+    const loX = -M, hiX = GW - 1 + M, loY = -M, hiY = GH - 1 + M, BS = 2;
+    const blk = (v) => v - (((v % BS) + BS) % BS);     // alinea costuras a rejilla par
+    for (let by = blk(loY); by <= hiY; by += BS) {
+      for (let bx = blk(loX); bx <= hiX; bx += BS) {
+        const x0 = Math.max(bx, loX), y0 = Math.max(by, loY);
+        const x1 = Math.min(bx + BS - 1, hiX), y1 = Math.min(by + BS - 1, hiY);
+        if (x1 < x0 || y1 < y0) continue;
+        // rombo de la losa (huella iso del bloque)
+        const N = [X(x0, y0), Y(x0, y0) - TILE_H / 2];
+        const E = [X(x1, y0) + TILE_W / 2, Y(x1, y0)];
+        const Sp = [X(x1, y1), Y(x1, y1) + TILE_H / 2];
+        const Wp = [X(x0, y1) - TILE_W / 2, Y(x0, y1)];
+        const ctr = [(N[0] + E[0] + Sp[0] + Wp[0]) / 4, (N[1] + E[1] + Sp[1] + Wp[1]) / 4];
+        // junta recogida (rombo completo en tono oscuro)
+        poly([N, E, Sp, Wp], jointCol);
+        // color de la losa: casi uniforme (variación ±3%)
+        const hv = hash(bx * 0.7 + 3, by * 0.7 + 7);
+        let col; { const t = (hv - 0.5) * 0.06; col = t >= 0 ? light(stoneBase, t) : dark(stoneBase, -t); }
+        const onRing = (x0 < 0 || y0 < 0 || x1 >= GW || y1 >= GH);
+        const mp = hash(bx * 1.7 + 5, by * 1.7 + 9);
+        let mossy = false;
+        if (onRing ? mp > 0.66 : mp > 0.88) { mossy = true; col = mix(col, moss, onRing ? 0.4 : 0.28); }
+        // losa encogida (deja ver la junta) + bisel tallado
+        const s = 0.92;
+        const n = lerp2(ctr, N, s), ee = lerp2(ctr, E, s), so = lerp2(ctr, Sp, s), ww = lerp2(ctr, Wp, s);
+        poly([n, ee, so, ww], col);
+        edge(ww, n, light(col, .17)); edge(n, ee, light(col, .10));   // aristas traseras: luz
+        edge(ww, so, dark(col, .13)); edge(so, ee, dark(col, .20));   // aristas delanteras: sombra
+        // veta tallada sutil dentro de la losa (determinista)
+        if (hv > 0.45) { const a = lerp2(n, ww, 0.3 + hv * 0.25), b = lerp2(ee, so, 0.45); edge(a, b, mix(col, jointCol, 0.35)); }
+        // hierba en las juntas con musgo
+        if (mossy && hash(bx + 2, by + 8) > 0.5) grassTuft(ctr[0], ctr[1] + TILE_H * 0.3);
       }
     }
+
+    // ── Pabellones: tinte del patio por rol (sobre el suelo, bajo muros) ───
+    // La región se recalcula EN VIVO desde la celda-semilla (se adapta a los
+    // muros). El NOMBRE se muestra al pasar el ratón (tooltip en la página, vía
+    // HacIso.cellAt), no como etiqueta fija, para no recargar la finca.
+    const pabList = (B && typeof B.regionPabellon === 'function' && Array.isArray(opts.pabellones)) ? opts.pabellones : [];
+    pabList.forEach(p => {
+      if (!p || !Array.isArray(p.seed)) return;
+      const region = B.regionPabellon(opts.mapa, tier, p.seed[0], p.seed[1]);
+      if (!region.length) return;
+      const r = B.rolPabellon(p.rol), col = r ? r.color : casa, cc = hexToRgb(col);
+      const fill = 'rgba(' + cc[0] + ',' + cc[1] + ',' + cc[2] + ',0.17)';
+      region.forEach(([gx, gy]) => {
+        const cx = X(gx, gy), cy = Y(gx, gy);
+        poly([[cx, cy - TILE_H / 2], [cx + TILE_W / 2, cy], [cx, cy + TILE_H / 2], [cx - TILE_W / 2, cy]], fill);
+      });
+    });
+    // Guarda la proyección para el hit-test celda↔cursor (hover de pabellones).
+    canvas._hacProj = { originX, originY, GW, GH };
 
     // ── Murallas (tras el paseo de ronda) ────────────────────────────────
     const capH = WD.cap === 'tile' ? 4 : 3;
@@ -181,6 +207,7 @@ const HacIso = (function () {
     const capT = light(capCol, .14), capL = dark(capCol, .14), capR = dark(capCol, .30);
     const tileRoof = mix('#933c22', casa, .04), gold = '#d0a84a', dark9 = '#1a120a';
     const wallSegs = [];
+    const pennants = [];   // estandartes Han en el color de la casa (con su caja de profundidad)
     const seg = (p, q, col) => { g.strokeStyle = col; g.lineWidth = 1; g.beginPath(); g.moveTo(p[0], p[1]); g.lineTo(q[0], q[1]); g.stroke(); };
     // Límites de los muros (interior = cara al patio · exterior = cara de fuera).
     const WLi = -M - 0.5, WLo = WLi - wt;             // muro trasero-izq (x)
@@ -194,7 +221,7 @@ const HacIso = (function () {
     const texFace = (face, fixed, plo, phi, z0, z1) => {
       const at = (u, z) => face === 'E' ? Pg(fixed, u, z) : Pg(u, fixed, z);
       if (WD.tex === 'rammed') { for (const t of [.36, .68]) { const z = z0 + (z1 - z0) * t; seg(at(plo, z), at(phi, z), dark(WD.base, .28)); } return; }
-      const jc = dark(WD.base, .42), courses = Math.max(3, Math.round((z1 - z0) / 4.5));
+      const jc = dark(WD.base, .26), courses = Math.max(3, Math.round((z1 - z0) / 4.5));
       for (let i = 1; i < courses; i++) { const z = z0 + (z1 - z0) * i / courses; seg(at(plo, z), at(phi, z), jc); }
       const ncol = Math.max(1, Math.round((phi - plo) / 0.45));
       for (let i = 1; i <= courses; i++) {
@@ -224,27 +251,29 @@ const HacIso = (function () {
     // Muro TRASERO-izquierdo (x), cara al patio (+x).
     for (let gy = lo; gy <= hiH; gy++) {
       const b = gy - 0.5, d = gy + 0.5;
-      wallSegs.push({ key: WLo + gy, draw: () => {
+      wallSegs.push({ box: [WLo, b, WLi, d], draw: () => {
         box(WLo, b, WLi, d, 0, WD.h, wTop, wL, wR); texFace('E', WLi, b, d, 0, WD.h); cap(WLo, b, WLi, d, WD.h);
         if (WD.cren && even(gy)) merlon('y', WLi, gy - 0.5, WD.h);
       } });
-      if (third(gy)) wallSegs.push({ key: WLi + gy + 0.02, draw: () => buttress('E', WLi, gy - 0.5, WD.h) });
+      if (third(gy)) wallSegs.push({ box: [WLi, b, WLi + wt * 0.6, d], draw: () => buttress('E', WLi, gy - 0.5, WD.h) });
     }
-    // Muro TRASERO-derecho (y), cara al patio (+y).
+    const gateGc = WD.gate ? Math.floor((GW - 1) / 2) : -999;   // eje ceremonial sur↔norte
+    // Muro TRASERO-derecho (y), cara al patio (+y). Deja hueco para la North Gate.
     for (let gx = lo; gx <= hiW; gx++) {
+      if (WD.gate && Math.abs(gx - gateGc) <= 1) continue;       // hueco del portón norte
       const a = gx - 0.5, c = gx + 0.5;
-      wallSegs.push({ key: gx + WTo, draw: () => {
+      wallSegs.push({ box: [a, WTo, c, WTi], draw: () => {
         box(a, WTo, c, WTi, 0, WD.h, wTop, wL, wR); texFace('S', WTi, a, c, 0, WD.h); cap(a, WTo, c, WTi, WD.h);
         if (WD.cren && even(gx)) merlon('x', WTi, gx - 0.5, WD.h);
       } });
-      if (third(gx)) wallSegs.push({ key: gx + WTi + 0.02, draw: () => buttress('S', WTi, gx - 0.5, WD.h) });
+      if (third(gx)) wallSegs.push({ box: [a, WTi, c, WTi + wt * 0.6], draw: () => buttress('S', WTi, gx - 0.5, WD.h) });
     }
-    // Portón monumental (城門) en el muro delantero-IZQUIERDO (lado corto,
-    // abajo-izquierda): base de sillería con vano y portón rojo de tachones
-    // dorados (門釘) + torre-puerta (城樓) con tejado a cuatro aguas.
-    const gateGc = WD.gate ? Math.floor(GW / 2) : -999;
-    const gate = (gc) => {
-      const a = gc - 1.5, c = gc + 1.5, y0 = FLi, y1 = FLo, gh = WD.h + 6;
+    // Portón monumental (城門) en un muro horizontal (a lo largo de x). La cara/
+    // puerta va en y1 (lado patio): base de sillería con vano y hojas rojas de
+    // tachones (門釘) + torre-puerta (城樓). South Gate (delantero) y North Gate
+    // (trasero), ambas en el eje central.
+    const gate = (gc, y0, y1) => {
+      const a = gc - 1.5, c = gc + 1.5, gh = WD.h + 6;
       box(a, y0, c, y1, 0, gh, wTop, wL, wR); texFace('S', y1, a, c, 0, gh); cap(a, y0, c, y1, gh);
       // vano + dos hojas rojas con dintel (cara sur, y=y1)
       const dz = gh * 0.6, doorCol = mix('#7a241a', casa, .03);
@@ -272,18 +301,20 @@ const HacIso = (function () {
       seg(r0, r1, dark(tileRoof, .42)); seg([r0[0], r0[1] - 1], [r1[0], r1[1] - 1], light(tileRoof, .3));
       seg(r0, [r0[0], r0[1] - 5], gold); g.fillStyle = gold; g.beginPath(); g.arc(r0[0], r0[1] - 6, 1.4, 0, 7); g.fill();
     };
-    // Muro DELANTERO-izquierdo (x), más bajo, con el portón centrado.
+    // Muro DELANTERO-izquierdo (x): SOUTH GATE (午門) en el eje (abajo-izquierda).
     for (let gx = lo; gx <= hiW; gx++) {
-      if (gx === gateGc) { wallSegs.push({ key: gx + FLo + 0.01, draw: () => gate(gx) }); continue; }
+      if (gx === gateGc) { wallSegs.push({ box: [gx - 1.5, FLi, gx + 1.5, FLo], draw: () => gate(gx, FLi, FLo) }); continue; }
       if (WD.gate && Math.abs(gx - gateGc) <= 1) continue;     // hueco que ocupa el portón (3 celdas)
       const a = gx - 0.5, c = gx + 0.5;
-      wallSegs.push({ key: gx + FLo, draw: () => { box(a, FLi, c, FLo, 0, frontH, wTop, wL, wR); texFace('S', FLo, a, c, 0, frontH); cap(a, FLi, c, FLo, frontH); } });
+      wallSegs.push({ box: [a, FLi, c, FLo], draw: () => { box(a, FLi, c, FLo, 0, frontH, wTop, wL, wR); texFace('S', FLo, a, c, 0, frontH); cap(a, FLi, c, FLo, frontH); } });
     }
     // Muro DELANTERO-derecho (x), más bajo (sin portón).
     for (let gy = lo; gy <= hiH; gy++) {
       const b = gy - 0.5, d = gy + 0.5;
-      wallSegs.push({ key: FRo + gy, draw: () => { box(FRi, b, FRo, d, 0, frontH, wTop, wL, wR); texFace('E', FRo, b, d, 0, frontH); cap(FRi, b, FRo, d, frontH); } });
+      wallSegs.push({ box: [FRi, b, FRo, d], draw: () => { box(FRi, b, FRo, d, 0, frontH, wTop, wL, wR); texFace('E', FRo, b, d, 0, frontH); cap(FRi, b, FRo, d, frontH); } });
     }
+    // NORTH GATE (神武門) en el muro TRASERO-derecho, en el eje (arriba-derecha).
+    if (WD.gate) wallSegs.push({ box: [gateGc - 1.5, WTo, gateGc + 1.5, WTi], draw: () => gate(gateGc, WTo, WTi) });
     // Torres de esquina (nivel 4): tronco texturizado + saetera + tejado + pináculo.
     const tower = (cgx, cgy) => {
       const tw = 0.5, th = WD.h + 14;
@@ -299,33 +330,121 @@ const HacIso = (function () {
       g.fillStyle = gold; g.beginPath(); g.arc(ap[0], ap[1] - 4, 1.7, 0, 7); g.fill();
     };
     if (WD.towers) {
-      const cN = -M - 0.5 - wt / 2, cE = GW - 1 + M + 0.5 + wt / 2, cW = GH - 1 + M + 0.5 + wt / 2;
-      wallSegs.push({ key: -2, draw: () => tower(cN, cN) });                    // esquina N (fondo)
-      wallSegs.push({ key: GW - 1 + M, draw: () => tower(cE, cN) });            // esquina E (der-fondo)
-      wallSegs.push({ key: GH - 1 + M, draw: () => tower(cN, cW) });            // esquina W (izq-frente)
+      const cN = -M - 0.5 - wt / 2, cE = GW - 1 + M + 0.5 + wt / 2, cW = GH - 1 + M + 0.5 + wt / 2, tw = 0.64;
+      wallSegs.push({ box: [cN - tw, cN - tw, cN + tw, cN + tw], draw: () => tower(cN, cN) });   // esquina N (fondo)
+      wallSegs.push({ box: [cE - tw, cN - tw, cE + tw, cN + tw], draw: () => tower(cE, cN) });   // esquina E (der-fondo)
+      wallSegs.push({ box: [cN - tw, cW - tw, cN + tw, cW + tw], draw: () => tower(cN, cW) });   // esquina W (izq-frente)
+    }
+    // Anclas de estandartes (en el color de la casa): astas altas en las esquinas
+    // (sobre las torres si las hay) y dos astas monumentales flanqueando la puerta
+    // sur. Entran en el orden de profundidad → nunca solapan mal (sin clipping).
+    {
+      const eN = -M - 0.5 - wt / 2, eE = GW - 1 + M + 0.5 + wt / 2, eW = GH - 1 + M + 0.5 + wt / 2;
+      const z0 = WD.towers ? WD.h + 31 : 0, zt = WD.towers ? WD.h + 50 : WD.h + 28;
+      [[eN, eN], [eE, eN], [eN, eW]].forEach(([gx, gy], i) => pennants.push({ gx, gy, z0, zt, len: 14, phase: i * 1.3, box: [gx - 0.4, gy - 0.4, gx + 0.4, gy + 0.4] }));
+      if (WD.gate) [-2.3, 2.3].forEach((dx, i) => pennants.push({ gx: gateGc + dx, gy: FLi - 0.9, z0: 0, zt: WD.h + 24, len: 14, phase: i * 1.1 + 0.6, box: [gateGc + dx - 0.4, FLi - 1.3, gateGc + dx + 0.4, FLi - 0.5] }));
     }
 
-    // ── Orden de pintado ──────────────────────────────────────────────────
+    // ── Construcciones del jugador ────────────────────────────────────────
     const lista = B ? B.construccionesValidas(opts.mapa, tier)
       : ((opts.mapa && opts.mapa.construcciones) || []);
     const fp = (c) => B ? B.footprintDe(c) : [1, 1];
-    const sortKey = (c) => { const f = fp(c); return (c.pos[0] + f[0] - 1) + (c.pos[1] + f[1] - 1); };
+    const cellsOf = (c) => (B && B.celdasOcupadas) ? B.celdasOcupadas(c) : [[c.pos[0], c.pos[1]]];
     const drawC = (c) => (spritesReady && META) ? sprite(c) : placeholder(c);
-    // Las construcciones de capa 'suelo' (jardines, estanques…) son PLANAS: con
-    // huella grande, un orden de profundidad por celda delantera las pondría por
-    // delante de edificios que en realidad están delante de ellas. Se pintan como
-    // capa sobre el pavimento; muros y edificios (volumétricos) van por encima.
-    // La capa la declara el catálogo (HacBuild.esSuelo); fallback por altura para
-    // tolerar una versión antigua de hac-build.js en caché.
+    // Capa 'suelo' (jardines, estanques…): PLANA, se pinta sobre el pavimento por
+    // DEBAJO de muros y edificios. La declara el catálogo (HacBuild.esSuelo).
     const isFlat = (c) => {
       if (B && typeof B.esSuelo === 'function') return B.esSuelo(c.tipo);
       const d = B && B.tipo(c.tipo); return !!d && (d.altura || 24) <= 8;
     };
-    lista.filter(isFlat).sort((a, b) => sortKey(a) - sortKey(b) || a.pos[0] - b.pos[0]).forEach(drawC);
-    // Muros + edificios, en un único orden de profundidad.
+    const flatSort = (c) => { const f = fp(c); return (c.pos[0] + f[0] - 1) + (c.pos[1] + f[1] - 1); };
+    lista.filter(isFlat).sort((a, b) => flatSort(a) - flatSort(b) || a.pos[0] - b.pos[0]).forEach(drawC);
+
+    // ── Muros interiores autoconectados (院墙) ─────────────────────────────
+    // Se dibujan PROCEDURALMENTE (no por sprite) para que se COMBINEN entre sí
+    // (rectas, esquinas, T, cruces y finales) y enganchen con portones, edificios
+    // y la muralla exterior. Cada celda mira sus 4 vecinos conectables y traza una
+    // barra en X y/o en Y hacia ellos (más un poste central implícito).
+    const k2 = (x, y) => x + ',' + y;
+    const muroSet = new Set();          // celdas con muralla o portón
+    const occSet = new Set();           // celdas ocupadas por edificios
+    lista.forEach(c => {
+      if (isFlat(c)) return;
+      if (c.tipo === 'muralla' || c.tipo === 'porton') muroSet.add(k2(c.pos[0], c.pos[1]));
+      else cellsOf(c).forEach(([x, y]) => occSet.add(k2(x, y)));
+    });
+    const conecta = (x, y) => muroSet.has(k2(x, y)) || occSet.has(k2(x, y));
+    const IWT = 0.34, hf = IWT / 2, IBH = 16, ICH = capH;
+    // Mismo despiece de piedra clara que la muralla exterior (粉墙) para que
+    // combinen; la coronación reutiliza la del tier (teja o piedra).
+    const ibT = wTop, ibL = wL, ibR = wR, ibJ = dark(WD.base, .26);
+    const icT = capT, icL = capL, icR = capR;
+    // Tramo de muro de ladrillo (cuerpo + hiladas de sillería + coronación de teja).
+    const wbox = (x0, y0, x1, y1) => {
+      box(x0, y0, x1, y1, 0, IBH, ibT, ibL, ibR);
+      for (let i = 1; i < 4; i++) { const z = IBH * i / 4; seg(Pg(x1, y0, z), Pg(x1, y1, z), ibJ); seg(Pg(x0, y1, z), Pg(x1, y1, z), ibJ); }
+      box(x0 - .1, y0 - .1, x1 + .1, y1 + .1, IBH, IBH + ICH, icT, icL, icR);
+    };
+    const vecinos = (gx, gy) => {
+      const cE = conecta(gx + 1, gy), cW = conecta(gx - 1, gy), cS = conecta(gx, gy + 1), cN = conecta(gx, gy - 1);
+      const iso = !cE && !cW && !cS && !cN;
+      return { cE, cW, cS, cN, iso, hasX: cE || cW || iso, hasY: cN || cS };
+    };
+    const iwall = (gx, gy) => {
+      const v = vecinos(gx, gy);
+      if (v.hasX) wbox((v.cW || v.iso) ? gx - 0.5 : gx - hf, gy - hf, (v.cE || v.iso) ? gx + 0.5 : gx + hf, gy + hf);
+      if (v.hasY) wbox(gx - hf, v.cN ? gy - 0.5 : gy - hf, gx + hf, v.cS ? gy + 0.5 : gy + hf);
+    };
+
+    // ── Estandarte Han en el color de la casa (牙旗) ────────────────────────
+    // Asta con punta de lanza + travesaño, y banderola VERTICAL estrecha que cae
+    // con cola de golondrina y leve ondeo (curva congelada). Estilo dinastía Han,
+    // no una bandera rectangular genérica. Se dibuja en el orden de profundidad.
+    const flav = casa;
+    const shF = (t) => t >= 0 ? light(flav, t) : dark(flav, -t);
+    const pennant = (p) => {
+      const top = Pg(p.gx, p.gy, p.zt), base = Pg(p.gx, p.gy, p.z0), W = 3.2, L = p.len;
+      seg(base, top, '#7a5a32'); seg([base[0] + 1, base[1]], [top[0] + 1, top[1]], '#5a4426');     // asta
+      poly([[top[0], top[1] - 7], [top[0] - 1.5, top[1] - 2], [top[0] + 1.5, top[1] - 2]], '#d8b048');  // punta de lanza
+      poly([[top[0] - W - 1.6, top[1] - 0.4], [top[0] + W + 1.6, top[1] - 0.4], [top[0] + W + 1.6, top[1] + 1.2], [top[0] - W - 1.6, top[1] + 1.2]], '#c2a048');  // travesaño
+      const sway = (u) => Math.sin(p.phase + u * 3.2) * 2.4 * (0.25 + u);
+      const rows = 10;
+      for (let i = 0; i < rows; i++) {
+        const u = i / rows, u1 = (i + 1) / rows, cx = top[0] + sway(u), cx1 = top[0] + sway(u1), y = top[1] + 1 + u * L, y1 = top[1] + 1 + u1 * L;
+        poly([[cx - W, y], [cx + W, y], [cx1 + W, y1], [cx1 - W, y1]], shF((i % 2 ? -0.05 : 0.05) - u * 0.12));
+        seg([cx, y], [cx1, y1], shF(0.18));                          // franja central clara
+      }
+      const cb = top[0] + sway(1), yb = top[1] + 1 + L;
+      poly([[cb - W, yb - 1], [cb - W, yb + 5], [cb, yb + 1.5], [cb + W, yb + 5], [cb + W, yb - 1]], shF(-0.12));   // cola de golondrina
+    };
+
+    // ── Orden de pintado: comparador isométrico por caja de huella ─────────
+    // Cada objeto lleva su caja [x0,y0,x1,y1]. A se pinta antes (detrás) si está
+    // separada hacia el NO de B en algún eje; si se solapan, desempata por la
+    // esquina delantera. Resuelve el caso «muro tras un edificio que tiene delante».
     const drawList = wallSegs.slice();
-    lista.filter(c => !isFlat(c)).forEach(c => drawList.push({ key: sortKey(c), x: c.pos[0], draw: () => drawC(c) }));
-    drawList.sort((a, b) => a.key - b.key || (a.x || 0) - (b.x || 0));
+    lista.filter(c => !isFlat(c) && c.tipo !== 'muralla').forEach(c => {
+      const f = fp(c), x0 = c.pos[0], y0 = c.pos[1];
+      drawList.push({ box: [x0, y0, x0 + f[0], y0 + f[1]], draw: () => drawC(c) });
+    });
+    lista.filter(c => c.tipo === 'muralla').forEach(c => {
+      const gx = c.pos[0], gy = c.pos[1], v = vecinos(gx, gy);
+      drawList.push({ box: [gx, gy, gx + 1, gy + 1], draw: () => iwall(gx, gy) });
+      // Enganche a la muralla exterior cuando el muro tiene un brazo hacia el borde.
+      if (gx === 0 && v.hasX)        drawList.push({ box: [WLi, gy - hf, gx - hf, gy + hf], draw: () => wbox(WLi, gy - hf, gx - hf, gy + hf) });
+      if (gx === GW - 1 && v.hasX)   drawList.push({ box: [gx + hf, gy - hf, FRi, gy + hf], draw: () => wbox(gx + hf, gy - hf, FRi, gy + hf) });
+      if (gy === 0 && v.hasY)        drawList.push({ box: [gx - hf, WTi, gx + hf, gy - hf], draw: () => wbox(gx - hf, WTi, gx + hf, gy - hf) });
+      if (gy === GH - 1 && v.hasY)   drawList.push({ box: [gx - hf, gy + hf, gx + hf, FLi], draw: () => wbox(gx - hf, gy + hf, gx + hf, FLi) });
+    });
+    pennants.forEach(p => drawList.push({ box: p.box, draw: () => pennant(p) }));
+    const before = (A, Z) => {
+      if (A[2] <= Z[0] + 1e-6) return true;     // A al oeste de Z → detrás
+      if (Z[2] <= A[0] + 1e-6) return false;
+      if (A[3] <= Z[1] + 1e-6) return true;     // A al norte de Z → detrás
+      if (Z[3] <= A[1] + 1e-6) return false;
+      return (A[2] + A[3]) < (Z[2] + Z[3]);     // solapan: por esquina delantera
+    };
+    drawList.sort((p, q) => before(p.box, q.box) ? -1 : (before(q.box, p.box) ? 1 : 0));
     drawList.forEach(d => d.draw());
 
     // ── Grano sutil: rompe el monocromo del suelo y las murallas (textura) ──
@@ -333,13 +452,15 @@ const HacIso = (function () {
     // reciben un grano leve que unifica el conjunto.
     try {
       g.setTransform(1, 0, 0, 1, 0, 0);
-      const id = g.getImageData(0, 0, canvas.width, canvas.height), d = id.data, CW = canvas.width;
-      for (let y = 0; y < canvas.height; y++) for (let x = 0; x < CW; x++) {
+      // Tabla de ruido 64×64 (evita un sin() por píxel → rápido en fincas grandes).
+      const NT = new Int8Array(4096);
+      for (let k = 0; k < 4096; k++) { const s = Math.sin((k & 63) * 12.9898 + (k >> 6) * 78.233) * 43758.5453; NT[k] = Math.round(((s - Math.floor(s)) - 0.5) * 6); }
+      const id = g.getImageData(0, 0, canvas.width, canvas.height), d = id.data, CW = canvas.width, CH = canvas.height;
+      for (let y = 0; y < CH; y++) { const row = (y & 63) << 6; for (let x = 0; x < CW; x++) {
         const i = (y * CW + x) * 4; if (d[i + 3] < 16) continue;
-        const s = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453;
-        const j = Math.round(((s - Math.floor(s)) - 0.5) * 6);   // ±3
+        const j = NT[row | (x & 63)];
         d[i] += j; d[i + 1] += j; d[i + 2] += j;                  // (clamp implícito Uint8ClampedArray)
-      }
+      } }
       g.putImageData(id, 0, 0);
     } catch (e) { /* getImageData podría fallar por CORS; en ese caso, sin grano */ }
 
@@ -382,7 +503,23 @@ const HacIso = (function () {
     }
   }
 
-  return { draw, TILE_W, TILE_H, SCALE };
+  // Hit-test: punto de pantalla (clientX/Y) → celda [gx,gy] del tablero, o null.
+  // Usa la proyección guardada en draw() e invierte la rejilla isométrica.
+  // Soporta el pan/zoom (getBoundingClientRect refleja el transform CSS).
+  function cellAt(canvas, clientX, clientY) {
+    const pr = canvas && canvas._hacProj; if (!pr) return null;
+    const rect = canvas.getBoundingClientRect();
+    if (!rect.width || !rect.height) return null;
+    const lx = (clientX - rect.left) / rect.width * canvas.width / SCALE;   // px lógicos
+    const ly = (clientY - rect.top) / rect.height * canvas.height / SCALE;
+    const a = (lx - pr.originX) / (TILE_W / 2);   // gx - gy
+    const b = (ly - pr.originY) / (TILE_H / 2);   // gx + gy
+    const gx = Math.round((a + b) / 2), gy = Math.round((b - a) / 2);
+    if (gx < 0 || gy < 0 || gx >= pr.GW || gy >= pr.GH) return null;
+    return [gx, gy];
+  }
+
+  return { draw, cellAt, TILE_W, TILE_H, SCALE };
 })();
 
 if (typeof window !== 'undefined') window.HacIso = HacIso;

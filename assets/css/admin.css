@@ -12,7 +12,7 @@
 .adm-denied-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
 
 /* ── Contenedor ─────────────────────────────────────────────────────────── */
-.adm{max-width:1180px;margin:0 auto;padding:34px clamp(16px,4vw,40px) 80px}
+.adm{max-width:1560px;margin:0 auto;padding:34px clamp(12px,2.2vw,26px) 80px}
 .adm-head{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;flex-wrap:wrap}
 .adm-eyebrow{font-family:'Cinzel Decorative',serif;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);opacity:.7}
 .adm-ttl{font-family:'Noto Serif SC',serif;font-size:clamp(26px,4vw,38px);font-weight:900;color:var(--parch);margin-top:4px}
@@ -56,7 +56,15 @@
 .adm-newform-actions,.adm-edit-actions{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}
 
 /* ── Cuerpo: lista + detalle ────────────────────────────────────────────── */
-.adm-body{display:grid;grid-template-columns:300px 1fr;gap:24px;align-items:start}
+/* La CONFIG (adm-detail) es lo importante: la lista de haciendas queda a la
+   izquierda, estrecha, y el detalle ocupa TODO el ancho restante (sin scroll
+   lateral en el tablero). */
+.adm-body{display:grid;grid-template-columns:215px minmax(0,1fr);gap:22px;align-items:start}
+.adm-list{grid-column:1}
+.adm-detail{grid-column:2}
+@media (max-width:720px){
+  .adm-body{grid-template-columns:1fr}
+}
 
 .adm-list{display:flex;flex-direction:column;gap:8px}
 .adm-listitem{
@@ -73,7 +81,7 @@
 .adm-li-meta{font-family:'Noto Sans SC',sans-serif;font-size:11px;color:var(--parch2);opacity:.6}
 
 /* ── Detalle ────────────────────────────────────────────────────────────── */
-.adm-detail{border:1px solid rgba(255,255,255,.06);border-radius:4px;background:rgba(255,255,255,.014);padding:22px}
+.adm-detail{border:1px solid rgba(255,255,255,.06);border-radius:4px;background:rgba(255,255,255,.014);padding:22px;width:100%}
 .adm-detail-head{display:flex;align-items:center;gap:16px;margin-bottom:16px}
 .adm-detail-zh{font-family:'Noto Serif SC',serif;font-size:42px;font-weight:900;color:var(--hac,var(--gold));line-height:1;text-shadow:0 0 24px color-mix(in srgb,var(--hac,var(--gold)) 35%,transparent)}
 .adm-detail-head h2{font-family:'Noto Serif SC',serif;font-size:22px;font-weight:900;color:var(--parch)}
@@ -131,13 +139,20 @@
 /* ── Tablero de construcciones ──────────────────────────────────────────── */
 .adm-board{margin-top:26px;border-top:1px solid rgba(201,168,76,.16);padding-top:18px}
 .adm-board-hint{font-family:'Noto Sans SC',sans-serif;font-size:11px;font-weight:400;color:var(--parch2);opacity:.5;margin-left:8px;text-transform:none;letter-spacing:0}
-.adm-grid-board{display:grid;gap:3px;justify-content:start;margin:4px 0 14px}
-.adm-cell{position:relative;width:30px;height:30px;border-radius:3px;display:flex;align-items:center;justify-content:center;line-height:1;padding:0;border:1px solid rgba(201,168,76,.18)}
+.adm-grid-board{display:grid;gap:3px;justify-content:center;margin:4px auto 14px;max-width:100%;overflow:auto}
+/* Tooltip de coordenadas (x,y) que sigue al cursor al construir en el tablero. */
+.adm-coord-tip{position:fixed;z-index:60;display:none;pointer-events:none;
+  font-family:'Noto Sans SC',sans-serif;font-size:12px;font-weight:700;letter-spacing:.02em;
+  color:#1a120a;background:var(--gold,#c9a84c);padding:2px 7px;border-radius:3px;
+  box-shadow:0 2px 8px rgba(0,0,0,.45);white-space:nowrap}
+.adm-cell{position:relative;width:var(--cell,30px);height:var(--cell,30px);border-radius:2px;display:flex;align-items:center;justify-content:center;line-height:1;padding:0;overflow:hidden;border:1px solid rgba(201,168,76,.18)}
 .adm-cell.free{background:rgba(255,255,255,.02);color:var(--parch2);opacity:.4;cursor:pointer;transition:all .14s;font-family:'Noto Serif SC',serif;font-size:14px}
 .adm-cell.free:hover{opacity:.9;background:rgba(201,168,76,.12);border-color:rgba(201,168,76,.4)}
 .adm-cell.free.on{opacity:1;background:rgba(201,168,76,.22);border-color:var(--gold);box-shadow:0 0 0 1px var(--gold)}
 .adm-cell.occ{background:color-mix(in srgb,var(--c,#888) 38%,transparent);border-color:color-mix(in srgb,var(--c,#888) 65%,transparent);color:#fff;font-family:'Noto Sans SC',sans-serif;font-weight:700;font-size:9px;letter-spacing:-.2px}
 .adm-cell.occ{cursor:pointer}
+/* Fila reservada por un muro de patio: no construible. */
+.adm-cell.wall-row{background:repeating-linear-gradient(90deg,#7a4a3a,#7a4a3a 4px,#8a5a46 4px,#8a5a46 8px);border-color:#5a3326;opacity:.85;cursor:not-allowed}
 .adm-cell.occ.anchor{box-shadow:inset 0 0 0 1px rgba(255,255,255,.45)}
 /* Preview de colocación: huella completa (forzamos opacidad por encima del
    atenuado de las celdas libres) en verde (cabe) o rojo (no cabe). */
@@ -162,6 +177,37 @@
 @keyframes move-pulse{0%,100%{box-shadow:inset 0 0 0 2px var(--gold)}50%{box-shadow:inset 0 0 0 2px var(--gold),0 0 8px 2px rgba(201,168,76,.35)}}
 .adm-board-moving{display:flex;align-items:center;gap:10px;padding:7px 12px;background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.28);border-radius:4px;margin-bottom:10px;font-family:'Noto Sans SC',sans-serif;font-size:12px;color:var(--gold)}
 .adm-btn-sm{font-size:11px;padding:3px 9px}
+/* Modo borrar: banner + botón papelera resaltado. */
+.adm-board-del{background:rgba(160,70,60,.14);border-color:rgba(190,90,80,.5);color:#e0a090}
+.adm-trash{margin-left:10px;vertical-align:middle}
+.adm-trash.on{background:#7a2a24;border-color:#b04a40;color:#ffd8cc}
+.adm-build-delall{cursor:pointer;background:rgba(160,70,60,.18);border:1px solid rgba(190,90,80,.4);color:#e0a090;font-size:10px;padding:2px 8px;border-radius:3px;flex-shrink:0}
+
+/* ── Delimitar pabellón ─────────────────────────────────────────────────── */
+/* Resaltado del área cerrada bajo el cursor: válida (jade) / inválida (rojo). */
+.adm-cell.pv-pab{opacity:1!important;background:rgba(58,138,90,.30)!important;box-shadow:inset 0 0 0 1px rgba(120,200,150,.7)!important;z-index:1}
+.adm-cell.pv-pab-bad{opacity:1!important;background:rgba(170,60,50,.22)!important;box-shadow:inset 0 0 0 1px rgba(200,110,100,.6)!important;z-index:1}
+.adm-pabbtn{margin-left:10px;vertical-align:middle}
+.adm-pabbtn.on{background:#2f5a3e;border-color:#4f8a64;color:#d8f0e0}
+.adm-pab-head{margin-top:18px}
+.adm-board-pab{background:rgba(58,138,90,.10);border-color:rgba(90,170,120,.4);color:#9fd9b6}
+/* Formulario inline para bautizar el pabellón. */
+.adm-pab-form{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 12px;margin-bottom:10px;background:rgba(58,138,90,.10);border:1px solid rgba(90,170,120,.4);border-radius:4px}
+.adm-pab-formttl{font-family:'Noto Sans SC',sans-serif;font-size:12px;font-weight:700;color:#9fd9b6}
+.adm-pab-form input,.adm-pab-form select{background:rgba(0,0,0,.3);border:1px solid rgba(201,168,76,.3);border-radius:3px;color:var(--parch);font-family:'Noto Sans SC',sans-serif;font-size:12px;padding:5px 8px}
+.adm-pab-form input{min-width:200px}
+/* Lista de pabellones. */
+.adm-pab-list{list-style:none;display:flex;flex-direction:column;gap:6px;margin-top:6px}
+.adm-pab-item{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.06);border-left:3px solid var(--c,#888);border-radius:3px;padding:7px 11px}
+.adm-pab-chip{font-family:'Noto Serif SC',serif;font-size:18px;font-weight:900;color:var(--c,#888);line-height:1;flex-shrink:0;width:24px;text-align:center}
+.adm-pab-name{flex:1;min-width:0;font-family:'Noto Sans SC',sans-serif;font-size:13px;font-weight:700;color:var(--parch)}
+.adm-pab-name i{font-style:normal;font-weight:400;font-size:11px;color:var(--parch2);opacity:.7;margin-left:4px}
+.adm-pab-del{cursor:pointer;background:rgba(160,70,60,.18);border:1px solid rgba(190,90,80,.4);color:#e0a090;font-size:11px;width:24px;height:24px;border-radius:3px;flex-shrink:0}
+.adm-pab-lost{opacity:.6;border-left-color:#a0584c}
+.adm-pab-lost .adm-pab-name i{color:#e0907a;opacity:.9}
+/* Tinte base de la región de cada pabellón ya delimitado (color del rol). */
+.adm-cell.pab-region::before{content:'';position:absolute;inset:0;background:var(--pc,#888);opacity:.2;pointer-events:none}
+.adm-build-delall:hover{background:#7a2a24;color:#ffd8cc}
 .adm-build-form{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:12px}
 .adm-build-form select{font-family:'Noto Sans SC',sans-serif;font-size:12px;color:var(--parch);background:rgba(0,0,0,.3);border:1px solid rgba(201,168,76,.25);border-radius:3px;padding:6px 8px}
 .adm-board-sel{font-family:'Cinzel Decorative',serif;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);opacity:.8}
