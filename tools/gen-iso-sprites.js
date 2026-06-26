@@ -129,7 +129,9 @@ const PAL = {
 
 // ── Dibujo de un edificio ────────────────────────────────────────────────
 // cfg: { w, h, roof, baseH, bodyH, roofH, stories, bodyH2, roofH2 }
-function drawBuilding(cfg) {
+function drawBuilding(cfg, layer) {
+  layer = layer || 'all';
+  const wantBase = layer !== 'body', wantBody = layer !== 'base';
   const { w, h, roof } = cfg;
   const baseH = cfg.baseH ?? 5;
   const bodyH = cfg.bodyH ?? 14;
@@ -323,20 +325,21 @@ function drawBuilding(cfg) {
   if (cfg.wings) {
     const order = cfg.wings.slice().sort((a,b)=>(a.x1+a.y1)-(b.x1+b.y1)||(a.x0+a.y0)-(b.x0+b.y0));
     order.forEach(wg=>{
-      prism(wg.x0,wg.y0,wg.x1,wg.y1, ovB, 0, baseH, PAL.stoneT, dark(PAL.stone,.06), PAL.stone, PAL.stoneD, 'stone');
-      body(wg.x0,wg.y0,wg.x1,wg.y1, baseH, bodyH, wg.door);
-      hipRoof(wg.x0,wg.y0,wg.x1,wg.y1, baseH+bodyH, roofH, roof);
+      if (wantBase) prism(wg.x0,wg.y0,wg.x1,wg.y1, ovB, 0, baseH, PAL.stoneT, dark(PAL.stone,.06), PAL.stone, PAL.stoneD, 'stone');
+      if (wantBody) { body(wg.x0,wg.y0,wg.x1,wg.y1, baseH, bodyH, wg.door); hipRoof(wg.x0,wg.y0,wg.x1,wg.y1, baseH+bodyH, roofH, roof); }
     });
     return { buf, ox: OX, oy: OY };
   }
 
   let z = 0;
-  if (cfg.stairs) {
-    prism(0,0,w-1,h-1, tov, 0, baseH, MB.t, MB.l, MB.r, MB.edge);   // plinto de mármol
-    marbleCourses((h-1)+tov, (w-1)+tov);
-    stairFlight('S'); stairFlight('E');
-  } else {
-    prism(0,0,w-1,h-1, ovB, z, z+baseH, PAL.stoneT, dark(PAL.stone,.06), PAL.stone, PAL.stoneD, 'stone');
+  if (wantBase) {
+    if (cfg.stairs) {
+      prism(0,0,w-1,h-1, tov, 0, baseH, MB.t, MB.l, MB.r, MB.edge);
+      marbleCourses((h-1)+tov, (w-1)+tov);
+      stairFlight('S'); stairFlight('E');
+    } else {
+      prism(0,0,w-1,h-1, ovB, z, z+baseH, PAL.stoneT, dark(PAL.stone,.06), PAL.stone, PAL.stoneD, 'stone');
+    }
   }
   z += baseH;
 
@@ -384,23 +387,20 @@ function drawBuilding(cfg) {
     } else { for(let gx=x0; gx<x1; gx++) winY(gx); }
   }
 
-  body(0,0,w-1,h-1, z, bodyH, cfg.door);
-  hipRoof(0,0,w-1,h-1, z+bodyH, roofH, roof);
-
-  // Pisos superiores: cada uno encoge (inset) y lleva su propio alero (sin
-  // puerta). Se omite el piso si quedaría sin anchura. Sirve para pagodas de
-  // varios aleros y para tejados dobles de templos y salones.
-  let zc = z + bodyH + roofH - 1;
-  let ins = tier0Ins;
-  tierList.forEach((ti) => {
-    if ((w - 1 - ins) - ins < -0.16 || (h - 1 - ins) - ins < -0.16) return;
-    body(ins, ins, w - 1 - ins, h - 1 - ins, zc, ti.bodyH, null);
-    hipRoof(ins, ins, w - 1 - ins, h - 1 - ins, zc + ti.bodyH, ti.roofH, light(roof, .04));
-    zc += ti.bodyH + ti.roofH - 1;
-    ins += tierIns;
-  });
-
-  if (cfg.stairs) balustrade();      // balaustrada de mármol en primer plano
+  if (wantBody) {
+    body(0,0,w-1,h-1, z, bodyH, cfg.door);
+    hipRoof(0,0,w-1,h-1, z+bodyH, roofH, roof);
+    let zc = z + bodyH + roofH - 1;
+    let ins = tier0Ins;
+    tierList.forEach((ti) => {
+      if ((w - 1 - ins) - ins < -0.16 || (h - 1 - ins) - ins < -0.16) return;
+      body(ins, ins, w - 1 - ins, h - 1 - ins, zc, ti.bodyH, null);
+      hipRoof(ins, ins, w - 1 - ins, h - 1 - ins, zc + ti.bodyH, ti.roofH, light(roof, .04));
+      zc += ti.bodyH + ti.roofH - 1;
+      ins += tierIns;
+    });
+  }
+  if (cfg.stairs && wantBase) balustrade();
   return { buf, ox: OX, oy: OY };
 }
 
@@ -937,7 +937,15 @@ EDIFICIOS.forEach(e=>{
     { w:e.w, h:e.h, door:null },  // rot 2: puerta a la izquierda (-x, de espaldas)
     { w:e.h, h:e.w, door:null }   // rot 3: puerta arriba (-y, de espaldas)
   ];
-  variants.forEach((v,r)=> save('bld-'+e.id+'-'+r, drawBuilding({ ...e, ...v })));
+  variants.forEach((v,r)=>{
+    const cfg = { ...e, ...v };
+    if (e.stairs) {
+      save('bld-'+e.id+'-'+r, drawBuilding(cfg, 'body'));
+      save('bld-'+e.id+'-base-'+r, drawBuilding(cfg, 'base'));
+    } else {
+      save('bld-'+e.id+'-'+r, drawBuilding(cfg, 'all'));
+    }
+  });
 });
 
 // Compuestos (L/U/anillo): rota las alas por las 4 orientaciones y hornea.

@@ -20,7 +20,7 @@ const HacIso = (function () {
   const TOP_MARGIN = 132;             // hueco arriba para edificios altos, murallas y torres
   const PAD_X = 40;                   // margen lateral para murallas y paseo de ronda
   const SPRITE_BASE = 'assets/img/iso/';
-  const SPRITE_VER = '21';  // súbelo al regenerar los PNG (cache-busting)
+  const SPRITE_VER = '22';  // súbelo al regenerar los PNG (cache-busting)
 
   // ── Color helpers (para el placeholder) ─────────────────────────────────
   const { hexToRgb, clamp255: cl } = HacUtil;
@@ -568,6 +568,12 @@ const HacIso = (function () {
       if (Z[3] <= A[1] + 1e-6) return false;
       return (A[2] + A[3]) < (Z[2] + Z[3]);     // solapan: por esquina delantera
     };
+    // Zócalo/escalinata de los edificios que lo tienen: capa baja, sobre el
+    // suelo y bajo el resto (decoración, muros, edificios, mecenas).
+    lista.filter(c => !isFlat(c) && META['bld-' + c.tipo + '-base-' + (((c.rot || 0) % 4 + 4) % 4)])
+      .sort((a, b) => flatSort(a) - flatSort(b) || a.pos[0] - b.pos[0])
+      .forEach(drawBaseSprite);
+
     drawList.sort((p, q) => before(p.box, q.box) ? -1 : (before(q.box, p.box) ? 1 : 0));
     drawList.forEach(d => d.draw());
 
@@ -619,6 +625,15 @@ const HacIso = (function () {
       if (!img || !m) { placeholder(c); return; }
       // El sprite está horneado a SCALE× (meta en px de dispositivo). Lo pintamos
       // a tamaño NATIVO en coords de dispositivo para que quede nítido (1:1).
+      g.setTransform(1, 0, 0, 1, 0, 0);
+      g.drawImage(img, Math.round(X(c.pos[0], c.pos[1]) * SCALE - m.ox), Math.round(Y(c.pos[0], c.pos[1]) * SCALE - m.oy));
+      g.setTransform(SCALE, 0, 0, SCALE, 0, 0);
+    }
+
+    function drawBaseSprite(c) {
+      const key = 'bld-' + c.tipo + '-base-' + (((c.rot || 0) % 4 + 4) % 4);
+      const img = SPRITES[key], m = META[key];
+      if (!img || !m) return;
       g.setTransform(1, 0, 0, 1, 0, 0);
       g.drawImage(img, Math.round(X(c.pos[0], c.pos[1]) * SCALE - m.ox), Math.round(Y(c.pos[0], c.pos[1]) * SCALE - m.oy));
       g.setTransform(SCALE, 0, 0, SCALE, 0, 0);
@@ -690,7 +705,9 @@ const HacIso = (function () {
     // empata bajo `before`, que no es orden total) → parpadeo/solape en las
     // murallas y patios. En su lugar, insertamos a cada actor en su hueco de
     // profundidad SIN tocar el orden de las estructuras.
-    const occ = acts.length ? sc.drawList.filter(d => acts.some(a => ov(d.box, a.fbox))) : [];
+    // Solo se repintan estructuras DELANTE de algún actor; repintar las de detrás
+    // las dibujaba sobre su vecina delantera (glitch de muros/edificios).
+    const occ = acts.length ? sc.drawList.filter(d => acts.some(a => sc.before(a.box, d.box) && ov(d.box, a.fbox))) : [];
     const render = occ.slice();
     acts.sort((p, q) => sc.before(p.box, q.box) ? -1 : (sc.before(q.box, p.box) ? 1 : 0));
     acts.forEach(a => {
