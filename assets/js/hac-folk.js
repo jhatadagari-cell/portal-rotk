@@ -34,20 +34,11 @@ const HacFolk = (function () {
 
   let raf = null, iso = null, opts = null, walkers = [], wk = null, names = {};
   let lastT = 0, running = false, visible = true, onScreen = true, io = null;
-  let selectedId = null, stateSig = '';
+  let selectedId = null, stateSig = '', hailCd = 20;
 
-  function hexToRgb(h) {
-    h = String(h || '').replace('#', '');
-    if (h.length === 3) h = h.split('').map(c => c + c).join('');
-    if (h.length !== 6) h = 'c9a84c';
-    return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
-  }
-  const reduced = () => !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
-  const neigh = (x, y) => [[x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]];
+  const { hexToRgb, reduced, neigh, rnd, rng } = HacUtil;
   const proj = () => iso && iso._hacProj;
   function logic(fx, fy) { const p = proj(); if (!p) return [0, 0]; return [p.originX + (fx - fy) * TW / 2, p.originY + (fx + fy) * TH / 2]; }
-  const rnd = (n) => Math.floor(Math.random() * n);
-  const rng = (a, b) => a + Math.random() * (b - a);
 
   // ── Modelo pixel-art (HacChar) ────────────────────────────────────────────
   const SCALE = (window.HacIso && HacIso.SCALE) || 2;   // px de dispositivo por px lógico
@@ -140,7 +131,11 @@ const HacFolk = (function () {
       }
       if (chosen) { b.spotCell = chosen.spot; b.approach = chosen.app; b.approachKey = chosen.app[0] + ',' + chosen.app[1]; b.visitable = true; visitable.push(b); }
     });
-    return { set, cells, cam, camCells, garden, water, GW, GH, ownByMember, buildings, visitable };
+    // Lista de celdas de césped PISABLE (para que los mecenas que pasean cerca
+    // decidan acercarse a descansar en la hierba).
+    const gardenCells = [];
+    garden.forEach(k => { if (set.has(k)) { const p = k.split(',').map(Number); gardenCells.push(p); } });
+    return { set, cells, cam, camCells, garden, gardenCells, water, GW, GH, ownByMember, buildings, visitable };
   }
 
   // BFS sobre celdas transitables: de `start` a la primera celda de `goalKeys`.
@@ -191,6 +186,8 @@ const HacFolk = (function () {
         state: 'paseando', path: null, goalBid: null, insideId: null, task: null,
         homeBid, home, taskTimer: 0, strollTimer: rng(2, 6), wait: Math.random() * 1.2,
         idleTimer: 0, gardenCd: rng(4, 12), socialCd: rng(4, 12), chatWith: null,
+        chatLead: false, convo: null, convoIdx: 0, turnTimer: 0, speech: null,
+        meetWith: null, meetLead: false, meetTimer: 0, restIntent: null,
         phase: Math.random() * 6.28
       };
     });
@@ -282,16 +279,46 @@ const HacFolk = (function () {
     w.wait -= dt; w.strollTimer -= dt;
     if (w.wait > 0) return;
     if (w.strollTimer <= 0) { if (startVisit(w)) return; w.strollTimer = rng(3, 9); }
+    if (maybeRest(w)) return;     // ¿pasa cerca de un jardín y decide acercarse a la hierba?
     wanderPick(w);
   }
 
   // ── Reacciones al entorno ──────────────────────────────────────────────────
-  // Al pisar un jardín (con cooldown): a veces nada, a veces se para a contemplar,
-  // a veces se sienta a descansar entre las plantas.
   function faceTowards(w, cx, cy, set) {
     const t = neigh(cx, cy).find(([x, y]) => set.has(x + ',' + y));
     if (t) { const fd = faceFromGrid(t[0] - cx, t[1] - cy); if (fd) w.dir = fd; }
   }
+  // Atracción por PROXIMIDAD al jardín: si pasea a <=2 teselas de césped pisable
+  // (sin estar ya en él), con cierta probabilidad se acerca a la hierba a tumbarse
+  // o a contemplar. Así no depende de que cruce el jardín por azar (es una
+  // construcción y no la pisarían sin motivo).
+  function maybeRest(w) {
+    if (w.gardenCd > 0 || !wk.gardenCells.length) return false;
+    const cx = Math.round(w.fx), cy = Math.round(w.fy);
+    if (wk.garden.has(cx + ',' + cy)) return false;   // ya está en césped → lo gestiona maybeGarden
+    let best = null, bestD = 99;
+    for (let i = 0; i < wk.gardenCells.length; i++) {
+      const g = wk.gardenCells[i], d = Math.abs(g[0] - cx) + Math.abs(g[1] - cy);
+      if (d >= 1 && d <= 2 && d < bestD) { bestD = d; best = g; }
+    }
+    if (!best) return false;
+    if (Math.random() >= 0.35) { w.gardenCd = rng(6, 14); return false; }   // pasa cerca pero esta vez sigue su camino
+    const path = bfs([cx, cy], new Set([best[0] + ',' + best[1]]));
+    if (!path || !path.length) { w.gardenCd = rng(6, 14); return false; }
+    w.path = path; w.moving = false;
+    w.restIntent = (Math.random() < 0.6) ? 'tumbado' : 'contemplando';      // la mayoría se tumba en la hierba
+    w.state = 'a-descansar';
+    return true;
+  }
+  // Llegado al césped, adopta la pose de descanso elegida.
+  function applyRest(w) {
+    const cx = Math.round(w.fx), cy = Math.round(w.fy);
+    if (w.restIntent === 'contemplando') { w.state = 'contemplando'; w.idleTimer = rng(6, 12); w.gardenCd = rng(25, 50); faceTowards(w, cx, cy, wk.garden); }
+    else { w.state = 'tumbado'; w.idleTimer = rng(12, 24); w.gardenCd = rng(45, 85); }
+    w.restIntent = null; w.moving = false; w.path = null;
+  }
+  // Al pisar un jardín al pasar (con cooldown), o junto al agua: a veces se para
+  // a contemplar o a descansar un momento.
   function maybeGarden(w) {
     if (w.state !== 'paseando' || w.gardenCd > 0) return;
     const cx = Math.round(w.fx), cy = Math.round(w.fy);
@@ -311,19 +338,44 @@ const HacFolk = (function () {
   }
 
   // Si dos mecenas paseando se cruzan, con cierta probabilidad se saludan y se
-  // quedan conversando un rato, mirándose. Cooldown para no encadenar charlas.
-  function startChat(a, b) {
-    const t = rng(22, 38);
-    a.state = b.state = 'charlando'; a.idleTimer = b.idleTimer = t;
-    a.moving = b.moving = false; a.path = b.path = null;
-    a.chatWith = b.id; b.chatWith = a.id;
+  // quedan conversando un rato, mirándose y turnándose la palabra (bocadillos).
+  // El iniciador (a) lleva la batuta del guion; el otro solo le sigue.
+  function faceChat(a, b) {
     const fa = faceFromGrid(b.fx - a.fx, b.fy - a.fy); if (fa) a.dir = fa;
     const fb = faceFromGrid(a.fx - b.fx, a.fy - b.fy); if (fb) b.dir = fb;
   }
+  function startChat(a, b) {
+    a.meetWith = b.meetWith = null; a.meetLead = b.meetLead = false;    // por si venían de una llamada a distancia
+    a.state = b.state = 'charlando'; a.idleTimer = b.idleTimer = 60;   // tope de seguridad; el guion marca el fin
+    a.moving = b.moving = false; a.path = b.path = null;
+    a.chatWith = b.id; b.chatWith = a.id;
+    a.chatLead = true; b.chatLead = false;
+    a.convo = HacDialog.charla(a.aptitud); a.convoIdx = -1; b.convo = null;
+    a.speech = b.speech = null;
+    faceChat(a, b);
+    convoAdvance(a);                                                   // arranca el primer turno
+  }
+  // Avanza el guion: muestra la siguiente réplica en el bocadillo del que habla
+  // y limpia el del que escucha. Al agotarse las réplicas, termina la charla.
+  function convoAdvance(lead) {
+    const o = walkers.find(x => x.id === lead.chatWith);
+    lead.convoIdx++;
+    if (!o || !lead.convo || lead.convoIdx >= lead.convo.length || lead.idleTimer <= 0) { endChat(lead); return; }
+    const line = lead.convo[lead.convoIdx];
+    const speaker = (lead.convoIdx % 2 === 0) ? lead : o;
+    const listener = (speaker === lead) ? o : lead;
+    speaker.speech = line; listener.speech = null;
+    lead.turnTimer = Math.min(5.2, Math.max(2.6, 1.6 + line.length * 0.05));   // dura según longitud + pausa
+    faceChat(lead, o);
+  }
+  function resetFromChat(w) {
+    w.state = 'paseando'; w.strollTimer = rng(2, 6); w.wait = rng(0.2, 0.8);
+    w.chatWith = null; w.chatLead = false; w.convo = null; w.speech = null; w.socialCd = rng(20, 50);
+  }
   function endChat(w) {
     const o = walkers.find(x => x.id === w.chatWith);
-    w.state = 'paseando'; w.strollTimer = rng(2, 6); w.wait = rng(0.2, 0.8); w.chatWith = null; w.socialCd = rng(20, 50);
-    if (o && o.state === 'charlando') { o.state = 'paseando'; o.strollTimer = rng(2, 6); o.wait = rng(0.2, 0.8); o.chatWith = null; o.socialCd = rng(20, 50); }
+    resetFromChat(w);
+    if (o && o.state === 'charlando') resetFromChat(o);
   }
   function encounters() {
     for (let i = 0; i < walkers.length; i++) {
@@ -339,6 +391,82 @@ const HacFolk = (function () {
     }
   }
 
+  // ── Llamada a distancia ────────────────────────────────────────────────────
+  // De vez en cuando un mecenas avista a otro a media distancia, le grita una
+  // exclamación y lo "llama"; el otro responde y ambos caminan a su encuentro
+  // antes de ponerse a charlar. El texto sale de HacDialog ({n} = nombre del otro).
+  function fillName(tpl, name) { const n = String(name || '').split(' ')[0] || 'amigo'; return tpl.replace('{n}', n); }
+
+  // Celda transitable más cercana a un punto (búsqueda en anillos crecientes).
+  function findMeetCell(mx, my) {
+    if (wk.set.has(mx + ',' + my)) return [mx, my];
+    for (let r = 1; r <= 5; r++) for (let dx = -r; dx <= r; dx++) for (let dy = -r; dy <= r; dy++) {
+      if (Math.abs(dx) !== r && Math.abs(dy) !== r) continue;
+      const x = mx + dx, y = my + dy; if (wk.set.has(x + ',' + y)) return [x, y];
+    }
+    return null;
+  }
+  function resetMeet(w) {
+    w.state = 'paseando'; w.strollTimer = rng(2, 6); w.wait = rng(0.2, 0.8);
+    w.meetWith = null; w.meetLead = false; w.speech = null; w.path = null; w.socialCd = rng(15, 35);
+  }
+  function abortMeet(w) {
+    const o = walkers.find(x => x.id === w.meetWith);
+    resetMeet(w);
+    if (o && (o.state === 'avisado' || o.state === 'acudiendo' || o.state === 'llamando')) resetMeet(o);
+  }
+  function startHail(a, b) {
+    a.state = 'llamando'; a.idleTimer = rng(1.5, 2.3); a.moving = false; a.path = null;
+    a.speech = fillName(HacDialog.hail(), b.name);
+    b.state = 'avisado'; b.idleTimer = 6; b.moving = false; b.path = null;     // espera a que el líder arranque
+    b.speech = fillName(HacDialog.ack(), a.name);
+    a.meetWith = b.id; b.meetWith = a.id; a.meetLead = true; b.meetLead = false;
+    faceChat(a, b);
+  }
+  // Pasada la exclamación, ambos trazan ruta a un punto de encuentro intermedio.
+  function beginApproach(lead) {
+    const o = walkers.find(x => x.id === lead.meetWith);
+    if (!o || o.state !== 'avisado') { abortMeet(lead); return; }
+    const mx = Math.round((lead.fx + o.fx) / 2), my = Math.round((lead.fy + o.fy) / 2);
+    const cell = findMeetCell(mx, my);
+    let pa = null, pb = null;
+    if (cell) {
+      const goal = new Set([cell[0] + ',' + cell[1]]);
+      pa = bfs([Math.round(lead.fx), Math.round(lead.fy)], goal);
+      pb = bfs([Math.round(o.fx), Math.round(o.fy)], goal);
+    }
+    if (!cell || (pa === null && pb === null)) { abortMeet(lead); return; }
+    lead.path = pa || []; o.path = pb || [];
+    lead.state = o.state = 'acudiendo'; lead.moving = o.moving = false;
+    lead.speech = o.speech = null; lead.meetTimer = 12;
+  }
+  // Avanza por la ruta de aproximación; al agotarla, se queda quieto esperando.
+  function approachStep(w, dt, SPD) {
+    if (!w.moving) {
+      if (w.path && w.path.length) { const c = w.path.shift(); w.tx = c[0]; w.ty = c[1]; w.moving = true; }
+      else return;
+    }
+    const dx = w.tx - w.fx, dy = w.ty - w.fy, d = Math.hypot(dx, dy), adv = SPD * dt;
+    const fd = faceFromGrid(dx, dy); if (fd) w.dir = fd;
+    if (d <= adv) { w.fx = w.tx; w.fy = w.ty; w.moving = false; w.phase += dt * 8; }
+    else { w.fx += dx / d * adv; w.fy += dy / d * adv; w.phase += dt * 8; }
+  }
+  // Busca, con espaciado temporal (hailCd), un par a media distancia para que uno
+  // llame al otro. No es habitual: tras una llamada, largo cooldown global.
+  function hails(dt) {
+    if (hailCd > 0) { hailCd -= dt; return; }
+    for (let i = 0; i < walkers.length; i++) {
+      const a = walkers[i]; if (a.state !== 'paseando' || a.socialCd > 0) continue;
+      for (let j = i + 1; j < walkers.length; j++) {
+        const b = walkers[j]; if (b.state !== 'paseando' || b.socialCd > 0) continue;
+        const dx = a.fx - b.fx, dy = a.fy - b.fy, d2 = dx * dx + dy * dy;
+        if (d2 < 9 || d2 > 64) continue;                 // entre ~3 y ~8 teselas: ni de cerca, ni lejísimos
+        if (Math.random() < 0.5) { startHail(a, b); hailCd = rng(30, 70); return; }
+      }
+    }
+    hailCd = rng(2, 5);                                   // nadie elegible/aceptó: reintenta pronto
+  }
+
   function step(dt) {
     const SPD = 1.1;
     walkers.forEach(w => {
@@ -348,13 +476,42 @@ const HacFolk = (function () {
         case 'tarea': w.taskTimer -= dt; w.phase += dt * 1.2; if (w.taskTimer <= 0) startLeave(w); break;
         case 'yendo':
         case 'saliendo': followPath(w, dt, SPD); break;
+        case 'a-descansar':
+          approachStep(w, dt, SPD);
+          if (!w.moving && !(w.path && w.path.length)) applyRest(w);
+          break;
         case 'contemplando':
         case 'tumbado': w.idleTimer -= dt; w.phase += dt * 0.4; if (w.idleTimer <= 0) { w.state = 'paseando'; w.strollTimer = rng(2, 6); w.wait = rng(0.2, 0.8); } break;
-        case 'charlando': w.idleTimer -= dt; w.phase += dt * 0.6; if (w.idleTimer <= 0) endChat(w); break;
+        case 'charlando':
+          w.idleTimer -= dt; w.phase += dt * 0.6;
+          if (w.chatLead) { w.turnTimer -= dt; if (w.turnTimer <= 0) convoAdvance(w); }
+          else if (w.idleTimer <= 0) endChat(w);                 // red de seguridad si el líder desaparece
+          break;
+        case 'llamando':
+          w.idleTimer -= dt; w.phase += dt * 0.5;
+          if (w.meetLead && w.idleTimer <= 0) beginApproach(w);
+          break;
+        case 'avisado':
+          w.idleTimer -= dt; w.phase += dt * 0.5;
+          if (w.idleTimer <= 0) abortMeet(w);                    // el líder nunca arrancó: vuelve a pasear
+          break;
+        case 'acudiendo': {
+          approachStep(w, dt, SPD * 1.12);                       // con un poco de prisa por saludar
+          if (!w.meetLead) break;
+          const o = walkers.find(x => x.id === w.meetWith);
+          if (!o || o.state !== 'acudiendo') { abortMeet(w); break; }
+          w.meetTimer -= dt;
+          const dx = w.fx - o.fx, dy = w.fy - o.fy, d2 = dx * dx + dy * dy;
+          const bothStill = !w.moving && !o.moving && !(w.path && w.path.length) && !(o.path && o.path.length);
+          if (d2 <= 2.3) { faceChat(w, o); startChat(w, o); }
+          else if (bothStill || w.meetTimer <= 0) { if (d2 <= 9) { faceChat(w, o); startChat(w, o); } else abortMeet(w); }
+          break;
+        }
         default: wander(w, dt, SPD); break;
       }
     });
     encounters();
+    hails(dt);
   }
 
   // ── Dibujo (coords LÓGICAS; el ctx ya está a escala SCALE) ────────────────
@@ -383,6 +540,37 @@ const HacFolk = (function () {
       g.restore();
     }
     if (o.banner !== false) banner(g, lx, ly - Math.round(FEET * disp / SCALE) + 1, w.name, o.highlight);
+  }
+
+  // Rectángulo redondeado (coords lógicas).
+  function rr(g, x, y, w, h, r) {
+    g.beginPath(); g.moveTo(x + r, y);
+    g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r);
+    g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath();
+  }
+  // Bocadillo de diálogo sobre la cabeza de un mecenas que habla. (lx,lyFeet) son
+  // los pies en coords lógicas; el texto se ajusta en varias líneas si hace falta.
+  function speechBubble(g, lx, lyFeet, text) {
+    const disp = SPRITE_DISP, FEET = HacChar ? HacChar.H - 5 : 51;
+    const headY = lyFeet - FEET * disp / SCALE;
+    const baseY = headY - 18;                       // por encima del banner del nombre
+    g.font = '600 7px "Noto Sans SC",sans-serif';
+    const maxW = 94, padX = 5, padY = 4, lh = 8.6;
+    const words = String(text || '').split(' '), lines = []; let cur = '';
+    for (let i = 0; i < words.length; i++) {
+      const t = cur ? cur + ' ' + words[i] : words[i];
+      if (cur && g.measureText(t).width > maxW) { lines.push(cur); cur = words[i]; } else cur = t;
+    }
+    if (cur) lines.push(cur);
+    let tw = 0; for (let i = 0; i < lines.length; i++) tw = Math.max(tw, g.measureText(lines[i]).width);
+    const bw = tw + padX * 2, bh = lines.length * lh + padY * 2;
+    const bx = lx - bw / 2, by = baseY - bh;
+    g.fillStyle = 'rgba(247,239,219,0.98)';
+    g.beginPath(); g.moveTo(lx - 3.5, by + bh - 0.5); g.lineTo(lx + 3.5, by + bh - 0.5); g.lineTo(lx, by + bh + 4.5); g.closePath(); g.fill();
+    rr(g, bx, by, bw, bh, 3.5); g.fill();
+    g.strokeStyle = '#6a4a28'; g.lineWidth = 1; g.stroke();
+    g.fillStyle = '#2a2018'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    for (let i = 0; i < lines.length; i++) g.fillText(lines[i], lx, by + padY + lh * i + lh / 2);
   }
 
   function banner(g, cx, topY, name, hot) {
@@ -455,6 +643,12 @@ const HacFolk = (function () {
     const sel = walkers.find(w => w.id === selectedId);
     if (sel) overlays.push({ draw: (g) => drawWalker(g, logic(sel.fx, sel.fy)[0], logic(sel.fx, sel.fy)[1], sel, { highlight: true }) });
 
+    // Bocadillos de las charlas: capa overlay, encima de todo y sin oclusión.
+    walkers.forEach(w => {
+      if (!w.speech) return;
+      overlays.push({ draw: (g) => { const p = logic(w.fx, w.fy); speechBubble(g, p[0], p[1], w.speech); } });
+    });
+
     iso._hacSigns = signs;
     HacIso.frame(iso, actors, overlays);
   }
@@ -499,7 +693,7 @@ const HacFolk = (function () {
     walkers = spawn(opts.mapa, opts.tier, opts.miembros, opts.color || '#c9a84c');
     if (!walkers.length) { iso._hacSigns = []; return; }
     if (reduced()) { staticPose(); paint(); pushState(); return; }
-    running = true; lastT = 0; visible = !document.hidden; onScreen = true;
+    running = true; lastT = 0; hailCd = rng(15, 40); visible = !document.hidden; onScreen = true;
     document.addEventListener('visibilitychange', onVis);
     if ('IntersectionObserver' in window) { io = new IntersectionObserver(es => { onScreen = es.some(e => e.isIntersecting); }, { threshold: 0 }); io.observe(iso); }
     raf = requestAnimationFrame(tick);
@@ -508,9 +702,14 @@ const HacFolk = (function () {
   // ── API para la página ────────────────────────────────────────────────────
   // Texto de lo que está haciendo un mecenas ahora mismo.
   function activityText(w) {
+    if (w.state === 'a-descansar') return 'Buscando un rincón de hierba';
     if (w.state === 'contemplando') return 'Contemplando el jardín';
     if (w.state === 'tumbado') return 'Descansando entre las plantas';
     if (w.state === 'charlando') { const o = walkers.find(x => x.id === w.chatWith); return 'Conversando' + (o && o.name ? ' con ' + o.name : ''); }
+    if (w.state === 'llamando' || w.state === 'avisado' || w.state === 'acudiendo') {
+      const o = walkers.find(x => x.id === w.meetWith);
+      return (w.state === 'llamando' ? 'Llamando a ' : 'Yendo al encuentro de ') + (o && o.name ? o.name : 'otro mecenas');
+    }
     if (w.state === 'tarea') {
       const b = wk.buildings.get(w.insideId);
       const lugar = b ? lugarDe(b.tipo) : null;

@@ -23,13 +23,7 @@ const HacIso = (function () {
   const SPRITE_VER = '21';  // súbelo al regenerar los PNG (cache-busting)
 
   // ── Color helpers (para el placeholder) ─────────────────────────────────
-  function hexToRgb(h) {
-    h = String(h || '').replace('#', '');
-    if (h.length === 3) h = h.split('').map(c => c + c).join('');
-    if (h.length !== 6) h = 'c9a84c';
-    return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
-  }
-  const cl = (v) => Math.max(0, Math.min(255, Math.round(v)));
+  const { hexToRgb, clamp255: cl } = HacUtil;
   const toHex = (r, g, b) => '#' + [r, g, b].map(v => cl(v).toString(16).padStart(2, '0')).join('');
   function mix(a, b, t) { const A = hexToRgb(a), B = hexToRgb(b); return toHex(A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t, A[2] + (B[2] - A[2]) * t); }
   const light = (c, t) => mix(c, '#ffffff', t);
@@ -91,10 +85,15 @@ const HacIso = (function () {
     const wt = WD.wt, frontH = Math.max(9, Math.round(WD.h * 0.52));
     const M = 1;                       // paseo de ronda: anillo de pavimento entre edificios y muros
     const e = M + 0.5 + wt;            // alcance exterior (cara externa del muro) en celdas
+    const TERR = 3.4;                  // anchura del TERRITORIO exterior (campo) en celdas
+    const eo = e + TERR;              // alcance total del lienzo (finca + territorio)
+    // Holgura para que las COPAS de los árboles del territorio (altas y anchas)
+    // no se recorten en el borde trasero (cielo) ni en los laterales.
+    const SKY = 64, SIDEPAD = 26;
 
-    const W = Math.round(((GW - 1) + (GH - 1) + 4 * e) * TILE_W / 2) + 2 * PAD_X;
-    const originX = PAD_X + ((GH - 1) + 2 * e) * TILE_W / 2 + TILE_W / 2, originY = TOP_MARGIN;
-    const H = originY + Math.round(((GW - 1) + (GH - 1) + 2 * e) * TILE_H / 2) + TILE_H + 24;
+    const W = Math.round(((GW - 1) + (GH - 1) + 4 * eo) * TILE_W / 2) + 2 * (PAD_X + SIDEPAD);
+    const originX = PAD_X + SIDEPAD + ((GH - 1) + 2 * eo) * TILE_W / 2 + TILE_W / 2, originY = TOP_MARGIN + SKY;
+    const H = originY + Math.round(((GW - 1) + (GH - 1) + 2 * eo) * TILE_H / 2) + TILE_H + 30;
     // Lienzo a SCALE× (más densidad): backing 2×, dibujo en coords lógicas.
     canvas.width = W * SCALE; canvas.height = H * SCALE;
     const g = canvas.getContext('2d');
@@ -148,6 +147,106 @@ const HacIso = (function () {
     };
     const loX = -M, hiX = GW - 1 + M, loY = -M, hiY = GH - 1 + M, BS = 2;
     const blk = (v) => v - (((v % BS) + BS) % BS);     // alinea costuras a rejilla par
+
+    // ── Territorio exterior: campo ESTACIONAL que rodea la finca ────────────
+    // Fuera de las murallas se ve algo de campo (hierba, árboles y un río si la
+    // finca tiene agua), tematizado por la estación elegida en el panel admin
+    // (mapa.estacion). Los árboles que caen DELANTE de la finca se dibujan al
+    // final (sobre los muros) para una oclusión correcta; el resto, aquí detrás.
+    const SEASONS = {
+      primavera: { g1: '#6f9b4a', g2: '#5f8b3e', soil: '#7c5c3a', leaf: '#4f7e2f', leafHi: '#7bb24e', bloom: '#eaa6c6', trunk: '#5a3f28', water: '#4385a6', snow: false, bare: false, petals: true },
+      verano:    { g1: '#517d33', g2: '#467029', soil: '#6e5230', leaf: '#3a6526', leafHi: '#5c8f3e', bloom: null,      trunk: '#4a3420', water: '#2f7390', snow: false, bare: false, petals: false },
+      otono:     { g1: '#8a7c3a', g2: '#7c6d2e', soil: '#6a4d2c', leaf: '#c26a1f', leafHi: '#e0913a', bloom: '#9c3b18', trunk: '#4a3420', water: '#3a6f7c', snow: false, bare: false, petals: true },
+      invierno:  { g1: '#cdd6d7', g2: '#bcc7c9', soil: '#8a8480', leaf: '#8f9a96', leafHi: '#ffffff', bloom: null,      trunk: '#3a2f28', water: '#86aab6', snow: true,  bare: true,  petals: false },
+    };
+    const seasonKey = (function () { const s = String(opts.estacion || '').toLowerCase().replace('ñ', 'n'); return SEASONS[s] ? s : 'verano'; })();
+    const P = SEASONS[seasonKey];
+    const hasWater = !!(opts.mapa && Array.isArray(opts.mapa.construcciones) && opts.mapa.construcciones.some(c => c && (c.tipo === 'estanque' || c.tipo === 'lago')));
+    const frontTrees = [];   // árboles delante de la finca (se pintan tras los muros)
+
+    // Río que discurre por fuera del borde OESTE, con un leve meandro (ancho 2).
+    function isRiver(gx, gy) {
+      if (!hasWater) return false;
+      const center = loX - 2 + Math.round(Math.sin(gy * 0.6) * 1.2);
+      return gx <= center && gx >= center - 1;
+    }
+    function terrTile(gx, gy, riv) {
+      const cx = X(gx, gy), cy = Y(gx, gy);
+      const N = [cx, cy - TILE_H / 2], E = [cx + TILE_W / 2, cy], S = [cx, cy + TILE_H / 2], Wp = [cx - TILE_W / 2, cy];
+      if (riv) {
+        const wc = P.water, hv = hash(gx * 2.1 + 1, gy * 1.7 + 4);
+        poly([N, E, S, Wp], hv < 0.5 ? wc : light(wc, 0.08));
+        edge(Wp, N, light(wc, 0.22));                                  // reflejo en la orilla
+        if (P.snow && hash(gx + 5, gy + 2) > 0.55) poly([N, E, S, Wp], 'rgba(235,245,248,0.30)');   // placas de hielo
+        return;
+      }
+      const hv = hash(gx * 1.3 + 11, gy * 1.3 + 5);
+      let col = hv < 0.5 ? P.g1 : P.g2;
+      if (!P.snow && hash(gx * 3.1 + 2, gy * 2.3 + 6) > 0.9) col = mix(col, P.soil, 0.5);   // calva de tierra
+      poly([N, E, S, Wp], col);
+      edge(Wp, S, dark(col, .10)); edge(S, E, dark(col, .07));         // sombrita iso delantera
+      if (P.snow) poly([N, E, S, Wp], 'rgba(255,255,255,0.16)');
+      else if (hash(gx + 3, gy * 2 + 1) > 0.62) grassTuft(cx, cy + TILE_H * 0.18);
+      if (P.petals && hash(gx * 5 + 7, gy * 5 + 3) > 0.72) {            // pétalos / hojas caídas
+        g.fillStyle = P.bloom || P.leaf;
+        g.fillRect(cx + (hash(gx, gy) - 0.5) * 11, cy + (hash(gy, gx) - 0.5) * 6, 1.6, 1.6);
+      }
+    }
+    const FLORA = (typeof HacFlora !== 'undefined') ? HacFlora : null;
+    // Blit de un sprite de prop en espacio de DISPOSITIVO (nítido 1:1) con sombra
+    // de contacto elíptica en el suelo.
+    function blitProp(cv, lx, ly, shR) {
+      g.fillStyle = 'rgba(0,0,0,0.20)'; g.beginPath(); g.ellipse(lx, ly + 1, shR, shR * 0.42, 0, 0, 6.2832); g.fill();
+      g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.imageSmoothingEnabled = false;
+      g.drawImage(cv, Math.round(lx * SCALE - cv.width / 2), Math.round(ly * SCALE - cv.height + 6));
+      g.restore();
+    }
+    // Fallback (si no está HacFlora): arbolito sencillo de respaldo.
+    function drawTreeBlob(lx, ly) {
+      const topY = ly - 17;
+      g.fillStyle = 'rgba(0,0,0,0.16)'; g.beginPath(); g.ellipse(lx, ly + 1, 7, 3.2, 0, 0, 6.2832); g.fill();
+      g.fillStyle = P.trunk; g.fillRect(lx - 1.5, topY + 4, 3, ly - topY - 3);
+      const blob = (ox, oy, r, c) => { g.fillStyle = c; g.beginPath(); g.arc(lx + ox, topY + oy, r, 0, 6.2832); g.fill(); };
+      if (P.bare) blob(0, -2, 5, '#8f9a96'); else { blob(0, 2, 7, dark(P.leaf, 0.12)); blob(-3, 0, 5, P.leaf); blob(3, -1, 5, P.leaf); blob(0, -3, 5.5, light(P.leaf, 0.05)); }
+    }
+    // Especifica el prop de una celda (o null): sprite + radio de sombra.
+    function propAt(gx, gy, riverNear) {
+      const r = hash(gx * 7.3 + 1, gy * 7.7 + 2);
+      if (riverNear && r < 0.5) return FLORA ? { cv: FLORA.reeds(seasonKey, (hash(gx + 9, gy + 4) * 9) | 0), sh: 6 } : null;
+      if (r < 0.66) return null;                                  // hierba pelada (densidad moderada)
+      if (!FLORA) return { blob: true, sh: 9 };
+      const pick = hash(gx * 2.7 + 5, gy * 3.1 + 8), vv = (hash(gx * 1.9 + 2, gy * 2.3 + 7) * 99) | 0;
+      if (pick < 0.58) { const sp = HacFlora.SPECIES[(hash(gx * 5.1 + 3, gy * 4.7 + 6) * HacFlora.SPECIES.length) | 0]; return { cv: FLORA.tree(sp, seasonKey, vv), sh: 13 }; }
+      if (pick < 0.78) return { cv: FLORA.bush(seasonKey, vv), sh: 9 };
+      if (pick < 0.90) return { cv: FLORA.rock(seasonKey, vv), sh: 9 };
+      return { cv: FLORA.flowers(seasonKey, vv), sh: 5 };
+    }
+    // Pinta el campo (saltando la huella del suelo de piedra) y reúne los props
+    // con su posición «jittered», para colocarlos con orden de profundidad.
+    const tLo = Math.floor(-eo), tHX = Math.ceil(GW - 1 + eo), tHY = Math.ceil(GH - 1 + eo);
+    const inFloor = (gx, gy) => gx >= loX && gx <= hiX && gy >= loY && gy <= hiY;
+    const props = [];
+    for (let gy = tLo; gy <= tHY; gy++) for (let gx = tLo; gx <= tHX; gx++) {
+      if (inFloor(gx, gy)) continue;
+      const riv = isRiver(gx, gy);
+      terrTile(gx, gy, riv);
+      if (riv) continue;
+      // Orla exterior limpia: sin props en el anillo más externo (evita recortes).
+      if (gx === tLo || gx === tHX || gy === tLo || gy === tHY) continue;
+      const nearWall = gx >= loX - 1 && gx <= hiX + 1 && gy >= loY - 1 && gy <= hiY + 1;
+      if (nearWall) continue;
+      const riverNear = hasWater && (isRiver(gx - 1, gy) || isRiver(gx + 1, gy) || isRiver(gx, gy - 1) || isRiver(gx, gy + 1));
+      const spec = propAt(gx, gy, riverNear);
+      if (!spec) continue;
+      const jx = (hash(gx + 1, gy + 5) - 0.5) * TILE_W * 0.4, jy = (hash(gx + 7, gy + 2) - 0.5) * TILE_H * 0.4;
+      props.push({ gx, gy, sum: gx + gy, lx: X(gx, gy) + jx, ly: Y(gx, gy) + jy, spec });
+    }
+    const drawProp = (p) => { if (p.spec.cv) blitProp(p.spec.cv, p.lx, p.ly, p.spec.sh); else if (p.spec.blob) drawTreeBlob(p.lx, p.ly); };
+    // Delante/detrás de la finca POR BORDE: al sur (gy>hiY) o al este (gx>hiX)
+    // van DELANTE (sobre los muros); al norte/oeste, DETRÁS. Dentro de cada grupo,
+    // orden isométrico por profundidad (suma de celda).
+    props.sort((a, b) => a.sum - b.sum).forEach(p => { if (p.gx > hiX || p.gy > hiY) frontTrees.push(p); else drawProp(p); });
+    const drawFrontProps = () => frontTrees.forEach(drawProp);
     for (let by = blk(loY); by <= hiY; by += BS) {
       for (let bx = blk(loX); bx <= hiX; bx += BS) {
         const x0 = Math.max(bx, loX), y0 = Math.max(by, loY);
@@ -471,6 +570,9 @@ const HacIso = (function () {
     };
     drawList.sort((p, q) => before(p.box, q.box) ? -1 : (before(q.box, p.box) ? 1 : 0));
     drawList.forEach(d => d.draw());
+
+    // Props del territorio que quedan DELANTE de la finca: sobre los muros.
+    drawFrontProps();
 
     // ── Grano sutil: rompe el monocromo del suelo y las murallas (textura) ──
     // Ruido de luminancia determinista por píxel; los sprites (ya texturizados)

@@ -78,7 +78,7 @@
    quepan SIN scroll horizontal. Centrada sobre el eje de la página. */
 .hacp-finca{
   margin-top:34px;text-align:center;
-  width:min(94vw,1180px);margin-left:50%;transform:translateX(-50%);
+  width:min(96vw,1760px);margin-left:50%;transform:translateX(-50%);
 }
 .hacp-finca-ttl{
   font-family:'Cinzel Decorative',serif;font-size:clamp(18px,3vw,24px);
@@ -106,6 +106,22 @@
   font-family:'Noto Sans SC',sans-serif; font-size:10.5px; color:var(--parch2);
   background:rgba(0,0,0,.45); padding:3px 7px; border-radius:10px; opacity:.7;
 }
+/* Botón de pantalla completa (esquina superior derecha del visor). */
+.hacp-fs-btn{
+  position:absolute; top:8px; right:8px; z-index:3;
+  width:32px; height:32px; display:flex; align-items:center; justify-content:center;
+  padding:0; cursor:pointer; color:var(--gold);
+  background:rgba(11,10,7,.62); border:1px solid rgba(201,168,76,.4); border-radius:6px;
+  transition:background .15s, color .15s, border-color .15s;
+}
+.hacp-fs-btn:hover{ background:rgba(201,168,76,.18); color:#fff; border-color:var(--gold); }
+.hacp-fs-btn svg{ display:block; }
+.hacp-fs-btn .hacp-fs-shrink{ display:none; }
+.hacp-fs-btn.on .hacp-fs-expand{ display:none; }
+.hacp-fs-btn.on .hacp-fs-shrink{ display:inline; }
+/* En pantalla completa el visor ocupa toda la pantalla, sin marco. */
+.hacp-iso-wrap:fullscreen{ width:100vw; height:100vh; border:none; border-radius:0; }
+.hacp-iso-wrap:-webkit-full-screen{ width:100vw; height:100vh; border:none; border-radius:0; }
 /* ── Plano + panel lateral de mecenas paseando ────────────────────────── */
 .hacp-iso-area{ display:flex; gap:12px; align-items:stretch; margin:18px auto 0; text-align:left; }
 .hacp-iso-area .hacp-iso-wrap{ flex:1 1 auto; margin:0; }

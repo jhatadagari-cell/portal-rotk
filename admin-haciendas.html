@@ -107,13 +107,14 @@
 <div id="chrome-footer"></div>
 
 <script src="assets/js/auth.js?v=2"></script>
+<script src="assets/js/hac-util.js?v=1"></script>
 <script src="assets/js/haciendas-data.js?v=8"></script>
 <script src="assets/js/hac-calc.js?v=3"></script>
-<script src="assets/js/hac-build.js?v=22"></script>
+<script src="assets/js/hac-build.js?v=23"></script>
 <script src="assets/js/hac-store.js?v=5"></script>
 <script src="assets/js/hac-tareas.js?v=1"></script>
 <script src="assets/js/personajes-data.js?v=1"></script>
-<script src="assets/js/hac-char.js?v=4"></script>
+<script src="assets/js/hac-char.js?v=5"></script>
 <script src="assets/js/hac-personajes.js?v=1"></script>
 <script>
 (function () {
@@ -514,6 +515,11 @@
                 const tt = tierPorNivel(n);
                 return `<option value="${n}"${n === tier ? ' selected' : ''}>Nivel ${n} · ${esc(tt.zh)} ${esc(tt.nombre)}</option>`;
               }).join('')}</select></label>
+            <label>Estación del territorio <i class="adm-lbl-note">campo que rodea la finca</i>
+              <select name="estacion">${[['primavera', '🌸 Primavera'], ['verano', '☀️ Verano'], ['otono', '🍂 Otoño'], ['invierno', '❄️ Invierno']].map(([v, t]) => {
+                const cur = ((h.mapa && h.mapa.estacion) || 'verano');
+                return `<option value="${v}"${v === cur ? ' selected' : ''}>${t}</option>`;
+              }).join('')}</select></label>
             <label class="adm-col2">Lema<input name="lema" value="${esc(h.lema || '')}"></label>
             <label class="adm-col2">Descripción<textarea name="descripcion" rows="2">${esc(h.descripcion || '')}</textarea></label>
           </div>
@@ -577,6 +583,8 @@
       // Nivel de la finca (trinquete): se guarda en mapa.tier. El nivel real
       // efectivo nunca será menor que el que dan los puntos.
       if (f.nivelFinca) { h.mapa = h.mapa || { v: 1, construcciones: [] }; h.mapa.tier = clampTier(Number(f.nivelFinca.value) || 1); }
+      // Estación del territorio exterior (se guarda en el mapa jsonb).
+      if (f.estacion) { h.mapa = h.mapa || { v: 1, construcciones: [] }; h.mapa.estacion = f.estacion.value; }
       saveHacienda(h);
       render();
     });

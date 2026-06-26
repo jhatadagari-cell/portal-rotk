@@ -24,14 +24,7 @@ const HacChar = (function () {
   'use strict';
 
   // ── Color helpers ───────────────────────────────────────────────────────
-  function hexToRgb(h) {
-    h = String(h || '').replace('#', '');
-    if (h.length === 3) h = h.split('').map(c => c + c).join('');
-    if (h.length !== 6) h = 'c9a84c';
-    return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
-  }
-  const clamp255 = (v) => Math.max(0, Math.min(255, Math.round(v)));
-  const rgbToHex = (r, g, b) => '#' + [r, g, b].map(v => clamp255(v).toString(16).padStart(2, '0')).join('');
+  const { hexToRgb, clamp255, rgbToHex } = HacUtil;
   function mix(a, b, t) { const A = hexToRgb(a), B = hexToRgb(b); return rgbToHex(A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t, A[2] + (B[2] - A[2]) * t); }
   const light = (c, t) => mix(c, '#ffffff', t);
   const dark  = (c, t) => mix(c, '#000000', t);

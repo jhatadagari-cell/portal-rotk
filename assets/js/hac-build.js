@@ -396,6 +396,10 @@ const HacBuild = (function () {
     // Nivel ALCANZADO de la finca (trinquete): la rejilla no encoge aunque
     // bajen los puntos. Se conserva si viene en el mapa.
     if (mapa && mapa.tier != null) out.tier = clampTier(mapa.tier);
+    // Estación del territorio exterior (primavera/verano/otono/invierno). Se
+    // guarda en el mapa (jsonb) para no requerir migración de la tabla.
+    const EST = { primavera: 1, verano: 1, otono: 1, invierno: 1 };
+    if (mapa && EST[String(mapa.estacion || '').toLowerCase().replace('ñ', 'n')]) out.estacion = String(mapa.estacion).toLowerCase().replace('ñ', 'n');
     return out;
   }
 

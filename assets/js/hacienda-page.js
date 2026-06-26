@@ -68,6 +68,12 @@
           <div class="hacp-iso-wrap" id="hacp-iso-wrap">
             <canvas class="hacp-iso" id="hacp-iso"
               role="img" aria-label="Plano isométrico de la finca de ${esc(h.nombre)}"></canvas>
+            <button type="button" class="hacp-fs-btn" id="hacp-fs-btn" aria-label="Ver en pantalla completa" title="Ver en pantalla completa">
+              <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path class="hacp-fs-expand" d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>
+                <path class="hacp-fs-shrink" d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/>
+              </svg>
+            </button>
             <span class="hacp-iso-hint">arrastra para mover · pellizca o ctrl+rueda para zoom</span>
           </div>
           <aside class="hacp-folk-panel" id="hacp-folk-panel" hidden>
@@ -87,11 +93,13 @@
     const iso = document.getElementById('hacp-iso');
     if (iso && window.HacIso) {
       const pabellones = (window.HacStore && HacStore.pabellones) ? HacStore.pabellones(h.id) : [];
-      HacIso.draw(iso, { mapa: h.mapa, tier, color, pabellones });
+      HacIso.draw(iso, { mapa: h.mapa, tier, color, pabellones, estacion: (h.mapa && h.mapa.estacion) || 'verano' });
       const vp = document.getElementById('hacp-iso-wrap');
       // Visor navegable: arrastrar (pan) + pellizco/ctrl-rueda (zoom). Las fincas
       // grandes ya no caben en pantalla, así que se exploran moviéndose dentro.
       const cam = enablePanZoom(vp, iso);
+      // Botón de pantalla completa sobre el visor.
+      enableFullscreen(vp, document.getElementById('hacp-fs-btn'));
       // Mecenas paseando + listado lateral con cámara y banners de edificio.
       if (window.HacFolk) setupFolk(iso, vp, cam, h, tier, color);
       // Nombre del pabellón al pasar el ratón (mapa celda→pabellón en vivo).
@@ -116,13 +124,29 @@
       const vw = vp.clientWidth, vh = vp.clientHeight;
       if (!vw || !cv.width) return;
       fit = Math.min(vw / cv.width, vh / cv.height);
-      scale = fit; tx = (vw - cv.width * scale) / 2; ty = (vh - cv.height * scale) / 2; apply();
+      scale = fit; targetScale = fit; tx = (vw - cv.width * scale) / 2; ty = (vh - cv.height * scale) / 2; apply();
     }
-    const zoomAt = (ox, oy, factor) => { const ns = clampS(scale * factor); tx = ox - (ox - tx) * (ns / scale); ty = oy - (oy - ty) * (ns / scale); scale = ns; apply(); };
+    const zoomAt = (ox, oy, factor) => { const ns = clampS(scale * factor); tx = ox - (ox - tx) * (ns / scale); ty = oy - (oy - ty) * (ns / scale); scale = ns; targetScale = ns; apply(); };
+    // Zoom de rueda animado: la escala persigue suavemente un objetivo en vez de
+    // saltar de golpe, manteniendo fijo el punto bajo el cursor (zfx,zfy).
+    let targetScale = scale, zfx = 0, zfy = 0, zAnim = null;
+    function smoothZoom() {
+      const diff = targetScale - scale;
+      if (Math.abs(diff) < 0.001) { scale = targetScale; apply(); zAnim = null; return; }
+      const ns = scale + diff * 0.22;
+      tx = zfx - (zfx - tx) * (ns / scale); ty = zfy - (zfy - ty) * (ns / scale);
+      scale = ns; apply(); zAnim = requestAnimationFrame(smoothZoom);
+    }
     vp.addEventListener('wheel', (e) => {
       e.preventDefault(); const r = vp.getBoundingClientRect();
-      if (e.ctrlKey) zoomAt(e.clientX - r.left, e.clientY - r.top, 1 - e.deltaY * 0.01);   // pellizco trackpad
-      else { tx -= e.deltaX; ty -= e.deltaY; apply(); }                                      // desplazar
+      if (e.ctrlKey) {                                                                       // pellizco trackpad / ctrl+rueda
+        zfx = e.clientX - r.left; zfy = e.clientY - r.top;
+        let dy = e.deltaY;                                                                   // normaliza líneas/páginas a px
+        if (e.deltaMode === 1) dy *= 16; else if (e.deltaMode === 2) dy *= vp.clientHeight;
+        dy = Math.max(-60, Math.min(60, dy));                                                // acota saltos bruscos de rueda
+        targetScale = clampS(targetScale * Math.exp(-dy * 0.0022));
+        if (!zAnim) zAnim = requestAnimationFrame(smoothZoom);
+      } else { tx -= e.deltaX; ty -= e.deltaY; apply(); }                                    // desplazar
     }, { passive: false });
     // Arrastrar con puntero (ratón o un dedo).
     const pts = new Map(); let pinch = null;
@@ -139,6 +163,9 @@
     vp.addEventListener('pointerup', end); vp.addEventListener('pointercancel', end);
     fitView();
     window.addEventListener('resize', fitView);
+    // Al entrar/salir de pantalla completa el visor cambia de tamaño: reencaja.
+    document.addEventListener('fullscreenchange', () => requestAnimationFrame(fitView));
+    document.addEventListener('webkitfullscreenchange', () => requestAnimationFrame(fitView));
 
     // Lleva la cámara a un punto LÓGICO (lx,ly) del plano, centrándolo en el
     // visor con una transición suave. Lo usa el listado de mecenas.
@@ -154,6 +181,27 @@
       })(t0);
     }
     return { centerOn };
+  }
+
+  // Botón de pantalla completa: alterna fullscreen sobre el visor (vp). Si el
+  // navegador no lo soporta, oculta el botón.
+  function enableFullscreen(vp, btn) {
+    if (!vp || !btn) return;
+    const req = vp.requestFullscreen || vp.webkitRequestFullscreen;
+    const exit = document.exitFullscreen || document.webkitExitFullscreen;
+    if (!req) { btn.hidden = true; return; }
+    const isFs = () => (document.fullscreenElement || document.webkitFullscreenElement) === vp;
+    const update = () => {
+      const on = isFs();
+      btn.classList.toggle('on', on);
+      const label = on ? 'Salir de pantalla completa' : 'Ver en pantalla completa';
+      btn.setAttribute('aria-label', label); btn.title = label;
+    };
+    btn.addEventListener('pointerdown', (e) => e.stopPropagation());   // no iniciar un arrastre del visor
+    btn.addEventListener('click', () => { if (isFs()) exit.call(document); else req.call(vp); });
+    document.addEventListener('fullscreenchange', update);
+    document.addEventListener('webkitfullscreenchange', update);
+    update();
   }
 
   // Tooltip con el nombre del pabellón al pasar el ratón por su patio. Mapea el
