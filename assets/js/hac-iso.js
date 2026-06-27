@@ -594,7 +594,13 @@ const HacIso = (function () {
     try {
       bgFloor = canvas._hacBgFloor || (canvas._hacBgFloor = document.createElement('canvas'));
       bgFloor.width = canvas.width; bgFloor.height = canvas.height;
-      bgFloor.getContext('2d').drawImage(canvas, 0, 0);
+      const bfg = bgFloor.getContext('2d');
+      bfg.drawImage(canvas, 0, 0);
+      // Hornea el MISMO grano determinista en el suelo cacheado. Así la recomposición
+      // por frame (alrededor de cada mecenas) NO tiene que reaplicar ruido con
+      // getImageData/putImageData —que hundía los FPS—: el grano ya cuadra pixel a
+      // pixel con `bg`.
+      applyNoise(bfg, 0, 0, bgFloor.width, bgFloor.height, bgFloor.width, bgFloor.height);
     } catch (e) { bgFloor = null; }
 
     drawList.sort((p, q) => before(p.box, q.box) ? -1 : (before(q.box, p.box) ? 1 : 0));
@@ -739,9 +745,8 @@ const HacIso = (function () {
       g.setTransform(S, 0, 0, S, 0, 0);
       render.forEach(d => d.draw());
       g.restore();
-      g.setTransform(1, 0, 0, 1, 0, 0);
-      rects.forEach(r => applyNoise(g, r[0], r[1], r[2], r[3], canvas.width, canvas.height));
-      g.setTransform(S, 0, 0, S, 0, 0);
+      // El grano ya está horneado en sc.bgFloor (y en sc.bg), así que NO se reaplica
+      // por frame: la zona recompuesta cuadra con el fondo sin coste de getImageData.
     }
     if (overlays) overlays.forEach(o => o && o.draw && o.draw(g, sc));
     g.setTransform(1, 0, 0, 1, 0, 0);
