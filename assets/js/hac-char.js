@@ -583,8 +583,10 @@ const HacChar = (function () {
   }
 
   // Registro de accesorios por aptitud. Sin entrada → cuerpo base (erudito) tal cual.
+  // DESACTIVADO: el tocado procedural sobre el cuerpo PNG no casa de estilo.
+  // Las variantes irán por SHEET COMPLETO por aptitud (char-sprites-<apt>.png).
   const ACCESSORIES = {
-    estratega: _drawGuanjin
+    // estratega: _drawGuanjin   // (conservado pero sin usar)
   };
 
   // Dibuja el accesorio de la aptitud sobre el ctx de destino, a escala. Usa el
