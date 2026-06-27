@@ -105,7 +105,7 @@ const HacPersonajes = (function () {
     if (error) { console.error('[HacPersonajes] remove', error); throw error; }
   }
 
-  return { ready, reload, all, get, dbOk, add, update, remove, TABLE };
+  return { ready, reload, all, get, mine, dbOk, add, update, remove, TABLE };
 })();
 
 if (typeof window !== 'undefined') window.HacPersonajes = HacPersonajes;
