@@ -11,6 +11,12 @@
 <link rel="stylesheet" href="assets/css/chrome.css?v=4">
 <link rel="stylesheet" href="assets/css/main.css">
 <link rel="stylesheet" href="assets/css/haciendas.css?v=2">
+<style>
+  .hac-two{display:grid;grid-template-columns:1fr 1fr;gap:32px;max-width:1180px;margin:0 auto;padding:0 20px;align-items:start}
+  @media(max-width:860px){.hac-two{grid-template-columns:1fr;gap:40px}}
+  .hac-col-ttl{font:700 18px "Noto Serif SC",serif;color:#d8b65a;margin:0 0 4px;text-align:center}
+  .hac-col-sub{font:400 13px/1.5 "Noto Sans SC",sans-serif;color:#b9a888;opacity:.8;margin:0 0 16px;text-align:center}
+</style>
 </head>
 <body>
 
@@ -27,34 +33,35 @@
 
 <section class="sec" id="hac-onboard"></section>
 
-<section class="sec sec-alt">
-  <div class="sec-hd">
-    <p class="sec-lbl">Los Niveles</p>
-    <h2 class="sec-ttl">La Escalera de Haciendas</h2>
-    <p class="sec-dsc">Toda hacienda nace como Residencia y asciende a medida que su casa crece y prospera — y cada nivel estrena un cargo de élite.</p>
-    <div class="sec-div"></div>
-  </div>
-  <div class="tier-ladder" id="hac-tiers"></div>
-</section>
-
 <section class="sec">
-  <div class="sec-hd">
-    <p class="sec-lbl">Los Cargos</p>
-    <h2 class="sec-ttl">La Escalera de la Casa</h2>
-    <p class="sec-dsc">De quien se sienta a la mesa a quien sostiene el reino. Tu lugar dentro de la casa decide tu cargo; el nivel de la hacienda decide cuáles están disponibles.</p>
-    <div class="sec-div"></div>
-  </div>
-  <div class="rango-ladder" id="hac-rangos"></div>
-</section>
-
-<section class="sec sec-alt">
   <div class="sec-hd">
     <p class="sec-lbl">Las Casas</p>
     <h2 class="sec-ttl">Haciendas Fundadas</h2>
-    <p class="sec-dsc">Cada hacienda reúne a sus mecenas por cargo. Con el tiempo, cada casa se representará como una finca que crece pabellón a pabellón.</p>
+    <p class="sec-dsc">Las casas que ya existen en el portal. Entra en cualquiera para ver su finca, sus gentes y los cargos de su casa.</p>
     <div class="sec-div"></div>
   </div>
   <div class="hac-list" id="hac-list"></div>
+</section>
+
+<section class="sec sec-alt">
+  <div class="sec-hd">
+    <p class="sec-lbl">Cómo funciona una casa</p>
+    <h2 class="sec-ttl">Cargos y Prestigio</h2>
+    <p class="sec-dsc">A la izquierda, la jerarquía interna de una hacienda: los cargos que se ganan dentro de ella. A la derecha, los niveles que alcanza una casa según su prestigio.</p>
+    <div class="sec-div"></div>
+  </div>
+  <div class="hac-two">
+    <div class="hac-col">
+      <h3 class="hac-col-ttl">La jerarquía de la casa</h3>
+      <p class="hac-col-sub">De quien se sienta a la mesa a quien sostiene el reino. Tu lugar en la casa decide tu cargo.</p>
+      <div class="rango-ladder" id="hac-rangos"></div>
+    </div>
+    <div class="hac-col">
+      <h3 class="hac-col-ttl">Los niveles de la hacienda</h3>
+      <p class="hac-col-sub">Toda casa nace como Residencia y asciende con su prestigio — y cada nivel estrena un cargo de élite.</p>
+      <div class="tier-ladder" id="hac-tiers"></div>
+    </div>
+  </div>
 </section>
 
 <div id="chrome-footer"></div>
@@ -77,7 +84,7 @@
 <script src="assets/js/hac-dialog.js?v=2"></script>
 <script src="assets/js/hac-folk.js?v=16"></script>
 <script src="assets/js/haciendas.js?v=2"></script>
-<script src="assets/js/hac-onboard.js?v=3"></script>
+<script src="assets/js/hac-onboard.js?v=4"></script>
 <script src="assets/js/chrome.js"></script>
 </body>
 </html>

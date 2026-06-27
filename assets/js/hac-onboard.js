@@ -312,11 +312,16 @@ const HacOnboard = (function () {
   async function renderPlayer(user, pj) {
     teardown();
     host.innerHTML = `<div class="onb-card"><div class="onb-loading">Cargando tu hacienda…</div></div>`;
-    if (window.HacStore && HacStore.ready) await withTimeout(HacStore.ready(), 6000, null);
-    const sol = window.HacSolicitudes ? await withTimeout(HacSolicitudes.mine(), 6000, null) : null;
-    if (sol && sol.estado === 'aprobada') return renderMember(user, pj, sol);
-    if (sol && sol.estado === 'pendiente') return renderPending(user, pj, sol);
-    renderPicker(user, pj);
+    try {
+      if (window.HacStore && HacStore.ready) await withTimeout(HacStore.ready(), 5000, null);
+      const sol = window.HacSolicitudes ? await withTimeout(HacSolicitudes.mine(), 5000, null) : null;
+      if (sol && sol.estado === 'aprobada') return renderMember(user, pj, sol);
+      if (sol && sol.estado === 'pendiente') return renderPending(user, pj, sol);
+      renderPicker(user, pj);
+    } catch (e) {
+      console.error('[onboard] renderPlayer falló:', e);
+      try { renderPicker(user, pj); } catch (e2) { host.innerHTML = `<div class="onb-card"><div class="onb-loading">No se pudo cargar tu hacienda. Recarga la página.</div></div>`; }
+    }
   }
 
   function renderPicker(user, pj) {
@@ -420,12 +425,20 @@ const HacOnboard = (function () {
   async function refresh() {
     if (!host) return;
     host.innerHTML = `<div class="onb-card"><div class="onb-loading">Cargando…</div></div>`;
-    await withTimeout(Auth.ready(), 6000, null);
-    const user = (window.Auth && Auth.current) ? Auth.current() : null;
-    if (!user) { renderAnon(); return; }
-    if (window.HacPersonajes && HacPersonajes.ready) await withTimeout(HacPersonajes.ready(), 6000, null);
-    const mine = window.HacPersonajes ? HacPersonajes.mine(user.id) : null;
-    if (mine) renderPlayer(user, mine); else renderIntro(user);
+    try {
+      await withTimeout(window.Auth && Auth.ready ? Auth.ready() : null, 5000, null);
+      const user = (window.Auth && Auth.current) ? Auth.current() : null;
+      if (!user) { renderAnon(); return; }
+      if (window.HacPersonajes && HacPersonajes.ready) await withTimeout(HacPersonajes.ready(), 5000, null);
+      const mine = window.HacPersonajes ? HacPersonajes.mine(user.id) : null;
+      if (mine) renderPlayer(user, mine); else renderIntro(user);
+    } catch (e) {
+      console.error('[onboard] refresh falló:', e);
+      // Último recurso: que SIEMPRE se vea algo, nunca un "cargando" eterno.
+      const u = (window.Auth && Auth.current) ? Auth.current() : null;
+      try { u ? renderIntro(u) : renderAnon(); }
+      catch (e2) { host.innerHTML = `<div class="onb-card"><div class="onb-loading">No se pudo cargar. Recarga la página.</div></div>`; }
+    }
   }
 
   function mount() {
