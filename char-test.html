@@ -41,6 +41,9 @@
     </div>
   </div>
 
+  <div class="lbl">Aptitud (tocado/accesorio por clase)</div>
+  <div class="sw" id="apts" style="gap:6px"></div>
+
   <div class="lbl">Color de túnica (recolorado en vivo)</div>
   <div class="sw" id="robes"></div>
 
@@ -49,11 +52,13 @@
 </div>
 
 <script src="assets/js/hac-util.js"></script>
-<script src="assets/js/hac-char.js?v=7"></script>
+<script src="assets/js/hac-char.js?v=8"></script>
 <script>
 (function(){
   var DIRS = HacChar.DIRS;          // S,SE,E,NE,N,NW,W,SW
   var robe = (HacChar.ROBES && HacChar.ROBES[0]) || '#2e6e6e';
+  var apt = 'erudito';
+  var APTS = ['erudito','estratega','guerrero','administrador','caudillo','canciller'];
   var statusEl = document.getElementById('status');
 
   function setStatus(){
@@ -69,10 +74,20 @@
     var ir = document.getElementById('idleRow'), wr = document.getElementById('walkRow');
     ir.innerHTML=''; wr.innerHTML='';
     DIRS.forEach(function(d){
-      var c1=document.createElement('canvas'); HacChar.draw(c1,{aspecto:{robe:robe},dir:d,frame:0,scale:2}); ir.appendChild(c1);
-      var c2=document.createElement('canvas'); HacChar.draw(c2,{aspecto:{robe:robe},dir:d,frame:1,scale:2}); wr.appendChild(c2);
+      var c1=document.createElement('canvas'); HacChar.draw(c1,{aptitud:apt,aspecto:{robe:robe},dir:d,frame:0,scale:2}); ir.appendChild(c1);
+      var c2=document.createElement('canvas'); HacChar.draw(c2,{aptitud:apt,aspecto:{robe:robe},dir:d,frame:1,scale:2}); wr.appendChild(c2);
     });
   }
+
+  // Botones de aptitud
+  var aptsEl = document.getElementById('apts');
+  APTS.forEach(function(a){
+    var b=document.createElement('button'); b.textContent=a; b.title=a;
+    b.style.cssText='width:auto;height:auto;border-radius:8px;padding:5px 9px;font:700 11px system-ui;color:#3a2a16;background:#f3ead2';
+    if(a===apt) b.className='on';
+    b.onclick=function(){ apt=a; [].forEach.call(aptsEl.children,function(x){x.className=(x===b)?'on':'';}); fillRows(); };
+    aptsEl.appendChild(b);
+  });
 
   // Swatches de túnica
   var robesEl = document.getElementById('robes');
@@ -89,7 +104,7 @@
     var dt=Math.min(0.05,(ts-t0)/1000||0); t0=ts; acc+=dt; dacc+=dt;
     if(acc>0.16){acc=0; fr=(fr+1)%HacChar.FRAMES;}
     if(dacc>1.2){dacc=0; di=(di+1)%DIRS.length;}
-    HacChar.draw(big,{aspecto:{robe:robe},dir:DIRS[di],frame:fr,scale:3});
+    HacChar.draw(big,{aptitud:apt,aspecto:{robe:robe},dir:DIRS[di],frame:fr,scale:3});
     requestAnimationFrame(tick);
   }
   requestAnimationFrame(tick);

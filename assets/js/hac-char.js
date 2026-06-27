@@ -495,6 +495,108 @@ const HacChar = (function () {
     const f = ((frame % FRAMES) + FRAMES) % FRAMES;
     return f === 1 ? 1 : f === 3 ? 2 : 0;
   }
+
+  // ── Accesorios por APTITUD (capa procedural sobre el cuerpo PNG) ───────────
+  // El cuerpo base (erudito) es común; cada aptitud añade su tocado/props encima,
+  // anclado a la CABEZA medida en cada celda. Así una variante = solo unas líneas
+  // de pixel-art, sin regenerar arte.
+  let _headAnchor = null;   // [row][col] = {x,y} (coords locales de celda) de la coronilla
+
+  // Mide la coronilla de cada celda del sheet (topmost opaco + centro de la banda
+  // superior). Una sola vez, en carga; el tocado tracea cada frame sin desancle.
+  function _measureAnchors() {
+    if (!_sheetData) return;
+    const { data, width } = _sheetData;
+    _headAnchor = [];
+    for (let r = 0; r < 3; r++) {
+      _headAnchor[r] = [];
+      for (let c = 0; c < SHEET_COLS.length; c++) {
+        const x0 = c * _cellW, y0 = r * _cellH;
+        let top = -1;
+        for (let y = 0; y < _cellH && top < 0; y++) {
+          for (let x = 0; x < _cellW; x++) {
+            if (data[((y0 + y) * width + (x0 + x)) * 4 + 3] > 40) { top = y; break; }
+          }
+        }
+        if (top < 0) { _headAnchor[r][c] = { x: Math.round(_cellW / 2), y: 8 }; continue; }
+        const xs = [];
+        for (let y = top; y < top + 12 && y < _cellH; y++)
+          for (let x = 0; x < _cellW; x++)
+            if (data[((y0 + y) * width + (x0 + x)) * 4 + 3] > 40) xs.push(x);
+        xs.sort((a, b) => a - b);
+        _headAnchor[r][c] = { x: xs.length ? xs[xs.length >> 1] : Math.round(_cellW / 2), y: top };
+      }
+    }
+  }
+
+  // Vista por dirección para los accesorios (front/back/side + dx de giro).
+  function _capView(dir) {
+    switch (dir) {
+      case 'S':  return { front: 1, back: 0, side: 0,  dx: 0 };
+      case 'SE': return { front: 1, back: 0, side: .5, dx: 1 };
+      case 'E':  return { front: 0, back: 0, side: 1,  dx: 2 };
+      case 'NE': return { front: 0, back: 1, side: .5, dx: 1 };
+      case 'N':  return { front: 0, back: 1, side: 0,  dx: 0 };
+      case 'NW': return { front: 0, back: 1, side: .5, dx: -1 };
+      case 'W':  return { front: 0, back: 0, side: 1,  dx: -2 };
+      case 'SW': return { front: 1, back: 0, side: .5, dx: -1 };
+      default:   return { front: 1, back: 0, side: 0,  dx: 0 };
+    }
+  }
+
+  // 綸巾 (guānjīn): pañuelo de tela del estratega/letrado culto. Tela sólida que
+  // ciñe la cabeza; en perfil/espalda envuelve el moño. Color índigo.
+  function _drawGuanjin(px, cx, topY, v) {
+    const C = { cloth: '#45546f', hi: '#5d6e8c', dk: '#33415a', sh: '#262f42', band: '#3b4863', knot: '#2b3447' };
+    const mir = v.dx < 0 ? -1 : 1;
+    const back = v.side >= 1 ? -mir * 2 : 0;
+    const c = cx + Math.round(v.dx * 0.5) + back;
+    const top = topY + 1;
+    const halfF = 7, halfS = 6;
+    const half = Math.round(halfS + (halfF - halfS) * (1 - v.side));
+    const H = 13;
+    if (v.side >= 1) {                                   // bulto del moño envuelto (atrás)
+      const bx = c - mir * (half - 1);
+      for (let i = 0; i < 6; i++) px(bx - 2, top + 3 + i, 4, 1, i < 2 ? C.cloth : C.dk);
+      px(bx - 2, top + 3, 4, 1, C.hi);
+    }
+    for (let i = 0; i < H; i++) {                        // cúpula que ciñe la cabeza
+      const t = i / (H - 1);
+      let w = half * (0.6 + 0.5 * Math.sin((t * 0.8 + 0.13) * Math.PI));
+      w = Math.max(2, Math.round(w));
+      const y = top + i;
+      px(c - w, y, w * 2, 1, C.cloth);
+      px(c - w, y, Math.max(1, Math.round(w * 0.42)), 1, C.hi);
+      px(c + Math.round(w * 0.5), y, w - Math.round(w * 0.5), 1, C.dk);
+      px(c - w, y, 1, 1, C.sh); px(c + w - 1, y, 1, 1, C.sh);
+    }
+    if (!(v.back && v.side === 0)) { px(c - 1 * mir, top + 1, 1, H - 5, C.dk); px(c, top + 1, 1, H - 6, C.hi); } // cresta central
+    if (!v.back) {                                       // banda frontal (doblez)
+      const by = top + H - 3;
+      px(c - half, by, half * 2, 2, C.band); px(c - half, by, half * 2, 1, C.hi);
+      if (v.front) px(c - 1, by, 2, 2, C.knot);
+    }
+    if (v.back && v.side === 0) { px(c - 2, top + H - 2, 2, 8, C.dk); px(c + 1, top + H - 2, 2, 7, C.cloth); px(c + 1, top + H - 2, 1, 7, C.dk); } // colas
+    else if (v.side >= 1) { const bx = c - mir * (half - 1); px(bx - 1, top + H - 4, 2, 7, C.dk); px(bx - 1, top + H - 4, 1, 7, C.sh); }
+  }
+
+  // Registro de accesorios por aptitud. Sin entrada → cuerpo base (erudito) tal cual.
+  const ACCESSORIES = {
+    estratega: _drawGuanjin
+  };
+
+  // Dibuja el accesorio de la aptitud sobre el ctx de destino, a escala.
+  function _drawAccessory(ctx, aptId, dir, row, col, scale) {
+    const fn = ACCESSORIES[aptId];
+    if (!fn || !_headAnchor) return;
+    const a = _headAnchor[row] && _headAnchor[row][col];
+    if (!a) return;
+    const px = (x, y, w, h, color) => {
+      ctx.fillStyle = color;
+      ctx.fillRect(Math.round(x * scale), Math.round(y * scale), Math.round(w * scale), Math.round(h * scale));
+    };
+    fn(px, a.x, a.y, _capView(dir));
+  }
   function _loadSheet(api) {
     if (typeof document === 'undefined') return;
     const img = new Image();
@@ -504,6 +606,7 @@ const HacChar = (function () {
       const cv = document.createElement('canvas'); cv.width=img.naturalWidth; cv.height=img.naturalHeight;
       const ctx = cv.getContext('2d'); ctx.drawImage(img, 0, 0);
       _sheetData = ctx.getImageData(0, 0, img.naturalWidth, img.naturalHeight);
+      _measureAnchors();
       _sheetReady = true; _recolorCache.clear();
       if (api) { api.W = _cellW; api.H = _cellH; }   // folk.js los lee de aquí
       if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('hacchar-loaded'));
@@ -548,13 +651,15 @@ const HacChar = (function () {
       const sheet = _getRecolored(robeHex);
       const col = SHEET_COLS.indexOf(dir);
       if (sheet && col >= 0) {
+        const row = _pngRow(opts.frame || 0, opts.pose);
         canvas.width = _cellW * scale; canvas.height = _cellH * scale;
         const ctx = canvas.getContext('2d'); if (!ctx) return;
         ctx.imageSmoothingEnabled = false;
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         if (opts.bg) { ctx.fillStyle = opts.bg; ctx.fillRect(0, 0, canvas.width, canvas.height); }
-        ctx.drawImage(sheet, col * _cellW, _pngRow(opts.frame || 0, opts.pose) * _cellH,
+        ctx.drawImage(sheet, col * _cellW, row * _cellH,
                       _cellW, _cellH, 0, 0, _cellW * scale, _cellH * scale);
+        _drawAccessory(ctx, opts.aptitud, dir, row, col, scale);   // tocado/props de la aptitud
         return;
       }
     }
