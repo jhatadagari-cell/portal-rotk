@@ -28,24 +28,29 @@ const HacOnboard = (function () {
 
   // Escena de intro: un patio pequeño y vivo (sin interacción de cámara).
   const SCENE = {
-    tier: 1,
+    tier: 2,
     color: '#b8842c',
     mapa: {
       v: 1, estacion: 'verano', construcciones: [
-        { pos: [2, 2], tipo: 'pabellon', rot: 0, dueno: null, nivel: 1 },
-        { pos: [5, 3], tipo: 'galeria', rot: 1, dueno: null, nivel: 1 },
-        { pos: [3, 8], tipo: 'pabellon-te', rot: 0, dueno: null, nivel: 1 },
-        { pos: [5, 8], tipo: 'farol', rot: 0, dueno: null, nivel: 1 },
-        { pos: [1, 5], tipo: 'jardin-flores', rot: 0, dueno: null, nivel: 1 },
-        { pos: [1, 6], tipo: 'jardin-flores', rot: 0, dueno: null, nivel: 1 },
-        { pos: [3, 4], tipo: 'camino', rot: 0 }, { pos: [3, 5], tipo: 'camino', rot: 0 },
-        { pos: [3, 6], tipo: 'camino', rot: 0 }, { pos: [3, 7], tipo: 'camino', rot: 0 },
-        { pos: [2, 6], tipo: 'camino', rot: 0 }, { pos: [4, 6], tipo: 'camino', rot: 0 }
+        { pos: [3, 3], tipo: 'pabellon', rot: 0, dueno: null, nivel: 1 },
+        { pos: [8, 3], tipo: 'galeria', rot: 0, dueno: null, nivel: 1 },
+        { pos: [3, 12], tipo: 'pabellon-te', rot: 0, dueno: null, nivel: 1 },
+        { pos: [9, 11], tipo: 'pabellon', rot: 0, dueno: null, nivel: 1 },
+        { pos: [7, 7], tipo: 'farol', rot: 0, dueno: null, nivel: 1 },
+        { pos: [3, 16], tipo: 'farol', rot: 0, dueno: null, nivel: 1 },
+        { pos: [3, 8], tipo: 'jardin-flores', rot: 0, dueno: null, nivel: 1 },
+        { pos: [4, 8], tipo: 'jardin-flores', rot: 0, dueno: null, nivel: 1 },
+        { pos: [3, 9], tipo: 'jardin-flores', rot: 0, dueno: null, nivel: 1 },
+        { pos: [6, 5], tipo: 'camino' }, { pos: [6, 6], tipo: 'camino' }, { pos: [6, 7], tipo: 'camino' },
+        { pos: [6, 8], tipo: 'camino' }, { pos: [6, 9], tipo: 'camino' }, { pos: [6, 10], tipo: 'camino' },
+        { pos: [6, 11], tipo: 'camino' }, { pos: [6, 12], tipo: 'camino' }, { pos: [5, 8], tipo: 'camino' }, { pos: [7, 8], tipo: 'camino' }
       ]
     },
     miembros: [
-      { id: 'onb-a', nombre: 'Zhao Yun', puntos: 1500, desde: '2026', nota: '' },
-      { id: 'onb-b', nombre: 'Zhuge Liang', puntos: 600, desde: '2026', nota: '' }
+      { id: 'onb-a', nombre: 'Zhao Yun', puntos: 3000, desde: '2026', nota: '' },
+      { id: 'onb-b', nombre: 'Zhuge Liang', puntos: 1500, desde: '2026', nota: '' },
+      { id: 'onb-c', nombre: 'Guan Yu', puntos: 600, desde: '2026', nota: '' },
+      { id: 'onb-d', nombre: 'Sun Qian', puntos: 120, desde: '2026', nota: '' }
     ]
   };
 
@@ -61,6 +66,15 @@ const HacOnboard = (function () {
     .onb-scene{position:relative;background:radial-gradient(120% 120% at 50% 20%,#9ab87f,#6f9560);min-height:240px;
       display:flex;align-items:center;justify-content:center;overflow:hidden}
     .onb-scene canvas{width:100%;height:auto;display:block;image-rendering:pixelated;image-rendering:crisp-edges}
+    /* Intro/anon: escena en BANDA ANCHA arriba y la llamada a crear, compacta, debajo */
+    .onb-wide{display:flex;flex-direction:column}
+    .onb-wide .onb-scene{width:100%;height:300px;align-items:center;justify-content:center}
+    .onb-wide .onb-scene canvas{width:100%;height:auto;max-width:none;max-height:none}
+    @media(max-width:760px){.onb-wide .onb-scene{height:200px}}
+    .onb-wide .onb-copy{padding:18px 30px 24px;align-items:center;text-align:center;max-width:760px;margin:0 auto}
+    .onb-wide .onb-zh{margin-bottom:0}
+    .onb-wide .onb-ttl{margin-bottom:8px}
+    .onb-wide .onb-cta{align-self:center}
     .onb-scene-tag{position:absolute;left:12px;bottom:10px;font:600 11px/1 "Noto Sans SC",sans-serif;
       color:#f3ead2;text-shadow:0 1px 3px rgba(0,0,0,.6);letter-spacing:.04em}
     .onb-copy{padding:26px 28px;display:flex;flex-direction:column;justify-content:center}
@@ -164,7 +178,7 @@ const HacOnboard = (function () {
   function renderAnon() {
     teardown();
     host.innerHTML = `
-      <div class="onb-card"><div class="onb-hero">
+      <div class="onb-card"><div class="onb-hero onb-wide">
         <div class="onb-scene"><canvas id="onb-scene-cv"></canvas><span class="onb-scene-tag">莊園 · una casa que cobra vida</span></div>
         <div class="onb-copy">
           <p class="onb-zh">立家</p>
@@ -183,7 +197,7 @@ const HacOnboard = (function () {
   function renderIntro(user) {
     teardown();
     host.innerHTML = `
-      <div class="onb-card"><div class="onb-hero">
+      <div class="onb-card"><div class="onb-hero onb-wide">
         <div class="onb-scene"><canvas id="onb-scene-cv"></canvas><span class="onb-scene-tag">莊園 · el patio de una casa</span></div>
         <div class="onb-copy">
           <p class="onb-zh">立家</p>
