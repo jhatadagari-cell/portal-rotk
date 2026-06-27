@@ -99,6 +99,7 @@ const HacChar = (function () {
   function figure(px, P, base, g, pose) {
     const v = viewOf(base);
     if (pose === 'sit') { figureSit(px, P, v); return; }
+    if (pose === 'bow') { figureBow(px, P, v); return; }
     shadow(px);
     if (P.cape) cape(px, P, v, g);
     legs(px, P, v, g);
@@ -137,6 +138,56 @@ const HacChar = (function () {
     px(c - 2, tTop - 2, 4, 3, P.skinDk);
     headFace(px, P, v, c, hy);
     hairAndCap(px, P, v, c, hy);
+  }
+
+  // Pose de REVERENCIA (抱拳禮 Bào Quán Lǐ): saludo marcial deferente. La cabeza
+  // se PICA mirando al suelo (se ve la coronilla, no la cara) y las manos se
+  // alzan al frente: puño derecho ENVUELTO por la palma izquierda. Reutiliza el
+  // torso/piernas de pie (ya pulidos), con marcha estática.
+  function figureBow(px, P, v) {
+    const g0 = { f: 0, bob: 0, step: 0 };
+    const c = CX + Math.round(v.dx * 0.6);
+    const dir = (v.dx >= 0) ? 1 : -1;                       // hacia dónde mira al picar
+    const armor = P.kind === 'armor';
+    const A = anchors(g0);
+    shadow(px);
+    legs(px, P, v, g0);
+    torso(px, P, v, g0);
+    // Cabeza PICADA: testa vista desde la coronilla, baja y algo adelantada, de
+    // modo que se ve el pelo/tocado y apenas la frente (mira al suelo).
+    headBowed(px, P, v, c + dir, A.shoulder - 5);
+    // Manos en 抱拳禮 al frente, alzadas a la altura del pecho: puño (al lado de
+    // la dirección) envuelto por la palma. Antebrazos/mangas confluyendo debajo.
+    const hy = A.shoulder + 4;
+    px(c - 6, hy + 1, 12, 4, armor ? P.steelDk : P.robeDk);                // antebrazos/mangas
+    px(c - 6, hy + 1, 12, 1, armor ? P.steel : P.robe);
+    if (!armor) px(c - 6, hy + 4, 12, 1, P.trim);                          // ribete de los puños
+    const fistX = c + 2 * dir;
+    px(fistX - 3, hy - 2, 6, 5, P.skinDk);                                 // PALMA que envuelve
+    px(fistX - 3, hy - 2, 6, 1, P.skinHi);
+    px(fistX - 3 + (dir > 0 ? 4 : 0), hy - 1, 2, 4, P.skin);               // PUÑO asomando por un lado
+    px(fistX - 1, hy, 2, 1, dark(P.skin, 0.30));                           // junta entre palma y puño
+  }
+
+  // Testa picada (vista de coronilla) para la reverencia: pelo/tocado arriba,
+  // un sliver de frente abajo; sin ojos (mira al suelo).
+  function headBowed(px, P, v, c, topY) {
+    // Casquete de pelo en cúpula.
+    for (let i = 0; i < 7; i++) {
+      const t = i / 6, w = Math.round(10 * (0.55 + 0.45 * Math.sin((t + 0.12) * Math.PI)));
+      px(c - Math.round(w / 2), topY + i, w, 1, P.hair);
+    }
+    px(c - 4, topY + 1, 8, 1, P.hairHi);                                   // brillo de la coronilla
+    if (!v.back) { px(c - 3, topY + 7, 6, 2, P.skin); px(c - 3, topY + 7, 6, 1, P.skinHi); px(c - 3, topY + 9, 6, 1, P.skinDk); } // frente agachada
+    // Tocado / casco inclinado hacia el observador.
+    if (P.kind === 'armor') {                                              // casco con cresta al frente
+      px(c - 5, topY - 1, 10, 3, P.steel); px(c - 5, topY - 1, 10, 1, P.steelHi); px(c - 5, topY + 2, 10, 1, P.steelDk);
+      px(c - 1, topY - 4, 3, 4, P.trim); px(c - 1, topY - 5, 3, 1, P.goldHi);   // cresta
+    } else if (P.ornate) {                                                 // tocado alto de oficial
+      px(c - 4, topY - 3, 9, 4, P.ink); px(c - 4, topY - 3, 9, 1, dark(P.gold, 0.1)); px(c - 1, topY - 5, 3, 2, P.ink); px(c, topY - 5, 1, 1, P.gold);
+    } else {                                                              // moño 髻 + gorro
+      px(c - 5, topY - 2, 10, 3, P.ink); px(c - 5, topY - 2, 10, 1, light(P.ink, 0.18)); px(c - 1, topY - 4, 3, 2, P.ink); px(c, topY - 4, 1, 1, P.gold);
+    }
   }
 
   function shadow(px) {

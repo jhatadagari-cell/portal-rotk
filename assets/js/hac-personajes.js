@@ -26,7 +26,8 @@ const HacPersonajes = (function () {
       nombre: r.nombre || '',
       personalidad: r.personalidad || '',
       aptitud: r.aptitud || '',
-      aspecto: (r.aspecto && typeof r.aspecto === 'object') ? r.aspecto : {}
+      aspecto: (r.aspecto && typeof r.aspecto === 'object') ? r.aspecto : {},
+      owner: r.owner || null   // uuid del jugador dueño (null = NPC del admin)
     };
   }
   function objToRow(p) {
@@ -35,7 +36,8 @@ const HacPersonajes = (function () {
       nombre: p.nombre || '',
       personalidad: p.personalidad || '',
       aptitud: p.aptitud || '',
-      aspecto: (p.aspecto && typeof p.aspecto === 'object') ? p.aspecto : {}
+      aspecto: (p.aspecto && typeof p.aspecto === 'object') ? p.aspecto : {},
+      owner: p.owner || null
     };
   }
 
@@ -67,6 +69,9 @@ const HacPersonajes = (function () {
   // ── Lectores SÍNCRONOS (tras ready) ─────────────────────────────────────
   function all() { return cache.slice(); }
   function get(id) { return cache.find(p => p.id === id) || null; }
+  // El personaje del jugador con esa cuenta (owner = su uid), o null. Sirve al
+  // onboarding para detectar si el usuario ya tiene personaje.
+  function mine(uid) { return uid ? (cache.find(p => p.owner && p.owner === uid) || null) : null; }
   function dbOk() { return ok; }
 
   function uuid() {
@@ -78,7 +83,7 @@ const HacPersonajes = (function () {
 
   // ── Escritores (admin) — optimistas, persisten en Supabase ──────────────
   async function add(p) {
-    const obj = { id: uuid(), nombre: (p.nombre || '').trim(), personalidad: p.personalidad || '', aptitud: p.aptitud || '', aspecto: p.aspecto || {} };
+    const obj = { id: uuid(), nombre: (p.nombre || '').trim(), personalidad: p.personalidad || '', aptitud: p.aptitud || '', aspecto: p.aspecto || {}, owner: p.owner || null };
     cache.push(obj);
     const client = await sb();
     const { error } = await client.from(TABLE).insert(objToRow(obj));

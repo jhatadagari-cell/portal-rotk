@@ -181,16 +181,17 @@ const HacFolk = (function () {
       const aptitud = pj ? pj.aptitud : '';
       const aspecto = pj ? (pj.aspecto || {}) : { robe: color };
       const cargo = (window.HacCalc && HacCalc.rangoDePuntos) ? HacCalc.rangoDePuntos(Number(m.puntos) || 0, tier) : null;
+      const rankIdx = (window.HacCalc && HacCalc.rangoIndex) ? HacCalc.rangoIndex(Number(m.puntos) || 0, tier) : -1;
       const aptDef = (aptitud && window.HacPersonajeDefs) ? HacPersonajeDefs.aptitud(aptitud) : null;
       return {
         id: m.id, name: m.nombre || '', color, aptitud, aspecto,
-        cargoIcon: cargo ? (cargo.icon || '') : '', cargoNombre: cargo ? cargo.nombre : '', cargoTier: cargo ? (cargo.tier || 1) : 0,
+        cargoIcon: cargo ? (cargo.icon || '') : '', cargoNombre: cargo ? cargo.nombre : '', cargoTier: cargo ? (cargo.tier || 1) : 0, rankIdx,
         aptIcon: aptDef ? (aptDef.icon || '') : '', dominios: aptDef ? (aptDef.dominios || []) : [],
         fx: start[0], fy: start[1], tx: start[0], ty: start[1], moving: false, dir: 'S',
         state: 'paseando', path: null, goalBid: null, insideId: null, task: null,
         homeBid, home, taskTimer: 0, strollTimer: rng(2, 6), wait: Math.random() * 1.2,
         idleTimer: 0, gardenCd: rng(4, 12), socialCd: rng(4, 12), chatWith: null,
-        chatLead: false, convo: null, convoIdx: 0, turnTimer: 0, speech: null,
+        chatLead: false, chatRole: null, bowing: false, convo: null, convoIdx: 0, turnTimer: 0, speech: null,
         meetWith: null, meetLead: false, meetTimer: 0, restIntent: null,
         phase: Math.random() * 6.28
       };
@@ -328,7 +329,7 @@ const HacFolk = (function () {
   function applyRest(w) {
     const cx = Math.round(w.fx), cy = Math.round(w.fy);
     if (w.restIntent === 'contemplando') { w.state = 'contemplando'; w.idleTimer = rng(6, 12); w.gardenCd = rng(25, 50); faceTowards(w, cx, cy, wk.garden); }
-    else { w.state = 'tumbado'; w.idleTimer = rng(12, 24); w.gardenCd = rng(45, 85); }
+    else { w.state = 'tumbado'; w.idleTimer = rng(35, 70); w.gardenCd = rng(45, 85); }
     w.restIntent = null; w.moving = false; w.path = null;
   }
   // Al pisar un jardín al pasar (con cooldown), o junto al agua: a veces se para
@@ -343,7 +344,7 @@ const HacFolk = (function () {
     const r = Math.random();
     if (onGarden) {
       if (r < 0.40) { w.state = 'contemplando'; w.idleTimer = rng(5, 11); w.gardenCd = rng(25, 50); faceTowards(w, cx, cy, wk.garden); }
-      else if (r < 0.68) { w.state = 'tumbado'; w.idleTimer = rng(10, 20); w.gardenCd = rng(40, 80); }   // se sienta a descansar (solo sobre plantas)
+      else if (r < 0.68) { w.state = 'tumbado'; w.idleTimer = rng(30, 60); w.gardenCd = rng(40, 80); }   // se sienta a descansar (solo sobre plantas)
       else { w.gardenCd = rng(8, 16); }                                                                    // esta vez nada
     } else {                                  // junto al agua: solo contemplar
       if (r < 0.55) { w.state = 'contemplando'; w.idleTimer = rng(6, 12); w.gardenCd = rng(25, 50); faceTowards(w, cx, cy, wk.water); }
@@ -358,16 +359,30 @@ const HacFolk = (function () {
     const fa = faceFromGrid(b.fx - a.fx, b.fy - a.fy); if (fa) a.dir = fa;
     const fb = faceFromGrid(a.fx - b.fx, a.fy - b.fy); if (fb) b.dir = fb;
   }
+  // Salto de cargo a partir del cual la charla deja de ser entre iguales y pasa
+  // a una DIRECTIVA (orden/consejo/reprimenda) del superior al inferior.
+  const RANK_GAP = 3;
+
   function startChat(a, b) {
     a.meetWith = b.meetWith = null; a.meetLead = b.meetLead = false;    // por si venían de una llamada a distancia
     a.state = b.state = 'charlando'; a.idleTimer = b.idleTimer = 60;   // tope de seguridad; el guion marca el fin
     a.moving = b.moving = false; a.path = b.path = null;
-    a.chatWith = b.id; b.chatWith = a.id;
-    a.chatLead = true; b.chatLead = false;
-    a.convo = HacDialog.charla(a.aptitud); a.convoIdx = -1; b.convo = null;
     a.speech = b.speech = null;
-    faceChat(a, b);
-    convoAdvance(a);                                                   // arranca el primer turno
+    // ¿Hay un salto de rango notable? Entonces manda el de cargo superior: en
+    // lugar de charlar de igual a igual le suelta una directiva según SU aptitud,
+    // y el inferior responde con deferencia, inclinándose en señal de respeto (揖).
+    const ra = (a.rankIdx == null ? -1 : a.rankIdx), rb = (b.rankIdx == null ? -1 : b.rankIdx);
+    const directive = (ra >= 0 && rb >= 0 && Math.abs(ra - rb) >= RANK_GAP);
+    const lead = directive ? (ra >= rb ? a : b) : a;
+    const follow = (lead === a) ? b : a;
+    lead.chatWith = follow.id; follow.chatWith = lead.id;
+    lead.chatLead = true; follow.chatLead = false;
+    lead.chatRole = directive ? 'mentor' : null; follow.chatRole = directive ? 'pupil' : null;
+    lead.bowing = false; follow.bowing = directive;
+    lead.convo = directive ? HacDialog.directiva(lead.aptitud) : HacDialog.charla(lead.aptitud);
+    lead.convoIdx = -1; follow.convo = null;
+    faceChat(lead, follow);
+    convoAdvance(lead);                                                // arranca el primer turno
   }
   // Avanza el guion: muestra la siguiente réplica en el bocadillo del que habla
   // y limpia el del que escucha. Al agotarse las réplicas, termina la charla.
@@ -384,7 +399,7 @@ const HacFolk = (function () {
   }
   function resetFromChat(w) {
     w.state = 'paseando'; w.strollTimer = rng(2, 6); w.wait = rng(0.2, 0.8);
-    w.chatWith = null; w.chatLead = false; w.convo = null; w.speech = null; w.socialCd = rng(20, 50);
+    w.chatWith = null; w.chatLead = false; w.chatRole = null; w.bowing = false; w.convo = null; w.speech = null; w.socialCd = rng(20, 50);
   }
   function endChat(w) {
     const o = walkers.find(x => x.id === w.chatWith);
@@ -539,7 +554,7 @@ const HacFolk = (function () {
     }
     const moving = w.moving && w.state !== 'tarea';
     const frame = moving ? (Math.floor(w.phase * 1.2) % HacChar.FRAMES) : 0;
-    const pose = (w.state === 'tumbado') ? 'sit' : 'stand';
+    const pose = (w.state === 'tumbado') ? 'sit' : (w.bowing ? 'bow' : 'stand');
     const cv = window.HacChar ? spriteFor(w, w.dir || 'S', frame, pose) : null;
     const disp = SPRITE_DISP, FEET = HacChar ? HacChar.H - 5 : 51;
     if (cv) {
@@ -587,22 +602,83 @@ const HacFolk = (function () {
     for (let i = 0; i < lines.length; i++) g.fillText(lines[i], lx, by + padY + lh * i + lh / 2);
   }
 
+  // ── Ornamentación del banner del nombre por RANGO (cargoTier 0..6) ──────────
+  // A mayor rango, más adorno chino, para distinguir al de más peso de un vistazo:
+  // color más noble, doble filo dorado, tachones, remate del asta, borlas (流蘇),
+  // cola de golondrina (燕尾) y, en lo más alto, cuenta de jade y aura.
+  const RANK_STYLE = [
+    { bg: ['#6f5836', '#574226'], edge: '#2f2410', gold: '#a98c52', txt: '#f1e7ce', dbl: false, studs: false, finial: 'none',  tassel: 0, tail: 'point',   glow: false },
+    { bg: ['#b8331f', '#8f1d11'], edge: '#6c190f', gold: '#d8b65a', txt: '#f6ecd6', dbl: false, studs: false, finial: 'knob',  tassel: 0, tail: 'point',   glow: false },
+    { bg: ['#c0341f', '#982313'], edge: '#71170d', gold: '#e2c061', txt: '#f6ecd6', dbl: true,  studs: false, finial: 'knob',  tassel: 0, tail: 'point',   glow: false },
+    { bg: ['#cb3c1c', '#a02713'], edge: '#71170d', gold: '#edca62', txt: '#fbf1d6', dbl: true,  studs: true,  finial: 'lotus', tassel: 1, tail: 'point',   glow: false },
+    { bg: ['#c23218', '#911f0e'], edge: '#6a150c', gold: '#f2d479', txt: '#fcf3d8', dbl: true,  studs: true,  finial: 'spear', tassel: 1, tail: 'point',   glow: false },
+    { bg: ['#caa42c', '#a07f1c'], edge: '#6e4f12', gold: '#fce7a0', txt: '#5a1408', dbl: true,  studs: true,  finial: 'spear', tassel: 2, tail: 'swallow', glow: true  },
+    { bg: ['#6a2c93', '#48196a'], edge: '#2f0f4a', gold: '#fadf86', txt: '#fbeecf', dbl: true,  studs: true,  finial: 'jade',  tassel: 2, tail: 'swallow', glow: true  },
+  ];
+  // Remate del asta, por encima del banner (en y = top del banner).
+  function bannerFinial(g, cx, y, kind, gold) {
+    if (kind === 'none') return;
+    g.strokeStyle = gold; g.lineWidth = 1; g.beginPath(); g.moveTo(cx, y); g.lineTo(cx, y - 2); g.stroke();
+    g.fillStyle = gold;
+    if (kind === 'knob') { g.beginPath(); g.arc(cx, y - 3.4, 1.7, 0, 6.2832); g.fill(); }
+    else if (kind === 'lotus') { g.beginPath(); g.moveTo(cx, y - 6); g.lineTo(cx + 2.4, y - 3.2); g.lineTo(cx, y - 2.2); g.lineTo(cx - 2.4, y - 3.2); g.closePath(); g.fill(); }
+    else if (kind === 'spear') { g.beginPath(); g.moveTo(cx, y - 7); g.lineTo(cx + 2, y - 2.6); g.lineTo(cx - 2, y - 2.6); g.closePath(); g.fill(); }
+    else if (kind === 'jade') {
+      g.beginPath(); g.arc(cx, y - 3.4, 1.6, 0, 6.2832); g.fill();                              // base dorada
+      g.fillStyle = '#7fc9a0'; g.beginPath(); g.arc(cx, y - 6, 1.9, 0, 6.2832); g.fill();        // cuenta de jade
+      g.fillStyle = '#bfe9d2'; g.beginPath(); g.arc(cx - 0.6, y - 6.6, 0.6, 0, 6.2832); g.fill(); // brillo
+      g.strokeStyle = gold; g.lineWidth = 0.7;
+      g.beginPath(); g.moveTo(cx - 3, y - 6.4); g.lineTo(cx - 1.7, y - 5.4); g.moveTo(cx + 3, y - 6.4); g.lineTo(cx + 1.7, y - 5.4); g.stroke();  // llamitas
+    }
+  }
+  // Borla colgante 流蘇 desde una esquina inferior del banner.
+  function bannerTassel(g, x, yTop, gold, long) {
+    const len = long ? 6 : 4;
+    g.strokeStyle = gold; g.lineWidth = 1; g.beginPath(); g.moveTo(x, yTop); g.lineTo(x, yTop + 2); g.stroke();
+    g.fillStyle = gold; g.beginPath(); g.arc(x, yTop + 2.4, 1.2, 0, 6.2832); g.fill();           // cuenta
+    g.lineWidth = 0.7; g.beginPath();
+    g.moveTo(x - 1.3, yTop + 3.4); g.lineTo(x - 1.3, yTop + len + 2);
+    g.moveTo(x, yTop + 3.6); g.lineTo(x, yTop + len + 2.6);
+    g.moveTo(x + 1.3, yTop + 3.4); g.lineTo(x + 1.3, yTop + len + 2); g.stroke();                 // flecos
+  }
+
   function banner(g, cx, topY, w, hot) {
     const name = String(w.name || '').slice(0, 16);
     const pre = (w.cargoIcon ? w.cargoIcon + ' ' : '') + (w.aptIcon ? w.aptIcon + ' ' : '');
     const label = pre + name;
+    const lvl = Math.max(0, Math.min(6, Number(w.cargoTier) || 0));
+    const S = RANK_STYLE[lvl];
     g.font = '700 8px "Noto Serif SC","Noto Sans SC",sans-serif';
-    const padX = 5, tw = g.measureText(label).width, bw = Math.max(16, tw + padX * 2), bh = 13;
+    const padX = 5 + (lvl >= 5 ? 2 : 0), tw = g.measureText(label).width;
+    const bw = Math.max(16, tw + padX * 2), bh = 13;
     const bx = cx - bw / 2, by = topY - bh - 7;
+
+    // Asta desde la cabeza hasta el banner.
     g.strokeStyle = '#6a4a28'; g.lineWidth = 1.4; g.beginPath(); g.moveTo(cx, topY); g.lineTo(cx, by); g.stroke();
-    g.fillStyle = hot ? '#b8331f' : '#9c2b1e';
-    g.beginPath();
+    // Aura de los rangos supremos (o del seleccionado).
+    if (S.glow || hot) { g.fillStyle = hot ? 'rgba(255,224,130,0.32)' : 'rgba(252,231,160,0.22)'; g.beginPath(); g.ellipse(cx, by + bh / 2, bw / 2 + 4, bh / 2 + 4.5, 0, 0, 6.2832); g.fill(); }
+
+    // Cuerpo del banner (degradado vertical) con cola según rango.
+    const grad = g.createLinearGradient(0, by, 0, by + bh);
+    grad.addColorStop(0, S.bg[0]); grad.addColorStop(1, S.bg[1]);
+    g.fillStyle = grad; g.beginPath();
     g.moveTo(bx, by); g.lineTo(bx + bw, by); g.lineTo(bx + bw, by + bh);
-    g.lineTo(cx + 2.4, by + bh); g.lineTo(cx, by + bh + 3); g.lineTo(cx - 2.4, by + bh); g.lineTo(bx, by + bh);
-    g.closePath(); g.fill();
-    g.strokeStyle = hot ? '#ffe082' : '#741c12'; g.lineWidth = 1; g.stroke();
-    g.strokeStyle = '#d8b65a'; g.lineWidth = 1; g.strokeRect(bx + 1.3, by + 1.3, bw - 2.6, bh - 2.6);
-    g.fillStyle = '#f6ecd6'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    if (S.tail === 'swallow') { g.lineTo(cx + 3, by + bh); g.lineTo(cx, by + bh - 3.2); g.lineTo(cx - 3, by + bh); }
+    else { g.lineTo(cx + 2.4, by + bh); g.lineTo(cx, by + bh + 3); g.lineTo(cx - 2.4, by + bh); }
+    g.lineTo(bx, by + bh); g.closePath(); g.fill();
+
+    // Filos: contorno + marco dorado (doble en rangos altos) + tachones.
+    g.strokeStyle = hot ? '#ffe082' : S.edge; g.lineWidth = 1; g.stroke();
+    g.strokeStyle = S.gold; g.lineWidth = 1; g.strokeRect(bx + 1.3, by + 1.3, bw - 2.6, bh - 2.6);
+    if (S.dbl) { g.lineWidth = 0.7; g.strokeRect(bx + 3, by + 3, bw - 6, bh - 6); }
+    if (S.studs) { g.fillStyle = S.gold; [[bx + 3, by + 3], [bx + bw - 3, by + 3], [bx + 3, by + bh - 3], [bx + bw - 3, by + bh - 3]].forEach(p => { g.beginPath(); g.arc(p[0], p[1], 0.9, 0, 6.2832); g.fill(); }); }
+
+    // Remate del asta y borlas.
+    bannerFinial(g, cx, by, hot && S.finial === 'none' ? 'knob' : S.finial, S.gold);
+    if (S.tassel >= 1) { bannerTassel(g, bx + 2, by + bh, S.gold, S.tassel >= 2); bannerTassel(g, bx + bw - 2, by + bh, S.gold, S.tassel >= 2); }
+
+    // Nombre.
+    g.fillStyle = S.txt; g.textAlign = 'center'; g.textBaseline = 'middle';
     g.fillText(label, cx, by + bh / 2 + 0.4);
   }
 
@@ -641,9 +717,10 @@ const HacFolk = (function () {
     const FEET = HacChar ? HacChar.H - 5 : 51, bannerDy = Math.round(FEET * SPRITE_DISP / SCALE) - 1;
     walkers.forEach(w => {
       if (w.id === selectedId) return;                 // el seleccionado va en overlay (encima)
+      if (w.insideId) return;                          // DENTRO de un edificio: oculto (su presencia la anuncia el banner 匾額)
       actors.push({ fx: w.fx, fy: w.fy, draw: (g, lx, ly) => drawWalker(g, lx, ly, w, { banner: false }) });
       // El nombre va en overlay (siempre encima, sin recorte de región).
-      if (!w.insideId) overlays.push({ draw: (g) => { const p = logic(w.fx, w.fy); banner(g, p[0], p[1] - bannerDy, w, false); } });
+      overlays.push({ draw: (g) => { const p = logic(w.fx, w.fy); banner(g, p[0], p[1] - bannerDy, w, false); } });
     });
 
     // Banners 匾額 de los edificios ocupados (capa overlay) + rects para hit-test.
@@ -724,7 +801,12 @@ const HacFolk = (function () {
     if (w.state === 'a-descansar') return 'Buscando un rincón de hierba';
     if (w.state === 'contemplando') return 'Contemplando el jardín';
     if (w.state === 'tumbado') return 'Descansando entre las plantas';
-    if (w.state === 'charlando') { const o = walkers.find(x => x.id === w.chatWith); return 'Conversando' + (o && o.name ? ' con ' + o.name : ''); }
+    if (w.state === 'charlando') {
+      const o = walkers.find(x => x.id === w.chatWith), quien = o && o.name ? o.name : null;
+      if (w.chatRole === 'mentor') return 'Aleccionando a ' + (quien || 'un subordinado');
+      if (w.chatRole === 'pupil') return 'Recibiendo el consejo de ' + (quien || 'un superior');
+      return 'Conversando' + (quien ? ' con ' + quien : '');
+    }
     if (w.state === 'llamando' || w.state === 'avisado' || w.state === 'acudiendo') {
       const o = walkers.find(x => x.id === w.meetWith);
       return (w.state === 'llamando' ? 'Llamando a ' : 'Yendo al encuentro de ') + (o && o.name ? o.name : 'otro mecenas');

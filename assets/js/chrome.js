@@ -91,6 +91,7 @@
       <li><a href="${href('assets/facciones.html')}"${isOn('facciones')}>Facciones</a></li>
       <li><a href="${href('assets/batallas.html')}"${isOn('batallas')}>Batallas</a></li>
       <li><a href="${href('assets/mapa.html')}"${isOn('mapa')}>Mapa</a></li>
+      <li><a href="${href('haciendas.html')}"${isOn('haciendas')}>Haciendas</a></li>
     </ul>
     <div class="nav-auth" id="nav-auth"></div>
     <button class="hamburger" aria-label="Menú">

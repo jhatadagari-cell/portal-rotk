@@ -50,6 +50,18 @@ const HacCalc = (function () {
     return r;
   }
 
+  // La escalera de cargos ordenada de menor a mayor (por umbral). Es el ORDEN
+  // DE RESPETO canónico de la casa, base de la jerarquía entre mecenas.
+  const rangosAsc = () => rangos().slice().sort((a, b) => num(a.umbral) - num(b.umbral));
+  // Índice (0-based) del cargo de un miembro en esa escalera, o -1 si no tiene
+  // cargo aún. Cuanto mayor el índice, mayor el rango. Sirve para comparar quién
+  // manda a quién sin depender de los puntos crudos (que oscilan).
+  function rangoIndex(pts, tier) {
+    const r = rangoDePuntos(pts, tier);
+    if (!r) return -1;
+    return rangosAsc().findIndex(x => x.id === r.id);
+  }
+
   // El tier objeto correspondiente a un nivel concreto (1..maxTier).
   function tierPorNivel(n) {
     const nn = clampTier(n);
@@ -75,7 +87,7 @@ const HacCalc = (function () {
     return (t && Number(t.maxMiembros)) || Infinity;
   }
 
-  return { haciendaPuntos, tierDePuntos, progresoHacia, rangoDePuntos, clampTier, tiersAsc, maxTier,
+  return { haciendaPuntos, tierDePuntos, progresoHacia, rangoDePuntos, rangoIndex, clampTier, tiersAsc, maxTier,
     tierPorNivel, nivelAlcanzado, nivelEfectivo, maxMiembros };
 })();
 

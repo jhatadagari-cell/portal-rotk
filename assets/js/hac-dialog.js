@@ -5,7 +5,17 @@
    réplicas que se alternan (el iniciador dice las pares; el otro las impares).
    Además de las generales, hay tandas TEMÁTICAS según la aptitud de quien
    inicia la charla, para dar sabor: un guerrero habla de batallas, un erudito
-   de versos, etc.   API:  HacDialog.charla(aptitud) · .hail() · .ack()
+   de versos, etc.
+   ─────────────────────────────────────────────────────────────────────────
+   ESCENAS DIRECTIVAS (por rango): cuando un mecenas de cargo MUY superior se
+   cruza con uno muy inferior, no charlan de igual a igual: el superior LIDERA
+   y le da una orden, un consejo o una reprimenda; el inferior responde con
+   deferencia. El registro lo pone la APTITUD DEL SUPERIOR (un caudillo riñe
+   sobre asedios; un guerrero veterano enseña a bajar el orgullo para seguir
+   vivo; un estratega aconseja sobre el terreno…). Mismo formato que `charla`:
+   el LÍDER (= el superior) dice las réplicas pares; el inferior, las impares.
+     API:  HacDialog.charla(aptitud) · .directiva(aptitudSuperior)
+           · .hail() · .ack()
    Debe cargarse antes que hac-folk.js.
    ═══════════════════════════════════════════════════════════════════════ */
 const HacDialog = (function () {
@@ -52,6 +62,52 @@ const HacDialog = (function () {
     administrador: 'gobierno', canciller: 'gobierno',
   };
 
+  // Escenas DIRECTIVAS por aptitud DEL SUPERIOR ──────────────────────────────
+  // El superior LIDERA (réplicas pares); el inferior responde con deferencia
+  // (impares). El sabor lo marca la aptitud de quien manda.
+  const DIRECTIVAS = {
+    guerrero: [   // veterano: baja el orgullo y la temeridad; sobrevivir para servir
+      ['No corras a la primera línea buscando gloria, muchacho.', 'Lo tendré presente, señor.', 'Un soldado vivo sirve diez años; un héroe muerto, un día.', 'Aprenderé a medir mi arrojo.'],
+      ['Vi cómo blandías la lanza: mucho brío, poca guardia.', 'Erré, lo reconozco.', 'El orgullo abre la coraza más que cualquier flecha.', 'Bajaré la cabeza y alzaré el escudo.'],
+      ['¿Sabes por qué sigo vivo tras veinte campañas?', 'Decídmelo, os lo ruego.', 'Porque retrocedí cuando otros cargaron. Recuérdalo.', 'No lo olvidaré, señor.'],
+      ['La temeridad mató a más bravos que el enemigo.', 'Domaré mi impaciencia.', 'Guarda el furor para cuando decida la batalla, no antes.', 'Así lo haré.'],
+    ],
+    caudillo: [   // mando: asedios, defensas, órdenes y reprimendas
+      ['Refuerza la empalizada del flanco este antes del ocaso.', 'A vuestras órdenes.', 'Un muro descuidado es una invitación al enemigo.', 'No habrá brecha por mi parte, señor.'],
+      ['¿Quién dejó el portón sin guardia anoche?', 'Fue un descuido de la ronda, señor.', 'Un descuido cuesta una ciudad. Que no se repita.', 'Respondo de ello con mi cabeza.'],
+      ['En el asedio, el agua y el grano vencen antes que el ariete.', 'Tomo nota, mi señor.', 'Asegura los pozos y los graneros lo primero, siempre.', 'Así se hará.'],
+      ['Tus hombres avanzan sin orden ni formación.', 'Los he instruido de prisa, lo admito.', 'Una tropa sin disciplina es una turba que muere junta.', 'La haré marchar como un solo hombre.'],
+    ],
+    estrategia: [  // estratega: terreno, paciencia, concentración de fuerzas
+      ['El terreno decide la batalla antes que la espada, recuérdalo.', 'Lo grabaré en mi memoria, maestro.', 'Estudia el río y la colina antes de mover un estandarte.', 'Así lo haré.'],
+      ['Tu plan es audaz, pero le falta una retirada.', 'No la había previsto, lo confieso.', 'Quien no deja puerta de salida entrega la victoria al azar.', 'Sabia advertencia. La corregiré.'],
+      ['Una grulla aislada cae; en bandada, gobierna el cielo.', '¿Qué queréis decir, señor?', 'Concentra tus fuerzas; no las disperses por orgullo.', 'Comprendo. Las mantendré unidas.'],
+      ['Atacas donde el enemigo es fuerte. Necio.', 'Me cegó la prisa.', 'Golpea el vacío, no el lleno; el flanco, no el frente.', 'Reharé el plan con paciencia.'],
+    ],
+    gobierno: [  // administrador / canciller: cuentas, graneros, mesura política
+      ['Estas cuentas no cuadran por tres fanegas de mijo.', 'Revisaré los registros de inmediato, señor.', 'Un grano perdido hoy es una hambruna mañana. Sé escrupuloso.', 'No volverá a faltar ni un grano.'],
+      ['Antes de la campaña, llena los graneros, no las arcas.', 'Lo tendré presente.', 'El oro no se come en un invierno de asedio.', 'Sabio consejo; lo aplicaré.'],
+      ['Mides tus palabras en la corte con poca prudencia.', 'Hablé de más, lo reconozco.', 'Una lengua suelta derriba más casas que un ejército.', 'Aprenderé a callar a tiempo.'],
+      ['No confundas la firmeza con la terquedad, joven.', '¿En qué he errado, señor?', 'El junco que se dobla con el viento no se quiebra. Cede en lo pequeño.', 'Lo tendré siempre presente.'],
+    ],
+    letras: [    // erudito: corrección culta, lección con cita clásica
+      ['Citaste mal a Confucio en la reunión, joven.', 'Os ruego que me corrijáis.', '«Aprender sin pensar es trabajo perdido.» Medita antes de hablar.', 'Vuestra lección me honra, maestro.'],
+      ['Tu caligrafía traiciona la prisa de tu espíritu.', 'Lo sé, maestro; me falta sosiego.', 'El trazo sereno nace de la mente serena. Practica.', 'Lo haré cada amanecer.'],
+      ['¿Has leído los comentarios al Libro de los Cambios?', 'Solo en parte, lo confieso.', 'Quien gobierna sin leer a los antiguos tropieza dos veces.', 'Los estudiaré sin demora.'],
+    ],
+  };
+  // Aptitud del superior → banco directivo. Las mixtas heredan el eje dominante.
+  const DIR_POR_APT = {
+    guerrero: 'guerrero', caudillo: 'caudillo', estratega: 'estrategia',
+    administrador: 'gobierno', canciller: 'gobierno', erudito: 'letras',
+  };
+  // Fallback: superior sin aptitud reconocida → consejo de veteranía genérico.
+  const DIR_GENERAL = [
+    ['Llevas poco bajo este estandarte; observa y aprende.', 'Así lo haré, señor.', 'El respeto se gana sirviendo, no exigiéndolo.', 'Lo tendré presente.'],
+    ['Conduce tus asuntos con mesura y honrarás a la casa.', 'Me esforzaré por ello.', 'El nombre de la hacienda pesa también sobre tus hombros.', 'No lo defraudaré.'],
+    ['He visto pasar a muchos como tú; pocos perseveran.', 'Yo perseveraré, os lo juro.', 'No lo jures: demuéstralo con los años.', 'Lo demostraré, señor.'],
+  ];
+
   // Exclamaciones de llamada a distancia y sus respuestas. {n} = nombre del otro.
   const HAILS = ['¡Eh, {n}! ¡Aguardad!', '¡{n}! ¡Cuánto tiempo!', '¡Vaya, si es {n}!', '¡{n}, amigo mío!', '¡Eh! ¡Por aquí, {n}!', '¡Dichosos los ojos, {n}!'];
   const ACKS = ['¡Oh, {n}!', '¡Vaya sorpresa!', '¡Ya voy, ya voy!', '¡Qué alegría!', '¡{n}, viejo amigo!', '¡Aguardad, que llego!'];
@@ -65,6 +121,14 @@ const HacDialog = (function () {
   const hail = () => pick(HAILS);
   const ack = () => pick(ACKS);
 
-  return { charla, hail, ack };
+  // Escena directiva del SUPERIOR hacia un inferior, según la aptitud del que
+  // manda. Sin aptitud reconocida → consejo de veteranía genérico. El líder
+  // (= superior) dice las réplicas pares; el inferior, las impares.
+  function directiva(aptitudSuperior) {
+    const banco = DIRECTIVAS[DIR_POR_APT[aptitudSuperior]];
+    return pick(banco && banco.length ? banco : DIR_GENERAL);
+  }
+
+  return { charla, directiva, hail, ack };
 })();
 if (typeof window !== 'undefined') window.HacDialog = HacDialog;

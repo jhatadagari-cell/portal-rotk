@@ -25,6 +25,16 @@ create table if not exists public.personajes (
 
 create index if not exists personajes_nombre_idx on public.personajes(nombre);
 
+-- ── Vínculo con el USUARIO (jugador dueño del personaje) ────────────────────
+-- owner = auth.uid() de quien lo creó. NULL = personaje NPC creado por el admin
+-- (no pertenece a ningún jugador). Un jugador solo puede tener UNO (índice único
+-- parcial: ignora los NULL del admin).
+alter table public.personajes
+  add column if not exists owner uuid references auth.users(id) on delete set null;
+
+create unique index if not exists personajes_owner_uniq
+  on public.personajes(owner) where owner is not null;
+
 -- Mantener `updated_at` al día (reusa la función de haciendas.sql).
 drop trigger if exists personajes_updated_at on public.personajes;
 create trigger personajes_updated_at
@@ -46,3 +56,16 @@ create policy personajes_admin_write
   on public.personajes for all
   using      ( (auth.jwt() ->> 'email') = 'jhatadagari@gmail.com' )
   with check ( (auth.jwt() ->> 'email') = 'jhatadagari@gmail.com' );
+
+-- El JUGADOR puede CREAR su propio personaje (uno, owner = su uid) y EDITARLO.
+-- Las políticas permisivas se SUMAN a la del admin (basta que una autorice).
+drop policy if exists personajes_owner_insert on public.personajes;
+create policy personajes_owner_insert
+  on public.personajes for insert
+  with check ( owner = auth.uid() );
+
+drop policy if exists personajes_owner_update on public.personajes;
+create policy personajes_owner_update
+  on public.personajes for update
+  using      ( owner = auth.uid() )
+  with check ( owner = auth.uid() );

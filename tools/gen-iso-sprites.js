@@ -137,6 +137,16 @@ function drawBuilding(cfg, layer) {
   const bodyH = cfg.bodyH ?? 14;
   const roofH = cfg.roofH ?? 13;
   const ovB = 0.22, ovR = 0.3;     // voladizos de base y alero
+  // GROSOR MÍNIMO para edificios cerrados de 1 celda de ancho/fondo: sin tocar
+  // su footprint, se hornean con cuerpo más grueso (≈0.76 celda en vez de 0.44)
+  // para que se lean como volumen y no como un tablón. Los tipos ABIERTOS por
+  // diseño (galería, quiosco) no lo llevan. El cuerpo se extiende a ±pad sobre
+  // las celdas extremas (bx0..bx1, by0..by1).
+  const PADW = 0.38;
+  const padX = (cfg.minThick && w === 1) ? PADW : 0;
+  const padY = (cfg.minThick && h === 1) ? PADW : 0;
+  const PB = padX + padY;          // holgura extra (uno de los dos es 0 en la práctica)
+  const bx0 = -padX, by0 = -padY, bx1 = (w - 1) + padX, by1 = (h - 1) + padY;
 
   // Pisos superiores (cuerpos+tejados apilados que encogen). `tiers` es una
   // lista explícita; `stories:true` es el atajo de UN solo piso (compatibilidad).
@@ -145,10 +155,10 @@ function drawBuilding(cfg, layer) {
   const tier0Ins = cfg.tier0Ins ?? 0.55;       // encogido del primer piso superior
   const tiersExtra = tierList.reduce((s, t) => s + t.bodyH + t.roofH - 1, 0);
   const totalH = baseH + bodyH + roofH + tiersExtra + 11;
-  const W = Math.ceil((w + h - 2 + 4 * ovR) * TW / 2) + 6;
-  const OX = Math.round((h - 1 + 2 * ovR) * TW / 2) + 3;
-  const OY = Math.round(totalH) + 2;
-  const H = OY + Math.ceil((w + h - 2 + 2 * ovR) * TH / 2) + Math.ceil(TH / 2) + 4;
+  const W = Math.ceil((w + h - 2 + 2 * PB + 4 * ovR) * TW / 2) + 6;
+  const OX = Math.round((h - 1 + PB + 2 * ovR) * TW / 2) + 3;
+  const OY = Math.round(totalH + PB * TH / 2) + 2;
+  const H = OY + Math.ceil((w + h - 2 + PB + 2 * ovR) * TH / 2) + Math.ceil(TH / 2) + 4;
   const buf = makeBuf(W, H);
 
   const P = (gx, gy, gz) => [OX + (gx - gy) * TW / 2, OY + (gx + gy) * TH / 2 - gz];
@@ -338,7 +348,7 @@ function drawBuilding(cfg, layer) {
       marbleCourses((h-1)+tov, (w-1)+tov);
       stairFlight('S'); stairFlight('E');
     } else {
-      prism(0,0,w-1,h-1, ovB, z, z+baseH, PAL.stoneT, dark(PAL.stone,.06), PAL.stone, PAL.stoneD, 'stone');
+      prism(bx0,by0,bx1,by1, ovB, z, z+baseH, PAL.stoneT, dark(PAL.stone,.06), PAL.stone, PAL.stoneD, 'stone');
     }
   }
   z += baseH;
@@ -388,14 +398,14 @@ function drawBuilding(cfg, layer) {
   }
 
   if (wantBody) {
-    body(0,0,w-1,h-1, z, bodyH, cfg.door);
-    hipRoof(0,0,w-1,h-1, z+bodyH, roofH, roof);
+    body(bx0,by0,bx1,by1, z, bodyH, cfg.door);
+    hipRoof(bx0,by0,bx1,by1, z+bodyH, roofH, roof);
     let zc = z + bodyH + roofH - 1;
     let ins = tier0Ins;
     tierList.forEach((ti) => {
-      if ((w - 1 - ins) - ins < -0.16 || (h - 1 - ins) - ins < -0.16) return;
-      body(ins, ins, w - 1 - ins, h - 1 - ins, zc, ti.bodyH, null);
-      hipRoof(ins, ins, w - 1 - ins, h - 1 - ins, zc + ti.bodyH, ti.roofH, light(roof, .04));
+      if ((bx1 - ins) - (bx0 + ins) < -0.16 || (by1 - ins) - (by0 + ins) < -0.16) return;
+      body(bx0 + ins, by0 + ins, bx1 - ins, by1 - ins, zc, ti.bodyH, null);
+      hipRoof(bx0 + ins, by0 + ins, bx1 - ins, by1 - ins, zc + ti.bodyH, ti.roofH, light(roof, .04));
       zc += ti.bodyH + ti.roofH - 1;
       ins += tierIns;
     });
@@ -406,8 +416,8 @@ function drawBuilding(cfg, layer) {
 
 // ── Catálogo a hornear (espejo de hac-build.js) ──────────────────────────
 const EDIFICIOS = [
-  { id:'pabellon',         w:1, h:2, roof:'#a85a32', bodyH:14, roofH:12 },
-  { id:'torre',            w:1, h:2, roof:'#7a3a20', baseH:6, bodyH:30, roofH:11 },
+  { id:'pabellon',         w:1, h:2, roof:'#a85a32', bodyH:14, roofH:12, minThick:true },
+  { id:'torre',            w:1, h:2, roof:'#7a3a20', baseH:6, bodyH:30, roofH:11, minThick:true },
   { id:'pagoda',           w:2, h:2, roof:'#b54a2a', bodyH:15, roofH:12, stories:true, bodyH2:12, roofH2:11 },
   { id:'galeria',          w:1, h:3, roof:'#9a6a3a', bodyH:13, roofH:11 },
   { id:'armeria',          w:2, h:2, roof:'#5a5a66', bodyH:13, roofH:10 },
