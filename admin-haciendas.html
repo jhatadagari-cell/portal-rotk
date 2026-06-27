@@ -44,6 +44,7 @@
     <button class="adm-tab on" data-tab="haciendas">Haciendas</button>
     <button class="adm-tab" data-tab="personajes">Personajes</button>
     <button class="adm-tab" data-tab="solicitudes">Solicitudes<span class="adm-solic-badge" id="solic-badge" hidden></span></button>
+    <button class="adm-tab" data-tab="usuarios">Usuarios</button>
     <button class="adm-tab" data-tab="tareas">Tareas de edificios</button>
   </nav>
 
@@ -112,6 +113,12 @@
       background:#b8331f;color:#fff;font-size:11px;font-weight:700;line-height:18px;text-align:center;vertical-align:middle}
   </style>
 
+  <!-- ══ Pestaña: Usuarios ══ -->
+  <div class="adm-tabpanel" id="tab-usuarios" hidden>
+    <p class="adm-warn adm-info">Usuarios registrados (tabla <b>perfiles</b>). Las contraseñas viven hasheadas en <code>auth.users</code> (Supabase); aquí solo el perfil y su <b>rol</b>. Haz admin o quita admin con un clic.</p>
+    <div class="adm-usuarios" id="adm-usuarios"></div>
+  </div>
+
   <!-- ══ Pestaña: Tareas de edificios ══ -->
   <div class="adm-tabpanel" id="tab-tareas" hidden>
     <p class="adm-warn adm-info">Catálogo <b>global</b> de tareas: lo que hace un mecenas dentro de cada tipo de edificio y cuánto tarda. Es igual para todas las haciendas.</p>
@@ -132,6 +139,7 @@
 <script src="assets/js/hac-char.js?v=6"></script>
 <script src="assets/js/hac-personajes.js?v=3"></script>
 <script src="assets/js/hac-solicitudes.js?v=1"></script>
+<script src="assets/js/hac-perfiles.js?v=1"></script>
 <script>
 (function () {
   'use strict';
@@ -1003,6 +1011,50 @@
     renderSolicitudes();
   }
 
+  // ── Pestaña «Usuarios» — perfiles + gestión de rol ────────────────────────
+  async function renderUsuarios() {
+    const host = document.getElementById('adm-usuarios');
+    if (!host) return;
+    if (!window.HacPerfiles) { host.innerHTML = '<div class="adm-tareas-seed">⚠ Falta <code>hac-perfiles.js</code>.</div>'; return; }
+    host.innerHTML = '<p class="adm-addmember-empty">Cargando usuarios…</p>';
+    let perfiles;
+    try { perfiles = await HacPerfiles.all(); }
+    catch (e) { host.innerHTML = '<div class="adm-tareas-seed">⚠ No se pudieron cargar. ¿Ejecutaste <code>supabase/perfiles.sql</code> en Supabase?</div>'; return; }
+    if (!perfiles.length) { host.innerHTML = '<p class="adm-addmember-empty">No hay usuarios registrados.</p>'; return; }
+    const me = (window.Auth && Auth.current) ? Auth.current() : null;
+    const pjAll = window.HacPersonajes ? HacPersonajes.all() : [];
+    const casas = window.HacStore ? HacStore.all() : [];
+    host.innerHTML = perfiles.map(u => {
+      const pj = pjAll.find(p => p.owner === u.id);
+      const casa = pj ? casas.find(h => (h.miembros || []).some(m => m.personajeId === pj.id)) : null;
+      const esAdmin = u.rol === 'admin', yo = me && me.id === u.id;
+      const extra = (pj ? '· personaje: ' + esc(pj.nombre) : '· sin personaje') + (casa ? ' · ' + esc(casa.nombre) : '');
+      return `<div class="adm-solic-row" data-uid="${esc(u.id)}">
+        <div>
+          <b>${esc(u.nombre || '(sin nombre)')}</b>${yo ? ' <span style="opacity:.7">(tú)</span>' : ''}
+          <span class="adm-solic-badge" style="margin-left:6px;background:${esAdmin ? '#b8331f' : '#6a6a5a'}">${esAdmin ? 'admin' : 'normal'}</span>
+          <span class="adm-hint">${esc(u.email || '')} ${extra}</span>
+        </div>
+        <div class="adm-solic-actions">
+          <button class="adm-btn${esAdmin ? '' : ' adm-btn-gold'}" data-act>${esAdmin ? 'Quitar admin' : 'Hacer admin'}</button>
+        </div>
+      </div>`;
+    }).join('');
+    host.querySelectorAll('.adm-solic-row').forEach(row => {
+      const u = perfiles.find(x => x.id === row.dataset.uid);
+      row.querySelector('[data-act]').addEventListener('click', () => cambiarRol(u, row));
+    });
+  }
+  async function cambiarRol(u, row) {
+    const nuevo = u.rol === 'admin' ? 'normal' : 'admin';
+    const me = (window.Auth && Auth.current) ? Auth.current() : null;
+    if (nuevo === 'normal' && me && me.id === u.id &&
+        !confirm('¿Quitarte a ti mismo el rol de admin? Perderás el acceso a este panel.')) return;
+    const btn = row.querySelector('[data-act]'); btn.disabled = true; btn.textContent = '…';
+    try { await HacPerfiles.setRol(u.id, nuevo); renderUsuarios(); }
+    catch (e) { btn.disabled = false; alert('No se pudo cambiar el rol: ' + (e.message || e)); }
+  }
+
   // ════════════════════════════════════════════════════════════════════════
   // Pestaña «Tareas de edificios» — CRUD del catálogo global (HacTareas)
   // ════════════════════════════════════════════════════════════════════════
@@ -1317,7 +1369,7 @@
   function wireTabs() {
     const tabs = document.getElementById('adm-tabs');
     if (!tabs) return;
-    const panels = { haciendas: 'tab-haciendas', personajes: 'tab-personajes', solicitudes: 'tab-solicitudes', tareas: 'tab-tareas' };
+    const panels = { haciendas: 'tab-haciendas', personajes: 'tab-personajes', solicitudes: 'tab-solicitudes', usuarios: 'tab-usuarios', tareas: 'tab-tareas' };
     tabs.querySelectorAll('.adm-tab').forEach(b => b.addEventListener('click', () => {
       tabs.querySelectorAll('.adm-tab').forEach(x => x.classList.toggle('on', x === b));
       const which = b.dataset.tab;
@@ -1327,6 +1379,7 @@
       if (which === 'tareas') renderTareas();
       if (which === 'personajes') renderPersonajes();
       if (which === 'solicitudes') renderSolicitudes();
+      if (which === 'usuarios') renderUsuarios();
     }));
     refreshSolicBadge();
   }
