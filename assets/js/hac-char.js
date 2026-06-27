@@ -500,32 +500,33 @@ const HacChar = (function () {
   // El cuerpo base (erudito) es común; cada aptitud añade su tocado/props encima,
   // anclado a la CABEZA medida en cada celda. Así una variante = solo unas líneas
   // de pixel-art, sin regenerar arte.
-  let _headAnchor = null;   // [row][col] = {x,y} (coords locales de celda) de la coronilla
+  let _headAnchor = null;   // [col] = {x,y} (coords locales) ESTABLE de la coronilla
 
-  // Mide la coronilla de cada celda del sheet (topmost opaco + centro de la banda
-  // superior). Una sola vez, en carga; el tocado tracea cada frame sin desancle.
+  // Mide la coronilla por COLUMNA (dirección), ESTABLE entre los 3 frames: x =
+  // mediana, y = mínimo (la cabeza más alta) → el tocado no vibra al andar y
+  // siempre cubre el moño. Una sola vez, en carga.
   function _measureAnchors() {
     if (!_sheetData) return;
     const { data, width } = _sheetData;
     _headAnchor = [];
-    for (let r = 0; r < 3; r++) {
-      _headAnchor[r] = [];
-      for (let c = 0; c < SHEET_COLS.length; c++) {
+    for (let c = 0; c < SHEET_COLS.length; c++) {
+      const xs = [], ys = [];
+      for (let r = 0; r < 3; r++) {
         const x0 = c * _cellW, y0 = r * _cellH;
         let top = -1;
-        for (let y = 0; y < _cellH && top < 0; y++) {
-          for (let x = 0; x < _cellW; x++) {
+        for (let y = 0; y < _cellH && top < 0; y++)
+          for (let x = 0; x < _cellW; x++)
             if (data[((y0 + y) * width + (x0 + x)) * 4 + 3] > 40) { top = y; break; }
-          }
-        }
-        if (top < 0) { _headAnchor[r][c] = { x: Math.round(_cellW / 2), y: 8 }; continue; }
-        const xs = [];
+        if (top < 0) continue;
+        const bx = [];
         for (let y = top; y < top + 12 && y < _cellH; y++)
           for (let x = 0; x < _cellW; x++)
-            if (data[((y0 + y) * width + (x0 + x)) * 4 + 3] > 40) xs.push(x);
-        xs.sort((a, b) => a - b);
-        _headAnchor[r][c] = { x: xs.length ? xs[xs.length >> 1] : Math.round(_cellW / 2), y: top };
+            if (data[((y0 + y) * width + (x0 + x)) * 4 + 3] > 40) bx.push(x);
+        bx.sort((a, b) => a - b); xs.push(bx[bx.length >> 1]); ys.push(top);
       }
+      if (!xs.length) { _headAnchor[c] = { x: Math.round(_cellW / 2), y: 8 }; continue; }
+      xs.sort((a, b) => a - b);
+      _headAnchor[c] = { x: xs[xs.length >> 1], y: Math.min.apply(null, ys) };
     }
   }
 
@@ -545,32 +546,33 @@ const HacChar = (function () {
   }
 
   // 綸巾 (guānjīn): pañuelo de tela del estratega/letrado culto. Tela sólida que
-  // ciñe la cabeza; en perfil/espalda envuelve el moño. Color índigo.
+  // CUBRE el moño (arranca sobre su punta) y ciñe la cabeza; en perfil/espalda
+  // envuelve el moño por detrás. Color índigo. (topY = coronilla estable.)
   function _drawGuanjin(px, cx, topY, v) {
     const C = { cloth: '#45546f', hi: '#5d6e8c', dk: '#33415a', sh: '#262f42', band: '#3b4863', knot: '#2b3447' };
     const mir = v.dx < 0 ? -1 : 1;
     const back = v.side >= 1 ? -mir * 2 : 0;
     const c = cx + Math.round(v.dx * 0.5) + back;
-    const top = topY + 1;
+    const top = topY - 1;                                // arranca SOBRE la punta del moño
     const halfF = 7, halfS = 6;
     const half = Math.round(halfS + (halfF - halfS) * (1 - v.side));
-    const H = 13;
+    const H = 14;
+    const widthAt = (t) => 0.58 + 0.46 * Math.sin(Math.min(1, t * 1.12 + 0.16) * Math.PI);
     if (v.side >= 1) {                                   // bulto del moño envuelto (atrás)
       const bx = c - mir * (half - 1);
-      for (let i = 0; i < 6; i++) px(bx - 2, top + 3 + i, 4, 1, i < 2 ? C.cloth : C.dk);
-      px(bx - 2, top + 3, 4, 1, C.hi);
+      for (let i = 0; i < 7; i++) px(bx - 2, top + 4 + i, 5, 1, i < 2 ? C.cloth : C.dk);
+      px(bx - 2, top + 4, 5, 1, C.hi);
     }
-    for (let i = 0; i < H; i++) {                        // cúpula que ciñe la cabeza
+    for (let i = 0; i < H; i++) {                        // copa que cubre y ciñe la cabeza
       const t = i / (H - 1);
-      let w = half * (0.6 + 0.5 * Math.sin((t * 0.8 + 0.13) * Math.PI));
-      w = Math.max(2, Math.round(w));
+      const w = Math.max(3, Math.round(half * widthAt(t)));   // min 3 arriba → tapa el moño
       const y = top + i;
       px(c - w, y, w * 2, 1, C.cloth);
       px(c - w, y, Math.max(1, Math.round(w * 0.42)), 1, C.hi);
       px(c + Math.round(w * 0.5), y, w - Math.round(w * 0.5), 1, C.dk);
       px(c - w, y, 1, 1, C.sh); px(c + w - 1, y, 1, 1, C.sh);
     }
-    if (!(v.back && v.side === 0)) { px(c - 1 * mir, top + 1, 1, H - 5, C.dk); px(c, top + 1, 1, H - 6, C.hi); } // cresta central
+    if (!(v.back && v.side === 0)) { px(c - 1 * mir, top + 2, 1, H - 7, C.dk); px(c, top + 2, 1, H - 8, C.hi); } // cresta central
     if (!v.back) {                                       // banda frontal (doblez)
       const by = top + H - 3;
       px(c - half, by, half * 2, 2, C.band); px(c - half, by, half * 2, 1, C.hi);
@@ -585,11 +587,12 @@ const HacChar = (function () {
     estratega: _drawGuanjin
   };
 
-  // Dibuja el accesorio de la aptitud sobre el ctx de destino, a escala.
-  function _drawAccessory(ctx, aptId, dir, row, col, scale) {
+  // Dibuja el accesorio de la aptitud sobre el ctx de destino, a escala. Usa el
+  // ancla ESTABLE de la columna (igual en los 3 frames) para que no vibre.
+  function _drawAccessory(ctx, aptId, dir, col, scale) {
     const fn = ACCESSORIES[aptId];
     if (!fn || !_headAnchor) return;
-    const a = _headAnchor[row] && _headAnchor[row][col];
+    const a = _headAnchor[col];
     if (!a) return;
     const px = (x, y, w, h, color) => {
       ctx.fillStyle = color;
@@ -659,7 +662,7 @@ const HacChar = (function () {
         if (opts.bg) { ctx.fillStyle = opts.bg; ctx.fillRect(0, 0, canvas.width, canvas.height); }
         ctx.drawImage(sheet, col * _cellW, row * _cellH,
                       _cellW, _cellH, 0, 0, _cellW * scale, _cellH * scale);
-        _drawAccessory(ctx, opts.aptitud, dir, row, col, scale);   // tocado/props de la aptitud
+        _drawAccessory(ctx, opts.aptitud, dir, col, scale);   // tocado/props de la aptitud
         return;
       }
     }
