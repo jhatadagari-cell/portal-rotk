@@ -429,9 +429,29 @@ const HacOnboard = (function () {
       await withTimeout(window.Auth && Auth.ready ? Auth.ready() : null, 5000, null);
       const user = (window.Auth && Auth.current) ? Auth.current() : null;
       if (!user) { renderAnon(); return; }
-      if (window.HacPersonajes && HacPersonajes.ready) await withTimeout(HacPersonajes.ready(), 5000, null);
+      // Recarga FRESCA de personajes (no la caché memoizada): así detectamos el
+      // personaje recién creado/aprobado. Si la carga no acaba a tiempo, NO
+      // asumimos "sin personaje": mostramos la intro provisional y, cuando termine,
+      // saltamos a su panel si aparece (sin molestar si ya empezó a crear).
+      let loaded = false;
+      if (window.HacPersonajes && HacPersonajes.reload) {
+        loaded = await withTimeout(HacPersonajes.reload().then(() => true), 8000, false);
+      }
       const mine = window.HacPersonajes ? HacPersonajes.mine(user.id) : null;
-      if (mine) renderPlayer(user, mine); else renderIntro(user);
+      try {
+        console.log('[onboard] uid=', user.id, '· personajes=', window.HacPersonajes ? HacPersonajes.all().length : 'n/a',
+          '· dbOk=', !!(window.HacPersonajes && HacPersonajes.dbOk && HacPersonajes.dbOk()),
+          '· míoId=', mine ? mine.id : null, '· cargaOK=', loaded);
+      } catch (_) { }
+      if (mine) { renderPlayer(user, mine); return; }
+      if (!loaded && window.HacPersonajes && HacPersonajes.ready) {
+        HacPersonajes.ready().then(() => {
+          if (!host.querySelector('[data-create]')) return;   // ya navegó (form/picker) → no le molestamos
+          const again = HacPersonajes.mine(user.id);
+          if (again) renderPlayer(user, again);
+        });
+      }
+      renderIntro(user);
     } catch (e) {
       console.error('[onboard] refresh falló:', e);
       // Último recurso: que SIEMPRE se vea algo, nunca un "cargando" eterno.
