@@ -1,24 +1,29 @@
 /* ═══════════════════════════════════════════════════════════════════════
-   hac-char.js — Modelo PIXEL ART de un personaje (8 direcciones + andar).
+   hac-char.js — Modelo de un personaje (8 direcciones + andar).
    ─────────────────────────────────────────────────────────────────────────
-   Figura procedural al estilo Han (tres reinos), dibujada en un lienzo lógico
-   pequeño y escalada con image-rendering:pixelated. Mismo idioma que
-   hac-pixel.js (helper px(), paleta derivada con mix/light/dark).
+   DOS MODOS, transparentes para quien llama a draw():
 
-   · 8 vistas (S, SE, E, NE, N, NW, W, SW). Las 3 de la izquierda se obtienen
-     espejando S/SE/E/NE/N (que miran a la DERECHA/al frente). El cuerpo gira
-     de verdad: de frente es ancho y simétrico, de perfil se estrecha, la cara
-     se pone de perfil y el brazo/prop pasan al frente.
-   · Andar: ciclo de 4 fotogramas (contacto/paso) con bob vertical, zancada de
-     botas y balanceo de mangas.
-   · El ATUENDO depende de la APTITUD (guerrero→armadura+lanza, erudito→túnica
-     +pergamino…). Túnica, piel y pelo salen de `aspecto`.
+   1) PNG (preferente) — si existe assets/img/char-sprites.png lo carga y lo
+      usa. Sprite sheet 8 columnas (S·SE·E·NE·N·NW·W·SW) × 3 filas
+      (idle · walkA · walkB); el tamaño de celda se detecta solo (ancho/8,
+      alto/3). El color de la túnica se RECOLOREA en carga (una vez por color,
+      cacheado): se detectan los píxeles de la túnica (rojo = canal más bajo)
+      y se sustituye el tono conservando luces/sombras. Piel, pelo y contorno
+      quedan intactos. El PNG se genera ensamblando arte pixel-art externo
+      (ver scratchpad/gen-sprites pipeline).
+
+   2) Procedural (reserva) — figura dibujada al estilo Han si no hay PNG.
+      8 vistas (las 3 de la izquierda espejando), atuendo según APTITUD
+      (guerrero→armadura, erudito→túnica…), ciclo de 4 fotogramas con bob.
+
+   getImageData SOLO en carga (recolor), NUNCA por frame: el render del juego
+   solo hace drawImage del canvas ya recoloreado (cf. hac-folk spriteCache).
 
    API:
-     HacChar.draw(canvas, { aptitud, aspecto, dir, frame, scale, bg })
+     HacChar.draw(canvas, { aptitud, aspecto, dir, frame, scale, bg, pose })
      HacChar.DIRS    → ['S','SE','E','NE','N','NW','W','SW']
      HacChar.FRAMES  → fotogramas del ciclo de andar
-     HacChar.W, HacChar.H → tamaño lógico del fotograma
+     HacChar.W, HacChar.H → tamaño del fotograma (=celda PNG tras cargar)
    ═══════════════════════════════════════════════════════════════════════ */
 const HacChar = (function () {
   'use strict';
@@ -32,6 +37,17 @@ const HacChar = (function () {
 
   // ── Lienzo lógico ─────────────────────────────────────────────────────────
   const W = 40, H = 56, BASEY = 51, CX = 20;
+
+  // ── Sprite sheet PNG (opcional) ───────────────────────────────────────────
+  // Pon assets/img/char-sprites.png con este formato:
+  //   8 columnas (S | SE | E | NE | N | NW | W | SW), de izq a der
+  //   3 filas    (idle | walkA | walkB), de arriba a abajo
+  //   fondo transparente; cualquier tamaño de celda (se detecta automático)
+  // Si el archivo no existe el código procedural actúa de reserva.
+  const SHEET_PATH = 'assets/img/char-sprites.png';
+  const SHEET_COLS = ['S', 'SE', 'E', 'NE', 'N', 'NW', 'W', 'SW'];
+  let _cellW = 0, _cellH = 0, _sheetData = null, _sheetReady = false;
+  const _recolorCache = new Map();
 
   const DIRS   = ['S', 'SE', 'E', 'NE', 'N', 'NW', 'W', 'SW'];
   const BASE   = { S: 'S', SE: 'SE', E: 'E', NE: 'NE', N: 'N', NW: 'NE', W: 'E', SW: 'SE' };
@@ -49,6 +65,9 @@ const HacChar = (function () {
   };
   const SKINS = ['#eac9a0', '#dcb487', '#c89a6e', '#ad7d54'];
   const HAIRS = ['#1b1712', '#2c2318', '#46301a', '#0f0d0b'];
+  // Colores de túnica seleccionables. En modo PNG se recolorea el sprite base
+  // conservando luces/sombras; en modo procedural se usan tal cual como `robe`.
+  const ROBES = ['#2e6e6e', '#9c2b1e', '#2f4f7a', '#3a6b3a', '#6a3a86', '#b8842c', '#7a2418', '#3a3a42'];
 
   function palette(aptId, aspecto) {
     aspecto = aspecto || {};
@@ -424,6 +443,75 @@ const HacChar = (function () {
     }
   }
 
+  // ── PNG helpers (getImageData solo en carga, nunca por frame) ────────────
+  function _isTunicGreen(r, g, b, a) {
+    if (a < 20) return false;
+    // La túnica (verde/teal del sprite base) tiene el ROJO como canal más bajo con
+    // margen claro. Así piel (rojo alto), pelo (pardo) y contorno negro (r≈g≈b)
+    // quedan excluidos sin depender del tono exacto.
+    return (g - r > 8) && (b - r > 0) && (Math.max(g, b) > 25);
+  }
+  function _rgbHsl(r, g, b) {
+    const R = r/255, G = g/255, B = b/255, max = Math.max(R,G,B), min = Math.min(R,G,B), l = (max+min)/2;
+    if (max === min) return [0, 0, l];
+    const d = max-min, s = l>0.5 ? d/(2-max-min) : d/(max+min);
+    let h;
+    if (max===R) h = ((G-B)/d + (G<B?6:0))/6;
+    else if (max===G) h = ((B-R)/d + 2)/6;
+    else h = ((R-G)/d + 4)/6;
+    return [h, s, l];
+  }
+  function _hslRgb(h, s, l) {
+    if (s === 0) { const v = Math.round(l*255); return [v,v,v]; }
+    const q = l<0.5 ? l*(1+s) : l+s-l*s, p = 2*l-q;
+    const f = (p,q,t) => { t=t<0?t+1:t>1?t-1:t; if(t<1/6)return p+(q-p)*6*t; if(t<1/2)return q; if(t<2/3)return p+(q-p)*(2/3-t)*6; return p; };
+    return [Math.round(f(p,q,h+1/3)*255), Math.round(f(p,q,h)*255), Math.round(f(p,q,h-1/3)*255)];
+  }
+  // Recoloreado: reemplaza píxeles verdes de la túnica con el color elegido,
+  // manteniendo la luminosidad original (luces/sombras). Cacheado por color.
+  function _getRecolored(robeHex) {
+    const key = robeHex || '';
+    if (_recolorCache.has(key)) return _recolorCache.get(key);
+    if (!_sheetData) return null;
+    const { data, width, height } = _sheetData;
+    const out = new Uint8ClampedArray(data.length);
+    let th = 0, ts = 1;
+    if (robeHex) { const [tr,tg,tb] = hexToRgb(robeHex); [th, ts] = _rgbHsl(tr, tg, tb); }
+    for (let i = 0; i < data.length; i += 4) {
+      const r=data[i], g=data[i+1], b=data[i+2], a=data[i+3];
+      if (robeHex && _isTunicGreen(r, g, b, a)) {
+        const [,,origL] = _rgbHsl(r, g, b);
+        const [nr,ng,nb] = _hslRgb(th, ts, origL);
+        out[i]=nr; out[i+1]=ng; out[i+2]=nb; out[i+3]=a;
+      } else { out[i]=r; out[i+1]=g; out[i+2]=b; out[i+3]=a; }
+    }
+    const cv = document.createElement('canvas'); cv.width=width; cv.height=height;
+    cv.getContext('2d').putImageData(new ImageData(out, width, height), 0, 0);
+    _recolorCache.set(key, cv); return cv;
+  }
+  // frame 0/2 → idle (fila 0) · frame 1 → walkA (fila 1) · frame 3 → walkB (fila 2)
+  function _pngRow(frame, pose) {
+    if (pose === 'sit' || pose === 'bow') return 0;
+    const f = ((frame % FRAMES) + FRAMES) % FRAMES;
+    return f === 1 ? 1 : f === 3 ? 2 : 0;
+  }
+  function _loadSheet(api) {
+    if (typeof document === 'undefined') return;
+    const img = new Image();
+    img.onload = function() {
+      _cellW = Math.floor(img.naturalWidth / SHEET_COLS.length);
+      _cellH = Math.floor(img.naturalHeight / 3);
+      const cv = document.createElement('canvas'); cv.width=img.naturalWidth; cv.height=img.naturalHeight;
+      const ctx = cv.getContext('2d'); ctx.drawImage(img, 0, 0);
+      _sheetData = ctx.getImageData(0, 0, img.naturalWidth, img.naturalHeight);
+      _sheetReady = true; _recolorCache.clear();
+      if (api) { api.W = _cellW; api.H = _cellH; }   // folk.js los lee de aquí
+      if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('hacchar-loaded'));
+    };
+    img.onerror = function() {};   // sin PNG → modo procedural silencioso
+    img.src = SHEET_PATH + '?v=1';
+  }
+
   // Pase de CONTORNO: pinta 1px oscuro alrededor de la silueta (vecindad-4).
   // Da "peso" a la figura y la separa del fondo de la finca.
   function outlinePass(o) {
@@ -452,14 +540,32 @@ const HacChar = (function () {
     if (!canvas) return;
     opts = opts || {};
     const dir = DIRS.indexOf(opts.dir) >= 0 ? opts.dir : 'S';
-    const base = BASE[dir], mirror = !!MIRROR[dir];
     const scale = Math.max(1, Math.round(opts.scale || 1));
+
+    // ── Modo PNG (cuando char-sprites.png está cargado) ──────────────────
+    if (_sheetReady) {
+      const robeHex = (opts.aspecto && okHex(opts.aspecto.robe)) ? opts.aspecto.robe : null;
+      const sheet = _getRecolored(robeHex);
+      const col = SHEET_COLS.indexOf(dir);
+      if (sheet && col >= 0) {
+        canvas.width = _cellW * scale; canvas.height = _cellH * scale;
+        const ctx = canvas.getContext('2d'); if (!ctx) return;
+        ctx.imageSmoothingEnabled = false;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        if (opts.bg) { ctx.fillStyle = opts.bg; ctx.fillRect(0, 0, canvas.width, canvas.height); }
+        ctx.drawImage(sheet, col * _cellW, _pngRow(opts.frame || 0, opts.pose) * _cellH,
+                      _cellW, _cellH, 0, 0, _cellW * scale, _cellH * scale);
+        return;
+      }
+    }
+
+    // ── Modo procedural (fallback) ────────────────────────────────────────
+    const base = BASE[dir], mirror = !!MIRROR[dir];
     const P = palette(opts.aptitud, opts.aspecto);
     const g = gait(opts.frame || 0);
     const wantOutline = opts.outline !== false && typeof document !== 'undefined' && document.createElement;
 
     if (wantOutline) {
-      // Render en lienzo lógico (W×H) → contorno → escalado nítido al destino.
       const off = document.createElement('canvas'); off.width = W; off.height = H;
       const o = off.getContext('2d'); o.imageSmoothingEnabled = false;
       paintFigure(o, base, mirror, P, g, opts.pose);
@@ -472,7 +578,6 @@ const HacChar = (function () {
       ctx.drawImage(off, 0, 0, W, H, 0, 0, W * scale, H * scale);
       return;
     }
-    // Fallback directo (sin contorno; p.ej. Node).
     canvas.width = W * scale; canvas.height = H * scale;
     const ctx = canvas.getContext('2d'); if (!ctx) return;
     ctx.imageSmoothingEnabled = false;
@@ -483,7 +588,9 @@ const HacChar = (function () {
     ctx.restore();
   }
 
-  return { draw, DIRS, FRAMES, W, H, palette, OUTFIT, SKINS, HAIRS };
+  const _api = { draw, DIRS, FRAMES, W, H, palette, OUTFIT, SKINS, HAIRS, ROBES };
+  _loadSheet(_api);
+  return _api;
 })();
 
 if (typeof window !== 'undefined') window.HacChar = HacChar;
