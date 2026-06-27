@@ -87,9 +87,14 @@ const HacFolk = (function () {
     const WATER = new Set(['estanque', 'lago']);                     // agua: NO pisable
     const blocked = new Set(), cam = new Set(), garden = new Set(), water = new Set(), ownByMember = {};
     const buildings = new Map();
+    const gates = [];   // portones (院門): hojas animadas al pasar un mecenas
     lista.forEach(c => {
       const cells = (B && B.celdasOcupadas) ? B.celdasOcupadas(c) : [[c.pos[0], c.pos[1]]];
       if (c.dueno) { (ownByMember[c.dueno] = ownByMember[c.dueno] || []).push.apply(ownByMember[c.dueno], cells.map(p => p[0] + ',' + p[1])); }
+      // Portón: lo dibuja hac-iso como sprite por rotación (sin hojas, solo el vano);
+      // aquí guardamos su celda y orientación para animar las hojas. orient 'x' =
+      // muro a lo largo de x (puerta en la cara +y); 'y' = a lo largo de y (+x).
+      if (c.tipo === 'porton') gates.push({ gx: c.pos[0], gy: c.pos[1], orient: (((c.rot || 0) % 2) === 0) ? 'x' : 'y', open: 0 });
       const cat = (B && B.categoriaDe) ? B.categoriaDe(c.tipo) : 'edificio';
       if (cat === 'edificio') {
         const id = c.pos[0] + ',' + c.pos[1], def = (B && B.tipo(c.tipo)) || {};
@@ -135,7 +140,7 @@ const HacFolk = (function () {
     // decidan acercarse a descansar en la hierba).
     const gardenCells = [];
     garden.forEach(k => { if (set.has(k)) { const p = k.split(',').map(Number); gardenCells.push(p); } });
-    return { set, cells, cam, camCells, garden, gardenCells, water, GW, GH, ownByMember, buildings, visitable };
+    return { set, cells, cam, camCells, garden, gardenCells, water, GW, GH, ownByMember, buildings, visitable, gates };
   }
 
   // BFS sobre celdas transitables: de `start` a la primera celda de `goalKeys`.
@@ -541,6 +546,25 @@ const HacFolk = (function () {
     });
     encounters();
     hails(dt);
+    stepGates(dt);
+  }
+
+  // Apertura/cierre de los portones: se abre si hay un mecenas cerca de la celda
+  // del portón; se cierra solo cuando no queda nadie. Easing suave.
+  function stepGates(dt) {
+    if (!wk || !wk.gates || !wk.gates.length) return;
+    const R2 = 1.55 * 1.55;   // ~1.5 celdas alrededor del portón
+    for (let k = 0; k < wk.gates.length; k++) {
+      const gate = wk.gates[k];
+      let near = false;
+      for (let i = 0; i < walkers.length; i++) {
+        const dx = walkers[i].fx - gate.gx, dy = walkers[i].fy - gate.gy;
+        if (dx * dx + dy * dy <= R2) { near = true; break; }
+      }
+      const target = near ? 1 : 0;
+      const sp = (target > gate.open ? 4.5 : 2.6) * dt;   // abre más rápido de lo que cierra
+      gate.open = target > gate.open ? Math.min(target, gate.open + sp) : Math.max(target, gate.open - sp);
+    }
   }
 
   // ── Dibujo (coords LÓGICAS; el ctx ya está a escala SCALE) ────────────────
@@ -744,6 +768,31 @@ const HacFolk = (function () {
 
   const memberName = (id) => names[id] || '—';
 
+  // ── Hojas de los portones (animadas) ───────────────────────────────────────
+  // El sprite del portón trae solo el vano; aquí pintamos las dos hojas y las
+  // hacemos girar sobre su gozne exterior según gate.open (0 cerrado → 1 abierto).
+  // GATE_DZ/_FACE deben coincidir con drawWallPiece de gen-iso-sprites.js.
+  const GATE_DZ = 10.56, GATE_HW = 0.26, GATE_GAP = 0.02, GATE_FACE = 0.17;
+  function gateLeaf(g, gate, hinge, freeClosed) {
+    const ang = gate.open * 1.30;                              // ~0 → ~74°
+    const w = Math.abs(freeClosed - hinge), sgn = (freeClosed - hinge) >= 0 ? 1 : -1;
+    const cell = (a, o) => gate.orient === 'x' ? [gate.gx + a, gate.gy + o] : [gate.gx + o, gate.gy + a];
+    const pt = (a, o, z) => { const p = logic(cell(a, o)[0], cell(a, o)[1]); return [p[0], p[1] - z]; };
+    const aFree = hinge + sgn * w * Math.cos(ang), oFree = GATE_FACE + w * Math.sin(ang);
+    const h0 = pt(hinge, GATE_FACE, 0), f0 = pt(aFree, oFree, 0), f1 = pt(aFree, oFree, GATE_DZ), h1 = pt(hinge, GATE_FACE, GATE_DZ);
+    g.beginPath(); g.moveTo(h0[0], h0[1]); g.lineTo(f0[0], f0[1]); g.lineTo(f1[0], f1[1]); g.lineTo(h1[0], h1[1]); g.closePath();
+    // Laca roja clara (contrasta con el vano oscuro: cerrado=rojo, abierto=hueco).
+    // Al abrirse, la hoja se ve más de canto → un punto más oscura.
+    g.fillStyle = gate.open > 0.5 ? '#8a3420' : '#b0492a'; g.fill();
+    g.strokeStyle = '#5a1810'; g.lineWidth = 0.5; g.stroke();
+    g.fillStyle = '#e0b85a';
+    for (let t = 0; t < 2; t++) { const f = 0.42 + t * 0.3; const p = pt(hinge + sgn * w * Math.cos(ang) * f, GATE_FACE + w * Math.sin(ang) * f, GATE_DZ * 0.5); g.beginPath(); g.arc(p[0], p[1], 0.6, 0, 6.2832); g.fill(); }
+  }
+  function drawGate(g, gate) {
+    gateLeaf(g, gate, -GATE_HW, -GATE_GAP);
+    gateLeaf(g, gate, GATE_HW, GATE_GAP);
+  }
+
   function paint() {
     if (!window.HacIso || !HacIso.frame) return;
     // Agrupa quién está DENTRO de cada edificio (estado 'tarea').
@@ -752,6 +801,9 @@ const HacFolk = (function () {
 
     const actors = [], overlays = [], signs = [];
     const FEET = HacChar ? HacChar.H - 5 : 51, bannerDy = Math.round(FEET * SPRITE_DISP / SCALE) - 1;
+    // Portones: hojas animadas (overlay; el sprite no las trae). Primero, para
+    // quedar bajo los banners y bocadillos. Coste mínimo: 2 polígonos por portón.
+    if (wk && wk.gates) wk.gates.forEach(gate => overlays.push({ draw: (g) => drawGate(g, gate) }));
     walkers.forEach(w => {
       if (w.id === selectedId) return;                 // el seleccionado va en overlay (encima)
       if (w.insideId) return;                          // DENTRO de un edificio: oculto (su presencia la anuncia el banner 匾額)

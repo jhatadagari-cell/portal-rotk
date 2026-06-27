@@ -868,18 +868,16 @@ function drawWallPiece(cfg){
   // cuerpo del muro (sillería)
   isoPrism(buf, P, a, b, c, d, 0, wallH, light(brick,.10), dark(brick,.20), dark(brick,.32), 'stone');
   if (gate) {
-    // vano + dos hojas rojas con tachones en la cara vista
-    const dz = wallH*0.66, doorCol = mix('#7a241a','#000',.02);
+    // SOLO el vano (hueco oscuro recesado). Las HOJAS se dibujan dinámicamente en
+    // la capa de animación (hac-folk) para que se abran/cierren al pasar un mecenas
+    // sin tener que repintar el fondo. dz debe coincidir con GATE_DZ en hac-folk.
+    const dz = wallH*0.66;
     if (aX) {
-      fillPoly(buf,[P(-0.30,d,0),P(0.30,d,0),P(0.30,d,dz+0.4),P(-0.30,d,dz+0.4)], '#1a120a');
-      fillPoly(buf,[P(-0.26,d,0),P(-0.02,d,0),P(-0.02,d,dz),P(-0.26,d,dz)], doorCol);
-      fillPoly(buf,[P(0.02,d,0),P(0.26,d,0),P(0.26,d,dz),P(0.02,d,dz)], doorCol);
-      for(const lf of[-1,1])for(let r=0;r<3;r++){const p=P(lf*0.13,d,dz*(0.3+r*0.26));px(buf,Math.round(p[0]),Math.round(p[1]),hexToRgb('#d0a84a'),255);}
+      fillPoly(buf,[P(-0.30,d,0),P(0.30,d,0),P(0.30,d,dz+0.4),P(-0.30,d,dz+0.4)], '#16100a');
+      fillPoly(buf,[P(-0.26,d,0),P(0.26,d,0),P(0.26,d,dz),P(-0.26,d,dz)], '#241812');   // umbral/fondo del paso
     } else {
-      fillPoly(buf,[P(c,-0.30,0),P(c,0.30,0),P(c,0.30,dz+0.4),P(c,-0.30,dz+0.4)], '#1a120a');
-      fillPoly(buf,[P(c,-0.26,0),P(c,-0.02,0),P(c,-0.02,dz),P(c,-0.26,dz)], doorCol);
-      fillPoly(buf,[P(c,0.02,0),P(c,0.26,0),P(c,0.26,dz),P(c,0.02,dz)], doorCol);
-      for(const lf of[-1,1])for(let r=0;r<3;r++){const p=P(c,lf*0.13,dz*(0.3+r*0.26));px(buf,Math.round(p[0]),Math.round(p[1]),hexToRgb('#d0a84a'),255);}
+      fillPoly(buf,[P(c,-0.30,0),P(c,0.30,0),P(c,0.30,dz+0.4),P(c,-0.30,dz+0.4)], '#16100a');
+      fillPoly(buf,[P(c,-0.26,0),P(c,0.26,0),P(c,0.26,dz),P(c,-0.26,dz)], '#241812');
     }
     // columnas rojas + tejadito a cuatro aguas (gatehouse)
     isoPrism(buf, P, a-.06, b-.06, c+.06, d+.06, wallH, wallH+3, light(tile,.1), dark(tile,.16), dark(tile,.04));

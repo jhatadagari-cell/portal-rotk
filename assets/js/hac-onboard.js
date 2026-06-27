@@ -43,7 +43,11 @@ const HacOnboard = (function () {
         { pos: [3, 9], tipo: 'jardin-flores', rot: 0, dueno: null, nivel: 1 },
         { pos: [6, 5], tipo: 'camino' }, { pos: [6, 6], tipo: 'camino' }, { pos: [6, 7], tipo: 'camino' },
         { pos: [6, 8], tipo: 'camino' }, { pos: [6, 9], tipo: 'camino' }, { pos: [6, 10], tipo: 'camino' },
-        { pos: [6, 11], tipo: 'camino' }, { pos: [6, 12], tipo: 'camino' }, { pos: [5, 8], tipo: 'camino' }, { pos: [7, 8], tipo: 'camino' }
+        { pos: [6, 11], tipo: 'camino' }, { pos: [6, 12], tipo: 'camino' }, { pos: [5, 8], tipo: 'camino' }, { pos: [7, 8], tipo: 'camino' },
+        // Muro interior con PORTÓN en el camino central: los mecenas lo cruzan y se abre.
+        { pos: [4, 10], tipo: 'muralla', rot: 0 }, { pos: [5, 10], tipo: 'muralla', rot: 0 },
+        { pos: [7, 10], tipo: 'muralla', rot: 0 }, { pos: [8, 10], tipo: 'muralla', rot: 0 },
+        { pos: [6, 10], tipo: 'porton', rot: 0 }
       ]
     },
     miembros: [
