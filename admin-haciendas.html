@@ -43,6 +43,7 @@
   <nav class="adm-tabs" id="adm-tabs">
     <button class="adm-tab on" data-tab="haciendas">Haciendas</button>
     <button class="adm-tab" data-tab="personajes">Personajes</button>
+    <button class="adm-tab" data-tab="solicitudes">Solicitudes<span class="adm-solic-badge" id="solic-badge" hidden></span></button>
     <button class="adm-tab" data-tab="tareas">Tareas de edificios</button>
   </nav>
 
@@ -97,6 +98,20 @@
     <div class="adm-pj" id="adm-pj"></div>
   </div>
 
+  <!-- ══ Pestaña: Solicitudes de ingreso ══ -->
+  <div class="adm-tabpanel" id="tab-solicitudes" hidden>
+    <p class="adm-warn adm-info">Jugadores que piden entrar en una hacienda con su personaje. Al <b>aprobar</b>, su mecenas se añade a la casa (con 100 puntos de salida) y aparece paseando por la finca.</p>
+    <div class="adm-solic" id="adm-solic"></div>
+  </div>
+  <style>
+    .adm-solic-row{display:flex;align-items:center;justify-content:space-between;gap:16px;
+      border:1px solid rgba(216,182,90,.28);border-radius:10px;padding:12px 16px;margin-bottom:10px;background:rgba(0,0,0,.16)}
+    .adm-solic-row .adm-hint{display:block;font-size:.85em;opacity:.8;margin-top:2px}
+    .adm-solic-actions{display:flex;gap:8px;flex-shrink:0}
+    .adm-solic-badge{display:inline-block;min-width:18px;margin-left:6px;padding:0 6px;border-radius:999px;
+      background:#b8331f;color:#fff;font-size:11px;font-weight:700;line-height:18px;text-align:center;vertical-align:middle}
+  </style>
+
   <!-- ══ Pestaña: Tareas de edificios ══ -->
   <div class="adm-tabpanel" id="tab-tareas" hidden>
     <p class="adm-warn adm-info">Catálogo <b>global</b> de tareas: lo que hace un mecenas dentro de cada tipo de edificio y cuánto tarda. Es igual para todas las haciendas.</p>
@@ -109,13 +124,14 @@
 <script src="assets/js/auth.js?v=2"></script>
 <script src="assets/js/hac-util.js?v=1"></script>
 <script src="assets/js/haciendas-data.js?v=11"></script>
-<script src="assets/js/hac-calc.js?v=4"></script>
+<script src="assets/js/hac-calc.js?v=5"></script>
 <script src="assets/js/hac-build.js?v=24"></script>
 <script src="assets/js/hac-store.js?v=5"></script>
 <script src="assets/js/hac-tareas.js?v=1"></script>
 <script src="assets/js/personajes-data.js?v=2"></script>
-<script src="assets/js/hac-char.js?v=5"></script>
-<script src="assets/js/hac-personajes.js?v=1"></script>
+<script src="assets/js/hac-char.js?v=6"></script>
+<script src="assets/js/hac-personajes.js?v=2"></script>
+<script src="assets/js/hac-solicitudes.js?v=1"></script>
 <script>
 (function () {
   'use strict';
@@ -923,6 +939,70 @@
 
   function render() { renderList(); renderDetail(); }
 
+  // ── Solicitudes de ingreso (Fase 4) ──────────────────────────────────────
+  function updateSolicBadge(n) {
+    const b = document.getElementById('solic-badge');
+    if (!b) return; b.textContent = n; b.hidden = !n;
+  }
+  async function refreshSolicBadge() {
+    if (!window.HacSolicitudes) return;
+    try { const s = await HacSolicitudes.pendientes(); updateSolicBadge(s.length); } catch (e) { /* tabla aún sin crear */ }
+  }
+  async function renderSolicitudes() {
+    const host = document.getElementById('adm-solic');
+    if (!host) return;
+    if (!window.HacSolicitudes) { host.innerHTML = '<div class="adm-tareas-seed">⚠ Falta <code>hac-solicitudes.js</code>.</div>'; return; }
+    host.innerHTML = '<p class="adm-addmember-empty">Cargando solicitudes…</p>';
+    let sols;
+    try { sols = await HacSolicitudes.pendientes(); }
+    catch (e) { host.innerHTML = '<div class="adm-tareas-seed">⚠ No se pudieron cargar. ¿Ejecutaste <code>supabase/solicitudes.sql</code> en Supabase?</div>'; return; }
+    updateSolicBadge(sols.length);
+    if (!sols.length) { host.innerHTML = '<p class="adm-addmember-empty">No hay solicitudes pendientes.</p>'; return; }
+    host.innerHTML = sols.map(s => {
+      const pj = window.HacPersonajes ? HacPersonajes.get(s.personajeId) : null;
+      const h = HacStore.get(s.haciendaId);
+      const apt = pj ? HacPersonajeDefs.aptitud(pj.aptitud) : null;
+      return `<div class="adm-solic-row" data-sid="${esc(s.id)}">
+        <div>
+          <b>${esc(pj ? pj.nombre : 'Personaje desconocido')}</b>${apt ? ' · ' + esc(apt.nombre) : ''}
+          <span class="adm-hint">solicita entrar en <b>${esc(h ? h.nombre : s.haciendaId)}</b></span>
+        </div>
+        <div class="adm-solic-actions">
+          <button class="adm-btn adm-btn-gold" data-act="ok">Aprobar</button>
+          <button class="adm-btn" data-act="no">Rechazar</button>
+        </div>
+      </div>`;
+    }).join('');
+    host.querySelectorAll('.adm-solic-row').forEach(row => {
+      const s = sols.find(x => x.id === row.dataset.sid);
+      row.querySelector('[data-act="ok"]').addEventListener('click', () => aprobarSolicitud(s, row));
+      row.querySelector('[data-act="no"]').addEventListener('click', () => rechazarSolicitud(s, row));
+    });
+  }
+  async function aprobarSolicitud(s, row) {
+    const pj = window.HacPersonajes ? HacPersonajes.get(s.personajeId) : null;
+    const h = HacStore.get(s.haciendaId);
+    if (!pj || !h) { alert('Falta el personaje o la hacienda de esta solicitud.'); return; }
+    const btns = row.querySelectorAll('button'); btns.forEach(b => b.disabled = true);
+    const yaEs = (h.miembros || []).some(m => m.personajeId === pj.id);
+    if (!yaEs) {
+      if ((h.miembros || []).length >= maxMiembros(h)) { alert('Esa hacienda tiene el cupo de mecenas completo. Sube su nivel primero.'); btns.forEach(b => b.disabled = false); return; }
+      h.miembros = (h.miembros || []).concat({ id: uid(), personajeId: pj.id, nombre: pj.nombre, puntos: 100, desde: mesActual(), nota: '' });
+      try { await HacStore.upsert(norm(h)); }
+      catch (e) { alert('No se pudo añadir el mecenas: ' + (e.message || e)); btns.forEach(b => b.disabled = false); return; }
+    }
+    try { await HacSolicitudes.decidir(s.id, 'aprobada', new Date().toISOString()); }
+    catch (e) { alert('Mecenas añadido, pero no se pudo marcar la solicitud como aprobada: ' + (e.message || e)); }
+    renderSolicitudes();
+  }
+  async function rechazarSolicitud(s, row) {
+    if (!confirm('¿Rechazar la solicitud de este jugador?')) return;
+    const btns = row.querySelectorAll('button'); btns.forEach(b => b.disabled = true);
+    try { await HacSolicitudes.decidir(s.id, 'rechazada', new Date().toISOString()); }
+    catch (e) { alert('No se pudo rechazar: ' + (e.message || e)); btns.forEach(b => b.disabled = false); return; }
+    renderSolicitudes();
+  }
+
   // ════════════════════════════════════════════════════════════════════════
   // Pestaña «Tareas de edificios» — CRUD del catálogo global (HacTareas)
   // ════════════════════════════════════════════════════════════════════════
@@ -1237,7 +1317,7 @@
   function wireTabs() {
     const tabs = document.getElementById('adm-tabs');
     if (!tabs) return;
-    const panels = { haciendas: 'tab-haciendas', personajes: 'tab-personajes', tareas: 'tab-tareas' };
+    const panels = { haciendas: 'tab-haciendas', personajes: 'tab-personajes', solicitudes: 'tab-solicitudes', tareas: 'tab-tareas' };
     tabs.querySelectorAll('.adm-tab').forEach(b => b.addEventListener('click', () => {
       tabs.querySelectorAll('.adm-tab').forEach(x => x.classList.toggle('on', x === b));
       const which = b.dataset.tab;
@@ -1246,7 +1326,9 @@
       if (which !== 'personajes' && pjAnim) { clearInterval(pjAnim); pjAnim = null; }
       if (which === 'tareas') renderTareas();
       if (which === 'personajes') renderPersonajes();
+      if (which === 'solicitudes') renderSolicitudes();
     }));
+    refreshSolicBadge();
   }
 
   // Esc cancela el modo mover desde cualquier punto.

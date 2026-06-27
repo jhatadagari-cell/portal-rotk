@@ -312,8 +312,8 @@ const HacOnboard = (function () {
   async function renderPlayer(user, pj) {
     teardown();
     host.innerHTML = `<div class="onb-card"><div class="onb-loading">Cargando tu hacienda…</div></div>`;
-    if (window.HacStore) { try { await HacStore.ready(); } catch (e) { } }
-    const sol = window.HacSolicitudes ? await HacSolicitudes.mine() : null;
+    if (window.HacStore && HacStore.ready) await withTimeout(HacStore.ready(), 6000, null);
+    const sol = window.HacSolicitudes ? await withTimeout(HacSolicitudes.mine(), 6000, null) : null;
     if (sol && sol.estado === 'aprobada') return renderMember(user, pj, sol);
     if (sol && sol.estado === 'pendiente') return renderPending(user, pj, sol);
     renderPicker(user, pj);
@@ -408,13 +408,22 @@ const HacOnboard = (function () {
   }
 
   // ── Arranque + reacción a sesión ──────────────────────────────────────────
+  // Espera con tope de tiempo: si una llamada a Supabase tarda o falla, seguimos
+  // y renderizamos igualmente (nunca nos quedamos clavados en "Cargando…").
+  function withTimeout(p, ms, fb) {
+    return Promise.race([
+      Promise.resolve(p).catch(() => fb),
+      new Promise(r => setTimeout(() => r(fb), ms))
+    ]);
+  }
+
   async function refresh() {
     if (!host) return;
     host.innerHTML = `<div class="onb-card"><div class="onb-loading">Cargando…</div></div>`;
-    await Auth.ready();
-    const user = Auth.current();
+    await withTimeout(Auth.ready(), 6000, null);
+    const user = (window.Auth && Auth.current) ? Auth.current() : null;
     if (!user) { renderAnon(); return; }
-    if (window.HacPersonajes) { try { await HacPersonajes.reload(); } catch (e) { } }
+    if (window.HacPersonajes && HacPersonajes.ready) await withTimeout(HacPersonajes.ready(), 6000, null);
     const mine = window.HacPersonajes ? HacPersonajes.mine(user.id) : null;
     if (mine) renderPlayer(user, mine); else renderIntro(user);
   }

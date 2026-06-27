@@ -642,7 +642,44 @@ const HacFolk = (function () {
     g.moveTo(x + 1.3, yTop + 3.4); g.lineTo(x + 1.3, yTop + len + 2); g.stroke();                 // flecos
   }
 
+  // El banner del nombre se PINTA UNA VEZ a un canvas cacheado por (label,rango,
+  // selección) y luego solo se BLITEA cada frame. Antes se redibujaba entero por
+  // mecenas y por frame (con createLinearGradient incluido), lo que hundía los FPS.
+  const bannerCache = new Map();
+  let bannerMeasure = null;
+  function bannerKey(w, hot) {
+    const pre = (w.cargoIcon ? w.cargoIcon + ' ' : '') + (w.aptIcon ? w.aptIcon + ' ' : '');
+    return pre + String(w.name || '').slice(0, 16) + '|' + (Number(w.cargoTier) || 0) + '|' + (hot ? 1 : 0);
+  }
+  function bannerSprite(w, hot) {
+    const key = bannerKey(w, hot);
+    let s = bannerCache.get(key);
+    if (s) return s;
+    const pre = (w.cargoIcon ? w.cargoIcon + ' ' : '') + (w.aptIcon ? w.aptIcon + ' ' : '');
+    const label = pre + String(w.name || '').slice(0, 16);
+    const lvl = Math.max(0, Math.min(6, Number(w.cargoTier) || 0));
+    if (!bannerMeasure) bannerMeasure = document.createElement('canvas').getContext('2d');
+    bannerMeasure.font = '700 8px "Noto Serif SC","Noto Sans SC",sans-serif';
+    const padX = 5 + (lvl >= 5 ? 2 : 0), tw = bannerMeasure.measureText(label).width;
+    const bw = Math.max(16, tw + padX * 2), bh = 13;
+    const Wd = bw + 12, Hd = bh + 22, ax = bw / 2 + 6, ay = bh + 16;   // ay = punto de anclaje (base del asta)
+    const cv = document.createElement('canvas');
+    cv.width = Math.ceil(Wd * SCALE); cv.height = Math.ceil(Hd * SCALE);
+    const g = cv.getContext('2d'); g.scale(SCALE, SCALE);
+    paintBannerInto(g, ax, ay, w, hot);
+    s = { cv, ax, ay };
+    bannerCache.set(key, s);
+    return s;
+  }
+  // Blit del banner cacheado: su base de asta cae sobre (cx, topY).
   function banner(g, cx, topY, w, hot) {
+    const s = bannerSprite(w, hot);
+    g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.imageSmoothingEnabled = true;
+    g.drawImage(s.cv, Math.round((cx - s.ax) * SCALE), Math.round((topY - s.ay) * SCALE), s.cv.width, s.cv.height);
+    g.restore();
+  }
+
+  function paintBannerInto(g, cx, topY, w, hot) {
     const name = String(w.name || '').slice(0, 16);
     const pre = (w.cargoIcon ? w.cargoIcon + ' ' : '') + (w.aptIcon ? w.aptIcon + ' ' : '');
     const label = pre + name;
