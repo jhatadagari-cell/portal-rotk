@@ -582,7 +582,7 @@ const HacFolk = (function () {
     g.fillStyle = 'rgba(0,0,0,0.22)';
     g.beginPath(); g.ellipse(lx, ly, 5.5, 2.6, 0, 0, 6.2832); g.fill();
     const moving = w.moving && w.state !== 'tarea';
-    const frame = moving ? (Math.floor(w.phase * 1.2) % HacChar.FRAMES) : 0;
+    const frame = moving ? (Math.floor(w.phase * 0.8) % HacChar.FRAMES) : 0;
     const pose = (w.state === 'tumbado') ? 'sit' : (w.bowing ? 'bow' : 'stand');
     const cv = window.HacChar ? spriteFor(w, w.dir || 'S', frame, pose) : null;
     const disp = SPRITE_DISP, FEET = HacChar ? HacChar.H - 5 : 51;
