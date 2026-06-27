@@ -21,8 +21,9 @@
      await Auth.register({nombre, email, password}) → crea cuenta (email) → {user, needsConfirm}
      await Auth.logout()          → cierra sesión
 
-   El administrador se decide por el correo: quien entre con ADMIN_EMAIL es
-   admin; cualquier otro, usuario normal.
+   El administrador se decide por el ROL guardado en la tabla `perfiles` (BD),
+   vía perfiles.sql. ADMIN_EMAIL es solo el BOOTSTRAP del primer admin y el
+   respaldo si la tabla `perfiles` aún no existe.
    ═══════════════════════════════════════════════════════════════════════ */
 const Auth = (function () {
   'use strict';
@@ -78,6 +79,23 @@ const Auth = (function () {
     });
   }
 
+  function notify() { listeners.forEach(cb => { try { cb(cachedUser); } catch (e) { /* noop */ } }); }
+
+  // El ROL viene de la tabla `perfiles` (rol en la BD). El rol por email (toUser)
+  // es solo un respaldo inmediato hasta que llega la consulta —o si la tabla aún
+  // no existe—. Actualiza cachedUser.role y avisa a los suscriptores.
+  async function applyRole() {
+    const u = cachedUser;
+    if (!u || !client) return;
+    try {
+      const { data, error } = await client.from('perfiles').select('rol').eq('id', u.id).maybeSingle();
+      if (!error && data && data.rol && cachedUser && cachedUser.id === u.id && cachedUser.role !== data.rol) {
+        cachedUser = Object.assign({}, cachedUser, { role: data.rol });
+        notify();
+      }
+    } catch (e) { /* sin tabla perfiles → se mantiene el rol por email */ }
+  }
+
   // Arranque: carga SDK, crea cliente y espera al primer evento de sesión.
   // Race entre onAuthStateChange (procesa hash OAuth) y getSession (recupera localStorage).
   async function init() {
@@ -88,8 +106,9 @@ const Auth = (function () {
       // Via onAuthStateChange (fiable para OAuth callback desde hash)
       client.auth.onAuthStateChange((_event, session) => {
         cachedUser = toUser(session);
-        listeners.forEach(cb => { try { cb(cachedUser); } catch (e) { /* noop */ } });
+        notify();
         if (!resolved) { resolved = true; resolve(); }
+        else applyRole();   // cambios posteriores (login/logout): refresca el rol desde la BD
       });
       // Fallback: getSession recupera sesión de localStorage directamente
       client.auth.getSession().then(({ data }) => {
@@ -100,6 +119,7 @@ const Auth = (function () {
         }
       });
     });
+    await applyRole();   // deja el rol de la BD listo ANTES de resolver ready()
     return cachedUser;
   }
   const initPromise = init().catch((e) => { console.error('[Auth]', e); return null; });
