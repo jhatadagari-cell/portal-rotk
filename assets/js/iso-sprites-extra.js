@@ -6,8 +6,8 @@
   'use strict';
   if (typeof window === 'undefined') return;
   window.ISO_SPRITES_META = window.ISO_SPRITES_META || {};
-  // Campamento militar (8×10): vista fija a partir de la ilustración. Mismo sprite
-  // para las 4 rotaciones (no rota de verdad). Anclaje (ox,oy) afinado al footprint.
-  const campamento = { ox: 396, oy: 79, w: 720, h: 444 };
-  for (let r = 0; r < 4; r++) window.ISO_SPRITES_META['bld-campamento-' + r] = Object.assign({}, campamento);
+  // Campamento militar (8×10): vista ÚNICA a partir de la ilustración (un solo
+  // sprite, sin cuantizar para no perder los degradados). No rota: spriteKey en
+  // hac-iso cae a '-0' para cualquier rotación. Anclaje (ox,oy) afinado al footprint.
+  window.ISO_SPRITES_META['bld-campamento-0'] = { ox: 396, oy: 79, w: 720, h: 444, webp: true };
 })();

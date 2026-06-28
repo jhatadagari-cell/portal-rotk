@@ -20,7 +20,7 @@ const HacIso = (function () {
   const TOP_MARGIN = 132;             // hueco arriba para edificios altos, murallas y torres
   const PAD_X = 40;                   // margen lateral para murallas y paseo de ronda
   const SPRITE_BASE = 'assets/img/iso/';
-  const SPRITE_VER = '24';  // súbelo al regenerar los PNG (cache-busting)
+  const SPRITE_VER = '25';  // súbelo al regenerar los PNG (cache-busting)
 
   // ── Color helpers (para el placeholder) ─────────────────────────────────
   const { hexToRgb, clamp255: cl } = HacUtil;
@@ -63,7 +63,10 @@ const HacIso = (function () {
       const done = () => { if (--left === 0) { spritesReady = true; flush(); } };
       img.onload = () => { SPRITES[k] = img; done(); };
       img.onerror = done;
-      img.src = SPRITE_BASE + k + '.png?v=' + SPRITE_VER;
+      // Extensión por sprite: los hechos a mano grandes van en .webp (marcados con
+      // `webp:true` en el meta); los generados por gen-iso-sprites siguen en .png.
+      const ext = (META[k] && META[k].webp) ? '.webp' : '.png';
+      img.src = SPRITE_BASE + k + ext + '?v=' + SPRITE_VER;
     });
   }
   function flush() {
@@ -642,7 +645,10 @@ const HacIso = (function () {
     function spriteKey(c) {
       const def = B && B.tipo(c.tipo);
       if (!def) return null;
-      return 'bld-' + c.tipo + '-' + (((c.rot || 0) % 4 + 4) % 4);
+      const k = 'bld-' + c.tipo + '-' + (((c.rot || 0) % 4 + 4) % 4);
+      // Si no hay sprite para esa rotación (edificios de vista ÚNICA, p.ej. el
+      // campamento), cae al sprite base (-0) en vez de al placeholder de prisma.
+      return (META && META[k]) ? k : ('bld-' + c.tipo + '-0');
     }
 
     function sprite(c) {
