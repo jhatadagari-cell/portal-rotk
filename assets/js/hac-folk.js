@@ -181,27 +181,39 @@ const HacFolk = (function () {
     return { set, cells, cam, camCells, garden, gardenCells, water, GW, GH, ownByMember, buildings, visitable, gates };
   }
 
-  // BFS sobre celdas transitables: de `start` a la primera celda de `goalKeys`.
-  // Devuelve la lista de celdas a recorrer (sin la de inicio, con la meta), o null.
+  // Ruta de `start` a la primera celda de `goalKeys` sobre celdas transitables,
+  // PREFIRIENDO los CAMINOS: pisar fuera de camino cuesta más, así los mecenas
+  // siguen las sendas al ir a trabajar (salvo que el rodeo sea desproporcionado).
+  // Dijkstra por cubos (costes enteros pequeños) — rápido y determinista.
+  const W_CAMINO = 1, W_FUERA = 3;   // coste por paso (en/ fuera de camino)
   function bfs(start, goalKeys) {
     const sk = start[0] + ',' + start[1];
     if (goalKeys.has(sk)) return [];
-    const prev = new Map(); prev.set(sk, null);
-    const q = [start]; let head = 0;
-    while (head < q.length) {
-      const cur = q[head++];
+    const dist = new Map([[sk, 0]]);
+    const prev = new Map([[sk, null]]);
+    const buckets = []; (buckets[0] = []).push(start);
+    let d = 0;
+    while (true) {
+      while (d < buckets.length && (!buckets[d] || !buckets[d].length)) d++;
+      if (d >= buckets.length) break;
+      const cur = buckets[d].pop();
+      const ck = cur[0] + ',' + cur[1];
+      if (d > (dist.has(ck) ? dist.get(ck) : Infinity)) continue;   // entrada obsoleta
+      if (goalKeys.has(ck)) {
+        const path = []; let p = cur;
+        while (p) { path.push(p); p = prev.get(p[0] + ',' + p[1]); }
+        path.reverse(); path.shift();   // quita la celda de inicio
+        return path;
+      }
       const ns = neigh(cur[0], cur[1]);
       for (let i = 0; i < ns.length; i++) {
         const nx = ns[i][0], ny = ns[i][1], k = nx + ',' + ny;
-        if (prev.has(k) || !wk.set.has(k)) continue;
-        prev.set(k, cur);
-        if (goalKeys.has(k)) {
-          const path = []; let p = [nx, ny];
-          while (p) { path.push(p); p = prev.get(p[0] + ',' + p[1]); }
-          path.reverse(); path.shift();   // quita la celda de inicio
-          return path;
+        if (!wk.set.has(k)) continue;
+        const nd = d + (wk.cam.has(k) ? W_CAMINO : W_FUERA);
+        if (nd < (dist.has(k) ? dist.get(k) : Infinity)) {
+          dist.set(k, nd); prev.set(k, cur);
+          (buckets[nd] = buckets[nd] || []).push([nx, ny]);
         }
-        q.push([nx, ny]);
       }
     }
     return null;
