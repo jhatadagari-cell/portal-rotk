@@ -170,7 +170,11 @@
 .hacp-char-panel[hidden]{ display:none; }
 .hacp-cp-x{ position:absolute; top:5px; right:6px; width:20px; height:20px; line-height:1; padding:0; background:none; border:0; color:var(--parch2); cursor:pointer; font-size:13px; opacity:.7; }
 .hacp-cp-x:hover{ opacity:1; color:#fff; }
-.hacp-cp-head{ display:flex; align-items:center; gap:7px; padding-right:18px; }
+.hacp-cp-top{ display:flex; align-items:center; gap:10px; padding-right:16px; }
+.hacp-cp-id{ flex:1; min-width:0; }
+.hacp-cp-avatar{ flex:none; width:48px; height:69px; image-rendering:pixelated; border-radius:5px;
+  background:radial-gradient(ellipse at 50% 78%, rgba(201,168,76,.16), rgba(0,0,0,.18)); border:1px solid rgba(201,168,76,.18); }
+.hacp-cp-head{ display:flex; align-items:center; gap:7px; }
 .hacp-cp-dot{ flex:none; width:11px; height:11px; border-radius:50%; background:var(--c,#c9a84c); box-shadow:0 0 0 1px rgba(0,0,0,.4); }
 .hacp-cp-name{ font-family:'Noto Serif SC',serif; font-weight:700; font-size:14px; color:var(--gold); }
 .hacp-cp-name em{ font-style:normal; color:#7fc9a0; font-size:12px; }

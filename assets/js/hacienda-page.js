@@ -407,12 +407,17 @@
       }
       charEl.innerHTML = `
         <button type="button" class="hacp-cp-x" data-act="close" aria-label="Cerrar">✕</button>
-        <div class="hacp-cp-head">
-          <span class="hacp-cp-dot" style="--c:${esc(d.it.color)}"></span>
-          <span class="hacp-cp-name">${esc(d.it.name)}${d.mine ? ' <em>(tú)</em>' : ''}</span>
+        <div class="hacp-cp-top">
+          <canvas class="hacp-cp-avatar" width="64" height="92"></canvas>
+          <div class="hacp-cp-id">
+            <div class="hacp-cp-head">
+              <span class="hacp-cp-dot" style="--c:${esc(d.it.color)}"></span>
+              <span class="hacp-cp-name">${esc(d.it.name)}${d.mine ? ' <em>(tú)</em>' : ''}</span>
+            </div>
+            ${d.aptDef ? `<div class="hacp-cp-apt">${d.aptDef.icon || ''} ${esc(d.aptDef.nombre)}${comp ? ' · domina ' + comp : ''}</div>` : (comp ? `<div class="hacp-cp-apt">domina ${comp}</div>` : '')}
+            <div class="hacp-cp-pts">Puntos: <b id="hacp-cp-pts">${d.puntos}</b>${d.earned ? ` <span class="hacp-cp-earn">+${d.earned} en misiones</span>` : ''}</div>
+          </div>
         </div>
-        ${d.aptDef ? `<div class="hacp-cp-apt">${d.aptDef.icon || ''} ${esc(d.aptDef.nombre)}${comp ? ' · domina ' + comp : ''}</div>` : (comp ? `<div class="hacp-cp-apt">domina ${comp}</div>` : '')}
-        <div class="hacp-cp-pts">Puntos: <b id="hacp-cp-pts">${d.puntos}</b>${d.earned ? ` <span class="hacp-cp-earn">+${d.earned} en misiones</span>` : ''}</div>
         <div class="hacp-cp-act" id="hacp-cp-act">${d.it.inside ? '⌂ ' : ''}${esc(d.it.activity || 'Paseando por la finca')}</div>
         <div class="hacp-cp-energy" title="Energía ${d.e}%"><i id="hacp-cp-ebar" style="width:${d.e}%"></i></div>
         ${mision}`;
@@ -423,13 +428,27 @@
       if (rb) rb.addEventListener('click', release);
     }
     function sigOf(d) { return charId + '|' + (d.activa ? (d.enTarea ? 't' : 'g') : '-') + '|' + (d.mine ? 'me' : '-'); }
+    // Retrato animado: pinta el sprite ACTUAL del mecenas (dir/andar/sentado) cada
+    // frame mientras el panel está abierto. Funciona también a pantalla completa.
+    let avatarRAF = null;
+    function startAvatar() {
+      stopAvatar();
+      (function loop() {
+        if (!charId) { avatarRAF = null; return; }
+        const cv = charEl && charEl.querySelector('.hacp-cp-avatar');
+        if (cv && HacFolk.drawAvatar) HacFolk.drawAvatar(cv, charId);
+        avatarRAF = requestAnimationFrame(loop);
+      })();
+    }
+    function stopAvatar() { if (avatarRAF) { cancelAnimationFrame(avatarRAF); avatarRAF = null; } }
     function openCharPanel(id) {
       if (!charEl) return;
       charId = id; charEl.hidden = false;
       const d = charData(id); charSig = d ? sigOf(d) : '';
       buildCharPanel(id);
+      startAvatar();
     }
-    function closeCharPanel() { if (charEl) { charId = null; charEl.hidden = true; } }
+    function closeCharPanel() { if (charEl) { charId = null; charEl.hidden = true; } stopAvatar(); }
     // Refresco ligero: actualiza actividad/energía/cuenta atrás sin rebuild (para
     // no resetear el <select>); solo reconstruye si cambia el "modo" (misión/tuyo).
     function refreshCharPanel() {

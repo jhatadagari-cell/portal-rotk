@@ -1114,6 +1114,25 @@ const HacFolk = (function () {
   const selected = () => selectedId;
   function position(id) { const w = walkers.find(x => x.id === id); return w ? logic(w.fx, w.fy) : null; }
 
+  // Pinta el sprite ACTUAL de un mecenas (su dir/frame/pose en vivo) centrado en un
+  // canvas — para el retrato animado del panel de personaje. Se llama cada frame.
+  function drawAvatar(canvas, id) {
+    if (!canvas || !window.HacChar) return;
+    const g = canvas.getContext('2d');
+    g.clearRect(0, 0, canvas.width, canvas.height);
+    const w = walkers.find(x => x.id === id);
+    if (!w) return;
+    const moving = w.moving && w.state !== 'tarea' && w.state !== 'saludo';
+    const frame = moving ? (Math.floor(w.phase * 1.2) % HacChar.FRAMES) : 0;
+    const pose = (w.state === 'tumbado') ? 'sit' : (w.bowing ? 'bow' : 'stand');
+    const cv = spriteFor(w, w.dir || 'S', frame, pose);
+    if (!cv) return;
+    g.imageSmoothingEnabled = false;
+    const s = Math.min(canvas.width / HacChar.W, canvas.height / HacChar.H);
+    const dw = Math.round(HacChar.W * s), dh = Math.round(HacChar.H * s);
+    g.drawImage(cv, Math.round((canvas.width - dw) / 2), canvas.height - dh, dw, dh);   // pies abajo
+  }
+
   // Edificios visitables (instancias). Incluye el DOMINIO para el coste.
   function buildings() { return wk ? wk.visitable.map(b => ({ id: b.id, nombre: b.nombre, tipo: b.tipo, dominio: b.dominio || null })) : []; }
   // TIPOS de edificio visitables, DEDUPLICADOS (si hay 4 cuarteles → un tipo). La
@@ -1136,6 +1155,6 @@ const HacFolk = (function () {
     if (!running) { paint(); pushState(); }
   }
 
-  return { start, stop, list, select, selected, position, buildings, buildingTypes, setOrders };
+  return { start, stop, list, select, selected, position, buildings, buildingTypes, setOrders, drawAvatar };
 })();
 if (typeof window !== 'undefined') window.HacFolk = HacFolk;
