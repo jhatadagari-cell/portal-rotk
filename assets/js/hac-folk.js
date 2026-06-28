@@ -44,8 +44,6 @@ const HacFolk = (function () {
   const SCALE = (window.HacIso && HacIso.SCALE) || 2;   // px de dispositivo por px lógico
   const SPRITE_DISP = 1;                                // px de dispositivo por px del sprite (1 = ratio entero, nítido)
   const spriteCache = new Map();                        // key → canvas ya con contorno
-  // Cuando carga char-sprites.png, invalida el caché (sprites procedurales obsoletos).
-  if (typeof window !== 'undefined') window.addEventListener('hacchar-loaded', () => spriteCache.clear(), { once: true });
   // Dirección de 8 según el vector de movimiento en pantalla (no en la rejilla):
   // +gx va a la derecha-abajo, +gy a la izquierda-abajo en el isométrico.
   const DIRS8 = ['E', 'SE', 'S', 'SW', 'W', 'NW', 'N', 'NE'];
@@ -578,11 +576,8 @@ const HacFolk = (function () {
       g.fillStyle = 'rgba(255,224,130,0.22)'; g.beginPath(); g.ellipse(lx, ly, r, r * 0.5, 0, 0, 6.2832); g.fill();
       g.strokeStyle = 'rgba(255,224,130,0.95)'; g.lineWidth = 1.4; g.beginPath(); g.ellipse(lx, ly, r, r * 0.5, 0, 0, 6.2832); g.stroke();
     }
-    // Sombra de contacto bajo los pies (los PNG no la traen; opacidad aquí).
-    g.fillStyle = 'rgba(0,0,0,0.22)';
-    g.beginPath(); g.ellipse(lx, ly, 5.5, 2.6, 0, 0, 6.2832); g.fill();
     const moving = w.moving && w.state !== 'tarea';
-    const frame = moving ? (Math.floor(w.phase * 0.8) % HacChar.FRAMES) : 0;
+    const frame = moving ? (Math.floor(w.phase * 1.2) % HacChar.FRAMES) : 0;
     const pose = (w.state === 'tumbado') ? 'sit' : (w.bowing ? 'bow' : 'stand');
     const cv = window.HacChar ? spriteFor(w, w.dir || 'S', frame, pose) : null;
     const disp = SPRITE_DISP, FEET = HacChar ? HacChar.H - 5 : 51;

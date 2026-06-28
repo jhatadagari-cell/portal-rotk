@@ -221,8 +221,7 @@ const HacOnboard = (function () {
     const APTS = (window.HacPersonajeDefs && HacPersonajeDefs.APTITUDES) || [];
     const SKINS = (window.HacChar && HacChar.SKINS) || ['#eac9a0', '#dcb487', '#c89a6e', '#ad7d54'];
     const HAIRS = (window.HacChar && HacChar.HAIRS) || ['#1b1712', '#2c2318', '#46301a', '#0f0d0b'];
-    const ROBES = (window.HacChar && HacChar.ROBES) || ['#2e6e6e', '#9c2b1e', '#2f4f7a', '#3a6b3a', '#6a3a86', '#b8842c', '#7a2418', '#3a3a42'];
-    const sel = { nombre: '', personalidad: '', aptitud: '', piel: 0, pelo: 0, robe: ROBES[0] };
+    const sel = { nombre: '', personalidad: '', aptitud: '', piel: 0, pelo: 0 };
 
     const optList = (name, arr) => arr.map(o => `
       <label class="onb-opt" data-grp="${name}" data-val="${esc(o.id)}">
@@ -231,8 +230,6 @@ const HacOnboard = (function () {
         <span class="onb-opt-tx"><span class="onb-opt-nm">${esc(o.nombre)}</span><span class="onb-opt-ds">${esc(o.desc || '')}</span></span>
       </label>`).join('');
     const swList = (name, cols) => cols.map((c, i) => `<button type="button" data-sw="${name}" data-i="${i}" style="background:${c}"></button>`).join('');
-    // La túnica guarda el HEX (no el índice): hac-char recolorea el sprite con ese color.
-    const robeList = (cols) => cols.map(c => `<button type="button" data-robe="${esc(c)}" style="background:${esc(c)}" title="${esc(c)}"></button>`).join('');
 
     host.innerHTML = `
       <div class="onb-card"><div class="onb-form">
@@ -258,9 +255,6 @@ const HacOnboard = (function () {
               <div class="onb-opts" id="onb-apt">${optList('aptitud', APTS)}</div>
             </div>
             <div class="onb-field">
-              <label class="onb-label">Túnica</label><div class="onb-sw" id="onb-robe">${robeList(ROBES)}</div>
-            </div>
-            <div class="onb-field">
               <label class="onb-label">Piel</label><div class="onb-sw" id="onb-piel">${swList('piel', SKINS)}</div>
             </div>
             <div class="onb-field">
@@ -275,7 +269,7 @@ const HacOnboard = (function () {
         </div>
       </div></div>`;
 
-    const state = () => ({ aptitud: sel.aptitud, aspecto: { piel: sel.piel, pelo: sel.pelo, robe: sel.robe } });
+    const state = () => ({ aptitud: sel.aptitud, aspecto: { piel: sel.piel, pelo: sel.pelo } });
     startPreview(document.getElementById('onb-prev-cv'), state);
 
     const nameEl = host.querySelector('#onb-nombre');
@@ -303,14 +297,6 @@ const HacOnboard = (function () {
       });
     };
     initSw('piel'); initSw('pelo');
-    // Túnica: guarda el HEX seleccionado (no índice).
-    (function initRobe() {
-      const wrap = host.querySelector('#onb-robe');
-      wrap.querySelectorAll('button').forEach(b => {
-        if (b.dataset.robe === sel.robe) b.classList.add('on');
-        b.addEventListener('click', () => { sel.robe = b.dataset.robe; wrap.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); });
-      });
-    })();
 
     const errEl = host.querySelector('#onb-err');
     const showErr = (m) => { errEl.textContent = m; errEl.hidden = !m; };
@@ -324,7 +310,7 @@ const HacOnboard = (function () {
       try {
         const pj = await HacPersonajes.add({
           nombre: sel.nombre, personalidad: sel.personalidad, aptitud: sel.aptitud,
-          aspecto: { piel: sel.piel, pelo: sel.pelo, robe: sel.robe }, owner: user.id
+          aspecto: { piel: sel.piel, pelo: sel.pelo }, owner: user.id
         });
         renderPlayer(user, pj);
       } catch (err) {
