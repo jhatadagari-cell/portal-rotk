@@ -77,18 +77,25 @@ const HacCalc = (function () {
     const t = h && h.mapa && Number(h.mapa.tier);
     return t > 0 ? clampTier(t) : 1;
   }
-  function nivelEfectivo(h) {
-    const derivado = tierDePuntos(haciendaPuntos(h)).nivel;
-    return clampTier(Math.max(Number(derivado) || 1, nivelAlcanzado(h)));
-  }
-  // Cupo de mecenas según el nivel efectivo de la finca.
+  // Nivel OPERATIVO = el CONFIRMADO (mapa.tier). Ya NO sube solo con los puntos:
+  // la subida la confirma el fundador/admin (ver hac-calc.nivelAlcanzable + admin).
+  // Trinquete: no baja.
+  function nivelEfectivo(h) { return nivelAlcanzado(h); }
+
+  // ── Prestigio colectivo y nivel alcanzable (confirmación) ────────────────
+  // Prestigio = puntos base (miembros + extra) + `bonus` (puntos ganados en
+  // misiones, que el llamador pasa desde HacPuntos, pues HacCalc es puro/sin DOM).
+  // El prestigio SOLO crece y determina hasta qué nivel se PUEDE confirmar.
+  function prestigio(h, bonus) { return haciendaPuntos(h) + num(bonus); }
+  function nivelAlcanzable(h, bonus) { return clampTier(tierDePuntos(prestigio(h, bonus)).nivel); }
+  // Cupo de mecenas según el nivel efectivo (confirmado) de la finca.
   function maxMiembros(h) {
     const t = tierPorNivel(nivelEfectivo(h));
     return (t && Number(t.maxMiembros)) || Infinity;
   }
 
   return { haciendaPuntos, tierDePuntos, progresoHacia, rangoDePuntos, rangoIndex, clampTier, tiersAsc, maxTier,
-    tierPorNivel, nivelAlcanzado, nivelEfectivo, maxMiembros };
+    tierPorNivel, nivelAlcanzado, nivelEfectivo, prestigio, nivelAlcanzable, maxMiembros };
 })();
 
 if (typeof window !== 'undefined') window.HacCalc = HacCalc;

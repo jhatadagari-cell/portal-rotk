@@ -29,10 +29,16 @@ const HacRender = (function () {
     // Solo aceptamos un hex válido; cualquier otra cosa cae al dorado global.
     const color = /^#[0-9a-fA-F]{3,6}$/.test(String(h.color || '')) ? h.color : 'var(--gold)';
     const pts   = C.haciendaPuntos(h);
-    const tier  = C.nivelEfectivo(h);          // trinquete: no baja por puntos
+    const bonus = (window.HacPuntos && HacPuntos.totalHacienda) ? HacPuntos.totalHacienda(h.id) : 0;
+    const prest = C.prestigio ? C.prestigio(h, bonus) : pts;   // prestigio colectivo (base + misiones)
+    const tier  = C.nivelEfectivo(h);          // nivel CONFIRMADO (no sube solo)
+    const alcanzable = C.nivelAlcanzable ? C.nivelAlcanzable(h, bonus) : tier;
     const tInfo = C.tierPorNivel(tier);
     const total = (h.miembros || []).length;
-    const prog  = C.progresoHacia(pts, tInfo);
+    const prog  = C.progresoHacia(prest, tInfo);
+    // Fundador (líder): un miembro designado por el admin (en mapa.fundador).
+    const fundId = h.mapa && h.mapa.fundador;
+    const fund   = fundId ? (h.miembros || []).find(m => m.id === fundId) : null;
     const tpn   = tierPorNivel();
     const rangos = RANGOS();
 
@@ -91,12 +97,18 @@ const HacRender = (function () {
         }).join('')}
       </p>` : '';
 
-    const ptsHTML = `<span class="hac-dot">·</span><span>${pts} pts</span>`;
+    const ptsHTML = `<span class="hac-dot">·</span><span>${prest} de prestigio</span>`;
 
-    const progHTML = prog
+    const listo = alcanzable > tier;   // el prestigio ya desbloquea el siguiente nivel
+    const progHTML = listo
+      ? `<div class="hac-prog">
+           <div class="hac-prog-bar"><span style="width:100%"></span></div>
+           <p class="hac-prog-lbl">¡Lista para subir de nivel! <b>El fundador puede confirmarlo</b></p>
+         </div>`
+      : prog
       ? `<div class="hac-prog">
            <div class="hac-prog-bar"><span style="width:${prog.pct}%"></span></div>
-           <p class="hac-prog-lbl">Faltan <b>${prog.faltan} pts</b> para
+           <p class="hac-prog-lbl">Faltan <b>${prog.faltan} pts</b> de prestigio para
              <b>${esc(prog.sig.nombre)} ${esc(prog.sig.zh)}</b></p>
          </div>`
       : `<div class="hac-prog">
@@ -123,6 +135,7 @@ const HacRender = (function () {
           ${h.lema ? `<p class="hac-lema">«${esc(h.lema)}»</p>` : ''}
           <p class="hac-meta">
             <span>Fundada en ${esc(h.fundada)}</span>
+            ${fund ? `<span class="hac-dot">·</span><span title="Fundador / líder de la casa">👑 ${esc(fund.nombre)}</span>` : ''}
             <span class="hac-dot">·</span>
             <span>${total} mecenas</span>
             ${ptsHTML}

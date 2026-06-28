@@ -131,7 +131,7 @@
 <script src="assets/js/auth.js?v=3"></script>
 <script src="assets/js/hac-util.js?v=1"></script>
 <script src="assets/js/haciendas-data.js?v=11"></script>
-<script src="assets/js/hac-calc.js?v=5"></script>
+<script src="assets/js/hac-calc.js?v=6"></script>
 <script src="assets/js/hac-build.js?v=24"></script>
 <script src="assets/js/hac-store.js?v=5"></script>
 <script src="assets/js/hac-tareas.js?v=1"></script>
@@ -141,6 +141,7 @@
 <script src="assets/js/hac-solicitudes.js?v=1"></script>
 <script src="assets/js/hac-perfiles.js?v=1"></script>
 <script src="assets/js/hac-competencias.js?v=1"></script>
+<script src="assets/js/hac-puntos.js?v=1"></script>
 <script>
 (function () {
   'use strict';
@@ -176,6 +177,8 @@
   if (window.HacPersonajes) await HacPersonajes.ready();
   // Competencias otorgadas (para mostrar/editar los chips por mecenas).
   if (window.HacCompetencias) await HacCompetencias.ready();
+  // Puntos de misión (para el prestigio colectivo y confirmar la subida de nivel).
+  if (window.HacPuntos) await HacPuntos.ready();
 
   const { haciendaPuntos, tierDePuntos, progresoHacia, rangoDePuntos, clampTier, nivelEfectivo, tierPorNivel, maxMiembros } = HacCalc;
   const RANGOS = (typeof HAC_RANGOS !== 'undefined') ? HAC_RANGOS : [];
@@ -449,18 +452,17 @@
     // (± puntos, editar, borrar) no saben a quién tocan. Garantizamos ids aquí.
     norm(h);
     const pts = haciendaPuntos(h);
-    // Nivel de la finca = TRINQUETE (no baja por puntos). Persistimos el ascenso
-    // en mapa.tier para que sobreviva a recargas y a la página pública.
+    const ledger = window.HacPuntos ? HacPuntos.totalHacienda(h.id) : 0;
+    const prest = HacCalc.prestigio(h, ledger);              // prestigio colectivo (base + misiones)
+    // Nivel = el CONFIRMADO (mapa.tier). Ya NO sube solo: el prestigio DESBLOQUEA
+    // la subida y el fundador/admin la CONFIRMA (botón abajo). Trinquete: no baja.
     const tier = nivelEfectivo(h);
-    if ((Number(h.mapa && h.mapa.tier) || 1) < tier) {
-      h.mapa = h.mapa || { v: 1, construcciones: [] };
-      h.mapa.tier = tier;
-      saveHacienda(h);
-    }
+    const alcanzable = HacCalc.nivelAlcanzable(h, ledger);   // hasta dónde se puede confirmar
+    const puedeSubir = alcanzable > tier;
     const tInfo = tierPorNivel(tier);
-    const prog = progresoHacia(pts, tInfo);
+    const prog = progresoHacia(prest, tInfo);
     const progTxt = prog
-      ? `Faltan <b>${prog.faltan} pts</b> para ${esc(prog.sig.zh)} ${esc(prog.sig.nombre)}`
+      ? `Faltan <b>${prog.faltan} pts</b> de prestigio para ${esc(prog.sig.zh)} ${esc(prog.sig.nombre)}`
       : 'Nivel máximo alcanzado';
 
     const filas = (h.miembros || []).map(m => {
@@ -531,7 +533,7 @@
         <span class="adm-detail-zh">${esc(h.zh || '—')}</span>
         <div>
           <h2>${esc(h.nombre)}</h2>
-          <p class="adm-detail-tier">${esc(tInfo.zh)} ${esc(tInfo.nombre)} · ${pts} pts</p>
+          <p class="adm-detail-tier">${esc(tInfo.zh)} ${esc(tInfo.nombre)} · <b>${prest}</b> prestigio <span class="adm-hint">(${pts} base + ${ledger} misiones)</span></p>
           <div class="adm-detail-actions">
             <a class="adm-btn adm-btn-gold" href="hacienda.html?id=${encodeURIComponent(h.id)}">Ver la hacienda ↗</a>
             <a class="adm-detail-link" href="hacienda.html?id=${encodeURIComponent(h.id)}" target="_blank">Abrir en otra pestaña ↗</a>
@@ -541,6 +543,18 @@
 
       <div class="adm-prog"><div class="adm-prog-bar"><span style="width:${prog ? prog.pct : 100}%;background:${esc(h.color || 'var(--gold)')}"></span></div>
         <p class="adm-prog-lbl">${progTxt}</p></div>
+
+      <div class="adm-gov" style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin:6px 0 4px">
+        <label style="font-size:13px">Fundador (líder):
+          <select id="adm-fundador" style="margin-left:4px">
+            <option value="">— sin fundador —</option>
+            ${(h.miembros || []).map(m => `<option value="${esc(m.id)}"${(h.mapa && h.mapa.fundador) === m.id ? ' selected' : ''}>${esc(m.nombre)}</option>`).join('')}
+          </select>
+        </label>
+        ${puedeSubir
+          ? `<button type="button" class="adm-btn adm-btn-gold" id="adm-confirm-tier">⬆ Confirmar subida a ${esc(tierPorNivel(alcanzable).nombre)} (nivel ${alcanzable})</button>`
+          : `<span class="adm-hint">Nivel ${tier} confirmado${prog ? ' · sube el prestigio para desbloquear el siguiente' : ' · máximo'}</span>`}
+      </div>
 
       <details class="adm-edit"${editOpen ? ' open' : ''}>
         <summary>Editar datos de la casa</summary>
@@ -616,6 +630,24 @@
         (tiene ? HacCompetencias.revoke(h.id, pid, d) : HacCompetencias.grant(h.id, pid, d));
         render();   // optimista: el caché ya está actualizado
       }));
+    });
+
+    // Fundador (líder) de la casa: lo designa el admin.
+    const fund = document.getElementById('adm-fundador');
+    if (fund) fund.addEventListener('change', () => {
+      h.mapa = h.mapa || { v: 1, construcciones: [] };
+      h.mapa.fundador = fund.value || null;
+      saveHacienda(h); render();
+    });
+    // Confirmar subida de nivel (cuando el prestigio lo desbloquea). Trinquete.
+    const ct = document.getElementById('adm-confirm-tier');
+    if (ct) ct.addEventListener('click', () => {
+      const ledger = window.HacPuntos ? HacPuntos.totalHacienda(h.id) : 0;
+      const alcanzable = HacCalc.nivelAlcanzable(h, ledger);
+      if (alcanzable <= nivelEfectivo(h)) return;
+      h.mapa = h.mapa || { v: 1, construcciones: [] };
+      h.mapa.tier = alcanzable;
+      saveHacienda(h); render();
     });
 
     // Guardar datos de la casa.
