@@ -565,7 +565,14 @@ const HacIso = (function () {
     const drawList = wallSegs.slice();
     lista.filter(c => !isFlat(c) && c.tipo !== 'muralla').forEach(c => {
       const f = fp(c), x0 = c.pos[0], y0 = c.pos[1];
-      drawList.push({ box: [x0, y0, x0 + f[0], y0 + f[1]], draw: () => drawC(c) });
+      // srect = rectángulo de PANTALLA (device) que ocupa el sprite. Sirve para que
+      // la recomposición por frame sepa que una estructura ALTA/ANCHA (p.ej. el
+      // campamento, 720×444) cubre celdas lejos de su footprint y debe redibujarse
+      // sobre los mecenas que tape (si no, los "chafan").
+      const sk = spriteKey(c), m = sk && META[sk];
+      const sox = X(x0, y0) * SCALE, soy = Y(x0, y0) * SCALE;
+      const srect = m ? [sox - m.ox, soy - m.oy, sox - m.ox + m.w, soy - m.oy + m.h] : null;
+      drawList.push({ box: [x0, y0, x0 + f[0], y0 + f[1]], srect, draw: () => drawC(c) });
     });
     lista.filter(c => c.tipo === 'muralla').forEach(c => {
       const gx = c.pos[0], gy = c.pos[1], v = vecinos(gx, gy);
@@ -728,7 +735,12 @@ const HacIso = (function () {
     if (acts.length && sc.bgFloor) {
       const S = sc.SCALE;
       const rects = acts.map(a => [Math.floor((a.lx - 18) * S), Math.floor((a.ly - 36) * S), Math.ceil(36 * S), Math.ceil(44 * S)]);
-      const near = sc.drawList.filter(d => acts.some(a => ov(d.box, [a.box[0] - 3, a.box[1] - 3, a.box[2] + 3, a.box[3] + 3])));
+      // Cercanas = por footprint (±3 celdas) O por SPRITE (su rect de pantalla solapa
+      // el recuadro recompuesto del mecenas). Lo segundo capta estructuras altas/anchas
+      // (campamento, pagodas…) que tapan al mecenas aunque su footprint esté lejos.
+      const near = sc.drawList.filter(d =>
+        acts.some(a => ov(d.box, [a.box[0] - 3, a.box[1] - 3, a.box[2] + 3, a.box[3] + 3]))
+        || (d.srect && rects.some(r => ov(d.srect, [r[0], r[1], r[0] + r[2], r[1] + r[3]]))));
       const render = near.slice();
       acts.sort((p, q) => sc.before(p.box, q.box) ? -1 : (sc.before(q.box, p.box) ? 1 : 0));
       acts.forEach(a => {
