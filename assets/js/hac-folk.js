@@ -57,7 +57,7 @@ const HacFolk = (function () {
   const SER_FIELDS = ['fx', 'fy', 'tx', 'ty', 'moving', 'dir', 'state', 'path', 'goalBid', 'insideId',
     'task', 'taskTimer', 'strollTimer', 'wait', 'idleTimer', 'gardenCd', 'socialCd',
     'chatWith', 'chatLead', 'chatRole', 'bowing', 'convo', 'convoIdx', 'turnTimer', 'speech',
-    'meetWith', 'meetLead', 'meetTimer', 'restIntent', 'phase', 'onMission', 'missionTimer', 'missionEndMs'];
+    'meetWith', 'meetLead', 'meetTimer', 'restIntent', 'phase', 'onMission', 'missionTimer', 'missionEndMs', 'missionDoneFor'];
 
   const { hexToRgb, reduced, neigh } = HacUtil;
   // rnd/rng ahora tiran del stream determinista R (no de Math.random), así que
@@ -241,7 +241,7 @@ const HacFolk = (function () {
         meetWith: null, meetLead: false, meetTimer: 0, restIntent: null,
         phase: R.next() * 6.28,
         // Misión del jugador (estado compartido); null = comportamiento ambiente.
-        order: orders[m.id] || null, onMission: false, missionTimer: 0, missionEndMs: 0, missionTask: null
+        order: orders[m.id] || null, onMission: false, missionTimer: 0, missionEndMs: 0, missionTask: null, missionDoneFor: null
       };
     });
   }
@@ -313,8 +313,9 @@ const HacFolk = (function () {
       if (w.onMission && w.missionTask) task = w.missionTask;  // misión: SU tarea, no al azar
       w.task = task;
       w.taskTimer = (task ? task.duracionSeg : 30) * (0.85 + R.next() * 0.3);
-      // En misión la estancia dura hasta el FIN de la misión (= duración de la tarea).
-      if (w.onMission) w.taskTimer = Math.max(2, (w.missionEndMs - nowSimMs()) / 1000);
+      // En misión, la TAREA dura su duración COMPLETA contada DESDE QUE LLEGA aquí
+      // (no desde que se mandó): así el countdown empieza al iniciar la tarea.
+      if (w.onMission) w.taskTimer = (w.order && w.order.durMs) ? w.order.durMs / 1000 : (task ? task.duracionSeg : 60);
     } else if (w.state === 'saliendo') {
       w.state = 'paseando'; w.strollTimer = rng(2, 6); w.wait = rng(0.2, 0.8); w.task = null;
     }
@@ -566,30 +567,29 @@ const HacFolk = (function () {
     hailCd = rng(2, 5);                                   // nadie elegible/aceptó: reintenta pronto
   }
 
-  // Activa/termina la MISIÓN del jugador según su timestamp (hora compartida).
-  // Al activarse interrumpe lo que hiciera, hace el saludo 抱拳 (pose bow) y luego
-  // ejecuta. Determinista: depende solo de nowSimMs() y de la orden compartida.
+  const MISSION_GRACE_MS = 90 * 1000;   // margen (saludo + viaje) sobre la duración de la tarea
+
+  function endMission(w) {
+    if (w.order) w.missionDoneFor = w.order.startMs;   // marca ESTA orden como cumplida (no re-activar)
+    w.onMission = false; w.bowing = false; w.missionTask = null;
+    if (w.insideId) startLeave(w);
+    else { w.state = 'paseando'; w.strollTimer = rng(2, 6); w.path = null; w.moving = false; }
+  }
+  // Activa la MISIÓN del jugador en su ventana (timestamp compartido). La TAREA en
+  // sí dura desde que LLEGA (ver onPathDone); aquí solo arrancamos (saludo) y damos
+  // un tope de seguridad por si el viaje se atasca. Termina al completar la tarea.
   function missionGate(w) {
     const o = w.order;
-    if (!o) {   // orden retirada estando en misión → vuelve al ambiente
-      if (w.onMission) {
-        w.onMission = false; w.bowing = false;
-        if (w.insideId) startLeave(w);
-        else { w.state = 'paseando'; w.strollTimer = rng(2, 6); w.path = null; w.moving = false; }
-      }
-      return;
-    }
-    const t = nowSimMs(), active = t >= o.startMs && t < o.endMs;
-    if (active && !w.onMission) {
+    if (!o) { if (w.onMission) endMission(w); return; }   // orden retirada → al ambiente
+    const t = nowSimMs(), dur = o.durMs || 60000, winEnd = o.startMs + dur + MISSION_GRACE_MS;
+    if (t >= o.startMs && t < winEnd && !w.onMission && w.missionDoneFor !== o.startMs) {
       if (w.chatWith) endChat(w);
       if (w.meetWith) abortMeet(w);
-      w.onMission = true; w.missionEndMs = o.endMs;
+      w.onMission = true;
       w.state = 'saludo'; w.bowing = true; w.missionTimer = SALUTE_SEC;
       w.moving = false; w.path = null; w.speech = null; w.dir = 'S';
-    } else if (w.onMission && t >= o.endMs) {
-      w.onMission = false; w.bowing = false;
-      if (w.insideId) startLeave(w);
-      else { w.state = 'paseando'; w.strollTimer = rng(2, 6); w.path = null; w.moving = false; }
+    } else if (w.onMission && t >= winEnd) {
+      endMission(w);   // seguridad: no debería colgarse más allá del tope
     }
   }
 
@@ -601,7 +601,7 @@ const HacFolk = (function () {
       missionGate(w);
       switch (w.state) {
         case 'saludo': w.phase += dt * 0.5; w.missionTimer -= dt; if (w.missionTimer <= 0) { w.bowing = false; startMissionVisit(w); } break;
-        case 'tarea': w.taskTimer -= dt; w.phase += dt * 1.2; if (!w.onMission && w.taskTimer <= 0) startLeave(w); break;
+        case 'tarea': w.taskTimer -= dt; w.phase += dt * 1.2; if (w.taskTimer <= 0) { if (w.onMission) endMission(w); else startLeave(w); } break;
         case 'yendo':
         case 'saliendo': followPath(w, dt, SPD); break;
         case 'a-descansar':
@@ -1105,8 +1105,9 @@ const HacFolk = (function () {
     return walkers.map(w => {
       const b = w.insideId && wk ? wk.buildings.get(w.insideId) : null;
       const inside = b ? (b.dueno ? memberName(b.dueno) : b.nombre) : null;
+      const enTarea = !!w.onMission && w.state === 'tarea';
       return { id: w.id, name: w.name, color: w.color, inside, activity: activityText(w),
-        onMission: !!w.onMission };
+        onMission: !!w.onMission, misEnTarea: enTarea, misRestante: enTarea ? Math.max(0, Math.ceil(w.taskTimer)) : null };
     });
   }
   function select(id) { selectedId = id || null; if (!running) paint(); pushState(); }

@@ -303,18 +303,30 @@
     // Puntos de un mecenas: base (admin) + ganados en misiones (ledger propio).
     function basePuntos(id) { const m = (h.miembros || []).find(x => x.personajeId === id); return m ? (Number(m.puntos) || 0) : 0; }
     function puntosTotales(id) { return basePuntos(id) + (window.HacPuntos ? HacPuntos.deMiembro(h.id, id) : 0); }
-    // Al completarse MI misión: recompensa BAJA (según energía + tiempo) y limpia
-    // la orden (dedup: solo el dueño escribe, y la orden desaparece tras premiar).
+    // Recompensa al COMPLETAR la tarea (no a tiempo fijo desde el envío): se detecta
+    // cuando el sim termina la misión de mi mecenas (onMission true→false) o, si no
+    // estaba mirando, por un tope de seguridad. Premia + limpia la orden (dedup).
+    let _wasOnMission = false;
     function maybeRewardMyMission() {
       if (!myId || !window.HacOrdenes || !window.HacPuntos) return;
-      const o = HacOrdenes.mine(h.id, myId); if (!o) return;
-      if (clock() < o.inicioMs + (o.duracionSeg || 120) * 1000) return;   // aún en curso
-      const task = (window.HacTareas && HacTareas.get) ? HacTareas.get(o.targetId) : null;
-      const dom = (task && window.HacBuild) ? (HacBuild.tipo(task.tipo) || {}).dominio : null;
-      const r = HacPuntos.recompensa(costeMision(dom), o.duracionSeg || 60);
-      HacPuntos.award(h.id, myId, r);
-      HacOrdenes.clear(h.id, myId);   // optimista: la quita del caché ya
-      toast('+' + r + ' puntos · misión cumplida');
+      const o = HacOrdenes.mine(h.id, myId);
+      if (!o) { _wasOnMission = false; return; }
+      const me = HacFolk.list().find(w => w.id === myId);
+      const onM = !!(me && me.onMission);
+      const hardDone = clock() > o.inicioMs + (o.duracionSeg || 60) * 1000 + 90000;   // saludo+viaje+tarea, con margen
+      const liveDone = _wasOnMission && !onM;                                          // el sim la acaba de completar
+      if (hardDone || liveDone) {
+        const task = (window.HacTareas && HacTareas.get) ? HacTareas.get(o.targetId) : null;
+        const dom = (task && window.HacBuild) ? (HacBuild.tipo(task.tipo) || {}).dominio : null;
+        const r = HacPuntos.recompensa(costeMision(dom), o.duracionSeg || 60);
+        HacPuntos.award(h.id, myId, r);
+        HacOrdenes.clear(h.id, myId);   // optimista: la quita del caché ya
+        toast('+' + r + ' puntos · misión cumplida');
+        _wasOnMission = false;
+        applyOrders();                  // re-sincroniza el sim sin la orden
+        return;
+      }
+      _wasOnMission = onM;
     }
     const refresh = () => { renderList(); refreshCharPanel(); };
     let lastOrdersSig = '';
@@ -324,7 +336,7 @@
       maybeRewardMyMission();   // premia/limpia mi misión si acaba de completarse
       const map = {};
       HacOrdenes.byHacienda(h.id).forEach(o => {
-        map[o.miembroId] = { startMs: o.inicioMs, endMs: o.inicioMs + (o.duracionSeg || 120) * 1000, taskId: o.targetId, tipo: o.tipo };
+        map[o.miembroId] = { startMs: o.inicioMs, durMs: (o.duracionSeg || 60) * 1000, taskId: o.targetId, tipo: o.tipo };
       });
       const sig = JSON.stringify(map);
       if (sig !== lastOrdersSig) { lastOrdersSig = sig; if (HacFolk.setOrders) HacFolk.setOrders(map); }
@@ -367,12 +379,13 @@
       const aptId = pj ? pj.aptitud : '';
       const aptDef = (window.HacPersonajeDefs && aptId) ? HacPersonajeDefs.aptitud(aptId) : null;
       const e = Math.round(window.HacEnergia ? HacEnergia.current(h.id, id) : 100);
-      const o = window.HacOrdenes ? HacOrdenes.mine(h.id, id) : null;
-      const now = clock();
-      const activa = !!(o && now < (o.inicioMs + (o.duracionSeg || 120) * 1000));
-      const rest = activa ? Math.max(0, Math.round((o.inicioMs + (o.duracionSeg || 120) * 1000 - now) / 1000)) : 0;
+      // Estado de misión desde el SIM (no la orden): en misión / en tarea / restante
+      // de la TAREA contado desde que LLEGA (el countdown empieza al iniciar la tarea).
+      const activa = !!it.onMission;
+      const enTarea = !!it.misEnTarea;
+      const rest = it.misRestante || 0;
       const earned = window.HacPuntos ? HacPuntos.deMiembro(h.id, id) : 0;
-      return { it, aptId, aptDef, e, activa, rest, mine: id === myId, puntos: puntosTotales(id), earned };
+      return { it, aptId, aptDef, e, activa, enTarea, rest, mine: id === myId, puntos: puntosTotales(id), earned };
     }
     function buildCharPanel(id) {
       const d = charData(id); if (!d) { closeCharPanel(); return; }
@@ -384,7 +397,8 @@
       let mision = '';
       if (d.mine) {
         if (d.activa) {
-          mision = `<div class="hacp-cp-mis hacp-cp-mis-on"><span class="hacp-cp-flag">⚑ En misión · <b id="hacp-cp-rest">${d.rest}s</b></span><button type="button" class="hacp-cp-btn" data-act="release">Liberar</button></div>`;
+          const flag = d.enTarea ? `⚒ En la tarea · <b id="hacp-cp-rest">${d.rest}s</b>` : `⚒ De camino a la tarea…`;
+          mision = `<div class="hacp-cp-mis hacp-cp-mis-on"><span class="hacp-cp-flag">${flag}</span><button type="button" class="hacp-cp-btn" data-act="release">Liberar</button></div>`;
         } else {
           const tasks = availableTasks();   // por TAREA (deduplicada por tipo), con su duración propia
           const opts = tasks.map(t => `<option value="${esc(t.taskId)}">${esc(t.nombre)} · ${fmtDur(t.duracionSeg)} · −${costeMision(t.dominio)}⚡</option>`).join('');
@@ -408,7 +422,7 @@
       const rb = charEl.querySelector('[data-act="release"]');
       if (rb) rb.addEventListener('click', release);
     }
-    function sigOf(d) { return charId + '|' + (d.activa ? 'm' : '-') + '|' + (d.mine ? 'me' : '-'); }
+    function sigOf(d) { return charId + '|' + (d.activa ? (d.enTarea ? 't' : 'g') : '-') + '|' + (d.mine ? 'me' : '-'); }
     function openCharPanel(id) {
       if (!charEl) return;
       charId = id; charEl.hidden = false;
@@ -457,7 +471,7 @@
       listEl.querySelectorAll('.hacp-folk-item').forEach(b => b.addEventListener('click', () => gotoMember(b.dataset.id)));
     }
 
-    HacFolk.start(iso, { mapa: h.mapa, tier, color, miembros: h.miembros, onState: refresh, seedKey: h.id, haciendaId: h.id, ordenes: {} });
+    HacFolk.start(iso, { mapa: h.mapa, tier, color, miembros: h.miembros, onState: applyOrders, seedKey: h.id, haciendaId: h.id, ordenes: {} });
     renderList();
     // Carga órdenes + energía + competencias (compartidas); refresca por poll (≤5 s).
     if (window.HacEnergia) HacEnergia.ready().then(refresh);
