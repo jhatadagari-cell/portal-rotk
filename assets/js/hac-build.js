@@ -400,6 +400,10 @@ const HacBuild = (function () {
     // guarda en el mapa (jsonb) para no requerir migración de la tabla.
     const EST = { primavera: 1, verano: 1, otono: 1, invierno: 1 };
     if (mapa && EST[String(mapa.estacion || '').toLowerCase().replace('ñ', 'n')]) out.estacion = String(mapa.estacion).toLowerCase().replace('ñ', 'n');
+    // Fundador (líder) de la casa: id de miembro designado por el admin. Se guarda
+    // en el mapa (jsonb) para no requerir migración de la tabla. (Sin esto, la
+    // normalización lo descartaba y el selector volvía a «sin fundador».)
+    if (mapa && mapa.fundador) out.fundador = String(mapa.fundador);
     return out;
   }
 

@@ -110,6 +110,13 @@ html{scrollbar-gutter:stable}
 .adm-prog-lbl{font-family:'Cinzel Decorative',serif;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--parch2);opacity:.65;margin-top:7px}
 .adm-prog-lbl b{color:var(--gold)}
 
+/* Gobierno de la casa: fundador (líder) + confirmar subida de nivel. */
+.adm-gov{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin:6px 0 16px;font-family:'Noto Sans SC',sans-serif}
+.adm-gov label{font-size:13px;color:var(--parch2);display:inline-flex;align-items:center;gap:6px}
+.adm-gov select{font-family:'Noto Sans SC',sans-serif;font-size:13px;color:var(--parch);background:rgba(0,0,0,.3);border:1px solid rgba(201,168,76,.3);border-radius:5px;padding:6px 10px;cursor:pointer}
+.adm-gov select:focus{outline:none;border-color:var(--gold)}
+.adm-gov .adm-hint{font-size:12px}
+
 .adm-edit{margin-bottom:20px;border:1px solid rgba(201,168,76,.14);border-radius:3px}
 .adm-edit summary{cursor:pointer;font-family:'Cinzel Decorative',serif;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);padding:11px 14px}
 .adm-edit form{padding:0 14px 16px}
