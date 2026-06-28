@@ -75,6 +75,7 @@
               </svg>
             </button>
             <span class="hacp-iso-hint">arrastra para mover · pellizca o ctrl+rueda para zoom</span>
+            <div class="hacp-char-panel" id="hacp-char-panel" hidden></div>
           </div>
           <aside class="hacp-folk-panel" id="hacp-folk-panel" hidden>
             <h3 class="hacp-folk-ttl">Mecenas en la finca</h3>
@@ -138,7 +139,7 @@
       scale = ns; apply(); zAnim = requestAnimationFrame(smoothZoom);
     }
     vp.addEventListener('wheel', (e) => {
-      e.preventDefault(); const r = vp.getBoundingClientRect();
+      e.preventDefault(); stopFollow(); const r = vp.getBoundingClientRect();
       if (e.ctrlKey) {                                                                       // pellizco trackpad / ctrl+rueda
         zfx = e.clientX - r.left; zfy = e.clientY - r.top;
         let dy = e.deltaY;                                                                   // normaliza líneas/páginas a px
@@ -150,7 +151,7 @@
     }, { passive: false });
     // Arrastrar con puntero (ratón o un dedo).
     const pts = new Map(); let pinch = null;
-    vp.addEventListener('pointerdown', (e) => { pts.set(e.pointerId, e); vp.setPointerCapture(e.pointerId); });
+    vp.addEventListener('pointerdown', (e) => { stopFollow(); pts.set(e.pointerId, e); vp.setPointerCapture(e.pointerId); });
     vp.addEventListener('pointermove', (e) => {
       if (!pts.has(e.pointerId)) return; const prev = pts.get(e.pointerId); pts.set(e.pointerId, e);
       if (pts.size === 2) {                                  // pellizco de dos toques
@@ -167,20 +168,46 @@
     document.addEventListener('fullscreenchange', () => requestAnimationFrame(fitView));
     document.addEventListener('webkitfullscreenchange', () => requestAnimationFrame(fitView));
 
-    // Lleva la cámara a un punto LÓGICO (lx,ly) del plano, centrándolo en el
-    // visor con una transición suave. Lo usa el listado de mecenas.
+    // ── Enfoque y SEGUIMIENTO de un personaje ──────────────────────────────
+    // focusFollow: zoom+centro animados sobre el objetivo y luego lo SIGUE cada
+    // frame (a escala fija) mientras camina. Se rompe al interactuar (pan/zoom).
     const S = (window.HacIso && HacIso.SCALE) || 2;
-    function centerOn(lx, ly) {
-      const vw = vp.clientWidth, vh = vp.clientHeight;
-      const tgX = vw / 2 - lx * S * scale, tgY = vh / 2 - ly * S * scale;
-      const x0 = tx, y0 = ty, t0 = performance.now(), dur = 420;
+    let following = null, followRAF = null;
+    function stopFollow() { following = null; if (followRAF) { cancelAnimationFrame(followRAF); followRAF = null; } }
+    function lookAt(p) { tx = vp.clientWidth / 2 - p[0] * S * scale; ty = vp.clientHeight / 2 - p[1] * S * scale; apply(); }
+    function followLoop() {
+      if (!following) return;
+      const p = following(); if (p) lookAt(p);
+      followRAF = requestAnimationFrame(followLoop);
+    }
+    function focusFollow(getPos, zoom) {
+      const p0 = getPos(); if (!p0) return;
+      following = getPos;
+      const s0 = scale, s1 = clampS(fit * (zoom || 3)), t0 = performance.now(), dur = 480;
+      (function anim(t) {
+        if (following !== getPos) return;                 // cancelado por interacción
+        const k = Math.min(1, (t - t0) / dur), e = k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+        scale = s0 + (s1 - s0) * e; targetScale = scale;
+        lookAt(getPos() || p0);                            // sigue al objetivo durante el zoom
+        if (k < 1) followRAF = requestAnimationFrame(anim);
+        else followLoop();                                 // pasa a seguimiento continuo
+      })(t0);
+    }
+    // Vuelve a encuadrar toda la finca (al cerrar el panel de personaje).
+    function reset() {
+      stopFollow();
+      const vw = vp.clientWidth, vh = vp.clientHeight, s0 = scale, s1 = fit;
+      const x0 = tx, y0 = ty, x1 = (vw - cv.width * s1) / 2, y1 = (vh - cv.height * s1) / 2;
+      const t0 = performance.now(), dur = 420;
       (function anim(t) {
         const k = Math.min(1, (t - t0) / dur), e = k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
-        tx = x0 + (tgX - x0) * e; ty = y0 + (tgY - y0) * e; apply();
+        scale = s0 + (s1 - s0) * e; targetScale = scale; tx = x0 + (x1 - x0) * e; ty = y0 + (y1 - y0) * e; apply();
         if (k < 1) requestAnimationFrame(anim);
       })(t0);
     }
-    return { centerOn };
+    // centerOn (compat): enfoca un punto fijo sin seguimiento.
+    function centerOn(lx, ly) { stopFollow(); focusFollow(() => [lx, ly], 3); stopFollow(); lookAt([lx, ly]); }
+    return { centerOn, focusFollow, stopFollow, reset };
   }
 
   // Botón de pantalla completa: alterna fullscreen sobre el visor (vp). Si el
@@ -231,16 +258,16 @@
   function setupFolk(iso, vp, cam, h, tier, color) {
     const panel = document.getElementById('hacp-folk-panel');
     const listEl = document.getElementById('hacp-folk-list');
+    const charEl = document.getElementById('hacp-char-panel');
     if (!panel || !listEl) return;
     let pop = null;
     const hidePop = () => { if (pop) { pop.remove(); pop = null; } };
+    const clock = () => (window.HacClock && HacClock.now) ? HacClock.now() : Date.now();
 
     // ¿Cuál es el mecenas del USUARIO en ESTA hacienda? Solo a él puede darle
-    // órdenes (su personaje debe ser miembro de la hacienda).
+    // órdenes. walker.id = personajeId (el id de miembro es otro uuid).
     const _user = (window.Auth && Auth.current) ? Auth.current() : null;
     const _myPj = (_user && window.HacPersonajes && HacPersonajes.mine) ? HacPersonajes.mine(_user.id) : null;
-    // El walker.id = personajeId; el miembro se vincula por personajeId (su id propio
-    // es otro uuid). myId = personajeId = clave de órdenes/energía/competencias.
     const _isMember = _myPj && (h.miembros || []).some(m => m.personajeId === _myPj.id);
     const myId = _isMember ? _myPj.id : null;
     const myApt = _myPj ? _myPj.aptitud : '';
@@ -250,18 +277,9 @@
       const base = (window.HacEnergia && HacEnergia.COSTE_MISION) || 34;
       return competente ? Math.round(base * 0.5) : base;
     }
+    const refresh = () => { renderList(); refreshCharPanel(); };
     let lastOrdersSig = '';
 
-    function gotoMember(id) {
-      hidePop();
-      HacFolk.select(id);
-      const p = HacFolk.position(id);
-      if (p && cam && cam.centerOn) cam.centerOn(p[0], p[1]);
-      renderList();
-    }
-
-    // Convierte las órdenes (HacOrdenes) al mapa que entiende HacFolk. Solo
-    // re-deriva el sim (setOrders) si CAMBIARON, para no rebobinar en cada poll.
     function applyOrders() {
       if (!window.HacOrdenes) return;
       const map = {};
@@ -270,14 +288,12 @@
       });
       const sig = JSON.stringify(map);
       if (sig !== lastOrdersSig) { lastOrdersSig = sig; if (HacFolk.setOrders) HacFolk.setOrders(map); }
-      renderList();
+      refresh();
     }
     function dispatch(targetId) {
       if (!myId || !targetId || !window.HacOrdenes) return;
-      // La misión CUESTA energía; el coste baja si el mecenas DOMINA el dominio
-      // del edificio (competencia). El ambiente es gratis.
       const b = (HacFolk.buildings ? HacFolk.buildings() : []).find(x => x.id === targetId);
-      if (window.HacEnergia) HacEnergia.spend(h.id, myId, costeMision(b && b.dominio));
+      if (window.HacEnergia) HacEnergia.spend(h.id, myId, costeMision(b && b.dominio));   // la misión cuesta energía
       HacOrdenes.set({ haciendaId: h.id, miembroId: myId, tipo: 'mision', targetId, duracionSeg: 120 })
         .then(applyOrders).catch(e => console.warn('[orden] set', e));
     }
@@ -285,33 +301,88 @@
       if (!myId || !window.HacOrdenes) return;
       HacOrdenes.clear(h.id, myId).then(applyOrders).catch(e => console.warn('[orden] clear', e));
     }
-    // Panel de órdenes para MI mecenas (selector de edificio + enviar/liberar).
-    function ordenPanel() {
-      if (!myId) return '';
-      const blds = HacFolk.buildings ? HacFolk.buildings() : [];
-      const o = window.HacOrdenes ? HacOrdenes.mine(h.id, myId) : null;
-      const now = (window.HacClock && HacClock.now) ? HacClock.now() : Date.now();
-      const activa = o && now < (o.inicioMs + (o.duracionSeg || 120) * 1000);
-      if (activa) {
-        const rest = Math.max(0, Math.round((o.inicioMs + (o.duracionSeg || 120) * 1000 - now) / 1000));
-        return `<div class="hacp-orden" style="display:flex;gap:6px;align-items:center;padding:2px 8px 8px 26px;font-size:12px">
-          <span style="color:#e0b85a">⚑ En misión · ${rest}s</span>
-          <button type="button" data-act="release" style="margin-left:auto">Liberar</button></div>`;
-      }
-      if (!blds.length) return '';
-      // Cada opción muestra el coste de energía (rebajado si dominas su dominio).
-      const optionsH = blds.map(b => `<option value="${esc(b.id)}">${esc(b.nombre)} · −${costeMision(b.dominio)}⚡</option>`).join('');
-      // Competencias del mecenas (las que domina), con su icono.
+
+    // ── Selección / cámara ──────────────────────────────────────────────────
+    // Clic en un mecenas: centra, hace zoom y lo SIGUE; abre su panel de control.
+    function gotoMember(id) {
+      hidePop();
+      HacFolk.select(id);
+      if (cam && cam.focusFollow) cam.focusFollow(() => HacFolk.position(id), 3.2);
+      openCharPanel(id);
+      renderList();
+    }
+    function deselect() {
+      HacFolk.select(null);
+      closeCharPanel();
+      if (cam && cam.reset) cam.reset();
+      renderList();
+    }
+
+    // ── Panel de control del personaje (overlay sobre el visor) ──────────────
+    let charId = null, charSig = '';
+    function charData(id) {
+      const it = HacFolk.list().find(w => w.id === id);
+      if (!it) return null;
+      const pj = window.HacPersonajes ? HacPersonajes.get(id) : null;
+      const aptId = pj ? pj.aptitud : '';
+      const aptDef = (window.HacPersonajeDefs && aptId) ? HacPersonajeDefs.aptitud(aptId) : null;
+      const e = Math.round(window.HacEnergia ? HacEnergia.current(h.id, id) : 100);
+      const o = window.HacOrdenes ? HacOrdenes.mine(h.id, id) : null;
+      const now = clock();
+      const activa = !!(o && now < (o.inicioMs + (o.duracionSeg || 120) * 1000));
+      const rest = activa ? Math.max(0, Math.round((o.inicioMs + (o.duracionSeg || 120) * 1000 - now) / 1000)) : 0;
+      return { it, aptId, aptDef, e, activa, rest, mine: id === myId };
+    }
+    function buildCharPanel(id) {
+      const d = charData(id); if (!d) { closeCharPanel(); return; }
       let comp = '';
       if (window.HacCompetencias) {
-        const eff = HacCompetencias.effective(h.id, myId, myApt);
-        const ic = HacCompetencias.DOMINIOS.filter(d => eff.has(d)).map(d => (HacCompetencias.def(d) || {}).icon || '').join(' ');
-        if (ic) comp = `<span title="Competencias" style="opacity:.85">${ic}</span>`;
+        const eff = HacCompetencias.effective(h.id, id, d.aptId);
+        comp = HacCompetencias.DOMINIOS.filter(x => eff.has(x)).map(x => { const def = HacCompetencias.def(x) || {}; return `<span title="${esc(def.nombre || x)}">${def.icon || ''}</span>`; }).join(' ');
       }
-      return `<div class="hacp-orden" style="display:flex;gap:6px;align-items:center;padding:2px 8px 8px 26px;font-size:12px">
-        ${comp}
-        <select class="hacp-orden-sel" style="flex:1;min-width:0">${optionsH}</select>
-        <button type="button" data-act="dispatch">Enviar (2 min)</button></div>`;
+      let mision = '';
+      if (d.mine) {
+        if (d.activa) {
+          mision = `<div class="hacp-cp-mis hacp-cp-mis-on"><span class="hacp-cp-flag">⚑ En misión · <b id="hacp-cp-rest">${d.rest}s</b></span><button type="button" class="hacp-cp-btn" data-act="release">Liberar</button></div>`;
+        } else {
+          const blds = HacFolk.buildings ? HacFolk.buildings() : [];
+          const opts = blds.map(b => `<option value="${esc(b.id)}">${esc(b.nombre)} · −${costeMision(b.dominio)}⚡</option>`).join('');
+          if (blds.length) mision = `<div class="hacp-cp-mis"><label class="hacp-cp-lbl">Enviar a misión · 2 min</label><div class="hacp-cp-row"><select class="hacp-cp-sel">${opts}</select><button type="button" class="hacp-cp-btn hacp-cp-go" data-act="dispatch">Enviar</button></div></div>`;
+        }
+      }
+      charEl.innerHTML = `
+        <button type="button" class="hacp-cp-x" data-act="close" aria-label="Cerrar">✕</button>
+        <div class="hacp-cp-head">
+          <span class="hacp-cp-dot" style="--c:${esc(d.it.color)}"></span>
+          <span class="hacp-cp-name">${esc(d.it.name)}${d.mine ? ' <em>(tú)</em>' : ''}</span>
+        </div>
+        ${d.aptDef ? `<div class="hacp-cp-apt">${d.aptDef.icon || ''} ${esc(d.aptDef.nombre)}${comp ? ' · domina ' + comp : ''}</div>` : (comp ? `<div class="hacp-cp-apt">domina ${comp}</div>` : '')}
+        <div class="hacp-cp-act" id="hacp-cp-act">${d.it.inside ? '⌂ ' : ''}${esc(d.it.activity || 'Paseando por la finca')}</div>
+        <div class="hacp-cp-energy" title="Energía ${d.e}%"><i id="hacp-cp-ebar" style="width:${d.e}%"></i></div>
+        ${mision}`;
+      charEl.querySelector('[data-act="close"]').addEventListener('click', deselect);
+      const db = charEl.querySelector('[data-act="dispatch"]');
+      if (db) db.addEventListener('click', () => { const s = charEl.querySelector('.hacp-cp-sel'); dispatch(s ? s.value : null); });
+      const rb = charEl.querySelector('[data-act="release"]');
+      if (rb) rb.addEventListener('click', release);
+    }
+    function sigOf(d) { return charId + '|' + (d.activa ? 'm' : '-') + '|' + (d.mine ? 'me' : '-'); }
+    function openCharPanel(id) {
+      if (!charEl) return;
+      charId = id; charEl.hidden = false;
+      const d = charData(id); charSig = d ? sigOf(d) : '';
+      buildCharPanel(id);
+    }
+    function closeCharPanel() { if (charEl) { charId = null; charEl.hidden = true; } }
+    // Refresco ligero: actualiza actividad/energía/cuenta atrás sin rebuild (para
+    // no resetear el <select>); solo reconstruye si cambia el "modo" (misión/tuyo).
+    function refreshCharPanel() {
+      if (!charId || !charEl) return;
+      const d = charData(charId); if (!d) { closeCharPanel(); return; }
+      if (sigOf(d) !== charSig) { charSig = sigOf(d); buildCharPanel(charId); return; }
+      const act = charEl.querySelector('#hacp-cp-act'); if (act) act.textContent = (d.it.inside ? '⌂ ' : '') + (d.it.activity || 'Paseando por la finca');
+      const eb = charEl.querySelector('#hacp-cp-ebar'); if (eb) eb.style.width = d.e + '%';
+      const rt = charEl.querySelector('#hacp-cp-rest'); if (rt && d.activa) rt.textContent = d.rest + 's';
     }
 
     function renderList() {
@@ -322,30 +393,22 @@
       listEl.innerHTML = items.map(m => {
         const mine = m.id === myId;
         const e = Math.round(window.HacEnergia ? HacEnergia.current(h.id, m.id) : 100);
-        return `<li>
-          <button class="hacp-folk-item${m.id === sel ? ' on' : ''}" data-id="${esc(m.id)}">
-            <span class="hacp-folk-dot" style="--c:${esc(m.color)}"></span>
-            <span class="hacp-folk-info">
-              <span class="hacp-folk-name">${esc(m.name)}${mine ? ' <em style="color:#7fc9a0;font-style:normal">(tú)</em>' : ''}</span>
-              <span class="hacp-folk-state${m.inside ? ' inside' : ''}">${m.inside ? '⌂ ' : ''}${esc(m.activity || 'Paseando por la finca')}</span>
-              <span class="hacp-folk-energy" title="Energía ${e}%" style="display:block;height:4px;margin-top:3px;border-radius:2px;background:rgba(255,255,255,.14);overflow:hidden"><i style="display:block;height:100%;width:${e}%;background:linear-gradient(90deg,#e0b85a,#7fc9a0)"></i></span>
-            </span>
-          </button>
-          ${mine ? ordenPanel() : ''}
-        </li>`;
+        return `<li><button class="hacp-folk-item${m.id === sel ? ' on' : ''}" data-id="${esc(m.id)}">
+          <span class="hacp-folk-dot" style="--c:${esc(m.color)}"></span>
+          <span class="hacp-folk-info">
+            <span class="hacp-folk-name">${esc(m.name)}${mine ? ' <em style="color:#7fc9a0;font-style:normal">(tú)</em>' : ''}</span>
+            <span class="hacp-folk-state${m.inside ? ' inside' : ''}">${m.inside ? '⌂ ' : ''}${esc(m.activity || 'Paseando por la finca')}</span>
+            <span class="hacp-folk-energy" title="Energía ${e}%" style="display:block;height:4px;margin-top:3px;border-radius:2px;background:rgba(255,255,255,.14);overflow:hidden"><i style="display:block;height:100%;width:${e}%;background:linear-gradient(90deg,#e0b85a,#7fc9a0)"></i></span>
+          </span></button></li>`;
       }).join('');
       listEl.querySelectorAll('.hacp-folk-item').forEach(b => b.addEventListener('click', () => gotoMember(b.dataset.id)));
-      const db = listEl.querySelector('[data-act="dispatch"]');
-      if (db) db.addEventListener('click', () => { const s = listEl.querySelector('.hacp-orden-sel'); dispatch(s ? s.value : null); });
-      const rb = listEl.querySelector('[data-act="release"]');
-      if (rb) rb.addEventListener('click', release);
     }
 
-    HacFolk.start(iso, { mapa: h.mapa, tier, color, miembros: h.miembros, onState: renderList, seedKey: h.id, haciendaId: h.id, ordenes: {} });
+    HacFolk.start(iso, { mapa: h.mapa, tier, color, miembros: h.miembros, onState: refresh, seedKey: h.id, haciendaId: h.id, ordenes: {} });
     renderList();
     // Carga órdenes + energía + competencias (compartidas); refresca por poll (≤5 s).
-    if (window.HacEnergia) HacEnergia.ready().then(renderList);
-    if (window.HacCompetencias) HacCompetencias.ready().then(renderList);
+    if (window.HacEnergia) HacEnergia.ready().then(refresh);
+    if (window.HacCompetencias) HacCompetencias.ready().then(refresh);
     if (window.HacOrdenes) {
       HacOrdenes.ready().then(applyOrders);
       setInterval(() => {
@@ -368,7 +431,8 @@
       pop.querySelectorAll('.hacp-folk-pop-name').forEach(b => b.addEventListener('click', () => gotoMember(b.dataset.id)));
     }
 
-    // Distinguimos TAP (clic) de arrastre (pan) por el desplazamiento del puntero.
+    // TAP en el plano: ¿banner de edificio? → popup; ¿un mecenas? → seleccionar;
+    // si no, deseleccionar. Distinguimos tap de arrastre por el desplazamiento.
     const S = (window.HacIso && HacIso.SCALE) || 2;
     let downAt = null, moved = false;
     vp.addEventListener('pointerdown', (e) => { downAt = [e.clientX, e.clientY]; moved = false; });
@@ -380,9 +444,18 @@
       if (!r.width || !r.height) return;
       const lx = (e.clientX - r.left) / r.width * iso.width / S;
       const ly = (e.clientY - r.top) / r.height * iso.height / S;
-      const hit = (iso._hacSigns || []).find(s => lx >= s.lx && lx <= s.lx + s.w && ly >= s.ly && ly <= s.ly + s.h);
-      if (hit) showPop(e.clientX, e.clientY, hit);
-      else { hidePop(); HacFolk.select(null); renderList(); }
+      const sign = (iso._hacSigns || []).find(s => lx >= s.lx && lx <= s.lx + s.w && ly >= s.ly && ly <= s.ly + s.h);
+      if (sign) { showPop(e.clientX, e.clientY, sign); return; }
+      // ¿clic sobre un mecenas? (caja ~ sprite, sobre sus pies en (px,py))
+      let bestId = null, bestD = 1e9;
+      HacFolk.list().forEach(w => {
+        const p = HacFolk.position(w.id); if (!p) return;
+        if (lx >= p[0] - 9 && lx <= p[0] + 9 && ly >= p[1] - 28 && ly <= p[1] + 5) {
+          const d = Math.abs(ly - p[1]) + Math.abs(lx - p[0]); if (d < bestD) { bestD = d; bestId = w.id; }
+        }
+      });
+      if (bestId) { gotoMember(bestId); return; }
+      hidePop(); deselect();
     });
     document.addEventListener('pointerdown', (e) => { if (pop && !pop.contains(e.target) && !vp.contains(e.target)) hidePop(); });
   }

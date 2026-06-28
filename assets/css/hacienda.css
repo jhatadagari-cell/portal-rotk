@@ -160,9 +160,37 @@
   font-family:'Noto Sans SC',sans-serif; font-size:12px; padding:5px 6px; border-radius:4px;
 }
 .hacp-folk-pop-name:hover{ background:rgba(201,168,76,.14); color:#fff; }
+/* Panel de control del personaje seleccionado (overlay sobre el visor). */
+.hacp-char-panel{
+  position:absolute; left:8px; bottom:8px; z-index:4; width:236px; max-width:calc(100% - 16px);
+  background:rgba(11,10,7,.92); border:1px solid rgba(201,168,76,.42); border-radius:8px;
+  padding:10px 11px 11px; box-shadow:0 6px 22px rgba(0,0,0,.55);
+  font-family:'Noto Sans SC',sans-serif; color:var(--parch); -webkit-backdrop-filter:blur(2px); backdrop-filter:blur(2px);
+}
+.hacp-char-panel[hidden]{ display:none; }
+.hacp-cp-x{ position:absolute; top:5px; right:6px; width:20px; height:20px; line-height:1; padding:0; background:none; border:0; color:var(--parch2); cursor:pointer; font-size:13px; opacity:.7; }
+.hacp-cp-x:hover{ opacity:1; color:#fff; }
+.hacp-cp-head{ display:flex; align-items:center; gap:7px; padding-right:18px; }
+.hacp-cp-dot{ flex:none; width:11px; height:11px; border-radius:50%; background:var(--c,#c9a84c); box-shadow:0 0 0 1px rgba(0,0,0,.4); }
+.hacp-cp-name{ font-family:'Noto Serif SC',serif; font-weight:700; font-size:14px; color:var(--gold); }
+.hacp-cp-name em{ font-style:normal; color:#7fc9a0; font-size:12px; }
+.hacp-cp-apt{ font-size:11px; color:var(--parch2); opacity:.88; margin:3px 0 0; }
+.hacp-cp-act{ font-size:12px; color:var(--parch); margin:6px 0 5px; min-height:16px; }
+.hacp-cp-energy{ height:6px; border-radius:3px; background:rgba(255,255,255,.14); overflow:hidden; }
+.hacp-cp-energy i{ display:block; height:100%; background:linear-gradient(90deg,#e0b85a,#7fc9a0); transition:width .4s ease; }
+.hacp-cp-mis{ margin-top:9px; border-top:1px solid rgba(201,168,76,.18); padding-top:8px; }
+.hacp-cp-mis-on{ display:flex; align-items:center; gap:8px; }
+.hacp-cp-mis-on .hacp-cp-btn{ margin-left:auto; }
+.hacp-cp-lbl{ display:block; font-size:10.5px; letter-spacing:.04em; text-transform:uppercase; color:var(--hac,var(--gold)); opacity:.8; margin-bottom:5px; }
+.hacp-cp-row{ display:flex; gap:6px; }
+.hacp-cp-sel{ flex:1; min-width:0; background:rgba(0,0,0,.35); color:var(--parch); border:1px solid rgba(201,168,76,.3); border-radius:5px; padding:4px 6px; font-size:12px; }
+.hacp-cp-btn{ background:rgba(201,168,76,.16); color:var(--gold); border:1px solid var(--hac,var(--gold)); border-radius:5px; padding:4px 11px; font-size:12px; cursor:pointer; white-space:nowrap; }
+.hacp-cp-btn:hover{ background:rgba(201,168,76,.32); color:#fff; }
+.hacp-cp-flag{ color:#e0b85a; font-size:12px; }
 @media (max-width:720px){
   .hacp-iso-area{ flex-direction:column; }
   .hacp-folk-panel{ flex:none; width:auto; max-height:200px; }
+  .hacp-char-panel{ width:calc(100% - 16px); }
 }
 /* Tooltip con el nombre del pabellón al pasar el ratón por su patio. */
 .hacp-pab-tip{
