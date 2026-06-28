@@ -318,7 +318,7 @@
       if (rb) rb.addEventListener('click', release);
     }
 
-    HacFolk.start(iso, { mapa: h.mapa, tier, color, miembros: h.miembros, onState: renderList, seedKey: h.id, ordenes: {} });
+    HacFolk.start(iso, { mapa: h.mapa, tier, color, miembros: h.miembros, onState: renderList, seedKey: h.id, haciendaId: h.id, ordenes: {} });
     renderList();
     // Carga las órdenes (compartidas) y las re-aplica; refresca por poll (≤5 s, sin realtime).
     if (window.HacOrdenes) {

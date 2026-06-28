@@ -36,17 +36,28 @@ const HacFolk = (function () {
   let running = false, visible = true, onScreen = true, io = null;
   let selectedId = null, stateSig = '', hailCd = 20;
 
-  // ── Determinismo / vida compartida ──────────────────────────────────────────
-  // Toda la simulación es función de un STREAM sembrado (R) y de una hora
-  // COMPARTIDA (HacClock). Así dos clientes que abren la misma finca ven al MISMO
-  // mecenas haciendo LO MISMO. El tiempo se trocea en VENTANAS: al cruzar una se
-  // re-siembra (salto suave, idéntico y simultáneo para todos). Quien abre a mitad
-  // de ventana «rebobina» con pasos fijos hasta el instante actual (ver tick()).
-  const WINDOW_MS = 6 * 60 * 1000;   // re-siembra sincronizada cada 6 min
-  const SIM_DT = 1 / 30;             // paso fijo del sim (30 Hz); el render va a 60
-  let R = HacRand.make('boot');      // stream actual (se re-crea por época)
-  let seedKey = 'finca';             // identidad estable de la finca (para sembrar)
-  let epoch = -1, simTick = 0;       // época actual y nº de pasos ejecutados en ella
+  // ── Determinismo / vida compartida (CONTINUA, con snapshots) ────────────────
+  // La simulación es función de un STREAM sembrado (R) y de una hora COMPARTIDA
+  // (HacClock). Línea de tiempo CONTINUA (sin re-arranques): el estado se persiste
+  // en snapshots (HacSnap); quien entra carga la última foto y solo simula desde
+  // t_snap hasta ahora. Así no hay saltos, sigue compartido y la carga es acotada.
+  const SIM_DT = 1 / 30;                 // paso fijo del sim (30 Hz); el render va a 60
+  const SIM_DT_MS = SIM_DT * 1000;
+  const CATCHUP_CAP_MS = 20 * 60 * 1000; // si la foto (o el hueco) supera esto → génesis fresco
+  const SAVE_EVERY_MS = 4 * 60 * 1000;   // cada cuánto reescribe el cliente la foto
+  let R = HacRand.make('boot');          // stream actual de azar
+  let seedKey = 'finca';                 // semilla estable de la finca (génesis)
+  let haciendaId = null;                 // id para snapshots (null = sin persistencia, p.ej. onboarding)
+  let simNowMs = 0;                       // reloj de la simulación (ms); avanza en pasos fijos
+  let snapTimer = null;                   // setInterval de guardado
+  let started = false;                    // génesis/restauración ya hechos
+
+  // Campos DINÁMICOS de un walker que se serializan en el snapshot (lo demás —
+  // identidad, modelo, hogar— se reconstruye al hacer spawn desde miembros/mapa).
+  const SER_FIELDS = ['fx', 'fy', 'tx', 'ty', 'moving', 'dir', 'state', 'path', 'goalBid', 'insideId',
+    'task', 'taskTimer', 'strollTimer', 'wait', 'idleTimer', 'gardenCd', 'socialCd',
+    'chatWith', 'chatLead', 'chatRole', 'bowing', 'convo', 'convoIdx', 'turnTimer', 'speech',
+    'meetWith', 'meetLead', 'meetTimer', 'restIntent', 'phase', 'onMission', 'missionTimer', 'missionEndMs'];
 
   const { hexToRgb, reduced, neigh } = HacUtil;
   // rnd/rng ahora tiran del stream determinista R (no de Math.random), así que
@@ -62,8 +73,8 @@ const HacFolk = (function () {
   let orders = {};
   const SALUTE_SEC = 1.6;
   const E_MAX = 100, E_DRAIN = 55, E_REGEN_PER_S = 7;   // pruebas: baja al currar, regenera rápido
-  // Hora de simulación (ms) del tick actual dentro de la ventana — base de las misiones.
-  function nowSimMs() { return epoch * WINDOW_MS + simTick * SIM_DT * 1000; }
+  // Hora de simulación (ms) del estado actual — base de las misiones y la energía.
+  function nowSimMs() { return simNowMs; }
   function energyOf(w) {
     const o = w.order; if (!o) return E_MAX;
     const t = nowSimMs();
@@ -558,7 +569,15 @@ const HacFolk = (function () {
   // Al activarse interrumpe lo que hiciera, hace el saludo 抱拳 (pose bow) y luego
   // ejecuta. Determinista: depende solo de nowSimMs() y de la orden compartida.
   function missionGate(w) {
-    const o = w.order; if (!o) return;
+    const o = w.order;
+    if (!o) {   // orden retirada estando en misión → vuelve al ambiente
+      if (w.onMission) {
+        w.onMission = false; w.bowing = false;
+        if (w.insideId) startLeave(w);
+        else { w.state = 'paseando'; w.strollTimer = rng(2, 6); w.path = null; w.moving = false; }
+      }
+      return;
+    }
     const t = nowSimMs(), active = t >= o.startMs && t < o.endMs;
     if (active && !w.onMission) {
       if (w.chatWith) endChat(w);
@@ -919,45 +938,84 @@ const HacFolk = (function () {
     if (sig !== stateSig) { stateSig = sig; if (opts && typeof opts.onState === 'function') opts.onState(); }
   }
 
-  // (Re)inicia el estado determinista para la época `e`: re-siembra el stream y
-  // vuelve a poblar la finca desde cero. Todos los clientes hacen esto a la vez
-  // (misma época derivada de la hora compartida) y con la misma semilla.
-  function resetEpoch(e) {
-    epoch = e; simTick = 0;
-    R = HacRand.make(seedKey + '#' + e);
+  // GÉNESIS: puebla la finca desde cero con la semilla estable y fija el reloj del
+  // sim en `atMs`. Se usa la primera vez (sin snapshot) o tras un hueco enorme.
+  function genesis(atMs) {
+    R = HacRand.make(seedKey);
     walkers = spawn(opts.mapa, opts.tier, opts.miembros, opts.color || '#c9a84c');
     hailCd = rng(15, 40);
+    simNowMs = atMs;
   }
-  // Ejecuta pasos FIJOS (sin pintar) hasta `target`. Al abrir a mitad de ventana,
-  // rebobina la ventana actual hasta ahora; en marcha avanza ~2 pasos por frame.
-  // El guard es un tope de seguridad (una ventana entera ≈ 10800 pasos).
-  function advanceTo(target) {
+  // Avanza la simulación en pasos FIJOS hasta `targetMs` (sin pintar). El guard es
+  // tope de seguridad (~CATCHUP_CAP_MS de sim ≈ 36000 pasos).
+  function advanceTo(targetMs) {
     let guard = 0;
-    while (simTick < target && guard++ < 200000) { step(SIM_DT); simTick++; }
+    while (simNowMs + SIM_DT_MS <= targetMs && guard++ < 60000) { step(SIM_DT); simNowMs += SIM_DT_MS; }
+  }
+
+  // ── Snapshots: serializar / restaurar ───────────────────────────────────────
+  function serialize() {
+    return {
+      rng: R.state(), hailCd: hailCd,
+      walkers: walkers.map(w => { const o = { id: w.id }; SER_FIELDS.forEach(k => { o[k] = w[k]; }); return o; }),
+    };
+  }
+  // Restaura sobre los walkers ya creados (por spawn) los campos dinámicos de la
+  // foto; reengancha la orden (no se serializa la referencia) y reanuda el azar.
+  function deserialize(st, tSnap) {
+    if (!st) return;
+    R = HacRand.fromState(st.rng | 0);
+    hailCd = (typeof st.hailCd === 'number') ? st.hailCd : rng(15, 40);
+    simNowMs = tSnap;
+    const byId = {}; (st.walkers || []).forEach(s => { byId[s.id] = s; });
+    walkers.forEach(w => {
+      const s = byId[w.id]; if (!s) return;          // miembro nuevo sin foto → queda en génesis
+      SER_FIELDS.forEach(k => { if (k in s) w[k] = s[k]; });
+      w.order = orders[w.id] || null;
+    });
+  }
+  function saveSnap() {
+    if (!haciendaId || !window.HacSnap) return;
+    HacSnap.save(haciendaId, simNowMs, serialize());
+  }
+  function scheduleSaves() {
+    if (!haciendaId || !window.HacSnap) return;   // demo sin persistencia → nada que guardar
+    if (snapTimer) clearInterval(snapTimer);
+    snapTimer = setInterval(() => { if (running && started) saveSnap(); }, SAVE_EVERY_MS);
   }
 
   function tick() {
     if (!running) return;
     if (visible && onScreen) {
       const now = HacClock.now();
-      const e = Math.floor(now / WINDOW_MS);
-      if (e !== epoch) resetEpoch(e);                              // cruzó ventana → re-siembra
-      const target = Math.floor(((now - epoch * WINDOW_MS) / 1000) / SIM_DT);
-      advanceTo(target);
+      if (now - simNowMs > CATCHUP_CAP_MS) genesis(now);   // fuera demasiado tiempo → arranque fresco
+      advanceTo(now);
       paint(); pushState();
     }
     raf = requestAnimationFrame(tick);
   }
 
-  // El sim es dirigido por el tiempo (no acumula dt), así que al volver de estar
-  // oculto basta con marcar visible: el siguiente tick rebobina lo que falte.
-  function onVis() { visible = !document.hidden; }
+  // Al ocultar la pestaña, guarda la foto (y deja de pintar). Al volver, el tick
+  // rebobina lo que falte (o hace génesis si el hueco fue enorme).
+  function onVis() { visible = !document.hidden; if (document.hidden) saveSnap(); }
+  function onHide() { saveSnap(); }
 
   function stop() {
-    running = false;
+    if (running && started) saveSnap();   // persiste la foto al cerrar/cambiar de finca
+    running = false; started = false;
     if (raf) cancelAnimationFrame(raf); raf = null;
+    if (snapTimer) { clearInterval(snapTimer); snapTimer = null; }
     document.removeEventListener('visibilitychange', onVis);
+    if (typeof window !== 'undefined') window.removeEventListener('pagehide', onHide);
     if (io) { io.disconnect(); io = null; }
+  }
+
+  function beginRun() {
+    running = true; visible = !document.hidden; onScreen = true;
+    document.addEventListener('visibilitychange', onVis);
+    if (typeof window !== 'undefined') window.addEventListener('pagehide', onHide);
+    if ('IntersectionObserver' in window) { io = new IntersectionObserver(es => { onScreen = es.some(e => e.isIntersecting); }, { threshold: 0 }); io.observe(iso); }
+    raf = requestAnimationFrame(tick);
   }
 
   // Con motion reducido: pose ESTÁTICA. Los administradores aparecen DENTRO de
@@ -970,27 +1028,45 @@ const HacFolk = (function () {
 
   function start(isoCanvas, o) {
     stop();
-    iso = isoCanvas; opts = o || {}; selectedId = null; stateSig = '';
+    iso = isoCanvas; opts = o || {}; selectedId = null; stateSig = ''; started = false;
     if (!iso) return;
-    // Semilla ESTABLE de la finca: id de hacienda si lo pasan; si no, algo derivado
-    // de los miembros para que al menos sea consistente entre clientes de esa finca.
+    // Semilla ESTABLE de la finca (génesis). Y el id para snapshots (null = demo
+    // sin persistencia, p.ej. onboarding → corre continuo desde génesis local).
     seedKey = String(opts.seedKey || opts.haciendaId
       || ('finca-' + (((opts.miembros || []).map(m => m && m.id).join('-')) || ('t' + (opts.tier || 0)))));
-    orders = opts.ordenes || {};   // misiones del jugador (estado compartido)
-    // Asegura el catálogo de tareas en caché para cuando un mecenas entre.
+    haciendaId = opts.haciendaId || null;
+    orders = opts.ordenes || {};
     if (window.HacTareas && HacTareas.ready) HacTareas.ready();
-    // Sincroniza el reloj de servidor (async); mientras, siembra con el reloj local
-    // (los NPCs aparecen ya). El desfase server↔local es de <1 s, así que cuando
-    // `now()` se corrija el siguiente tick solo reajusta unos pocos pasos.
     if (window.HacClock && HacClock.ready) HacClock.ready();
-    const now = (window.HacClock && HacClock.now) ? HacClock.now() : Date.now();
-    resetEpoch(Math.floor(now / WINDOW_MS));
+
+    // Spawn SÍNCRONO (provisional): construye la estructura (wk) y deja list()/
+    // buildings() operativos ya. NO se pinta hasta restaurar la foto, para que no
+    // se vea el salto génesis→restaurado.
+    const bootNow = (window.HacClock && HacClock.now) ? HacClock.now() : Date.now();
+    genesis(bootNow);
     if (!walkers.length) { iso._hacSigns = []; return; }
-    if (reduced()) { staticPose(); paint(); pushState(); return; }
-    running = true; visible = !document.hidden; onScreen = true;
-    document.addEventListener('visibilitychange', onVis);
-    if ('IntersectionObserver' in window) { io = new IntersectionObserver(es => { onScreen = es.some(e => e.isIntersecting); }, { threshold: 0 }); io.observe(iso); }
-    raf = requestAnimationFrame(tick);
+
+    const afterReady = () => {
+      if (reduced()) { staticPose(); paint(); pushState(); started = true; return; }
+      started = true; beginRun(); scheduleSaves();
+    };
+
+    if (haciendaId && window.HacSnap) {
+      // Restaura la última foto y rebobina hasta ahora; si no hay o es muy vieja,
+      // génesis fresco en 'ahora' y ancla la línea de tiempo con una foto nueva.
+      HacSnap.load(haciendaId).then(snap => {
+        const now = (window.HacClock && HacClock.now) ? HacClock.now() : Date.now();
+        if (snap && (now - snap.tSnap) <= CATCHUP_CAP_MS && snap.tSnap <= now + 5000) {
+          deserialize(snap.estado, snap.tSnap);
+          advanceTo(now);
+        } else {
+          genesis(now); saveSnap();
+        }
+        afterReady();
+      }).catch(() => { genesis((window.HacClock && HacClock.now) ? HacClock.now() : Date.now()); afterReady(); });
+    } else {
+      afterReady();   // demo sin persistencia: corre continuo desde el génesis ya hecho
+    }
   }
 
   // ── API para la página ────────────────────────────────────────────────────
@@ -1044,8 +1120,10 @@ const HacFolk = (function () {
   function setOrders(map) {
     orders = map || {};
     if (opts) opts.ordenes = orders;
-    if (running) { resetEpoch(epoch); }                  // el siguiente tick rebobina hasta ahora
-    else if (wk) { walkers.forEach(w => { w.order = orders[w.id] || null; }); paint(); pushState(); }
+    // Reengancha la orden a cada walker EN VIVO (sin re-simular): missionGate la
+    // activa hacia delante por timestamp. Así no hay salto al mandar una misión.
+    walkers.forEach(w => { w.order = orders[w.id] || null; });
+    if (!running) { paint(); pushState(); }
   }
 
   return { start, stop, list, select, selected, position, buildings, setOrders };

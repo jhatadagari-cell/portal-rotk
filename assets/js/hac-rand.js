@@ -37,27 +37,30 @@ const HacRand = (function () {
     return (h1 ^ h2 ^ h3 ^ h4) >>> 0;
   }
 
-  // Generador determinista a partir de una semilla de 32 bits.
-  function mulberry32(a) {
-    return function () {
-      a |= 0; a = (a + 0x6D2B79F5) | 0;
+  // Generador determinista mulberry32 a partir de un estado de 32 bits. El estado
+  // es UN entero (`a`), que exponemos con state()/fromState para poder SERIALIZARLO
+  // en los snapshots y reanudar la corriente de azar exactamente donde estaba.
+  function makeFromState(a0) {
+    let a = a0 | 0;
+    function next() {
+      a = (a + 0x6D2B79F5) | 0;
       let t = Math.imul(a ^ (a >>> 15), 1 | a);
       t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
       return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-    };
-  }
-
-  function make(seedStr) {
-    const next = mulberry32(hash(seedStr));
+    }
     return {
       next,
       int: (n) => Math.floor(next() * n),
-      range: (a, b) => a + next() * (b - a),
+      range: (lo, hi) => lo + next() * (hi - lo),
       pick: (arr) => (arr && arr.length) ? arr[Math.floor(next() * arr.length)] : undefined,
       chance: (p) => next() < p,
+      state: () => a >>> 0,                 // cursor actual (serializable)
     };
   }
 
-  return { make, hash };
+  function make(seedStr) { return makeFromState(hash(seedStr)); }
+  function fromState(n) { return makeFromState((n | 0)); }   // reanuda desde un cursor guardado
+
+  return { make, fromState, hash };
 })();
 if (typeof window !== 'undefined') window.HacRand = HacRand;
