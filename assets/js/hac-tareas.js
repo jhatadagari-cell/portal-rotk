@@ -81,6 +81,7 @@ const HacTareas = (function () {
   // ── Lectores SÍNCRONOS (tras ready) ─────────────────────────────────────
   function all() { return cache.slice(); }
   function byTipo(tipo) { return cache.filter(t => t.tipo === tipo); }
+  function get(id) { return cache.find(t => t.id === id) || null; }
   function isSeed() { return fromSeed; }
   // Una tarea al azar de las de ese edificio (null si no hay).
   function pick(tipo) { const ls = byTipo(tipo); return ls.length ? ls[Math.floor(Math.random() * ls.length)] : null; }
@@ -132,7 +133,7 @@ const HacTareas = (function () {
     return reload();
   }
 
-  return { ready, reload, all, byTipo, pick, isSeed, add, update, remove, seedToDb, TABLE };
+  return { ready, reload, all, byTipo, get, pick, isSeed, add, update, remove, seedToDb, TABLE };
 })();
 
 if (typeof window !== 'undefined') window.HacTareas = HacTareas;

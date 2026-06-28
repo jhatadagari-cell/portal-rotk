@@ -241,7 +241,7 @@ const HacFolk = (function () {
         meetWith: null, meetLead: false, meetTimer: 0, restIntent: null,
         phase: R.next() * 6.28,
         // Misión del jugador (estado compartido); null = comportamiento ambiente.
-        order: orders[m.id] || null, onMission: false, missionTimer: 0, missionEndMs: 0
+        order: orders[m.id] || null, onMission: false, missionTimer: 0, missionEndMs: 0, missionTask: null
       };
     });
   }
@@ -274,11 +274,16 @@ const HacFolk = (function () {
     return true;
   }
 
-  // Visita FORZADA por una misión del jugador: va al edificio indicado. Si no hay
-  // destino válido o no se puede trazar, deambula durante el resto de la misión.
+  // Visita FORZADA por una misión: la orden lleva una TAREA (taskId); vamos al
+  // edificio de SU tipo MÁS CERCANO al mecenas (determinista). Si no hay, deambula.
   function startMissionVisit(w) {
-    const o = w.order, b = (o && o.targetBid) ? wk.buildings.get(o.targetBid) : null;
-    if (!b || !b.visitable) { w.state = 'paseando'; w.strollTimer = rng(2, 6); return; }
+    const o = w.order;
+    const task = (o && o.taskId && window.HacTareas && HacTareas.get) ? HacTareas.get(o.taskId) : null;
+    const tipo = task ? task.tipo : (o && o.targetTipo) || null;
+    w.missionTask = task;   // para ejecutar SU tarea (su verbo/duración), no una al azar
+    let b = null, bestD = Infinity;
+    if (tipo) wk.visitable.forEach(x => { if (x.tipo === tipo) { const dx = x.cx - w.fx, dy = x.cy - w.fy, d = dx * dx + dy * dy; if (d < bestD) { bestD = d; b = x; } } });
+    if (!b) { w.state = 'paseando'; w.strollTimer = rng(2, 6); return; }
     const path = bfs([Math.round(w.fx), Math.round(w.fy)], new Set([b.approachKey]));
     if (!path) { w.state = 'paseando'; w.strollTimer = rng(2, 6); return; }
     path.push(b.spotCell);
@@ -304,11 +309,11 @@ const HacFolk = (function () {
       // Elección DETERMINISTA (no HacTareas.pick, que usa Math.random): mismo
       // catálogo + mismo stream → misma tarea para todos.
       const ls = (b && window.HacTareas && HacTareas.byTipo) ? (HacTareas.byTipo(b.tipo) || []) : [];
-      const task = ls.length ? ls[R.int(ls.length)] : null;
+      let task = ls.length ? ls[R.int(ls.length)] : null;   // consume R igual (con o sin misión)
+      if (w.onMission && w.missionTask) task = w.missionTask;  // misión: SU tarea, no al azar
       w.task = task;
       w.taskTimer = (task ? task.duracionSeg : 30) * (0.85 + R.next() * 0.3);
-      // En misión, la estancia dura hasta el FIN de la misión (lo gestiona el
-      // gating por timestamp en step; aquí solo evitamos que salga antes).
+      // En misión la estancia dura hasta el FIN de la misión (= duración de la tarea).
       if (w.onMission) w.taskTimer = Math.max(2, (w.missionEndMs - nowSimMs()) / 1000);
     } else if (w.state === 'saliendo') {
       w.state = 'paseando'; w.strollTimer = rng(2, 6); w.wait = rng(0.2, 0.8); w.task = null;
@@ -1108,9 +1113,16 @@ const HacFolk = (function () {
   const selected = () => selectedId;
   function position(id) { const w = walkers.find(x => x.id === id); return w ? logic(w.fx, w.fy) : null; }
 
-  // Edificios visitables (para que la UI ofrezca destinos de misión). Incluye el
-  // DOMINIO (militar/cultural/administrativo) para calcular el coste por competencia.
+  // Edificios visitables (instancias). Incluye el DOMINIO para el coste.
   function buildings() { return wk ? wk.visitable.map(b => ({ id: b.id, nombre: b.nombre, tipo: b.tipo, dominio: b.dominio || null })) : []; }
+  // TIPOS de edificio visitables, DEDUPLICADOS (si hay 4 cuarteles → un tipo). La
+  // UI ofrece tareas por tipo; el sim elige el edificio más cercano de ese tipo.
+  function buildingTypes() {
+    if (!wk) return [];
+    const seen = {}, out = [];
+    wk.visitable.forEach(b => { if (!seen[b.tipo]) { seen[b.tipo] = 1; out.push({ tipo: b.tipo, nombre: b.nombre, dominio: b.dominio || null }); } });
+    return out;
+  }
   // Aplica un nuevo mapa de órdenes (miembroId → { startMs, endMs, targetBid }) y
   // RE-DERIVA la ventana actual para que las misiones se apliquen en su tick
   // exacto (sin teletransporte). Coste ~igual a abrir la finca (<50 ms).
@@ -1123,6 +1135,6 @@ const HacFolk = (function () {
     if (!running) { paint(); pushState(); }
   }
 
-  return { start, stop, list, select, selected, position, buildings, setOrders };
+  return { start, stop, list, select, selected, position, buildings, buildingTypes, setOrders };
 })();
 if (typeof window !== 'undefined') window.HacFolk = HacFolk;

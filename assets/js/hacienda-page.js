@@ -288,6 +288,18 @@
       const base = (window.HacEnergia && HacEnergia.COSTE_MISION) || 34;
       return competente ? Math.round(base * 0.5) : base;
     }
+    // Tareas disponibles para mandar: una por TAREA (por tipo de edificio), no por
+    // instancia → si hay 4 cuarteles, sale una sola y el sim irá al más cercano.
+    function availableTasks() {
+      const types = HacFolk.buildingTypes ? HacFolk.buildingTypes() : [];
+      const out = [];
+      types.forEach(ty => {
+        const tasks = (window.HacTareas && HacTareas.byTipo) ? HacTareas.byTipo(ty.tipo) : [];
+        tasks.forEach(tk => out.push({ taskId: tk.id, nombre: tk.nombre || tk.verbo || 'Tarea', dominio: ty.dominio, duracionSeg: tk.duracionSeg || 60 }));
+      });
+      return out;
+    }
+    const fmtDur = (s) => (s < 60) ? Math.round(s) + 's' : Math.round(s / 60) + ' min';
     // Puntos de un mecenas: base (admin) + ganados en misiones (ledger propio).
     function basePuntos(id) { const m = (h.miembros || []).find(x => x.personajeId === id); return m ? (Number(m.puntos) || 0) : 0; }
     function puntosTotales(id) { return basePuntos(id) + (window.HacPuntos ? HacPuntos.deMiembro(h.id, id) : 0); }
@@ -297,8 +309,9 @@
       if (!myId || !window.HacOrdenes || !window.HacPuntos) return;
       const o = HacOrdenes.mine(h.id, myId); if (!o) return;
       if (clock() < o.inicioMs + (o.duracionSeg || 120) * 1000) return;   // aún en curso
-      const b = (HacFolk.buildings ? HacFolk.buildings() : []).find(x => x.id === o.targetId);
-      const r = HacPuntos.recompensa(costeMision(b && b.dominio), o.duracionSeg || 120);
+      const task = (window.HacTareas && HacTareas.get) ? HacTareas.get(o.targetId) : null;
+      const dom = (task && window.HacBuild) ? (HacBuild.tipo(task.tipo) || {}).dominio : null;
+      const r = HacPuntos.recompensa(costeMision(dom), o.duracionSeg || 60);
       HacPuntos.award(h.id, myId, r);
       HacOrdenes.clear(h.id, myId);   // optimista: la quita del caché ya
       toast('+' + r + ' puntos · misión cumplida');
@@ -311,17 +324,17 @@
       maybeRewardMyMission();   // premia/limpia mi misión si acaba de completarse
       const map = {};
       HacOrdenes.byHacienda(h.id).forEach(o => {
-        map[o.miembroId] = { startMs: o.inicioMs, endMs: o.inicioMs + (o.duracionSeg || 120) * 1000, targetBid: o.targetId, tipo: o.tipo };
+        map[o.miembroId] = { startMs: o.inicioMs, endMs: o.inicioMs + (o.duracionSeg || 120) * 1000, taskId: o.targetId, tipo: o.tipo };
       });
       const sig = JSON.stringify(map);
       if (sig !== lastOrdersSig) { lastOrdersSig = sig; if (HacFolk.setOrders) HacFolk.setOrders(map); }
       refresh();
     }
-    function dispatch(targetId) {
-      if (!myId || !targetId || !window.HacOrdenes) return;
-      const b = (HacFolk.buildings ? HacFolk.buildings() : []).find(x => x.id === targetId);
-      if (window.HacEnergia) HacEnergia.spend(h.id, myId, costeMision(b && b.dominio));   // la misión cuesta energía
-      HacOrdenes.set({ haciendaId: h.id, miembroId: myId, tipo: 'mision', targetId, duracionSeg: 120 })
+    function dispatch(taskId) {
+      if (!myId || !taskId || !window.HacOrdenes) return;
+      const t = availableTasks().find(x => x.taskId === taskId); if (!t) return;
+      if (window.HacEnergia) HacEnergia.spend(h.id, myId, costeMision(t.dominio));   // la misión cuesta energía
+      HacOrdenes.set({ haciendaId: h.id, miembroId: myId, tipo: 'mision', targetId: taskId, duracionSeg: t.duracionSeg })
         .then(applyOrders).catch(e => console.warn('[orden] set', e));
     }
     function release() {
@@ -373,9 +386,9 @@
         if (d.activa) {
           mision = `<div class="hacp-cp-mis hacp-cp-mis-on"><span class="hacp-cp-flag">⚑ En misión · <b id="hacp-cp-rest">${d.rest}s</b></span><button type="button" class="hacp-cp-btn" data-act="release">Liberar</button></div>`;
         } else {
-          const blds = HacFolk.buildings ? HacFolk.buildings() : [];
-          const opts = blds.map(b => `<option value="${esc(b.id)}">${esc(b.nombre)} · −${costeMision(b.dominio)}⚡</option>`).join('');
-          if (blds.length) mision = `<div class="hacp-cp-mis"><label class="hacp-cp-lbl">Enviar a misión · 2 min</label><div class="hacp-cp-row"><select class="hacp-cp-sel">${opts}</select><button type="button" class="hacp-cp-btn hacp-cp-go" data-act="dispatch">Enviar</button></div></div>`;
+          const tasks = availableTasks();   // por TAREA (deduplicada por tipo), con su duración propia
+          const opts = tasks.map(t => `<option value="${esc(t.taskId)}">${esc(t.nombre)} · ${fmtDur(t.duracionSeg)} · −${costeMision(t.dominio)}⚡</option>`).join('');
+          if (tasks.length) mision = `<div class="hacp-cp-mis"><label class="hacp-cp-lbl">Enviar a misión</label><div class="hacp-cp-row"><select class="hacp-cp-sel">${opts}</select><button type="button" class="hacp-cp-btn hacp-cp-go" data-act="dispatch">Enviar</button></div></div>`;
         }
       }
       charEl.innerHTML = `
