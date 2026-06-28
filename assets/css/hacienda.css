@@ -187,6 +187,24 @@
 .hacp-cp-btn{ background:rgba(201,168,76,.16); color:var(--gold); border:1px solid var(--hac,var(--gold)); border-radius:5px; padding:4px 11px; font-size:12px; cursor:pointer; white-space:nowrap; }
 .hacp-cp-btn:hover{ background:rgba(201,168,76,.32); color:#fff; }
 .hacp-cp-flag{ color:#e0b85a; font-size:12px; }
+.hacp-cp-pts{ font-size:11px; color:var(--parch2); margin:3px 0 0; }
+.hacp-cp-pts b{ color:var(--parch); }
+.hacp-cp-earn{ color:#7fc9a0; }
+/* Tu mecenas: arriba, separado del resto. + icono de "trabajando" (en misión). */
+.hacp-folk-sec{ list-style:none; font:700 9.5px/1 'Cinzel Decorative',serif; letter-spacing:.08em; text-transform:uppercase; color:#7fc9a0; opacity:.85; padding:0 2px 5px; }
+.hacp-folk-div{ list-style:none; height:1px; background:rgba(201,168,76,.18); margin:7px 2px 8px; }
+.hacp-folk-item.mine{ background:rgba(127,201,160,.10); border-color:rgba(127,201,160,.3); }
+.hacp-folk-item.mine:hover{ background:rgba(127,201,160,.16); }
+.hacp-folk-item.mine.on{ border-color:#7fc9a0; }
+.hacp-folk-work{ color:#e0b85a; font-size:11px; }
+/* Aviso flotante (recompensa de misión, etc.). */
+.hacp-toast{
+  position:fixed; left:50%; bottom:26px; transform:translateX(-50%) translateY(8px); z-index:90;
+  background:rgba(11,10,7,.95); border:1px solid var(--gold); color:var(--gold);
+  font:600 13px 'Noto Sans SC',sans-serif; padding:8px 16px; border-radius:20px;
+  box-shadow:0 4px 16px rgba(0,0,0,.5); opacity:0; transition:opacity .35s, transform .35s; pointer-events:none;
+}
+.hacp-toast.on{ opacity:1; transform:translateX(-50%) translateY(0); }
 @media (max-width:720px){
   .hacp-iso-area{ flex-direction:column; }
   .hacp-folk-panel{ flex:none; width:auto; max-height:200px; }

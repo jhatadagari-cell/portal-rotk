@@ -268,6 +268,12 @@
     let pop = null;
     const hidePop = () => { if (pop) { pop.remove(); pop = null; } };
     const clock = () => (window.HacClock && HacClock.now) ? HacClock.now() : Date.now();
+    function toast(msg) {
+      const t = document.createElement('div'); t.className = 'hacp-toast'; t.textContent = msg;
+      document.body.appendChild(t);
+      requestAnimationFrame(() => t.classList.add('on'));
+      setTimeout(() => { t.classList.remove('on'); setTimeout(() => t.remove(), 450); }, 2200);
+    }
 
     // ¿Cuál es el mecenas del USUARIO en ESTA hacienda? Solo a él puede darle
     // órdenes. walker.id = personajeId (el id de miembro es otro uuid).
@@ -282,11 +288,27 @@
       const base = (window.HacEnergia && HacEnergia.COSTE_MISION) || 34;
       return competente ? Math.round(base * 0.5) : base;
     }
+    // Puntos de un mecenas: base (admin) + ganados en misiones (ledger propio).
+    function basePuntos(id) { const m = (h.miembros || []).find(x => x.personajeId === id); return m ? (Number(m.puntos) || 0) : 0; }
+    function puntosTotales(id) { return basePuntos(id) + (window.HacPuntos ? HacPuntos.deMiembro(h.id, id) : 0); }
+    // Al completarse MI misión: recompensa BAJA (según energía + tiempo) y limpia
+    // la orden (dedup: solo el dueño escribe, y la orden desaparece tras premiar).
+    function maybeRewardMyMission() {
+      if (!myId || !window.HacOrdenes || !window.HacPuntos) return;
+      const o = HacOrdenes.mine(h.id, myId); if (!o) return;
+      if (clock() < o.inicioMs + (o.duracionSeg || 120) * 1000) return;   // aún en curso
+      const b = (HacFolk.buildings ? HacFolk.buildings() : []).find(x => x.id === o.targetId);
+      const r = HacPuntos.recompensa(costeMision(b && b.dominio), o.duracionSeg || 120);
+      HacPuntos.award(h.id, myId, r);
+      HacOrdenes.clear(h.id, myId);   // optimista: la quita del caché ya
+      toast('+' + r + ' puntos · misión cumplida');
+    }
     const refresh = () => { renderList(); refreshCharPanel(); };
     let lastOrdersSig = '';
 
     function applyOrders() {
       if (!window.HacOrdenes) return;
+      maybeRewardMyMission();   // premia/limpia mi misión si acaba de completarse
       const map = {};
       HacOrdenes.byHacienda(h.id).forEach(o => {
         map[o.miembroId] = { startMs: o.inicioMs, endMs: o.inicioMs + (o.duracionSeg || 120) * 1000, targetBid: o.targetId, tipo: o.tipo };
@@ -336,7 +358,8 @@
       const now = clock();
       const activa = !!(o && now < (o.inicioMs + (o.duracionSeg || 120) * 1000));
       const rest = activa ? Math.max(0, Math.round((o.inicioMs + (o.duracionSeg || 120) * 1000 - now) / 1000)) : 0;
-      return { it, aptId, aptDef, e, activa, rest, mine: id === myId };
+      const earned = window.HacPuntos ? HacPuntos.deMiembro(h.id, id) : 0;
+      return { it, aptId, aptDef, e, activa, rest, mine: id === myId, puntos: puntosTotales(id), earned };
     }
     function buildCharPanel(id) {
       const d = charData(id); if (!d) { closeCharPanel(); return; }
@@ -362,6 +385,7 @@
           <span class="hacp-cp-name">${esc(d.it.name)}${d.mine ? ' <em>(tú)</em>' : ''}</span>
         </div>
         ${d.aptDef ? `<div class="hacp-cp-apt">${d.aptDef.icon || ''} ${esc(d.aptDef.nombre)}${comp ? ' · domina ' + comp : ''}</div>` : (comp ? `<div class="hacp-cp-apt">domina ${comp}</div>` : '')}
+        <div class="hacp-cp-pts">Puntos: <b id="hacp-cp-pts">${d.puntos}</b>${d.earned ? ` <span class="hacp-cp-earn">+${d.earned} en misiones</span>` : ''}</div>
         <div class="hacp-cp-act" id="hacp-cp-act">${d.it.inside ? '⌂ ' : ''}${esc(d.it.activity || 'Paseando por la finca')}</div>
         <div class="hacp-cp-energy" title="Energía ${d.e}%"><i id="hacp-cp-ebar" style="width:${d.e}%"></i></div>
         ${mision}`;
@@ -385,27 +409,38 @@
       if (!charId || !charEl) return;
       const d = charData(charId); if (!d) { closeCharPanel(); return; }
       if (sigOf(d) !== charSig) { charSig = sigOf(d); buildCharPanel(charId); return; }
+      const pe = charEl.querySelector('#hacp-cp-pts'); if (pe) pe.textContent = d.puntos;
       const act = charEl.querySelector('#hacp-cp-act'); if (act) act.textContent = (d.it.inside ? '⌂ ' : '') + (d.it.activity || 'Paseando por la finca');
       const eb = charEl.querySelector('#hacp-cp-ebar'); if (eb) eb.style.width = d.e + '%';
       const rt = charEl.querySelector('#hacp-cp-rest'); if (rt && d.activa) rt.textContent = d.rest + 's';
     }
 
+    function itemHTML(m, sel) {
+      const mine = m.id === myId;
+      const e = Math.round(window.HacEnergia ? HacEnergia.current(h.id, m.id) : 100);
+      // Icono de "trabajando" (en misión): lo derivamos del estado COMPARTIDO, así
+      // que todos los que miran la finca lo ven en ese mecenas.
+      const work = m.onMission ? ' <span class="hacp-folk-work" title="En misión">⚒</span>' : '';
+      return `<li><button class="hacp-folk-item${m.id === sel ? ' on' : ''}${mine ? ' mine' : ''}" data-id="${esc(m.id)}">
+        <span class="hacp-folk-dot" style="--c:${esc(m.color)}"></span>
+        <span class="hacp-folk-info">
+          <span class="hacp-folk-name">${esc(m.name)}${work}${mine ? ' <em style="color:#7fc9a0;font-style:normal">(tú)</em>' : ''}</span>
+          <span class="hacp-folk-state${m.inside ? ' inside' : ''}">${m.inside ? '⌂ ' : ''}${esc(m.activity || 'Paseando por la finca')}</span>
+          <span class="hacp-folk-energy" title="Energía ${e}%" style="display:block;height:4px;margin-top:3px;border-radius:2px;background:rgba(255,255,255,.14);overflow:hidden"><i style="display:block;height:100%;width:${e}%;background:linear-gradient(90deg,#e0b85a,#7fc9a0)"></i></span>
+        </span></button></li>`;
+    }
     function renderList() {
       const items = HacFolk.list();
       if (!items.length) { panel.hidden = true; return; }
       panel.hidden = false;
       const sel = HacFolk.selected();
-      listEl.innerHTML = items.map(m => {
-        const mine = m.id === myId;
-        const e = Math.round(window.HacEnergia ? HacEnergia.current(h.id, m.id) : 100);
-        return `<li><button class="hacp-folk-item${m.id === sel ? ' on' : ''}" data-id="${esc(m.id)}">
-          <span class="hacp-folk-dot" style="--c:${esc(m.color)}"></span>
-          <span class="hacp-folk-info">
-            <span class="hacp-folk-name">${esc(m.name)}${mine ? ' <em style="color:#7fc9a0;font-style:normal">(tú)</em>' : ''}</span>
-            <span class="hacp-folk-state${m.inside ? ' inside' : ''}">${m.inside ? '⌂ ' : ''}${esc(m.activity || 'Paseando por la finca')}</span>
-            <span class="hacp-folk-energy" title="Energía ${e}%" style="display:block;height:4px;margin-top:3px;border-radius:2px;background:rgba(255,255,255,.14);overflow:hidden"><i style="display:block;height:100%;width:${e}%;background:linear-gradient(90deg,#e0b85a,#7fc9a0)"></i></span>
-          </span></button></li>`;
-      }).join('');
+      // Tu mecenas, arriba del todo y separado del resto para encontrarlo fácil.
+      const mineItem = myId ? items.find(m => m.id === myId) : null;
+      const others = items.filter(m => m.id !== myId);
+      let html = '';
+      if (mineItem) html += `<li class="hacp-folk-sec">Tu mecenas</li>` + itemHTML(mineItem, sel) + `<li class="hacp-folk-div"></li>`;
+      html += others.map(m => itemHTML(m, sel)).join('');
+      listEl.innerHTML = html;
       listEl.querySelectorAll('.hacp-folk-item').forEach(b => b.addEventListener('click', () => gotoMember(b.dataset.id)));
     }
 
@@ -414,11 +449,13 @@
     // Carga órdenes + energía + competencias (compartidas); refresca por poll (≤5 s).
     if (window.HacEnergia) HacEnergia.ready().then(refresh);
     if (window.HacCompetencias) HacCompetencias.ready().then(refresh);
+    if (window.HacPuntos) HacPuntos.ready().then(refresh);
     if (window.HacOrdenes) {
       HacOrdenes.ready().then(applyOrders);
       setInterval(() => {
         if (window.HacEnergia) HacEnergia.reload();
         if (window.HacCompetencias) HacCompetencias.reload();
+        if (window.HacPuntos) HacPuntos.reload();
         HacOrdenes.reload().then(applyOrders);
       }, 5000);
     }
