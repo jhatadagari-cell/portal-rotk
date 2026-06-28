@@ -53,6 +53,24 @@ const HacFolk = (function () {
   // todos los puntos de uso existentes quedan sincronizados sin más cambios.
   const rnd = (n) => R.int(n);
   const rng = (a, b) => R.range(a, b);
+
+  // ── Misiones del jugador (agencia) ──────────────────────────────────────────
+  // Órdenes COMPARTIDAS (Supabase) mapeadas miembroId → { startMs, endMs, targetBid }.
+  // Se activan por TIMESTAMP (hora compartida): al activarse el mecenas hace el
+  // saludo del puño y la mano (抱拳, pose bow) y luego ejecuta la tarea ~2 min.
+  // La energía se DERIVA de esa línea de tiempo (v1 de pruebas: no bloquea).
+  let orders = {};
+  const SALUTE_SEC = 1.6;
+  const E_MAX = 100, E_DRAIN = 55, E_REGEN_PER_S = 7;   // pruebas: baja al currar, regenera rápido
+  // Hora de simulación (ms) del tick actual dentro de la ventana — base de las misiones.
+  function nowSimMs() { return epoch * WINDOW_MS + simTick * SIM_DT * 1000; }
+  function energyOf(w) {
+    const o = w.order; if (!o) return E_MAX;
+    const t = nowSimMs();
+    if (t <= o.startMs) return E_MAX;
+    if (t < o.endMs) return Math.max(E_MAX - E_DRAIN, E_MAX - E_DRAIN * ((t - o.startMs) / (o.endMs - o.startMs)));
+    return Math.min(E_MAX, (E_MAX - E_DRAIN) + E_REGEN_PER_S * ((t - o.endMs) / 1000));
+  }
   const proj = () => iso && iso._hacProj;
   function logic(fx, fy) { const p = proj(); if (!p) return [0, 0]; return [p.originX + (fx - fy) * TW / 2, p.originY + (fx + fy) * TH / 2]; }
 
@@ -214,7 +232,9 @@ const HacFolk = (function () {
         idleTimer: 0, gardenCd: rng(4, 12), socialCd: rng(4, 12), chatWith: null,
         chatLead: false, chatRole: null, bowing: false, convo: null, convoIdx: 0, turnTimer: 0, speech: null,
         meetWith: null, meetLead: false, meetTimer: 0, restIntent: null,
-        phase: R.next() * 6.28
+        phase: R.next() * 6.28,
+        // Misión del jugador (estado compartido); null = comportamiento ambiente.
+        order: orders[m.id] || null, onMission: false, missionTimer: 0, missionEndMs: 0
       };
     });
   }
@@ -247,6 +267,17 @@ const HacFolk = (function () {
     return true;
   }
 
+  // Visita FORZADA por una misión del jugador: va al edificio indicado. Si no hay
+  // destino válido o no se puede trazar, deambula durante el resto de la misión.
+  function startMissionVisit(w) {
+    const o = w.order, b = (o && o.targetBid) ? wk.buildings.get(o.targetBid) : null;
+    if (!b || !b.visitable) { w.state = 'paseando'; w.strollTimer = rng(2, 6); return; }
+    const path = bfs([Math.round(w.fx), Math.round(w.fy)], new Set([b.approachKey]));
+    if (!path) { w.state = 'paseando'; w.strollTimer = rng(2, 6); return; }
+    path.push(b.spotCell);
+    w.path = path; w.state = 'yendo'; w.goalBid = b.id; w.moving = false;
+  }
+
   // Sale del edificio: a la celda de aproximación y luego a un punto de paseo.
   function startLeave(w) {
     const b = wk.buildings.get(w.insideId);
@@ -269,6 +300,9 @@ const HacFolk = (function () {
       const task = ls.length ? ls[R.int(ls.length)] : null;
       w.task = task;
       w.taskTimer = (task ? task.duracionSeg : 30) * (0.85 + R.next() * 0.3);
+      // En misión, la estancia dura hasta el FIN de la misión (lo gestiona el
+      // gating por timestamp en step; aquí solo evitamos que salga antes).
+      if (w.onMission) w.taskTimer = Math.max(2, (w.missionEndMs - nowSimMs()) / 1000);
     } else if (w.state === 'saliendo') {
       w.state = 'paseando'; w.strollTimer = rng(2, 6); w.wait = rng(0.2, 0.8); w.task = null;
     }
@@ -520,13 +554,34 @@ const HacFolk = (function () {
     hailCd = rng(2, 5);                                   // nadie elegible/aceptó: reintenta pronto
   }
 
+  // Activa/termina la MISIÓN del jugador según su timestamp (hora compartida).
+  // Al activarse interrumpe lo que hiciera, hace el saludo 抱拳 (pose bow) y luego
+  // ejecuta. Determinista: depende solo de nowSimMs() y de la orden compartida.
+  function missionGate(w) {
+    const o = w.order; if (!o) return;
+    const t = nowSimMs(), active = t >= o.startMs && t < o.endMs;
+    if (active && !w.onMission) {
+      if (w.chatWith) endChat(w);
+      if (w.meetWith) abortMeet(w);
+      w.onMission = true; w.missionEndMs = o.endMs;
+      w.state = 'saludo'; w.bowing = true; w.missionTimer = SALUTE_SEC;
+      w.moving = false; w.path = null; w.speech = null; w.dir = 'S';
+    } else if (w.onMission && t >= o.endMs) {
+      w.onMission = false; w.bowing = false;
+      if (w.insideId) startLeave(w);
+      else { w.state = 'paseando'; w.strollTimer = rng(2, 6); w.path = null; w.moving = false; }
+    }
+  }
+
   function step(dt) {
     const SPD = 1.1;
     walkers.forEach(w => {
       if (w.gardenCd > 0) w.gardenCd -= dt;
       if (w.socialCd > 0) w.socialCd -= dt;
+      missionGate(w);
       switch (w.state) {
-        case 'tarea': w.taskTimer -= dt; w.phase += dt * 1.2; if (w.taskTimer <= 0) startLeave(w); break;
+        case 'saludo': w.phase += dt * 0.5; w.missionTimer -= dt; if (w.missionTimer <= 0) { w.bowing = false; startMissionVisit(w); } break;
+        case 'tarea': w.taskTimer -= dt; w.phase += dt * 1.2; if (!w.onMission && w.taskTimer <= 0) startLeave(w); break;
         case 'yendo':
         case 'saliendo': followPath(w, dt, SPD); break;
         case 'a-descansar':
@@ -921,6 +976,7 @@ const HacFolk = (function () {
     // de los miembros para que al menos sea consistente entre clientes de esa finca.
     seedKey = String(opts.seedKey || opts.haciendaId
       || ('finca-' + (((opts.miembros || []).map(m => m && m.id).join('-')) || ('t' + (opts.tier || 0)))));
+    orders = opts.ordenes || {};   // misiones del jugador (estado compartido)
     // Asegura el catálogo de tareas en caché para cuando un mecenas entre.
     if (window.HacTareas && HacTareas.ready) HacTareas.ready();
     // Sincroniza el reloj de servidor (async); mientras, siembra con el reloj local
@@ -940,6 +996,7 @@ const HacFolk = (function () {
   // ── API para la página ────────────────────────────────────────────────────
   // Texto de lo que está haciendo un mecenas ahora mismo.
   function activityText(w) {
+    if (w.state === 'saludo') return 'Recibe tus órdenes';
     if (w.state === 'a-descansar') return 'Buscando un rincón de hierba';
     if (w.state === 'contemplando') return 'Contemplando el jardín';
     if (w.state === 'tumbado') return 'Descansando entre las plantas';
@@ -971,13 +1028,26 @@ const HacFolk = (function () {
     return walkers.map(w => {
       const b = w.insideId && wk ? wk.buildings.get(w.insideId) : null;
       const inside = b ? (b.dueno ? memberName(b.dueno) : b.nombre) : null;
-      return { id: w.id, name: w.name, color: w.color, inside, activity: activityText(w) };
+      return { id: w.id, name: w.name, color: w.color, inside, activity: activityText(w),
+        energia: Math.round(energyOf(w)), onMission: !!w.onMission };
     });
   }
   function select(id) { selectedId = id || null; if (!running) paint(); pushState(); }
   const selected = () => selectedId;
   function position(id) { const w = walkers.find(x => x.id === id); return w ? logic(w.fx, w.fy) : null; }
 
-  return { start, stop, list, select, selected, position };
+  // Edificios visitables (para que la UI ofrezca destinos de misión).
+  function buildings() { return wk ? wk.visitable.map(b => ({ id: b.id, nombre: b.nombre, tipo: b.tipo })) : []; }
+  // Aplica un nuevo mapa de órdenes (miembroId → { startMs, endMs, targetBid }) y
+  // RE-DERIVA la ventana actual para que las misiones se apliquen en su tick
+  // exacto (sin teletransporte). Coste ~igual a abrir la finca (<50 ms).
+  function setOrders(map) {
+    orders = map || {};
+    if (opts) opts.ordenes = orders;
+    if (running) { resetEpoch(epoch); }                  // el siguiente tick rebobina hasta ahora
+    else if (wk) { walkers.forEach(w => { w.order = orders[w.id] || null; }); paint(); pushState(); }
+  }
+
+  return { start, stop, list, select, selected, position, buildings, setOrders };
 })();
 if (typeof window !== 'undefined') window.HacFolk = HacFolk;

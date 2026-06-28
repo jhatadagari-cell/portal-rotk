@@ -235,6 +235,13 @@
     let pop = null;
     const hidePop = () => { if (pop) { pop.remove(); pop = null; } };
 
+    // ¿Cuál es el mecenas del USUARIO en ESTA hacienda? Solo a él puede darle
+    // órdenes (su personaje debe ser miembro de la hacienda).
+    const _user = (window.Auth && Auth.current) ? Auth.current() : null;
+    const _myPj = (_user && window.HacPersonajes && HacPersonajes.mine) ? HacPersonajes.mine(_user.id) : null;
+    const myId = (_myPj && (h.miembros || []).some(m => m.id === _myPj.id)) ? _myPj.id : null;
+    let lastOrdersSig = '';
+
     function gotoMember(id) {
       hidePop();
       HacFolk.select(id);
@@ -243,25 +250,81 @@
       renderList();
     }
 
+    // Convierte las órdenes (HacOrdenes) al mapa que entiende HacFolk. Solo
+    // re-deriva el sim (setOrders) si CAMBIARON, para no rebobinar en cada poll.
+    function applyOrders() {
+      if (!window.HacOrdenes) return;
+      const map = {};
+      HacOrdenes.byHacienda(h.id).forEach(o => {
+        map[o.miembroId] = { startMs: o.inicioMs, endMs: o.inicioMs + (o.duracionSeg || 120) * 1000, targetBid: o.targetId, tipo: o.tipo };
+      });
+      const sig = JSON.stringify(map);
+      if (sig !== lastOrdersSig) { lastOrdersSig = sig; if (HacFolk.setOrders) HacFolk.setOrders(map); }
+      renderList();
+    }
+    function dispatch(targetId) {
+      if (!myId || !targetId || !window.HacOrdenes) return;
+      HacOrdenes.set({ haciendaId: h.id, miembroId: myId, tipo: 'mision', targetId, duracionSeg: 120 })
+        .then(applyOrders).catch(e => console.warn('[orden] set', e));
+    }
+    function release() {
+      if (!myId || !window.HacOrdenes) return;
+      HacOrdenes.clear(h.id, myId).then(applyOrders).catch(e => console.warn('[orden] clear', e));
+    }
+    // Panel de órdenes para MI mecenas (selector de edificio + enviar/liberar).
+    function ordenPanel() {
+      if (!myId) return '';
+      const blds = HacFolk.buildings ? HacFolk.buildings() : [];
+      const o = window.HacOrdenes ? HacOrdenes.mine(h.id, myId) : null;
+      const now = (window.HacClock && HacClock.now) ? HacClock.now() : Date.now();
+      const activa = o && now < (o.inicioMs + (o.duracionSeg || 120) * 1000);
+      if (activa) {
+        const rest = Math.max(0, Math.round((o.inicioMs + (o.duracionSeg || 120) * 1000 - now) / 1000));
+        return `<div class="hacp-orden" style="display:flex;gap:6px;align-items:center;padding:2px 8px 8px 26px;font-size:12px">
+          <span style="color:#e0b85a">⚑ En misión · ${rest}s</span>
+          <button type="button" data-act="release" style="margin-left:auto">Liberar</button></div>`;
+      }
+      if (!blds.length) return '';
+      const optionsH = blds.map(b => `<option value="${esc(b.id)}">${esc(b.nombre)}</option>`).join('');
+      return `<div class="hacp-orden" style="display:flex;gap:6px;align-items:center;padding:2px 8px 8px 26px;font-size:12px">
+        <select class="hacp-orden-sel" style="flex:1;min-width:0">${optionsH}</select>
+        <button type="button" data-act="dispatch">Enviar (2 min)</button></div>`;
+    }
+
     function renderList() {
       const items = HacFolk.list();
       if (!items.length) { panel.hidden = true; return; }
       panel.hidden = false;
       const sel = HacFolk.selected();
-      listEl.innerHTML = items.map(m => `
-        <li><button class="hacp-folk-item${m.id === sel ? ' on' : ''}" data-id="${esc(m.id)}">
-          <span class="hacp-folk-dot" style="--c:${esc(m.color)}"></span>
-          <span class="hacp-folk-info">
-            <span class="hacp-folk-name">${esc(m.name)}</span>
-            <span class="hacp-folk-state${m.inside ? ' inside' : ''}">${m.inside ? '⌂ ' : ''}${esc(m.activity || 'Paseando por la finca')}</span>
-          </span>
-        </button></li>`).join('');
-      listEl.querySelectorAll('.hacp-folk-item').forEach(b =>
-        b.addEventListener('click', () => gotoMember(b.dataset.id)));
+      listEl.innerHTML = items.map(m => {
+        const mine = m.id === myId;
+        const e = Math.max(0, Math.min(100, m.energia == null ? 100 : m.energia));
+        return `<li>
+          <button class="hacp-folk-item${m.id === sel ? ' on' : ''}" data-id="${esc(m.id)}">
+            <span class="hacp-folk-dot" style="--c:${esc(m.color)}"></span>
+            <span class="hacp-folk-info">
+              <span class="hacp-folk-name">${esc(m.name)}${mine ? ' <em style="color:#7fc9a0;font-style:normal">(tú)</em>' : ''}</span>
+              <span class="hacp-folk-state${m.inside ? ' inside' : ''}">${m.inside ? '⌂ ' : ''}${esc(m.activity || 'Paseando por la finca')}</span>
+              <span class="hacp-folk-energy" title="Energía ${e}%" style="display:block;height:4px;margin-top:3px;border-radius:2px;background:rgba(255,255,255,.14);overflow:hidden"><i style="display:block;height:100%;width:${e}%;background:linear-gradient(90deg,#e0b85a,#7fc9a0)"></i></span>
+            </span>
+          </button>
+          ${mine ? ordenPanel() : ''}
+        </li>`;
+      }).join('');
+      listEl.querySelectorAll('.hacp-folk-item').forEach(b => b.addEventListener('click', () => gotoMember(b.dataset.id)));
+      const db = listEl.querySelector('[data-act="dispatch"]');
+      if (db) db.addEventListener('click', () => { const s = listEl.querySelector('.hacp-orden-sel'); dispatch(s ? s.value : null); });
+      const rb = listEl.querySelector('[data-act="release"]');
+      if (rb) rb.addEventListener('click', release);
     }
 
-    HacFolk.start(iso, { mapa: h.mapa, tier, color, miembros: h.miembros, onState: renderList, seedKey: h.id });
+    HacFolk.start(iso, { mapa: h.mapa, tier, color, miembros: h.miembros, onState: renderList, seedKey: h.id, ordenes: {} });
     renderList();
+    // Carga las órdenes (compartidas) y las re-aplica; refresca por poll (≤5 s, sin realtime).
+    if (window.HacOrdenes) {
+      HacOrdenes.ready().then(applyOrders);
+      setInterval(() => { HacOrdenes.reload().then(applyOrders); }, 5000);
+    }
 
     // Popup con la gente que hay dentro de un edificio (al pulsar su banner).
     function showPop(x, y, sign) {
