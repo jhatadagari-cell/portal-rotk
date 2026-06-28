@@ -260,6 +260,11 @@
     const listEl = document.getElementById('hacp-folk-list');
     const charEl = document.getElementById('hacp-char-panel');
     if (!panel || !listEl) return;
+    // El panel vive DENTRO del visor: evita que sus clics/rueda burbujeen a los
+    // manejadores de la cámara (que romperían el seguimiento) y al tap (que
+    // deseleccionaría). Así puedes usar el selector y los botones sin perder el zoom.
+    if (charEl) ['pointerdown', 'pointerup', 'wheel', 'click'].forEach(ev =>
+      charEl.addEventListener(ev, (e) => e.stopPropagation(), { passive: false }));
     let pop = null;
     const hidePop = () => { if (pop) { pop.remove(); pop = null; } };
     const clock = () => (window.HacClock && HacClock.now) ? HacClock.now() : Date.now();
