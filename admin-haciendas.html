@@ -140,6 +140,7 @@
 <script src="assets/js/hac-personajes.js?v=3"></script>
 <script src="assets/js/hac-solicitudes.js?v=1"></script>
 <script src="assets/js/hac-perfiles.js?v=1"></script>
+<script src="assets/js/hac-competencias.js?v=1"></script>
 <script>
 (function () {
   'use strict';
@@ -173,6 +174,8 @@
   // Registro global de personajes (para la pestaña «Personajes» y el alta de
   // mecenas). Degrada a vacío si falta la tabla.
   if (window.HacPersonajes) await HacPersonajes.ready();
+  // Competencias otorgadas (para mostrar/editar los chips por mecenas).
+  if (window.HacCompetencias) await HacCompetencias.ready();
 
   const { haciendaPuntos, tierDePuntos, progresoHacia, rangoDePuntos, clampTier, nivelEfectivo, tierPorNivel, maxMiembros } = HacCalc;
   const RANGOS = (typeof HAC_RANGOS !== 'undefined') ? HAC_RANGOS : [];
@@ -476,8 +479,18 @@
       const sello = apt
         ? ` <span class="adm-mini-apt" title="${esc(apt.nombre + (per ? ' · ' + per.nombre : ''))}">${esc(apt.zh)}</span>`
         : '';
+      // Competencias por dominio: las INICIALES (de la aptitud) van fijas; las
+      // demás se otorgan/retiran con un clic. Clave = personajeId (= walker.id).
+      const pid = m.personajeId || '', aptId = pj ? pj.aptitud : '';
+      const chips = (window.HacCompetencias && pid) ? HacCompetencias.DOMINIOS.map(d => {
+        const ini = HacCompetencias.isInitial(aptId, d);
+        const on = ini || HacCompetencias.granted(h.id, pid).indexOf(d) >= 0;
+        const def = HacCompetencias.def(d) || {};
+        const ttl = (def.nombre || d) + (ini ? ' · innata (aptitud)' : (on ? ' · otorgada (clic para quitar)' : ' · clic para otorgar'));
+        return `<button type="button" class="adm-comp" data-dom="${d}"${ini ? ' disabled' : ''} title="${esc(ttl)}" style="border:1px solid ${on ? '#d8b65a' : '#555'};background:${on ? 'rgba(216,182,90,.18)' : 'transparent'};border-radius:4px;padding:1px 4px;margin:0 1px;cursor:${ini ? 'default' : 'pointer'};opacity:${ini ? '.9' : (on ? '1' : '.4')};font-size:13px;line-height:1.2">${def.icon || d[0]}</button>`;
+      }).join('') : '<span class="adm-hint">—</span>';
       return `
-        <tr data-mid="${esc(m.id)}">
+        <tr data-mid="${esc(m.id)}" data-pid="${esc(pid)}">
           <td>${esc(m.nombre)}${sello}</td>
           <td class="adm-pts-cell">
             <button class="adm-step" data-step="-5"${(Number(m.puntos) || 0) <= 0 ? ' disabled' : ''}>−</button>
@@ -485,6 +498,7 @@
             <button class="adm-step" data-step="5">+</button>
           </td>
           <td>${cargo}${hint}</td>
+          <td class="adm-comp-cell" style="white-space:nowrap">${chips}</td>
           <td>${esc(m.nota || '')}</td>
           <td><button class="adm-del" title="Quitar mecenas">✕</button></td>
         </tr>`;
@@ -559,8 +573,8 @@
 
       <h3 class="adm-members-ttl">Mecenas · cargo según sus puntos <span class="adm-board-hint">${nMiembros}/${cupo === Infinity ? '∞' : cupo} · cupo nivel ${tier}</span></h3>
       <table class="adm-table">
-        <thead><tr><th>Nombre</th><th>Puntos</th><th>Cargo</th><th>Nota</th><th></th></tr></thead>
-        <tbody>${filas || `<tr><td colspan="5" class="adm-empty">Sin mecenas todavía.</td></tr>`}</tbody>
+        <thead><tr><th>Nombre</th><th>Puntos</th><th>Cargo</th><th>Comp.</th><th>Nota</th><th></th></tr></thead>
+        <tbody>${filas || `<tr><td colspan="6" class="adm-empty">Sin mecenas todavía.</td></tr>`}</tbody>
       </table>
 
       ${addMemberForm}
@@ -593,6 +607,15 @@
         saveHacienda(h);
         render();
       });
+      // Otorgar/retirar competencias (las innatas están disabled). Clave = personajeId.
+      const pid = tr.dataset.pid;
+      tr.querySelectorAll('.adm-comp:not([disabled])').forEach(btn => btn.addEventListener('click', () => {
+        if (!window.HacCompetencias || !pid) return;
+        const d = btn.dataset.dom;
+        const tiene = HacCompetencias.granted(h.id, pid).indexOf(d) >= 0;
+        (tiene ? HacCompetencias.revoke(h.id, pid, d) : HacCompetencias.grant(h.id, pid, d));
+        render();   // optimista: el caché ya está actualizado
+      }));
     });
 
     // Guardar datos de la casa.

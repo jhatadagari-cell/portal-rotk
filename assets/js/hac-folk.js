@@ -227,7 +227,10 @@ const HacFolk = (function () {
       const rankIdx = (window.HacCalc && HacCalc.rangoIndex) ? HacCalc.rangoIndex(Number(m.puntos) || 0, tier) : -1;
       const aptDef = (aptitud && window.HacPersonajeDefs) ? HacPersonajeDefs.aptitud(aptitud) : null;
       return {
-        id: m.id, name: m.nombre || '', color, aptitud, aspecto,
+        // id del walker = id del PERSONAJE (clave estable para órdenes/energía/
+        // competencias y verificable en RLS). Fallback al id de miembro si no hay
+        // personaje vinculado (mecenas sin cuenta, no controlable por un jugador).
+        id: m.personajeId || m.id, name: m.nombre || '', color, aptitud, aspecto,
         cargoIcon: cargo ? (cargo.icon || '') : '', cargoNombre: cargo ? cargo.nombre : '', cargoTier: cargo ? (cargo.tier || 1) : 0, rankIdx,
         aptIcon: aptDef ? (aptDef.icon || '') : '', dominios: aptDef ? (aptDef.dominios || []) : [],
         fx: start[0], fy: start[1], tx: start[0], ty: start[1], moving: false, dir: 'S',
@@ -1105,8 +1108,9 @@ const HacFolk = (function () {
   const selected = () => selectedId;
   function position(id) { const w = walkers.find(x => x.id === id); return w ? logic(w.fx, w.fy) : null; }
 
-  // Edificios visitables (para que la UI ofrezca destinos de misión).
-  function buildings() { return wk ? wk.visitable.map(b => ({ id: b.id, nombre: b.nombre, tipo: b.tipo })) : []; }
+  // Edificios visitables (para que la UI ofrezca destinos de misión). Incluye el
+  // DOMINIO (militar/cultural/administrativo) para calcular el coste por competencia.
+  function buildings() { return wk ? wk.visitable.map(b => ({ id: b.id, nombre: b.nombre, tipo: b.tipo, dominio: b.dominio || null })) : []; }
   // Aplica un nuevo mapa de órdenes (miembroId → { startMs, endMs, targetBid }) y
   // RE-DERIVA la ventana actual para que las misiones se apliquen en su tick
   // exacto (sin teletransporte). Coste ~igual a abrir la finca (<50 ms).

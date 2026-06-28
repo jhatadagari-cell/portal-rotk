@@ -239,7 +239,17 @@
     // órdenes (su personaje debe ser miembro de la hacienda).
     const _user = (window.Auth && Auth.current) ? Auth.current() : null;
     const _myPj = (_user && window.HacPersonajes && HacPersonajes.mine) ? HacPersonajes.mine(_user.id) : null;
-    const myId = (_myPj && (h.miembros || []).some(m => m.id === _myPj.id)) ? _myPj.id : null;
+    // El walker.id = personajeId; el miembro se vincula por personajeId (su id propio
+    // es otro uuid). myId = personajeId = clave de órdenes/energía/competencias.
+    const _isMember = _myPj && (h.miembros || []).some(m => m.personajeId === _myPj.id);
+    const myId = _isMember ? _myPj.id : null;
+    const myApt = _myPj ? _myPj.aptitud : '';
+    // Coste de una misión según si el mecenas DOMINA el dominio del edificio (suave).
+    function costeMision(dominio) {
+      const competente = window.HacCompetencias && dominio && HacCompetencias.has(h.id, myId, myApt, dominio);
+      const base = (window.HacEnergia && HacEnergia.COSTE_MISION) || 34;
+      return competente ? Math.round(base * 0.5) : base;
+    }
     let lastOrdersSig = '';
 
     function gotoMember(id) {
@@ -264,8 +274,10 @@
     }
     function dispatch(targetId) {
       if (!myId || !targetId || !window.HacOrdenes) return;
-      // La misión CUESTA energía (único gasto; el ambiente es gratis).
-      if (window.HacEnergia) HacEnergia.spend(h.id, myId, HacEnergia.COSTE_MISION);
+      // La misión CUESTA energía; el coste baja si el mecenas DOMINA el dominio
+      // del edificio (competencia). El ambiente es gratis.
+      const b = (HacFolk.buildings ? HacFolk.buildings() : []).find(x => x.id === targetId);
+      if (window.HacEnergia) HacEnergia.spend(h.id, myId, costeMision(b && b.dominio));
       HacOrdenes.set({ haciendaId: h.id, miembroId: myId, tipo: 'mision', targetId, duracionSeg: 120 })
         .then(applyOrders).catch(e => console.warn('[orden] set', e));
     }
@@ -287,8 +299,17 @@
           <button type="button" data-act="release" style="margin-left:auto">Liberar</button></div>`;
       }
       if (!blds.length) return '';
-      const optionsH = blds.map(b => `<option value="${esc(b.id)}">${esc(b.nombre)}</option>`).join('');
+      // Cada opción muestra el coste de energía (rebajado si dominas su dominio).
+      const optionsH = blds.map(b => `<option value="${esc(b.id)}">${esc(b.nombre)} · −${costeMision(b.dominio)}⚡</option>`).join('');
+      // Competencias del mecenas (las que domina), con su icono.
+      let comp = '';
+      if (window.HacCompetencias) {
+        const eff = HacCompetencias.effective(h.id, myId, myApt);
+        const ic = HacCompetencias.DOMINIOS.filter(d => eff.has(d)).map(d => (HacCompetencias.def(d) || {}).icon || '').join(' ');
+        if (ic) comp = `<span title="Competencias" style="opacity:.85">${ic}</span>`;
+      }
       return `<div class="hacp-orden" style="display:flex;gap:6px;align-items:center;padding:2px 8px 8px 26px;font-size:12px">
+        ${comp}
         <select class="hacp-orden-sel" style="flex:1;min-width:0">${optionsH}</select>
         <button type="button" data-act="dispatch">Enviar (2 min)</button></div>`;
     }
@@ -322,12 +343,14 @@
 
     HacFolk.start(iso, { mapa: h.mapa, tier, color, miembros: h.miembros, onState: renderList, seedKey: h.id, haciendaId: h.id, ordenes: {} });
     renderList();
-    // Carga órdenes + energía (compartidas) y refresca por poll (≤5 s, sin realtime).
+    // Carga órdenes + energía + competencias (compartidas); refresca por poll (≤5 s).
     if (window.HacEnergia) HacEnergia.ready().then(renderList);
+    if (window.HacCompetencias) HacCompetencias.ready().then(renderList);
     if (window.HacOrdenes) {
       HacOrdenes.ready().then(applyOrders);
       setInterval(() => {
         if (window.HacEnergia) HacEnergia.reload();
+        if (window.HacCompetencias) HacCompetencias.reload();
         HacOrdenes.reload().then(applyOrders);
       }, 5000);
     }
