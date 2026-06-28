@@ -155,24 +155,24 @@ const HacFolk = (function () {
       const k = x + ',' + y;
       if (!blocked.has(k)) { set.add(k); cells.push([x, y]); if (cam.has(k)) camCells.push([x, y]); }
     }
-    // Puerta de cada edificio: una celda interior (spot) con un vecino transitable
-    // (approach). Se prefiere que la aproximación caiga sobre un CAMINO. Sin
-    // aproximación accesible → no es "visitable".
+    // Puerta de cada edificio: celda interior (spot) + vecino transitable (approach).
+    // Elegimos la puerta en la CARA DELANTERA (la que mira al espectador: en iso, la
+    // de mayor gx+gy) y CENTRADA en esa cara (no en una esquina), con leve preferencia
+    // por un camino. Así el mecenas entra "por la puerta" y no da un rodeo a una
+    // esquina trasera. Sin aproximación accesible → no es "visitable".
     const visitable = [];
     buildings.forEach(b => {
-      let chosen = null, onCam = false;
-      for (let i = 0; i < b.cells.length && !onCam; i++) {
-        const p = b.cells[i];
-        const ns = neigh(p[0], p[1]);
-        for (let j = 0; j < ns.length; j++) {
-          const nk = ns[j][0] + ',' + ns[j][1];
-          if (!set.has(nk)) continue;
-          const isCam = cam.has(nk);
-          if (!chosen || (isCam && !onCam)) { chosen = { spot: p, app: ns[j] }; onCam = isCam; }
-          if (isCam) break;
-        }
-      }
-      if (chosen) { b.spotCell = chosen.spot; b.approach = chosen.app; b.approachKey = chosen.app[0] + ',' + chosen.app[1]; b.visitable = true; visitable.push(b); }
+      let best = null, bestScore = -Infinity;
+      b.cells.forEach(p => {
+        neigh(p[0], p[1]).forEach(n => {
+          if (!set.has(n[0] + ',' + n[1])) return;                 // vecino transitable
+          const frente = n[0] + n[1];                              // ∝ Y en pantalla: + = más al frente
+          const dCentro = Math.abs(n[0] - b.cx) + Math.abs(n[1] - b.cy);   // centrado en la cara
+          const score = frente - 2 * dCentro + (cam.has(n[0] + ',' + n[1]) ? 1 : 0);
+          if (score > bestScore) { bestScore = score; best = { spot: p, app: n }; }
+        });
+      });
+      if (best) { b.spotCell = best.spot; b.approach = best.app; b.approachKey = best.app[0] + ',' + best.app[1]; b.visitable = true; visitable.push(b); }
     });
     // Lista de celdas de césped PISABLE (para que los mecenas que pasean cerca
     // decidan acercarse a descansar en la hierba).
