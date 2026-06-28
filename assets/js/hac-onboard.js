@@ -149,7 +149,7 @@ const HacOnboard = (function () {
     try {
       HacIso.draw(canvas, { mapa: SCENE.mapa, tier: SCENE.tier, color: SCENE.color, pabellones: [], estacion: 'verano' });
       if (window.HacFolk) {
-        HacFolk.start(canvas, { mapa: SCENE.mapa, tier: SCENE.tier, color: SCENE.color, miembros: SCENE.miembros });
+        HacFolk.start(canvas, { mapa: SCENE.mapa, tier: SCENE.tier, color: SCENE.color, miembros: SCENE.miembros, seedKey: 'onboard' });
         folkOn = true;
       }
     } catch (e) { console.warn('[onboard] escena', e); }

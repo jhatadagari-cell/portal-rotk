@@ -33,10 +33,26 @@ const HacFolk = (function () {
   const TH = (window.HacIso && HacIso.TILE_H) || 18;
 
   let raf = null, iso = null, opts = null, walkers = [], wk = null, names = {};
-  let lastT = 0, running = false, visible = true, onScreen = true, io = null;
+  let running = false, visible = true, onScreen = true, io = null;
   let selectedId = null, stateSig = '', hailCd = 20;
 
-  const { hexToRgb, reduced, neigh, rnd, rng } = HacUtil;
+  // ── Determinismo / vida compartida ──────────────────────────────────────────
+  // Toda la simulación es función de un STREAM sembrado (R) y de una hora
+  // COMPARTIDA (HacClock). Así dos clientes que abren la misma finca ven al MISMO
+  // mecenas haciendo LO MISMO. El tiempo se trocea en VENTANAS: al cruzar una se
+  // re-siembra (salto suave, idéntico y simultáneo para todos). Quien abre a mitad
+  // de ventana «rebobina» con pasos fijos hasta el instante actual (ver tick()).
+  const WINDOW_MS = 6 * 60 * 1000;   // re-siembra sincronizada cada 6 min
+  const SIM_DT = 1 / 30;             // paso fijo del sim (30 Hz); el render va a 60
+  let R = HacRand.make('boot');      // stream actual (se re-crea por época)
+  let seedKey = 'finca';             // identidad estable de la finca (para sembrar)
+  let epoch = -1, simTick = 0;       // época actual y nº de pasos ejecutados en ella
+
+  const { hexToRgb, reduced, neigh } = HacUtil;
+  // rnd/rng ahora tiran del stream determinista R (no de Math.random), así que
+  // todos los puntos de uso existentes quedan sincronizados sin más cambios.
+  const rnd = (n) => R.int(n);
+  const rng = (a, b) => R.range(a, b);
   const proj = () => iso && iso._hacProj;
   function logic(fx, fy) { const p = proj(); if (!p) return [0, 0]; return [p.originX + (fx - fy) * TW / 2, p.originY + (fx + fy) * TH / 2]; }
 
@@ -179,7 +195,7 @@ const HacFolk = (function () {
       let homeBid = null, home = null, start = null;
       wk.buildings.forEach(b => { if (b.dueno === m.id && b.visitable) homeBid = b.id; });
       if (homeBid) { const b = wk.buildings.get(homeBid); home = b.spotCell; start = b.approach; }
-      if (!start) start = (wk.camCells.length && Math.random() < 0.7) ? wk.camCells[rnd(wk.camCells.length)] : wk.cells[rnd(wk.cells.length)];
+      if (!start) start = (wk.camCells.length && R.next() < 0.7) ? wk.camCells[rnd(wk.camCells.length)] : wk.cells[rnd(wk.cells.length)];
       // Modelo del mecenas: aptitud/aspecto de su personaje registrado. Si no
       // tiene personaje vinculado, modelo por defecto con el color de la casa.
       const pj = (m.personajeId && window.HacPersonajes && HacPersonajes.get) ? HacPersonajes.get(m.personajeId) : null;
@@ -194,11 +210,11 @@ const HacFolk = (function () {
         aptIcon: aptDef ? (aptDef.icon || '') : '', dominios: aptDef ? (aptDef.dominios || []) : [],
         fx: start[0], fy: start[1], tx: start[0], ty: start[1], moving: false, dir: 'S',
         state: 'paseando', path: null, goalBid: null, insideId: null, task: null,
-        homeBid, home, taskTimer: 0, strollTimer: rng(2, 6), wait: Math.random() * 1.2,
+        homeBid, home, taskTimer: 0, strollTimer: rng(2, 6), wait: R.next() * 1.2,
         idleTimer: 0, gardenCd: rng(4, 12), socialCd: rng(4, 12), chatWith: null,
         chatLead: false, chatRole: null, bowing: false, convo: null, convoIdx: 0, turnTimer: 0, speech: null,
         meetWith: null, meetLead: false, meetTimer: 0, restIntent: null,
-        phase: Math.random() * 6.28
+        phase: R.next() * 6.28
       };
     });
   }
@@ -208,7 +224,7 @@ const HacFolk = (function () {
   // administrativos/nobles). Con frecuencia, el propio.
   function chooseBuilding(w) {
     if (!wk.visitable.length) return null;
-    if (w.homeBid && Math.random() < 0.5) { const b = wk.buildings.get(w.homeBid); if (b && b.visitable) return b; }
+    if (w.homeBid && R.next() < 0.5) { const b = wk.buildings.get(w.homeBid); if (b && b.visitable) return b; }
     const doms = w.dominios || [], noble = (w.cargoTier || 0) >= 2;
     const weighted = [];
     wk.visitable.forEach(b => {
@@ -236,20 +252,23 @@ const HacFolk = (function () {
     const b = wk.buildings.get(w.insideId);
     w.insideId = null; w.goalBid = null; w.task = null;
     if (!b) { w.state = 'paseando'; w.strollTimer = rng(2, 6); return; }
-    const goal = (wk.camCells.length && Math.random() < 0.8) ? wk.camCells[rnd(wk.camCells.length)] : wk.cells[rnd(wk.cells.length)];
+    const goal = (wk.camCells.length && R.next() < 0.8) ? wk.camCells[rnd(wk.camCells.length)] : wk.cells[rnd(wk.cells.length)];
     const out = bfs(b.approach, new Set([goal[0] + ',' + goal[1]])) || [];
     w.path = [b.approach].concat(out); w.state = 'saliendo'; w.moving = false;
   }
 
   function onPathDone(w) {
     if (w.state === 'yendo') {
-      w.state = 'tarea'; w.insideId = w.goalBid; w.phase = Math.random() * 6.28;
+      w.state = 'tarea'; w.insideId = w.goalBid; w.phase = R.next() * 6.28;
       // Elige una tarea del edificio (varias por tipo) y su duración configurada;
       // jitter ±15% para que no entren/salgan todos en lockstep.
       const b = wk.buildings.get(w.goalBid);
-      const task = (b && window.HacTareas && HacTareas.pick) ? HacTareas.pick(b.tipo) : null;
+      // Elección DETERMINISTA (no HacTareas.pick, que usa Math.random): mismo
+      // catálogo + mismo stream → misma tarea para todos.
+      const ls = (b && window.HacTareas && HacTareas.byTipo) ? (HacTareas.byTipo(b.tipo) || []) : [];
+      const task = ls.length ? ls[R.int(ls.length)] : null;
       w.task = task;
-      w.taskTimer = (task ? task.duracionSeg : 30) * (0.85 + Math.random() * 0.3);
+      w.taskTimer = (task ? task.duracionSeg : 30) * (0.85 + R.next() * 0.3);
     } else if (w.state === 'saliendo') {
       w.state = 'paseando'; w.strollTimer = rng(2, 6); w.wait = rng(0.2, 0.8); w.task = null;
     }
@@ -262,7 +281,7 @@ const HacFolk = (function () {
       if (w.path && w.path.length) { const c = w.path.shift(); w.tx = c[0]; w.ty = c[1]; w.moving = true; }
       else { onPathDone(w); return; }
     }
-    const dx = w.tx - w.fx, dy = w.ty - w.fy, d = Math.hypot(dx, dy), adv = SPD * dt;
+    const dx = w.tx - w.fx, dy = w.ty - w.fy, d = Math.sqrt(dx * dx + dy * dy), adv = SPD * dt;
     const fd = faceFromGrid(dx, dy); if (fd) w.dir = fd;
     if (d <= adv) { w.fx = w.tx; w.fy = w.ty; w.moving = false; w.phase += dt * 8; if (!(w.path && w.path.length)) onPathDone(w); }
     else { w.fx += dx / d * adv; w.fy += dy / d * adv; w.phase += dt * 8; }
@@ -289,7 +308,7 @@ const HacFolk = (function () {
 
   function wander(w, dt, SPD) {
     if (w.moving) {
-      const dx = w.tx - w.fx, dy = w.ty - w.fy, d = Math.hypot(dx, dy), adv = SPD * dt;
+      const dx = w.tx - w.fx, dy = w.ty - w.fy, d = Math.sqrt(dx * dx + dy * dy), adv = SPD * dt;
       const fd = faceFromGrid(dx, dy); if (fd) w.dir = fd;
       if (d <= adv) { w.fx = w.tx; w.fy = w.ty; w.moving = false; w.wait = rng(0.3, 1.9); maybeGarden(w); }
       else { w.fx += dx / d * adv; w.fy += dy / d * adv; }
@@ -322,11 +341,11 @@ const HacFolk = (function () {
       if (d >= 1 && d <= 2 && d < bestD) { bestD = d; best = g; }
     }
     if (!best) return false;
-    if (Math.random() >= 0.35) { w.gardenCd = rng(6, 14); return false; }   // pasa cerca pero esta vez sigue su camino
+    if (R.next() >= 0.35) { w.gardenCd = rng(6, 14); return false; }   // pasa cerca pero esta vez sigue su camino
     const path = bfs([cx, cy], new Set([best[0] + ',' + best[1]]));
     if (!path || !path.length) { w.gardenCd = rng(6, 14); return false; }
     w.path = path; w.moving = false;
-    w.restIntent = (Math.random() < 0.6) ? 'tumbado' : 'contemplando';      // la mayoría se tumba en la hierba
+    w.restIntent = (R.next() < 0.6) ? 'tumbado' : 'contemplando';      // la mayoría se tumba en la hierba
     w.state = 'a-descansar';
     return true;
   }
@@ -346,7 +365,7 @@ const HacFolk = (function () {
     // El agua no es pisable: solo se contempla desde una celda contigua.
     const nearWater = !onGarden && neigh(cx, cy).some(([x, y]) => wk.water.has(x + ',' + y));
     if (!onGarden && !nearWater) return;
-    const r = Math.random();
+    const r = R.next();
     if (onGarden) {
       if (r < 0.40) { w.state = 'contemplando'; w.idleTimer = rng(5, 11); w.gardenCd = rng(25, 50); faceTowards(w, cx, cy, wk.garden); }
       else if (r < 0.68) { w.state = 'tumbado'; w.idleTimer = rng(30, 60); w.gardenCd = rng(40, 80); }   // se sienta a descansar (solo sobre plantas)
@@ -418,7 +437,7 @@ const HacFolk = (function () {
         const b = walkers[j]; if (b.state !== 'paseando' || b.socialCd > 0) continue;
         const dx = a.fx - b.fx, dy = a.fy - b.fy;
         if (dx * dx + dy * dy > 1.7) continue;          // ~1.3 tiles
-        if (Math.random() < 0.5) startChat(a, b);
+        if (R.next() < 0.5) startChat(a, b);
         else { a.socialCd = b.socialCd = rng(6, 14); }  // este cruce no; reintenta luego
         break;
       }
@@ -480,7 +499,7 @@ const HacFolk = (function () {
       if (w.path && w.path.length) { const c = w.path.shift(); w.tx = c[0]; w.ty = c[1]; w.moving = true; }
       else return;
     }
-    const dx = w.tx - w.fx, dy = w.ty - w.fy, d = Math.hypot(dx, dy), adv = SPD * dt;
+    const dx = w.tx - w.fx, dy = w.ty - w.fy, d = Math.sqrt(dx * dx + dy * dy), adv = SPD * dt;
     const fd = faceFromGrid(dx, dy); if (fd) w.dir = fd;
     if (d <= adv) { w.fx = w.tx; w.fy = w.ty; w.moving = false; w.phase += dt * 8; }
     else { w.fx += dx / d * adv; w.fy += dy / d * adv; w.phase += dt * 8; }
@@ -495,7 +514,7 @@ const HacFolk = (function () {
         const b = walkers[j]; if (b.state !== 'paseando' || b.socialCd > 0) continue;
         const dx = a.fx - b.fx, dy = a.fy - b.fy, d2 = dx * dx + dy * dy;
         if (d2 < 9 || d2 > 64) continue;                 // entre ~3 y ~8 teselas: ni de cerca, ni lejísimos
-        if (Math.random() < 0.5) { startHail(a, b); hailCd = rng(30, 70); return; }
+        if (R.next() < 0.5) { startHail(a, b); hailCd = rng(30, 70); return; }
       }
     }
     hailCd = rng(2, 5);                                   // nadie elegible/aceptó: reintenta pronto
@@ -845,14 +864,39 @@ const HacFolk = (function () {
     if (sig !== stateSig) { stateSig = sig; if (opts && typeof opts.onState === 'function') opts.onState(); }
   }
 
-  function tick(ts) {
+  // (Re)inicia el estado determinista para la época `e`: re-siembra el stream y
+  // vuelve a poblar la finca desde cero. Todos los clientes hacen esto a la vez
+  // (misma época derivada de la hora compartida) y con la misma semilla.
+  function resetEpoch(e) {
+    epoch = e; simTick = 0;
+    R = HacRand.make(seedKey + '#' + e);
+    walkers = spawn(opts.mapa, opts.tier, opts.miembros, opts.color || '#c9a84c');
+    hailCd = rng(15, 40);
+  }
+  // Ejecuta pasos FIJOS (sin pintar) hasta `target`. Al abrir a mitad de ventana,
+  // rebobina la ventana actual hasta ahora; en marcha avanza ~2 pasos por frame.
+  // El guard es un tope de seguridad (una ventana entera ≈ 10800 pasos).
+  function advanceTo(target) {
+    let guard = 0;
+    while (simTick < target && guard++ < 200000) { step(SIM_DT); simTick++; }
+  }
+
+  function tick() {
     if (!running) return;
-    const dt = Math.min(0.05, (ts - lastT) / 1000 || 0); lastT = ts;
-    if (visible && onScreen) { step(dt); paint(); pushState(); }
+    if (visible && onScreen) {
+      const now = HacClock.now();
+      const e = Math.floor(now / WINDOW_MS);
+      if (e !== epoch) resetEpoch(e);                              // cruzó ventana → re-siembra
+      const target = Math.floor(((now - epoch * WINDOW_MS) / 1000) / SIM_DT);
+      advanceTo(target);
+      paint(); pushState();
+    }
     raf = requestAnimationFrame(tick);
   }
 
-  function onVis() { visible = !document.hidden; lastT = 0; }
+  // El sim es dirigido por el tiempo (no acumula dt), así que al volver de estar
+  // oculto basta con marcar visible: el siguiente tick rebobina lo que falte.
+  function onVis() { visible = !document.hidden; }
 
   function stop() {
     running = false;
@@ -873,12 +917,21 @@ const HacFolk = (function () {
     stop();
     iso = isoCanvas; opts = o || {}; selectedId = null; stateSig = '';
     if (!iso) return;
+    // Semilla ESTABLE de la finca: id de hacienda si lo pasan; si no, algo derivado
+    // de los miembros para que al menos sea consistente entre clientes de esa finca.
+    seedKey = String(opts.seedKey || opts.haciendaId
+      || ('finca-' + (((opts.miembros || []).map(m => m && m.id).join('-')) || ('t' + (opts.tier || 0)))));
     // Asegura el catálogo de tareas en caché para cuando un mecenas entre.
     if (window.HacTareas && HacTareas.ready) HacTareas.ready();
-    walkers = spawn(opts.mapa, opts.tier, opts.miembros, opts.color || '#c9a84c');
+    // Sincroniza el reloj de servidor (async); mientras, siembra con el reloj local
+    // (los NPCs aparecen ya). El desfase server↔local es de <1 s, así que cuando
+    // `now()` se corrija el siguiente tick solo reajusta unos pocos pasos.
+    if (window.HacClock && HacClock.ready) HacClock.ready();
+    const now = (window.HacClock && HacClock.now) ? HacClock.now() : Date.now();
+    resetEpoch(Math.floor(now / WINDOW_MS));
     if (!walkers.length) { iso._hacSigns = []; return; }
     if (reduced()) { staticPose(); paint(); pushState(); return; }
-    running = true; lastT = 0; hailCd = rng(15, 40); visible = !document.hidden; onScreen = true;
+    running = true; visible = !document.hidden; onScreen = true;
     document.addEventListener('visibilitychange', onVis);
     if ('IntersectionObserver' in window) { io = new IntersectionObserver(es => { onScreen = es.some(e => e.isIntersecting); }, { threshold: 0 }); io.observe(iso); }
     raf = requestAnimationFrame(tick);

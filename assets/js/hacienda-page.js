@@ -260,7 +260,7 @@
         b.addEventListener('click', () => gotoMember(b.dataset.id)));
     }
 
-    HacFolk.start(iso, { mapa: h.mapa, tier, color, miembros: h.miembros, onState: renderList });
+    HacFolk.start(iso, { mapa: h.mapa, tier, color, miembros: h.miembros, onState: renderList, seedKey: h.id });
     renderList();
 
     // Popup con la gente que hay dentro de un edificio (al pulsar su banner).

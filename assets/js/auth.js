@@ -176,6 +176,7 @@ const Auth = (function () {
   return {
     ready, current, isAdmin, onChange, client: getClient,
     loginWithGoogle, login, register, logout,
+    url: () => SUPABASE_URL,
     ADMIN_EMAIL
   };
 })();
