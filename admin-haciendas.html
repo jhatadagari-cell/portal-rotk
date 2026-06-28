@@ -9,7 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700;900&family=Cinzel+Decorative:wght@400;700&family=IM+Fell+English:ital@0;1&family=Noto+Sans+SC:wght@300;400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/chrome.css?v=4">
 <link rel="stylesheet" href="assets/css/main.css">
-<link rel="stylesheet" href="assets/css/admin.css?v=30">
+<link rel="stylesheet" href="assets/css/admin.css?v=31">
 </head>
 <body>
 
@@ -132,7 +132,7 @@
 <script src="assets/js/hac-util.js?v=1"></script>
 <script src="assets/js/haciendas-data.js?v=11"></script>
 <script src="assets/js/hac-calc.js?v=6"></script>
-<script src="assets/js/hac-build.js?v=26"></script>
+<script src="assets/js/hac-build.js?v=27"></script>
 <script src="assets/js/hac-store.js?v=5"></script>
 <script src="assets/js/hac-tareas.js?v=2"></script>
 <script src="assets/js/personajes-data.js?v=2"></script>
@@ -273,12 +273,20 @@
     if (!B) return '';
     const lista = (h.mapa && h.mapa.construcciones) || [];
     const [GW, GH] = B.gridDims(tier);
-    // Tamaño de celda adaptativo: la rejilla ocupa el escenario (izquierda) sin
-    // scroll; el raíl de controles vive a su derecha.
-    const cellPx = Math.max(13, Math.min(46, Math.floor(880 / GW)));
+    // Terreno exterior comprado (anillo perimetral). Se dibuja alrededor de la
+    // rejilla interior, en otro color; solo admite edificios exteriores.
+    const eT = Number(h.mapa && h.mapa.exteriorTier) || 0;
+    const ringD = B.ringDepth(eT);
+    const X0 = -ringD, Y0 = -ringD;                 // esquina norte de lo dibujado
+    const COLS = GW + ringD * 2, ROWS = GH + ringD * 2;
+    // Tamaño de celda adaptativo: la rejilla (interior + anillo) ocupa el escenario
+    // (izquierda) sin scroll; el raíl de controles vive a su derecha.
+    const cellPx = Math.max(10, Math.min(46, Math.floor(880 / COLS)));
 
     let cells = '';
-    for (let gy = 0; gy < GH; gy++) for (let gx = 0; gx < GW; gx++) {
+    for (let gy = Y0; gy < GH + ringD; gy++) for (let gx = X0; gx < GW + ringD; gx++) {
+      const ext = B.esCeldaExterior(gx, gy, tier, eT);   // celda del anillo exterior
+      const extCls = ext ? ' ext' : '';
       const c = B.construccionEn(lista, gx, gy);
       const t = c ? B.tipo(c.tipo) : null;
       if (t) {
@@ -287,10 +295,10 @@
         const due = c.dueno ? (((h.miembros || []).find(m => m.id === c.dueno) || {}).nombre || '¿?') : 'sin dueño';
         const abbr = t.nombre.slice(0, 3);
         const moveSrc = boardMovePos && c.pos[0] === boardMovePos[0] && c.pos[1] === boardMovePos[1];
-        cells += `<div class="adm-cell occ${anchor ? ' anchor' : ''}${moveSrc ? ' move-src' : ''}" data-gx="${gx}" data-gy="${gy}" style="--c:${esc(t.color)}" title="${esc(t.nombre)} ${f[0]}×${f[1]} · ${esc(due)}">${esc(abbr)}</div>`;
+        cells += `<div class="adm-cell occ${anchor ? ' anchor' : ''}${moveSrc ? ' move-src' : ''}${extCls}" data-gx="${gx}" data-gy="${gy}" style="--c:${esc(t.color)}" title="${esc(t.nombre)} ${f[0]}×${f[1]} · ${esc(due)}">${esc(abbr)}</div>`;
       } else {
         const sel = boardSel && boardSel[0] === gx && boardSel[1] === gy ? ' on' : '';
-        cells += `<button class="adm-cell free${sel}" data-gx="${gx}" data-gy="${gy}">·</button>`;
+        cells += `<button class="adm-cell free${sel}${extCls}" data-gx="${gx}" data-gy="${gy}">·</button>`;
       }
     }
 
@@ -317,7 +325,7 @@
       ? (wallStart ? `inicio del ${lineaNoun} [${wallStart[0]}, ${wallStart[1]}]` : `— elige el inicio del ${lineaNoun} —`)
       : (boardSel ? `casilla [${boardSel[0]}, ${boardSel[1]}]` : '— elige una casilla libre —');
     // Validez de la colocación seleccionada (para bloquear "Construir" y avisar).
-    const selV = boardSel ? B.puedeColocar({ pos: boardSel, tipo: boardTipo, rot: boardRot }, tier, lista) : { ok: false };
+    const selV = boardSel ? B.puedeColocar({ pos: boardSel, tipo: boardTipo, rot: boardRot }, tier, lista, eT) : { ok: false };
     const noConstruible = !boardSel || !selV.ok;
     const motivoHTML = (!muroMode && boardSel && !selV.ok) ? `<span class="adm-board-bad">✕ ${esc(selV.motivo)}</span>` : '';
     const buildLabel = muroMode ? (wallStart ? `Coloca el final del ${lineaNoun}` : `Elige el inicio del ${lineaNoun}`) : 'Construir';
@@ -411,7 +419,7 @@
           <div class="adm-board-stage">
             ${moveBanner}
             ${pabBanner}
-            <div class="adm-grid-board" style="grid-template-columns:repeat(${GW},${cellPx}px);--cell:${cellPx}px">${cells}</div>
+            <div class="adm-grid-board" style="grid-template-columns:repeat(${COLS},${cellPx}px);--cell:${cellPx}px">${cells}</div>
             <p class="adm-board-tip">${boardTip}</p>
           </div>
           <aside class="adm-board-rail">
@@ -459,6 +467,19 @@
     const tier = nivelEfectivo(h);
     const alcanzable = HacCalc.nivelAlcanzable(h, ledger);   // hasta dónde se puede confirmar
     const puedeSubir = alcanzable > tier;
+    // ── Tesorería + extensión exterior (anillo perimetral) ──
+    // Una sola moneda: el prestigio NO baja al comprar; la tesorería = prestigio −
+    // gastado acumulado. La extensión se compra escalonada (nivel 3→6), nunca por
+    // encima del nivel confirmado de la casa, y ensancha el anillo (5/10/15/20).
+    const eT = Number(h.mapa && h.mapa.exteriorTier) || 0;
+    const gastado = Number(h.mapa && h.mapa.gastado) || 0;
+    const saldo = Math.max(0, prest - gastado);
+    const ringD = window.HacBuild ? HacBuild.ringDepth(eT) : 0;
+    const extMaxT = HacCalc.maxTier();
+    const nextExt = eT >= 3 ? eT + 1 : 3;
+    const extCoste = (window.HacBuild && nextExt <= extMaxT) ? HacBuild.costeExterior(nextExt) : 0;
+    const extDisponible = nextExt <= extMaxT && nextExt <= tier;   // no superar el nivel confirmado
+    const extAsequible = saldo >= extCoste;
     const tInfo = tierPorNivel(tier);
     const prog = progresoHacia(prest, tInfo);
     const progTxt = prog
@@ -556,6 +577,16 @@
           : `<span class="adm-hint">Nivel ${tier} confirmado${prog ? ' · sube el prestigio para desbloquear el siguiente' : ' · máximo'}</span>`}
       </div>
 
+      <div class="adm-gov" style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin:0 0 8px">
+        <span style="font-size:13px">🏛 Tesorería: <b>${saldo}</b> pts${gastado ? ` <span class="adm-hint">(${gastado} gastados de ${prest})</span>` : ''}</span>
+        <span class="adm-hint">${eT >= 3 ? `Exterior nivel ${eT} · anillo de ${ringD} celdas` : 'Sin terreno exterior'}</span>
+        ${extDisponible
+          ? `<button type="button" class="adm-btn adm-btn-gold" id="adm-buy-ext"${extAsequible ? '' : ' disabled'} title="${extAsequible ? 'Amplía el anillo exterior a ' + HacBuild.ringDepth(nextExt) + ' celdas' : 'Tesorería insuficiente'}">🏕 ${eT >= 3 ? 'Ampliar' : 'Comprar'} terreno exterior (nivel ${nextExt}) · ${extCoste} pts</button>`
+          : eT >= extMaxT
+          ? '<span class="adm-hint">Exterior al máximo</span>'
+          : `<span class="adm-hint">Sube la casa a nivel ${nextExt} para ${eT >= 3 ? 'ampliar' : 'comprar'} el exterior</span>`}
+      </div>
+
       <details class="adm-edit"${editOpen ? ' open' : ''}>
         <summary>Editar datos de la casa</summary>
         <form id="form-edit">
@@ -649,6 +680,24 @@
       h.mapa.tier = alcanzable;
       saveHacienda(h); render();
     });
+    // Comprar/ampliar el terreno exterior (anillo perimetral). Gasta tesorería
+    // (prestigio − gastado); el prestigio no baja. Escalonado: nivel 3→6, nunca
+    // por encima del nivel confirmado de la casa.
+    const buyExt = document.getElementById('adm-buy-ext');
+    if (buyExt) buyExt.addEventListener('click', () => {
+      const ledger2 = window.HacPuntos ? HacPuntos.totalHacienda(h.id) : 0;
+      const prest2 = HacCalc.prestigio(h, ledger2);
+      const eT2 = Number(h.mapa && h.mapa.exteriorTier) || 0;
+      const next2 = eT2 >= 3 ? eT2 + 1 : 3;
+      if (next2 > HacCalc.maxTier() || next2 > nivelEfectivo(h)) return;
+      const coste = HacBuild.costeExterior(next2);
+      const gast2 = Number(h.mapa && h.mapa.gastado) || 0;
+      if (prest2 - gast2 < coste) { alert('Tesorería insuficiente para esta extensión.'); return; }
+      h.mapa = h.mapa || { v: 1, construcciones: [] };
+      h.mapa.exteriorTier = next2;
+      h.mapa.gastado = gast2 + coste;
+      saveHacienda(h); render();
+    });
 
     // Guardar datos de la casa.
     const fe = document.getElementById('form-edit');
@@ -706,6 +755,7 @@
     if (window.HacBuild) {
       if (!h.mapa) h.mapa = { v: 1, construcciones: [] };
       const tierNow = nivelEfectivo(h);   // nivel de la finca (trinquete), igual que la rejilla pintada
+      const eTNow = Number(h.mapa.exteriorTier) || 0;   // nivel del anillo exterior comprado
       const enPos = (gx, gy) => h.mapa.construcciones.find(c => c.pos[0] === gx && c.pos[1] === gy);
 
       // Elegir tipo de edificio (preview de tamaño se actualiza al re-render).
@@ -759,7 +809,7 @@
         const useRot   = mC ? (mC.rot || 0)  : boardRot;
         const useOtras = mC ? h.mapa.construcciones.filter(x => x !== mC) : h.mapa.construcciones;
         const c = { pos: pos, tipo: useTipo, rot: useRot };
-        const ok = HacBuild.puedeColocar(c, tierNow, useOtras).ok;
+        const ok = HacBuild.puedeColocar(c, tierNow, useOtras, eTNow).ok;
         HacBuild.celdasOcupadas(c).forEach(([gx, gy]) => {
           const el = cellAt(gx, gy); if (el) el.classList.add(ok ? 'pv-ok' : 'pv-bad');
         });
@@ -785,7 +835,7 @@
         clearMarks();
         if (!wallStart) return;
         lineCells(wallStart, end).cells.forEach(([gx, gy]) => {
-          const ok = HacBuild.puedeColocar({ pos: [gx, gy], tipo: boardTipo, rot: 0 }, tierNow, h.mapa.construcciones).ok;
+          const ok = HacBuild.puedeColocar({ pos: [gx, gy], tipo: boardTipo, rot: 0 }, tierNow, h.mapa.construcciones, eTNow).ok;
           const el = cellAt(gx, gy); if (el) el.classList.add(ok ? 'pv-ok' : 'pv-bad');
         });
       }
@@ -859,7 +909,7 @@
               const g2 = { pos: [c.pos[0], c.pos[1]], tipo: boardTipo, rot: c.rot || 0, dueno: null, nivel: 1 };
               const foot = HacBuild.celdasOcupadas(g2);
               const after = h.mapa.construcciones.filter(x => !(x.tipo === 'muralla' && foot.some(([fx, fy]) => fx === x.pos[0] && fy === x.pos[1])));
-              if (HacBuild.puedeColocar(g2, tierNow, after).ok) { h.mapa.construcciones = after.concat([g2]); saveHacienda(h); render(); }
+              if (HacBuild.puedeColocar(g2, tierNow, after, eTNow).ok) { h.mapa.construcciones = after.concat([g2]); saveHacienda(h); render(); }
               else alert('No cabe la puerta aquí.');
               return;
             }
@@ -932,7 +982,7 @@
             const mC = h.mapa.construcciones.find(c => c.pos[0] === boardMovePos[0] && c.pos[1] === boardMovePos[1]);
             if (!mC) { boardMovePos = null; render(); return; }
             const otras = h.mapa.construcciones.filter(c => c !== mC);
-            const v = HacBuild.puedeColocar({ pos: [gx, gy], tipo: mC.tipo, rot: mC.rot || 0 }, tierNow, otras);
+            const v = HacBuild.puedeColocar({ pos: [gx, gy], tipo: mC.tipo, rot: mC.rot || 0 }, tierNow, otras, eTNow);
             if (!v.ok) { alert('No cabe aquí: ' + v.motivo); return; }
             mC.pos = [gx, gy]; boardMovePos = null; saveHacienda(h); render();
           } else if (muroMode) {
@@ -941,7 +991,7 @@
             let n = 0;
             cells.forEach(([cx, cy]) => {
               const c = { pos: [cx, cy], tipo: boardTipo, rot, dueno: null, nivel: 1 };
-              if (HacBuild.puedeColocar(c, tierNow, h.mapa.construcciones).ok) { h.mapa.construcciones.push(c); n++; }
+              if (HacBuild.puedeColocar(c, tierNow, h.mapa.construcciones, eTNow).ok) { h.mapa.construcciones.push(c); n++; }
             });
             wallStart = null;
             if (n) saveHacienda(h);
@@ -960,7 +1010,7 @@
         if (muroMode) return;   // el muro se traza con dos clics, no con el botón
         if (!boardSel) { alert('Elige primero una casilla libre en la rejilla.'); return; }
         const c = { pos: [boardSel[0], boardSel[1]], tipo: boardTipo, rot: boardRot, dueno: null, nivel: 1 };
-        const v = HacBuild.puedeColocar(c, tierNow, h.mapa.construcciones);
+        const v = HacBuild.puedeColocar(c, tierNow, h.mapa.construcciones, eTNow);
         if (!v.ok) { alert(v.motivo); return; }
         h.mapa.construcciones.push(c);
         boardSel = null;
@@ -975,7 +1025,7 @@
           if (!c) return;
           const giro = { pos: c.pos, tipo: c.tipo, rot: ((c.rot || 0) + 1) % 4, dueno: c.dueno, nivel: c.nivel };
           const otras = h.mapa.construcciones.filter(x => x !== c);
-          const v = HacBuild.puedeColocar(giro, tierNow, otras);
+          const v = HacBuild.puedeColocar(giro, tierNow, otras, eTNow);
           if (!v.ok) { alert('No se puede rotar aquí: ' + v.motivo); return; }
           c.rot = giro.rot;
           saveHacienda(h);

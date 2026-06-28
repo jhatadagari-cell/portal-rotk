@@ -65,7 +65,7 @@ const HacBuild = (function () {
     { id: 'salon-largo', dominio: 'administrativo',       nombre: 'Salón Alargado',     zh: '长殿', capa: 'edificio', footprint: [3, 5], tierMin: 3, unico: false, cargoMin: null,    color: '#bb3c1e', altura: 44, desc: 'Salón de planta alargada para audiencias numerosas.' },
     { id: 'salon-banquete', dominio: 'administrativo',    nombre: 'Salón de Banquetes', zh: '宴殿', capa: 'edificio', footprint: [3, 7], tierMin: 4, unico: false, cargoMin: null,    color: '#b83a1c', altura: 48, desc: 'Largo salón donde la casa celebra sus grandes banquetes.' },
     { id: 'cuartel', dominio: 'militar',           nombre: 'Cuartel',            zh: '营房', capa: 'edificio', footprint: [4, 5], tierMin: 3, unico: false, cargoMin: null,    color: '#6a6a5a', altura: 28, desc: 'Barracones de la guarnición: tropa, oficiales y pertrechos.' },
-    { id: 'campamento', dominio: 'militar',        nombre: 'Campamento Militar', zh: '军营', capa: 'edificio', footprint: [8, 10], tierMin: 2, unico: false, cargoMin: null, color: '#7a6a4a', altura: 46, desc: 'Campamento de tropas: tiendas, empalizada, hoguera y caballerizas.' },
+    { id: 'campamento', dominio: 'militar',        nombre: 'Campamento Militar', zh: '军营', capa: 'edificio', footprint: [8, 10], tierMin: 3, unico: false, cargoMin: null, color: '#7a6a4a', altura: 46, exterior: true, desc: 'Campamento de tropas: tiendas, empalizada, hoguera y caballerizas. Solo en terreno exterior.' },
     { id: 'gran-palacio', dominio: 'administrativo',      nombre: 'Gran Palacio',       zh: '大宮', capa: 'edificio', footprint: [4, 7], tierMin: 6, unico: true,  cargoMin: null,    color: '#c43c1a', altura: 70, desc: 'El palacio mayor: triple alero sobre el eje ceremonial de la casa.' },
     // ── Compuestos (huella en L, U o anillo · campo `mask`) ────────────────
     { id: 'ala-l', dominio: 'administrativo',             nombre: 'Ala en Escuadra',    zh: '曲尺', capa: 'edificio', footprint: [3, 3], mask: [[0,0],[0,1],[0,2],[1,2],[2,2]], tierMin: 2, unico: false, cargoMin: null, color: '#a85a30', altura: 28, desc: 'Dos crujías en ángulo recto que cierran la esquina de un patio.' },
@@ -189,6 +189,26 @@ const HacBuild = (function () {
     return [2 + n, 2 + n];
   };
   const slotsDesbloqueados = (tier) => { const [w, h] = gridDims(tier); return w * h; };
+
+  // ── Terreno EXTERIOR (anillo perimetral comprable) ───────────────────────
+  // Fuera de las murallas se puede comprar un anillo construible SOLO para
+  // edificios exteriores (campamento…). Se compra por tiers (3→6), en orden, con
+  // tesorería; cada tier ensancha el anillo. exteriorTier ∈ {0,3,4,5,6} ≤ tier.
+  const RING_PASO = 5;                                  // celdas de anillo por tier
+  const COSTE_EXTERIOR = { 3: 2000, 4: 4500, 5: 9000, 6: 18000 };
+  const ringDepth = (exteriorTier) => { const e = Number(exteriorTier) || 0; return e >= 3 ? (e - 2) * RING_PASO : 0; };
+  const costeExterior = (tierAComprar) => COSTE_EXTERIOR[tierAComprar] || 0;
+  // ¿La celda (x,y) está en el anillo exterior comprado? (fuera de la rejilla
+  // interior pero dentro de la profundidad del anillo).
+  function esCeldaExterior(x, y, tier, exteriorTier) {
+    const d = ringDepth(exteriorTier); if (d <= 0) return false;
+    const [w, h] = gridDims(tier);
+    const interior = x >= 0 && y >= 0 && x < w && y < h;
+    const dentroAnillo = x >= -d && y >= -d && x < w + d && y < h + d;
+    return dentroAnillo && !interior;
+  }
+  // ¿Todas las celdas de una construcción caen en el anillo exterior?
+  const enExterior = (c, tier, exteriorTier) => celdasOcupadas(c).every(([x, y]) => esCeldaExterior(x, y, tier, exteriorTier));
 
   // Footprint EFECTIVO de una construcción según su rotación. Las rotaciones
   // impares (90°/270°) intercambian ancho y alto; las pares lo dejan igual.
@@ -358,11 +378,16 @@ const HacBuild = (function () {
   }
 
   // Valida una colocación. Devuelve {ok:true} o {ok:false, motivo:'…'}.
-  function puedeColocar(c, tier, lista) {
+  function puedeColocar(c, tier, lista, exteriorTier) {
     const t = tipo(c && c.tipo);
     if (!t) return { ok: false, motivo: 'Tipo de edificio desconocido.' };
     if (clampTier(tier) < t.tierMin) return { ok: false, motivo: `Requiere nivel ${t.tierMin} de hacienda.` };
-    if (!dentroDeRejilla(c, tier)) return { ok: false, motivo: 'No cabe dentro de la rejilla.' };
+    // Exteriores SOLO en el anillo exterior; normales SOLO dentro de la rejilla.
+    if (t.exterior) {
+      if (!enExterior(c, tier, exteriorTier)) return { ok: false, motivo: 'Solo en terreno exterior (compra la extensión).' };
+    } else if (!dentroDeRejilla(c, tier)) {
+      return { ok: false, motivo: 'No cabe dentro de la rejilla.' };
+    }
     if (t.unico && (lista || []).some(o => o.tipo === t.id && !(o.pos && c.pos && o.pos[0] === c.pos[0] && o.pos[1] === c.pos[1])))
       return { ok: false, motivo: `Ya existe un ${t.nombre} en esta hacienda.` };
     if (colisiona(c, lista)) return { ok: false, motivo: 'Se solapa con otro edificio.' };
@@ -405,6 +430,11 @@ const HacBuild = (function () {
     // en el mapa (jsonb) para no requerir migración de la tabla. (Sin esto, la
     // normalización lo descartaba y el selector volvía a «sin fundador».)
     if (mapa && mapa.fundador) out.fundador = String(mapa.fundador);
+    // Terreno exterior comprado (tier 3..6) y puntos de tesorería ya gastados.
+    const eT = Math.floor(Number(mapa && mapa.exteriorTier) || 0);
+    if (eT >= 3) out.exteriorTier = clampTier(eT);
+    const ga = Math.floor(Number(mapa && mapa.gastado) || 0);
+    if (ga > 0) out.gastado = ga;
     return out;
   }
 
@@ -412,6 +442,7 @@ const HacBuild = (function () {
     CONSTRUCCIONES, tipo, esSuelo, esLinea, CATEGORIAS, categoriaDe, TAREAS, tareaDe, lugarDe, gridDims, slotsDesbloqueados, footprintDe, celdasOcupadas,
     dentroDeRejilla, colisiona, construccionEn, puedeColocar, patios, enMuro,
     construccionesValidas, normalizaMapa, MAX_TIER,
+    ringDepth, costeExterior, esCeldaExterior, enExterior, COSTE_EXTERIOR,
     ROLES_PABELLON, rolPabellon, maxPabellones, MIN_PABELLON, regionPabellon, regionValidaPabellon
   };
 })();
