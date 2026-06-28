@@ -72,16 +72,9 @@ const HacFolk = (function () {
   // La energía se DERIVA de esa línea de tiempo (v1 de pruebas: no bloquea).
   let orders = {};
   const SALUTE_SEC = 1.6;
-  const E_MAX = 100, E_DRAIN = 55, E_REGEN_PER_S = 7;   // pruebas: baja al currar, regenera rápido
-  // Hora de simulación (ms) del estado actual — base de las misiones y la energía.
+  // Hora de simulación (ms) del estado actual — base de las misiones.
+  // (La energía es un recurso del jugador independiente del sim → HacEnergia.)
   function nowSimMs() { return simNowMs; }
-  function energyOf(w) {
-    const o = w.order; if (!o) return E_MAX;
-    const t = nowSimMs();
-    if (t <= o.startMs) return E_MAX;
-    if (t < o.endMs) return Math.max(E_MAX - E_DRAIN, E_MAX - E_DRAIN * ((t - o.startMs) / (o.endMs - o.startMs)));
-    return Math.min(E_MAX, (E_MAX - E_DRAIN) + E_REGEN_PER_S * ((t - o.endMs) / 1000));
-  }
   const proj = () => iso && iso._hacProj;
   function logic(fx, fy) { const p = proj(); if (!p) return [0, 0]; return [p.originX + (fx - fy) * TW / 2, p.originY + (fx + fy) * TH / 2]; }
 
@@ -1105,7 +1098,7 @@ const HacFolk = (function () {
       const b = w.insideId && wk ? wk.buildings.get(w.insideId) : null;
       const inside = b ? (b.dueno ? memberName(b.dueno) : b.nombre) : null;
       return { id: w.id, name: w.name, color: w.color, inside, activity: activityText(w),
-        energia: Math.round(energyOf(w)), onMission: !!w.onMission };
+        onMission: !!w.onMission };
     });
   }
   function select(id) { selectedId = id || null; if (!running) paint(); pushState(); }

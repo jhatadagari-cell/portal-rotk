@@ -264,6 +264,8 @@
     }
     function dispatch(targetId) {
       if (!myId || !targetId || !window.HacOrdenes) return;
+      // La misión CUESTA energía (único gasto; el ambiente es gratis).
+      if (window.HacEnergia) HacEnergia.spend(h.id, myId, HacEnergia.COSTE_MISION);
       HacOrdenes.set({ haciendaId: h.id, miembroId: myId, tipo: 'mision', targetId, duracionSeg: 120 })
         .then(applyOrders).catch(e => console.warn('[orden] set', e));
     }
@@ -298,7 +300,7 @@
       const sel = HacFolk.selected();
       listEl.innerHTML = items.map(m => {
         const mine = m.id === myId;
-        const e = Math.max(0, Math.min(100, m.energia == null ? 100 : m.energia));
+        const e = Math.round(window.HacEnergia ? HacEnergia.current(h.id, m.id) : 100);
         return `<li>
           <button class="hacp-folk-item${m.id === sel ? ' on' : ''}" data-id="${esc(m.id)}">
             <span class="hacp-folk-dot" style="--c:${esc(m.color)}"></span>
@@ -320,10 +322,14 @@
 
     HacFolk.start(iso, { mapa: h.mapa, tier, color, miembros: h.miembros, onState: renderList, seedKey: h.id, haciendaId: h.id, ordenes: {} });
     renderList();
-    // Carga las órdenes (compartidas) y las re-aplica; refresca por poll (≤5 s, sin realtime).
+    // Carga órdenes + energía (compartidas) y refresca por poll (≤5 s, sin realtime).
+    if (window.HacEnergia) HacEnergia.ready().then(renderList);
     if (window.HacOrdenes) {
       HacOrdenes.ready().then(applyOrders);
-      setInterval(() => { HacOrdenes.reload().then(applyOrders); }, 5000);
+      setInterval(() => {
+        if (window.HacEnergia) HacEnergia.reload();
+        HacOrdenes.reload().then(applyOrders);
+      }, 5000);
     }
 
     // Popup con la gente que hay dentro de un edificio (al pulsar su banner).
