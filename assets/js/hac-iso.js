@@ -20,7 +20,7 @@ const HacIso = (function () {
   const TOP_MARGIN = 132;             // hueco arriba para edificios altos, murallas y torres
   const PAD_X = 40;                   // margen lateral para murallas y paseo de ronda
   const SPRITE_BASE = 'assets/img/iso/';
-  const SPRITE_VER = '28';  // súbelo al regenerar los PNG (cache-busting)
+  const SPRITE_VER = '29';  // súbelo al regenerar los PNG (cache-busting)
 
   // ── Color helpers (para el placeholder) ─────────────────────────────────
   const { hexToRgb, clamp255: cl } = HacUtil;
@@ -289,11 +289,17 @@ const HacIso = (function () {
         return { ax: Math.round(X(c.pos[0], c.pos[1]) * SCALE - m.ox), ay: Math.round(Y(c.pos[0], c.pos[1]) * SCALE - m.oy), w: img.width, h: img.height, data: og.getImageData(0, 0, img.width, img.height).data };
       } catch (e) { return null; }
     }).filter(Boolean);
+    // Muestrea el centro de la celda y un anillo a ±½ tile (tolerancia ≈1 celda)
+    // para excluir también props pegados al borde de la silueta (p.ej. el bambú
+    // junto a la atalaya, cuya base cae justo fuera de la explanada).
+    const SAMPLE = [[0, 0], [18, 0], [-18, 0], [0, 9], [0, -9]];
     const underExtSprite = (gx, gy) => {
       const px = X(gx, gy) * SCALE, py = Y(gx, gy) * SCALE;
       for (const s of extAlpha) {
-        const ix = Math.round(px - s.ax), iy = Math.round(py - s.ay);
-        if (ix >= 0 && iy >= 0 && ix < s.w && iy < s.h && s.data[(iy * s.w + ix) * 4 + 3] > 40) return true;
+        for (const [dx, dy] of SAMPLE) {
+          const ix = Math.round(px + dx - s.ax), iy = Math.round(py + dy - s.ay);
+          if (ix >= 0 && iy >= 0 && ix < s.w && iy < s.h && s.data[(iy * s.w + ix) * 4 + 3] > 40) return true;
+        }
       }
       return false;
     };
