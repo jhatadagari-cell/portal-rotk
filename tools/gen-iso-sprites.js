@@ -411,6 +411,10 @@ function drawBuilding(cfg, layer) {
     });
   }
   if (cfg.stairs && wantBase) balustrade();
+  // Decoración temática (edificios de clase): props del patio frontal, al final.
+  if (wantBody && cfg.decor && DECOR_HALL[cfg.decor]) {
+    DECOR_HALL[cfg.decor](buf, P, { w, h, baseH, bodyH, roofH, door: cfg.door });
+  }
   return { buf, ox: OX, oy: OY };
 }
 
@@ -440,9 +444,9 @@ const EDIFICIOS = [
   { id:'gran-recinto',     w:5, h:8, roof:'#c43c1a', baseH:10, bodyH:24, roofH:20, stairs:true, tier0Ins:0.55, tierIns:0.5,
     tiers:[{bodyH:14,roofH:13},{bodyH:11,roofH:11}] },
   // ── Edificios de CLASE (tareas restringidas a la aptitud del dominio) ────
-  { id:'instruccion',      w:3, h:3, roof:'#4a4a52', baseH:5, bodyH:15, roofH:13 },                                   // 校場 militar (techo de hierro/pizarra)
-  { id:'academia',         w:3, h:3, roof:'#3a7a4a', baseH:5, bodyH:16, roofH:13, stories:true, bodyH2:9, roofH2:11 }, // 太學 cultural (teja vidriada verde)
-  { id:'cancilleria',      w:3, h:3, roof:'#2f5a86', baseH:6, bodyH:16, roofH:14 }                                     // 官署 administrativo (teja vidriada azul)
+  { id:'instruccion',      w:3, h:3, roof:'#4a4a52', baseH:5, bodyH:15, roofH:13, decor:'instruccion' },                                   // 校場 militar (techo de hierro/pizarra)
+  { id:'academia',         w:3, h:3, roof:'#3a7a4a', baseH:5, bodyH:16, roofH:13, stories:true, bodyH2:9, roofH2:11, decor:'academia' },   // 太學 cultural (teja vidriada verde)
+  { id:'cancilleria',      w:3, h:3, roof:'#2f5a86', baseH:6, bodyH:16, roofH:14, decor:'cancilleria' }                                    // 官署 administrativo (teja vidriada azul)
 ];
 
 // ── Compuestos: L, U y anillo (alas rectangulares unidas en escuadra) ─────
@@ -561,6 +565,101 @@ const DECOR = [
       lineP(buf,[ap[0],ap[1]],[ap[0],ap[1]-4],'#d0a84a'); fillEllipse(buf,ap[0],ap[1]-5,1.4,1.4,'#e8c24a');
     } }
 ];
+
+// ── Decoración TEMÁTICA de los edificios de clase (校場/太學/官署) ──────────
+// Se dibuja DENTRO del lienzo del edificio, en el PATIO frontal (sobre el suelo,
+// z=0), tras el cuerpo+tejado. Respeta la cara de la puerta: rot0 puerta +x
+// (frente este), rot1 puerta +y (frente sur); en las "traseras" (door=null) se
+// coloca en el frente sur, que igualmente da a cámara. Anclado en coords de
+// huella → cuadra con la rotación. Helpers globales: fillPoly/lineP/fillEllipse.
+function frontInfo(ctx) {
+  const { w, h, door } = ctx;
+  if (door === 'x') return { face: 'E', flanks: [[w - 1, 0], [w - 1, h - 1]], out: [0.55, 0], cx: w - 1, cy: (h - 1) / 2 };
+  return { face: 'S', flanks: [[0, h - 1], [w - 1, h - 1]], out: [0, 0.55], cx: (w - 1) / 2, cy: h - 1 };  // 'y' y null
+}
+// Prisma pequeño en (gx,gy) con radio r entre z0..z1.
+function pcube(buf, P, gx, gy, r, z0, z1, cT, cL, cR) {
+  fillPoly(buf, [P(gx - r, gy + r, z0), P(gx + r, gy + r, z0), P(gx + r, gy + r, z1), P(gx - r, gy + r, z1)], cL);
+  fillPoly(buf, [P(gx + r, gy + r, z0), P(gx + r, gy - r, z0), P(gx + r, gy - r, z1), P(gx + r, gy + r, z1)], cR);
+  fillPoly(buf, [P(gx - r, gy - r, z1), P(gx + r, gy - r, z1), P(gx + r, gy + r, z1), P(gx - r, gy + r, z1)], cT);
+}
+// Estandarte de guerra (asta + pendón rojo colgante + punta dorada).
+function warBanner(buf, P, gx, gy, topZ) {
+  const pole = '#6a5030', poleD = '#46341e', cloth = '#b2261b', clothD = '#7e1810', clothL = '#d0473a';
+  lineP(buf, P(gx, gy, 0), P(gx, gy, topZ), pole);
+  lineP(buf, [P(gx, gy, 0)[0] + 1, P(gx, gy, 0)[1]], [P(gx, gy, topZ)[0] + 1, P(gx, gy, topZ)[1]], poleD);
+  const tip = P(gx, gy, topZ); fillPoly(buf, [[tip[0], tip[1] - 5], [tip[0] - 2, tip[1]], [tip[0] + 2, tip[1]]], '#d0a84a');
+  const a = P(gx, gy, topZ - 3), x = a[0], y0 = a[1];
+  fillPoly(buf, [[x, y0], [x + 11, y0 + 1], [x + 11, y0 + 19], [x, y0 + 18]], cloth);
+  fillPoly(buf, [[x, y0], [x + 3, y0 + 0.4], [x + 3, y0 + 18.4], [x, y0 + 18]], clothL);
+  lineP(buf, [x + 11, y0 + 1], [x + 11, y0 + 19], clothD);
+  fillEllipse(buf, x + 6, y0 + 9, 2, 2, '#d8b850');
+}
+// Panoplia: caballete de madera con lanzas y un escudo (兵器架).
+function weaponRack(buf, P, gx, gy, face) {
+  const wd = '#6a4a2a', wdD = '#46301a', steel = '#cbd0d6', shield = '#3a6a8a', shieldR = '#c0392b';
+  const along = face === 'E' ? ([d, z]) => P(gx, gy + d, z) : ([d, z]) => P(gx + d, gy, z);  // el caballete corre por la cara
+  lineP(buf, along([-0.34, 0]), along([0, 6.5]), wdD); lineP(buf, along([0.34, 0]), along([0, 6.5]), wd);  // patas en A
+  lineP(buf, along([-0.28, 4]), along([0.28, 4]), wd);                                                      // travesaño
+  [-0.26, -0.09, 0.08, 0.25].forEach(d => { const b = along([d * 0.5 + 0.1, 12]); lineP(buf, along([d, 0]), b, wd);
+    fillPoly(buf, [[b[0], b[1] - 4], [b[0] - 1.3, b[1]], [b[0] + 1.3, b[1]]], steel); });                   // lanzas
+  const sc = along([0, 3.2]); fillEllipse(buf, sc[0], sc[1], 2.6, 3, shield); fillEllipse(buf, sc[0], sc[1], 1.3, 1.6, shieldR);
+}
+// Estela de piedra inscrita (石碑): pedestal + losa con panel de inscripción.
+function stele(buf, P, gx, gy, topZ) {
+  const st = '#aaa59b', stL = '#c8c3b7', stD = '#747064', ink = '#3a3e38';
+  pcube(buf, P, gx, gy, 0.24, 0, 2.4, stL, stD, st);                // pedestal ancho
+  pcube(buf, P, gx, gy, 0.13, 2.4, topZ, stL, stD, st);             // losa
+  const a = P(gx + 0.13, gy + 0.13, topZ - 1.6), b = P(gx + 0.13, gy + 0.13, 3.4);  // strip vertical (cara a cámara)
+  fillPoly(buf, [[a[0] - 1.5, a[1]], [a[0] + 1.5, a[1]], [b[0] + 1.5, b[1]], [b[0] - 1.5, b[1]]], ink);  // panel inscrito
+  for (let k = 0; k < 4; k++) px(buf, Math.round(a[0]), Math.round(a[1] + (b[1] - a[1]) * (k + 1) / 5), hexToRgb(stL), 210);
+  const cap = P(gx, gy, topZ); fillEllipse(buf, cap[0], cap[1] - 0.4, 2, 1.2, stL);                       // remate redondeado
+}
+// Tambor de audiencia sobre caballete en X (鼓): cilindro rojo con tachones.
+function audienceDrum(buf, P, gx, gy) {
+  const wd = '#7a4a2a', wdD = '#4e2e18', red = '#b42a1c', hide = '#ead8b0';
+  lineP(buf, P(gx - 0.26, gy, 0), P(gx + 0.16, gy, 7), wdD);        // caballete en X
+  lineP(buf, P(gx + 0.26, gy, 0), P(gx - 0.16, gy, 7), wd);
+  lineP(buf, P(gx - 0.22, gy, 0), P(gx + 0.22, gy, 0), wdD);        // travesaño de pie
+  const c = P(gx, gy, 8.5);                                         // tambor apoyado en la X
+  fillEllipse(buf, c[0], c[1], 4.2, 4.4, '#8a1f14');               // sombra/canto
+  fillEllipse(buf, c[0] - 0.5, c[1] - 0.5, 3.6, 3.8, red);          // cuerpo
+  fillEllipse(buf, c[0] - 1.2, c[1] - 1.2, 2, 2.2, '#cf4030');      // brillo
+  for (let k = 0; k < 8; k++) { const an = k / 8 * 6.2832; px(buf, Math.round(c[0] + Math.cos(an) * 3.2), Math.round(c[1] + Math.sin(an) * 3.4), hexToRgb('#e8c24a'), 255); }
+  fillEllipse(buf, c[0] + 2.5, c[1], 1.1, 3.1, hide);              // parche lateral del parche
+  lineP(buf, P(gx, gy, 12.7), P(gx, gy, 14.5), wdD); fillEllipse(buf, P(gx, gy, 15)[0], P(gx, gy, 15)[1], 1, 1, '#d8b24a'); // remate
+}
+// Placa horizontal sobre la puerta (匾額): tablero oscuro con marco dorado.
+function plaque(buf, P, ctx, color) {
+  const fi = frontInfo(ctx), z0 = ctx.baseH + ctx.bodyH * 0.62, z1 = z0 + 2.6, dark2 = '#2a1c12', gold = '#d8b24a';
+  const pts = fi.face === 'E'
+    ? [P(ctx.w - 1, fi.cy - 0.5, z0), P(ctx.w - 1, fi.cy + 0.5, z0), P(ctx.w - 1, fi.cy + 0.5, z1), P(ctx.w - 1, fi.cy - 0.5, z1)]
+    : [P(fi.cx - 0.5, ctx.h - 1, z0), P(fi.cx + 0.5, ctx.h - 1, z0), P(fi.cx + 0.5, ctx.h - 1, z1), P(fi.cx - 0.5, ctx.h - 1, z1)];
+  fillPoly(buf, pts, color || dark2);
+  lineP(buf, pts[0], pts[1], gold); lineP(buf, pts[2], pts[3], gold);
+  const mid = [(pts[0][0] + pts[1][0]) / 2, (pts[0][1] + pts[1][1]) / 2 - 1.3];
+  for (let k = -1; k <= 1; k++) px(buf, Math.round(mid[0] + k * 3), Math.round(mid[1]), hexToRgb(gold), 230);
+}
+const DECOR_HALL = {
+  // 校場: estandartes de guerra flanqueando + panoplia de armas en el frente.
+  instruccion: (buf, P, ctx) => {
+    const fi = frontInfo(ctx);
+    fi.flanks.forEach(([gx, gy]) => warBanner(buf, P, gx + fi.out[0], gy + fi.out[1], ctx.baseH + ctx.bodyH + 4));
+    weaponRack(buf, P, fi.cx + fi.out[0] * 0.7, fi.cy + fi.out[1] * 0.7, fi.face);
+  },
+  // 太學: estelas de piedra inscritas flanqueando + placa sobre la puerta.
+  academia: (buf, P, ctx) => {
+    const fi = frontInfo(ctx);
+    fi.flanks.forEach(([gx, gy]) => stele(buf, P, gx + fi.out[0], gy + fi.out[1], ctx.baseH + 10));
+    plaque(buf, P, ctx, '#1f3a2a');
+  },
+  // 官署: tambores de audiencia flanqueando + placa sobre la puerta.
+  cancilleria: (buf, P, ctx) => {
+    const fi = frontInfo(ctx);
+    fi.flanks.forEach(([gx, gy]) => audienceDrum(buf, P, gx + fi.out[0], gy + fi.out[1]));
+    plaque(buf, P, ctx, '#1d2c44');
+  },
+};
 
 // ── Jardines ───────────────────────────────────────────────────────────────
 // Tiles PLANOS (sin tejado): suelo/agua que llena toda la huella + vegetación
