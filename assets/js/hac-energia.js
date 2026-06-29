@@ -62,6 +62,12 @@ const HacEnergia = (function () {
     return Math.max(0, Math.min(MAX, r.energia + regen));
   }
 
+  // Segundos hasta llenar al MÁX desde ahora (0 si ya está llena).
+  function tiempoLleno(hid, mid) {
+    const c = current(hid, mid);
+    return c >= MAX ? 0 : (MAX - c) / REGEN_POR_SEG;
+  }
+
   // Descuenta `coste` de la energía ACTUAL y persiste (instante = ahora).
   async function spend(hid, mid, coste) {
     const nowMs = now();
@@ -79,6 +85,6 @@ const HacEnergia = (function () {
     return nv;
   }
 
-  return { ready, reload, current, spend, dbOk: () => ok, MAX, COSTE_MISION, TABLE };
+  return { ready, reload, current, tiempoLleno, spend, dbOk: () => ok, MAX, COSTE_MISION, REGEN_POR_SEG, REGEN_POR_MIN: REGEN_POR_SEG * 60, TABLE };
 })();
 if (typeof window !== 'undefined') window.HacEnergia = HacEnergia;

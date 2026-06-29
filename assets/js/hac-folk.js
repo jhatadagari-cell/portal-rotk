@@ -149,6 +149,13 @@ const HacFolk = (function () {
       }
       cells.forEach(p => blocked.add(p[0] + ',' + p[1]));
     });
+    // Portón PERIMETRAL (muralla): hac-iso exporta su geometría → hojas GRANDES
+    // animadas que se abren HACIA AFUERA (+y) cuando un mecenas cruza. (Las hojas
+    // cerradas las hornea hac-iso; aquí solo se animan al abrirse.)
+    if (iso && iso._hacGates) iso._hacGates.forEach(d => gates.push({
+      gx: d.gc, gy: d.yFace, orient: d.orient || 'x', open: 0, perimeter: true,
+      hw: d.hw || 0.56, zTop: d.zTop || 14, faceOff: 0, swing: d.swing || 1, r2: 2.6 * 2.6,
+    }));
     // Celdas transitables (no bloqueadas y dentro de la rejilla).
     const set = new Set(), cells = [], camCells = [];
     for (let y = 0; y < GH; y++) for (let x = 0; x < GW; x++) {
@@ -719,9 +726,14 @@ const HacFolk = (function () {
     for (let k = 0; k < wk.gates.length; k++) {
       const gate = wk.gates[k];
       let near = false;
+      const r2 = gate.r2 || R2;
       for (let i = 0; i < walkers.length; i++) {
-        const dx = walkers[i].fx - gate.gx, dy = walkers[i].fy - gate.gy;
-        if (dx * dx + dy * dy <= R2) { near = true; break; }
+        const w2 = walkers[i];
+        // El portón PERIMETRAL solo se abre para quien CRUZA (sale/entra de expedición),
+        // no para los que pasean cerca del frente del patio.
+        if (gate.perimeter && w2.state !== 'exped-out' && w2.state !== 'exped-in') continue;
+        const dx = w2.fx - gate.gx, dy = w2.fy - gate.gy;
+        if (dx * dx + dy * dy <= r2) { near = true; break; }
       }
       const target = near ? 1 : 0;
       const sp = (target > gate.open ? 4.5 : 2.6) * dt;   // abre más rápido de lo que cierra
@@ -936,23 +948,44 @@ const HacFolk = (function () {
   // GATE_DZ/_FACE deben coincidir con drawWallPiece de gen-iso-sprites.js.
   const GATE_DZ = 10.56, GATE_HW = 0.26, GATE_GAP = 0.02, GATE_FACE = 0.17;
   function gateLeaf(g, gate, hinge, freeClosed) {
+    const zTop = gate.zTop || GATE_DZ, face = (gate.faceOff != null) ? gate.faceOff : GATE_FACE, sw = gate.swing || 1;
     const ang = gate.open * 1.30;                              // ~0 → ~74°
     const w = Math.abs(freeClosed - hinge), sgn = (freeClosed - hinge) >= 0 ? 1 : -1;
     const cell = (a, o) => gate.orient === 'x' ? [gate.gx + a, gate.gy + o] : [gate.gx + o, gate.gy + a];
     const pt = (a, o, z) => { const p = logic(cell(a, o)[0], cell(a, o)[1]); return [p[0], p[1] - z]; };
-    const aFree = hinge + sgn * w * Math.cos(ang), oFree = GATE_FACE + w * Math.sin(ang);
-    const h0 = pt(hinge, GATE_FACE, 0), f0 = pt(aFree, oFree, 0), f1 = pt(aFree, oFree, GATE_DZ), h1 = pt(hinge, GATE_FACE, GATE_DZ);
+    const aFree = hinge + sgn * w * Math.cos(ang), oFree = face + sw * w * Math.sin(ang);
+    const h0 = pt(hinge, face, 0), f0 = pt(aFree, oFree, 0), f1 = pt(aFree, oFree, zTop), h1 = pt(hinge, face, zTop);
     g.beginPath(); g.moveTo(h0[0], h0[1]); g.lineTo(f0[0], f0[1]); g.lineTo(f1[0], f1[1]); g.lineTo(h1[0], h1[1]); g.closePath();
-    // Laca roja clara (contrasta con el vano oscuro: cerrado=rojo, abierto=hueco).
-    // Al abrirse, la hoja se ve más de canto → un punto más oscura.
+    // Laca roja (cerrada=rojo; al abrirse se ve más de canto → un punto más oscura).
     g.fillStyle = gate.open > 0.5 ? '#8a3420' : '#b0492a'; g.fill();
     g.strokeStyle = '#5a1810'; g.lineWidth = 0.5; g.stroke();
+    // Tachones 門釘 de bronce (en rejilla; más filas en el portón grande perimetral).
     g.fillStyle = '#e0b85a';
-    for (let t = 0; t < 2; t++) { const f = 0.42 + t * 0.3; const p = pt(hinge + sgn * w * Math.cos(ang) * f, GATE_FACE + w * Math.sin(ang) * f, GATE_DZ * 0.5); g.beginPath(); g.arc(p[0], p[1], 0.6, 0, 6.2832); g.fill(); }
+    const rows = gate.perimeter ? Math.max(3, Math.round(zTop / 3.2)) : 1;
+    for (let ci = 0; ci < 2; ci++) { const fw = 0.34 + ci * 0.32;
+      const ax = hinge + sgn * w * Math.cos(ang) * fw, ao = face + sw * w * Math.sin(ang) * fw;
+      for (let ri = 0; ri < rows; ri++) { const zz = rows > 1 ? zTop * (ri + 0.6) / (rows + 0.2) : zTop * 0.5; const p = pt(ax, ao, zz); g.beginPath(); g.arc(p[0], p[1], gate.perimeter ? 0.7 : 0.6, 0, 6.2832); g.fill(); }
+    }
+  }
+  // Vano del portón perimetral al abrirse: cubre las hojas CERRADAS horneadas por
+  // hac-iso y simula un pasaje (no negro) con suelo y claro del patio al fondo.
+  function gatePassage(g, gate) {
+    const hw = gate.hw || GATE_HW, zTop = gate.zTop || GATE_DZ, face = (gate.faceOff != null) ? gate.faceOff : GATE_FACE;
+    const cell = (a, o) => gate.orient === 'x' ? [gate.gx + a, gate.gy + o] : [gate.gx + o, gate.gy + a];
+    const pt = (a, o, z) => { const p = logic(cell(a, o)[0], cell(a, o)[1]); return [p[0], p[1] - z]; };
+    const quad = (pts, col) => { g.beginPath(); g.moveTo(pts[0][0], pts[0][1]); for (let i = 1; i < pts.length; i++) g.lineTo(pts[i][0], pts[i][1]); g.closePath(); g.fillStyle = col; g.fill(); };
+    quad([pt(-hw - 0.06, face, 0), pt(hw + 0.06, face, 0), pt(hw + 0.06, face, zTop + 0.22), pt(-hw - 0.06, face, zTop + 0.22)], '#241a14');   // túnel en sombra
+    quad([pt(-hw * 0.55, face, zTop * 0.12), pt(hw * 0.55, face, zTop * 0.12), pt(hw * 0.55, face, zTop * 0.74), pt(-hw * 0.55, face, zTop * 0.74)], '#6b6256');   // claro del patio al fondo
+    quad([pt(-hw, face, 0), pt(hw, face, 0), pt(hw, face, zTop * 0.16), pt(-hw, face, zTop * 0.16)], '#3a3026');   // suelo del pasaje
   }
   function drawGate(g, gate) {
-    gateLeaf(g, gate, -GATE_HW, -GATE_GAP);
-    gateLeaf(g, gate, GATE_HW, GATE_GAP);
+    if (gate.perimeter) {
+      if (gate.open <= 0.012) return;        // cerrado → se ven las hojas horneadas por hac-iso
+      gatePassage(g, gate);                  // tapa las hojas horneadas y deja ver el pasaje
+    }
+    const hw = gate.hw || GATE_HW;
+    gateLeaf(g, gate, -hw, -GATE_GAP);
+    gateLeaf(g, gate, hw, GATE_GAP);
   }
 
   function paint() {

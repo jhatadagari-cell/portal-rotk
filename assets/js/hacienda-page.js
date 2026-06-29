@@ -339,6 +339,8 @@
     ];
     const DOM_GLYPH = { militar: '武', cultural: '文', administrativo: '政' };
     const fmtDur = (s) => (s < 60) ? Math.round(s) + 's' : Math.round(s / 60) + ' min';
+    // Cuenta atrás legible: «1m 45s» / «45s».
+    const fmtClock = (s) => { s = Math.max(0, Math.round(s)); const m = Math.floor(s / 60), r = s % 60; return m ? `${m}m ${r}s` : `${r}s`; };
     // Puntos de un mecenas: base (admin) + ganados en misiones (ledger propio).
     function basePuntos(id) { const m = (h.miembros || []).find(x => x.personajeId === id); return m ? (Number(m.puntos) || 0) : 0; }
     function puntosTotales(id) { return basePuntos(id) + (window.HacPuntos ? HacPuntos.deMiembro(h.id, id) : 0); }
@@ -425,16 +427,30 @@
       const pj = window.HacPersonajes ? HacPersonajes.get(id) : null;
       const aptId = pj ? pj.aptitud : '';
       const aptDef = (window.HacPersonajeDefs && aptId) ? HacPersonajeDefs.aptitud(aptId) : null;
-      const e = Math.round(window.HacEnergia ? HacEnergia.current(h.id, id) : 100);
+      const eExact = window.HacEnergia ? HacEnergia.current(h.id, id) : 100;
+      const e = Math.round(eExact);
+      const eFull = window.HacEnergia && HacEnergia.tiempoLleno ? HacEnergia.tiempoLleno(h.id, id) : 0;   // seg hasta llenar
+      const eRegenMin = window.HacEnergia ? (HacEnergia.REGEN_POR_MIN || 0) : 0;                          // %/min
       // Estado de misión desde el SIM (no la orden): en misión / en tarea / restante
       // de la TAREA contado desde que LLEGA (el countdown empieza al iniciar la tarea).
       const activa = !!it.onMission;
       const enTarea = !!it.misEnTarea;
       const fuera = !!it.fuera;
-      const rest = it.misRestante || 0;
+      let rest = it.misRestante || 0;
+      // Expedición: el tiempo restante REAL sale de la ORDEN (hora de servidor), así
+      // se ve la cuenta atrás durante TODO el viaje (saliendo / fuera / regresando),
+      // no solo cuando está oculto. Fuente de verdad = inicio + duración − ahora.
+      let exped = false;
+      if (id === myId && window.HacOrdenes) {
+        const o = HacOrdenes.mine(h.id, id);
+        if (o && o.tipo === 'expedicion') {
+          exped = true;
+          rest = Math.max(0, Math.ceil((o.inicioMs + (o.duracionSeg || 120) * 1000 - clock()) / 1000));
+        }
+      }
       const earned = window.HacPuntos ? HacPuntos.deMiembro(h.id, id) : 0;
       const money = (window.HacStats && HacStats.dinero) ? HacStats.dinero(id) : 0;   // monedero (XP/dinero reales)
-      return { it, aptId, aptDef, e, activa, enTarea, fuera, rest, mine: id === myId, puntos: puntosTotales(id), earned, money };
+      return { it, aptId, aptDef, e, eFull, eRegenMin, activa, enTarea, fuera, exped, rest, mine: id === myId, puntos: puntosTotales(id), earned, money };
     }
     // Panel de inventario/monedero que se despliega a la derecha del panel del
     // mecenas. Scaffolding: el dinero y los objetos llegarán al jugar misiones
@@ -452,6 +468,15 @@
         <div class="hacp-inv-note hacp-inv-soon">El dinero y los objetos llegarán al jugar misiones (próximamente).</div>
       </div>`;
     }
+    // Texto transparente de energía: % + ritmo de regeneración + cuánto falta para
+    // llenar (para TU mecenas; para los demás, solo el %).
+    function energyLabel(d) {
+      const pct = `⚡ <b>${d.e}%</b>`;
+      if (!d.mine) return `${pct} energía`;
+      const regen = d.eRegenMin ? ` · +${Math.round(d.eRegenMin)}%/min` : '';
+      const full = d.e >= 100 ? ' · al máximo' : (d.eFull > 0 ? ` · lleno en ${fmtClock(d.eFull)}` : '');
+      return `${pct}${regen}${full}`;
+    }
     function buildCharPanel(id) {
       const d = charData(id); if (!d) { closeCharPanel(); return; }
       let comp = '';
@@ -462,8 +487,8 @@
       let mision = '';
       if (d.mine) {
         if (d.activa) {
-          const flag = d.fuera ? `🧭 En expedición · vuelve en <b id="hacp-cp-rest">${d.rest}s</b>`
-            : d.enTarea ? `⚒ En la tarea · <b id="hacp-cp-rest">${d.rest}s</b>`
+          const flag = d.exped ? `🧭 Expedición · vuelve en <b id="hacp-cp-rest">${fmtClock(d.rest)}</b>`
+            : d.enTarea ? `⚒ En la tarea · <b id="hacp-cp-rest">${fmtClock(d.rest)}</b>`
             : `⚒ De camino…`;
           mision = `<div class="hacp-cp-mis hacp-cp-mis-on"><span class="hacp-cp-flag">${flag}</span><button type="button" class="hacp-cp-btn" data-act="release">Liberar</button></div>`;
         } else {
@@ -487,6 +512,7 @@
         </div>
         <div class="hacp-cp-act" id="hacp-cp-act">${d.it.inside ? '⌂ ' : ''}${esc(d.it.activity || 'Paseando por la finca')}</div>
         <div class="hacp-cp-energy" title="Energía ${d.e}%"><i id="hacp-cp-ebar" style="width:${d.e}%"></i></div>
+        <div class="hacp-cp-elabel" id="hacp-cp-elabel">${energyLabel(d)}</div>
         ${mision}
         ${d.mine ? `<button type="button" class="hacp-cp-btn hacp-cp-invbtn${invOpen ? ' on' : ''}" data-act="inv">🎒 ${invOpen ? 'Ocultar' : 'Inventario'} · 💰 ${d.money}</button>` : ''}
         ${(d.mine && invOpen) ? invPanelHTML(d) : ''}`;
@@ -531,7 +557,8 @@
       const pe = charEl.querySelector('#hacp-cp-pts'); if (pe) pe.textContent = d.puntos;
       const act = charEl.querySelector('#hacp-cp-act'); if (act) act.textContent = (d.it.inside ? '⌂ ' : '') + (d.it.activity || 'Paseando por la finca');
       const eb = charEl.querySelector('#hacp-cp-ebar'); if (eb) eb.style.width = d.e + '%';
-      const rt = charEl.querySelector('#hacp-cp-rest'); if (rt && d.activa) rt.textContent = d.rest + 's';
+      const el = charEl.querySelector('#hacp-cp-elabel'); if (el) el.innerHTML = energyLabel(d);
+      const rt = charEl.querySelector('#hacp-cp-rest'); if (rt && d.activa) rt.textContent = fmtClock(d.rest);
     }
 
     function itemHTML(m, sel) {
@@ -580,6 +607,9 @@
         HacOrdenes.reload().then(applyOrders);
       }, 5000);
     }
+    // Tic de 1 s: refresca SOLO el panel del personaje (cuenta atrás de expedición y
+    // energía/regeneración se derivan del reloj de servidor → tienen que verse vivos).
+    setInterval(() => { if (charId) refreshCharPanel(); }, 1000);
 
     // Popup con la gente que hay dentro de un edificio (al pulsar su banner).
     function showPop(x, y, sign) {

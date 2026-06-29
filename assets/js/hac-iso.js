@@ -456,11 +456,29 @@ const HacIso = (function () {
       // Vano ABIERTO (pasaje oscuro) con las dos hojas rojas PLEGADAS planas a los
       // lados (sin batir hacia dentro): los mecenas entran y salen por aquí. (La
       // animación cerrada→abierta al acercarse vendrá luego.)
-      const dz = gh * 0.6, doorCol = mix('#7a241a', casa, .03);
-      poly([Pg(gc - 0.62, y1, 0), Pg(gc + 0.62, y1, 0), Pg(gc + 0.62, y1, dz + 0.7), Pg(gc - 0.62, y1, dz + 0.7)], dark9);
-      poly([Pg(gc - 0.62, y1, 0), Pg(gc - 0.5, y1, 0), Pg(gc - 0.5, y1, dz), Pg(gc - 0.62, y1, dz)], doorCol);   // hoja izq plegada
-      poly([Pg(gc + 0.5, y1, 0), Pg(gc + 0.62, y1, 0), Pg(gc + 0.62, y1, dz), Pg(gc + 0.5, y1, dz)], doorCol);   // hoja der plegada
-      seg(Pg(gc - 0.62, y1, dz + 0.5), Pg(gc + 0.62, y1, dz + 0.5), capCol);
+      const dz = gh * 0.6, doorTop = dz + 0.4, HW = 0.56;
+      // Hojas de madera lacada CERRADAS (門釘 de bronce): así por defecto no es un
+      // hueco negro ni queda permanentemente abierto. En la finca pública, la capa
+      // hac-folk las abre HACIA AFUERA cuando un mecenas cruza (overlay animado).
+      const shadow = mix('#241a14', casa, .02);   // recess oscuro CÁLIDO tras las hojas (no negro)
+      poly([Pg(gc - 0.62, y1, 0), Pg(gc + 0.62, y1, 0), Pg(gc + 0.62, y1, doorTop + 0.25), Pg(gc - 0.62, y1, doorTop + 0.25)], shadow);
+      const woodLintel = dark(mix('#5a3a22', casa, .03), .1);
+      poly([Pg(gc - 0.66, y1, doorTop + 0.05), Pg(gc + 0.66, y1, doorTop + 0.05), Pg(gc + 0.66, y1, doorTop + 0.7), Pg(gc - 0.66, y1, doorTop + 0.7)], woodLintel);
+      const lac = mix('#7a2a1c', casa, .03);
+      const leaf = (x0, x1, fill) => {
+        poly([Pg(x0, y1, 0), Pg(x1, y1, 0), Pg(x1, y1, doorTop), Pg(x0, y1, doorTop)], fill);
+        for (let t = 1; t < 3; t++) { const xx = x0 + (x1 - x0) * t / 3; seg(Pg(xx, y1, 0.3), Pg(xx, y1, doorTop - 0.3), dark(fill, .16)); }   // tablones
+        g.fillStyle = gold;   // tachones 門釘 en rejilla
+        const rows = Math.max(3, Math.round(doorTop / 3.2));
+        for (let r = 0; r < rows; r++) { const zz = doorTop * (r + 0.6) / (rows + 0.2);
+          for (let cI = 0; cI < 2; cI++) { const xx = x0 + (x1 - x0) * (cI ? 0.66 : 0.34); const p = Pg(xx, y1, zz); g.beginPath(); g.arc(p[0], p[1], 0.55, 0, 6.2832); g.fill(); } }
+      };
+      leaf(gc - HW, gc - 0.02, lac);              // hoja izquierda
+      leaf(gc + 0.02, gc + HW, dark(lac, .07));   // hoja derecha (un punto en sombra)
+      seg(Pg(gc, y1, 0.2), Pg(gc, y1, doorTop), shadow);   // junta central
+      g.strokeStyle = gold; g.lineWidth = 0.6;             // tiradores 鋪首 (anillas de bronce)
+      [-0.2, 0.2].forEach(dx0 => { const p = Pg(gc + dx0, y1, doorTop * 0.46); g.beginPath(); g.arc(p[0], p[1], 1.0, 0, 6.2832); g.stroke(); });
+      seg(Pg(gc - HW, y1, 0.14), Pg(gc + HW, y1, 0.14), dark(capCol, .2));   // umbral de piedra
       // torre-puerta (城樓): cuerpo de madera + friso turquesa + columnas rojas
       const tz = gh, bh = 11, wood = mix('#6a4a2a', casa, .03);
       box(a, y0, c, y1, tz, tz + bh, light(wood, .08), dark(wood, .22), dark(wood, .38));
@@ -476,6 +494,9 @@ const HacIso = (function () {
       seg(r0, r1, dark(tileRoof, .42)); seg([r0[0], r0[1] - 1], [r1[0], r1[1] - 1], light(tileRoof, .3));
       seg(r0, [r0[0], r0[1] - 5], gold); g.fillStyle = gold; g.beginPath(); g.arc(r0[0], r0[1] - 6, 1.4, 0, 7); g.fill();
     };
+    // Geometría del SOUTH GATE para que hac-folk anime sus hojas (abrir hacia afuera,
+    // +y) al cruzar un mecenas. Coords de celda (= proyección logic() de folk).
+    if (WD.gate) canvas._hacGates = [{ orient: 'x', gc: gateGc, yFace: FLo, z0: 0, zTop: (WD.h + 6) * 0.6 + 0.4, hw: 0.56, swing: 1 }];
     // Muro DELANTERO-izquierdo (x): SOUTH GATE (午門) en el eje (abajo-izquierda).
     for (let gx = lo; gx <= hiW; gx++) {
       if (gx === gateGc) { wallSegs.push({ box: [gx - 1.5, FLi, gx + 1.5, FLo], draw: () => gate(gx, FLi, FLo) }); continue; }

@@ -199,6 +199,8 @@
 .hacp-cp-act{ font-size:12px; color:var(--parch); margin:6px 0 5px; min-height:16px; }
 .hacp-cp-energy{ height:6px; border-radius:3px; background:rgba(255,255,255,.14); overflow:hidden; }
 .hacp-cp-energy i{ display:block; height:100%; background:linear-gradient(90deg,#e0b85a,#7fc9a0); transition:width .4s ease; }
+.hacp-cp-elabel{ font-size:11px; color:var(--parch2); margin:4px 0 0; }
+.hacp-cp-elabel b{ color:#e0b85a; }
 .hacp-cp-mis{ margin-top:9px; border-top:1px solid rgba(201,168,76,.18); padding-top:8px; }
 .hacp-cp-mis-on{ display:flex; align-items:center; gap:8px; }
 .hacp-cp-mis-on .hacp-cp-btn{ margin-left:auto; }
