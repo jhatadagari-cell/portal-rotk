@@ -12,5 +12,5 @@
   window.ISO_SPRITES_META['bld-campamento-0'] = { ox: 396, oy: 58, w: 720, h: 444, webp: true };
   // Mercado (3×3): puesto de té (茶) ilustrado. Vista única (no rota: spriteKey
   // cae a '-0' para cualquier rotación). El mercader lo dibuja hac-folk aparte.
-  window.ISO_SPRITES_META['bld-mercado-0'] = { ox: 100, oy: 150, w: 200, h: 252 };
+  window.ISO_SPRITES_META['bld-mercado-0'] = { ox: 75, oy: 62, w: 150, h: 166 };
 })();
