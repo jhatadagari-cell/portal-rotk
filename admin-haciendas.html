@@ -976,10 +976,12 @@
         coordTip.style.top = (e.clientY + 16) + 'px';
       };
       if (board) {
-        board.addEventListener('mousemove', (e) => {
-          const cell = e.target.closest('.adm-cell'); if (!cell) { hideCoord(); return; }
-          const gx = Number(cell.dataset.gx), gy = Number(cell.dataset.gy);
-          showCoord(gx, gy, e);
+        // El preview (huella verde/roja, etc.) solo se RECALCULA cuando el ratón
+        // cambia de CELDA, y como mucho una vez por frame (requestAnimationFrame).
+        // mousemove fijo dispara cada píxel; recalcular el highlight ahí (con
+        // querySelectorAll por celda) lageaba al mover rápido. El tooltip de
+        // coordenadas sí se reposiciona en cada move (es barato).
+        const recompute = (gx, gy) => {
           if (pabMode) {
             if (pabPending) { showPabRegion(pabPending.cells, true); return; }
             const region = HacBuild.regionPabellon(h.mapa, tierNow, gx, gy);
@@ -991,9 +993,20 @@
           if (deleteMode) { if (occ) showDelete(occ); else clearMarks(); return; }
           if (occ) { if (!boardMovePos) showDelete(occ); else clearMarks(); }
           else showPreview([gx, gy]);
+        };
+        let hovKey = null, raf = 0;
+        board.addEventListener('mousemove', (e) => {
+          const cell = e.target.closest('.adm-cell'); if (!cell) { hideCoord(); hovKey = null; return; }
+          const gx = Number(cell.dataset.gx), gy = Number(cell.dataset.gy);
+          coordTip.style.left = (e.clientX + 14) + 'px'; coordTip.style.top = (e.clientY + 16) + 'px';   // reposición barata
+          const key = gx + ',' + gy;
+          if (key === hovKey) return;                 // misma celda → nada que recalcular
+          hovKey = key;
+          coordTip.textContent = gx + ', ' + gy; coordTip.style.display = 'block';
+          if (!raf) raf = requestAnimationFrame(() => { raf = 0; if (hovKey) { const p = hovKey.split(',').map(Number); recompute(p[0], p[1]); } });
         });
         board.addEventListener('mouseleave', () => {
-          hideCoord();
+          hideCoord(); hovKey = null;
           if (pabMode) { if (pabPending) showPabRegion(pabPending.cells, true); else clearMarks(); return; }
           if (muroMode && wallStart) showWallPreview(wallStart); else showPreview(boardSel);
         });
