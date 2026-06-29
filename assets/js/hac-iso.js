@@ -20,7 +20,7 @@ const HacIso = (function () {
   const TOP_MARGIN = 132;             // hueco arriba para edificios altos, murallas y torres
   const PAD_X = 40;                   // margen lateral para murallas y paseo de ronda
   const SPRITE_BASE = 'assets/img/iso/';
-  const SPRITE_VER = '31';  // súbelo al regenerar los PNG (cache-busting)
+  const SPRITE_VER = '32';  // súbelo al regenerar los PNG (cache-busting)
 
   // ── Color helpers (para el placeholder) ─────────────────────────────────
   const { hexToRgb, clamp255: cl } = HacUtil;
@@ -382,9 +382,9 @@ const HacIso = (function () {
     // ── Murallas (tras el paseo de ronda) ────────────────────────────────
     const capH = WD.cap === 'tile' ? 4 : 3;
     const wTop = light(WD.base, .14), wL = dark(WD.base, .18), wR = dark(WD.base, .33);
-    const capCol = WD.cap === 'tile' ? mix('#933c22', casa, .04) : light(WD.base, .16);
+    const capCol = WD.cap === 'tile' ? mix('#5b6068', casa, .04) : light(WD.base, .16);
     const capT = light(capCol, .14), capL = dark(capCol, .14), capR = dark(capCol, .30);
-    const tileRoof = mix('#933c22', casa, .04), gold = '#d0a84a', dark9 = '#1a120a';
+    const tileRoof = mix('#5b6068', casa, .04), gold = '#d0a84a', dark9 = '#1a120a';
     const wallSegs = [];
     const pennants = [];   // estandartes Han en el color de la casa (con su caja de profundidad)
     const seg = (p, q, col) => { g.strokeStyle = col; g.lineWidth = 1; g.beginPath(); g.moveTo(p[0], p[1]); g.lineTo(q[0], q[1]); g.stroke(); };

@@ -420,33 +420,34 @@ function drawBuilding(cfg, layer) {
 
 // ── Catálogo a hornear (espejo de hac-build.js) ──────────────────────────
 const EDIFICIOS = [
-  { id:'pabellon',         w:1, h:2, roof:'#a85a32', bodyH:14, roofH:12, minThick:true },
-  { id:'torre',            w:1, h:2, roof:'#7a3a20', baseH:6, bodyH:30, roofH:11, minThick:true },
-  { id:'pagoda',           w:2, h:2, roof:'#b54a2a', bodyH:15, roofH:12, stories:true, bodyH2:12, roofH2:11 },
-  { id:'galeria',          w:1, h:3, roof:'#9a6a3a', bodyH:13, roofH:11 },
-  { id:'armeria',          w:2, h:2, roof:'#5a5a66', bodyH:13, roofH:10 },
-  { id:'ala',              w:2, h:3, roof:'#aa5530', bodyH:16, roofH:13 },
-  { id:'templo',           w:2, h:3, roof:'#9a3820', baseH:6, bodyH:17, roofH:15, stories:true, bodyH2:9,  roofH2:11 },
-  { id:'gran-pagoda',      w:2, h:4, roof:'#a83018', baseH:6, bodyH:18, roofH:12, tier0Ins:0.2, tierIns:0.18,
+  { id:'pabellon',         w:1, h:2, roof:'#5b6068', bodyH:14, roofH:12, minThick:true },
+  { id:'torre',            w:1, h:2, roof:'#5b6068', baseH:6, bodyH:30, roofH:11, minThick:true },
+  { id:'pagoda',           w:2, h:2, roof:'#5b6068', bodyH:15, roofH:12, stories:true, bodyH2:12, roofH2:11 },
+  { id:'galeria',          w:1, h:3, roof:'#5b6068', bodyH:13, roofH:11 },
+  { id:'armeria',          w:2, h:2, roof:'#5b6068', bodyH:13, roofH:10 },
+  { id:'ala',              w:2, h:3, roof:'#5b6068', bodyH:16, roofH:13 },
+  { id:'templo',           w:2, h:3, roof:'#5b6068', baseH:6, bodyH:17, roofH:15, stories:true, bodyH2:9,  roofH2:11 },
+  { id:'gran-pagoda',      w:2, h:4, roof:'#5b6068', baseH:6, bodyH:18, roofH:12, tier0Ins:0.2, tierIns:0.18,
     tiers:[{bodyH:13,roofH:10},{bodyH:11,roofH:9},{bodyH:9,roofH:8},{bodyH:8,roofH:7}] },
-  { id:'salon',            w:3, h:3, roof:'#c0532a', bodyH:19, roofH:18 },
-  { id:'templo-ancestral', w:3, h:4, roof:'#7a2818', baseH:7, bodyH:18, roofH:15, stories:true, bodyH2:10, roofH2:12 },
-  { id:'salon-gran',       w:4, h:3, roof:'#b03818', baseH:7, bodyH:19, roofH:16, stories:true, bodyH2:9,  roofH2:12 },
-  { id:'pabellon-gran',    w:3, h:4, roof:'#a85a2e', baseH:6, bodyH:18, roofH:16 },
-  { id:'salon-corte',      w:3, h:6, roof:'#bb3c1e', baseH:8, bodyH:20, roofH:17, stairs:true, stories:true, bodyH2:10, roofH2:13 },
-  { id:'palacio',          w:4, h:6, roof:'#c43c1a', baseH:9, bodyH:22, roofH:18, stairs:true, stories:true, bodyH2:12, roofH2:15 },
-  { id:'salon-largo',      w:3, h:5, roof:'#bb3c1e', baseH:7, bodyH:20, roofH:17, stories:true, bodyH2:10, roofH2:13 },
-  { id:'salon-banquete',   w:3, h:7, roof:'#b83a1c', baseH:8, bodyH:21, roofH:18, stairs:true, stories:true, bodyH2:11, roofH2:14 },
-  { id:'cuartel',          w:4, h:5, roof:'#6a6a5a', baseH:6, bodyH:15, roofH:12 },
-  { id:'gran-palacio',     w:4, h:7, roof:'#c43c1a', baseH:10, bodyH:24, roofH:19, stairs:true, tier0Ins:0.6, tierIns:0.5,
+  { id:'salon',            w:3, h:3, roof:'#5b6068', bodyH:19, roofH:18 },
+  { id:'templo-ancestral', w:3, h:4, roof:'#5b6068', baseH:7, bodyH:18, roofH:15, stories:true, bodyH2:10, roofH2:12 },
+  { id:'salon-gran',       w:4, h:3, roof:'#5b6068', baseH:7, bodyH:19, roofH:16, stories:true, bodyH2:9,  roofH2:12 },
+  { id:'pabellon-gran',    w:3, h:4, roof:'#5b6068', baseH:6, bodyH:18, roofH:16 },
+  { id:'salon-corte',      w:3, h:6, roof:'#5b6068', baseH:8, bodyH:20, roofH:17, stairs:true, stories:true, bodyH2:10, roofH2:13 },
+  { id:'palacio',          w:4, h:6, roof:'#5b6068', baseH:9, bodyH:22, roofH:18, stairs:true, stories:true, bodyH2:12, roofH2:15 },
+  { id:'salon-largo',      w:3, h:5, roof:'#5b6068', baseH:7, bodyH:20, roofH:17, stories:true, bodyH2:10, roofH2:13 },
+  { id:'salon-banquete',   w:3, h:7, roof:'#5b6068', baseH:8, bodyH:21, roofH:18, stairs:true, stories:true, bodyH2:11, roofH2:14 },
+  { id:'cuartel',          w:4, h:5, roof:'#5b6068', baseH:6, bodyH:15, roofH:12 },
+  { id:'gran-palacio',     w:4, h:7, roof:'#5b6068', baseH:10, bodyH:24, roofH:19, stairs:true, tier0Ins:0.6, tierIns:0.5,
     tiers:[{bodyH:14,roofH:13},{bodyH:11,roofH:11}] },
-  { id:'salon-doble',      w:4, h:8, roof:'#bb3c1e', baseH:9, bodyH:21, roofH:18, stairs:true, stories:true, bodyH2:11, roofH2:14 },
-  { id:'gran-recinto',     w:5, h:8, roof:'#c43c1a', baseH:10, bodyH:24, roofH:20, stairs:true, tier0Ins:0.55, tierIns:0.5,
+  { id:'salon-doble',      w:4, h:8, roof:'#5b6068', baseH:9, bodyH:21, roofH:18, stairs:true, stories:true, bodyH2:11, roofH2:14 },
+  { id:'gran-recinto',     w:5, h:8, roof:'#5b6068', baseH:10, bodyH:24, roofH:20, stairs:true, tier0Ins:0.55, tierIns:0.5,
     tiers:[{bodyH:14,roofH:13},{bodyH:11,roofH:11}] },
-  // ── Edificios de CLASE (tareas restringidas a la aptitud del dominio) ────
-  { id:'instruccion',      w:3, h:3, roof:'#4a4a52', baseH:5, bodyH:15, roofH:13, decor:'instruccion' },                                   // 校場 militar (techo de hierro/pizarra)
-  { id:'academia',         w:3, h:3, roof:'#3a7a4a', baseH:5, bodyH:16, roofH:13, stories:true, bodyH2:9, roofH2:11, decor:'academia' },   // 太學 cultural (teja vidriada verde)
-  { id:'cancilleria',      w:3, h:3, roof:'#2f5a86', baseH:6, bodyH:16, roofH:14, decor:'cancilleria' }                                    // 官署 administrativo (teja vidriada azul)
+  // ── Edificios de CLASE: teja GRIS Han como el resto; se diferencian por su
+  //    DECORACIÓN (estandartes/estelas/tambores) + un tinte de pátina muy sutil.
+  { id:'instruccion',      w:3, h:3, roof:'#4d5158', baseH:5, bodyH:15, roofH:13, decor:'instruccion' },                                   // 校場 militar (gris hierro, más oscuro)
+  { id:'academia',         w:3, h:3, roof:'#586460', baseH:5, bodyH:16, roofH:13, stories:true, bodyH2:9, roofH2:11, decor:'academia' },   // 太學 cultural (gris con pátina verdosa leve)
+  { id:'cancilleria',      w:3, h:3, roof:'#535b67', baseH:6, bodyH:16, roofH:14, decor:'cancilleria' }                                    // 官署 administrativo (gris con pátina azulada leve)
 ];
 
 // ── Compuestos: L, U y anillo (alas rectangulares unidas en escuadra) ─────
@@ -458,13 +459,13 @@ function rotCell(dx,dy,w,h,rot){ rot=((rot%4)+4)%4;
 function rotDoorDir(dir,rot){ if(!dir)return null; const s=['E','S','W','N']; return s[(s.indexOf(dir)+rot)%4]; }
 function doorParam(dir){ return dir==='E'?'x':dir==='S'?'y':null; }
 const COMPUESTOS = [
-  { id:'ala-l',       w:3, h:3, roof:'#a85a30', baseH:5, bodyH:16, roofH:13,
+  { id:'ala-l',       w:3, h:3, roof:'#5b6068', baseH:5, bodyH:16, roofH:13,
     wings:[ {x0:0,y0:0,x1:0,y1:2,door:'E'}, {x0:0,y0:2,x1:2,y1:2,door:'S'} ] },
-  { id:'ala-l-mayor', w:4, h:4, roof:'#a85a2e', baseH:6, bodyH:17, roofH:14,
+  { id:'ala-l-mayor', w:4, h:4, roof:'#5b6068', baseH:6, bodyH:17, roofH:14,
     wings:[ {x0:0,y0:0,x1:1,y1:3,door:'E'}, {x0:2,y0:2,x1:3,y1:3,door:'S'} ] },
-  { id:'patio-u',     w:5, h:3, roof:'#b34528', baseH:6, bodyH:17, roofH:14,
+  { id:'patio-u',     w:5, h:3, roof:'#5b6068', baseH:6, bodyH:17, roofH:14,
     wings:[ {x0:0,y0:0,x1:4,y1:0,door:'S'}, {x0:0,y0:0,x1:0,y1:2,door:'E'}, {x0:4,y0:0,x1:4,y1:2,door:null} ] },
-  { id:'patio-o',     w:4, h:4, roof:'#b03c1c', baseH:7, bodyH:18, roofH:15,
+  { id:'patio-o',     w:4, h:4, roof:'#5b6068', baseH:7, bodyH:18, roofH:15,
     wings:[ {x0:0,y0:0,x1:3,y1:0,door:'S'}, {x0:0,y0:3,x1:3,y1:3,door:'S'},
             {x0:0,y0:1,x1:0,y1:2,door:'E'}, {x0:3,y0:1,x1:3,y1:2,door:null} ] }
 ];
@@ -502,7 +503,7 @@ const DECOR = [
       fillEllipse(buf, P(0,0.22,16.5)[0], P(0,0.22,16.5)[1], 1.4, 2.4, '#ffd060');
       // tejadillo
       const ap = P(0, 0, 26), n = P(-0.34,-0.34,20), e = P(0.34,-0.34,20), s = P(0.34,0.34,20), ww = P(-0.34,0.34,20);
-      fillPoly(buf,[n,e,ap],dark('#8a3a22',.2)); fillPoly(buf,[n,ww,ap],dark('#8a3a22',.08)); fillPoly(buf,[ww,s,ap],light('#8a3a22',.1)); fillPoly(buf,[s,e,ap],dark('#8a3a22',.02));
+      fillPoly(buf,[n,e,ap],dark('#5b6068',.2)); fillPoly(buf,[n,ww,ap],dark('#5b6068',.08)); fillPoly(buf,[ww,s,ap],light('#5b6068',.1)); fillPoly(buf,[s,e,ap],dark('#5b6068',.02));
     } },
   { id: 'antorcha', totalH: 38, draw: (buf, P) => {
       const wd = '#5a3a22', wdD = '#3c2614';
@@ -548,7 +549,7 @@ const DECOR = [
       fillEllipse(buf, x+7, y0+11, 2.4, 2.4, '#d8b850');                 // emblema dorado
     } },
   { id: 'pabellon-te', totalH: 36, draw: (buf, P) => {
-      const red='#9c3c22', redD='#6a2614', tile='#9a3820', postH=13;
+      const red='#9c3c22', redD='#6a2614', tile='#5b6068', postH=13;
       miniPrism(buf, P, 0.42, 0, 3, '#a39c8d', '#6a655a', '#857c6e');    // plataforma
       // 4 columnas rojas
       [[-0.34,-0.34],[0.34,-0.34],[0.34,0.34],[-0.34,0.34]].forEach(([dx,dy])=>{ const a=P(dx,dy,3), b=P(dx,dy,3+postH);
@@ -816,7 +817,7 @@ function drawGarden(cfg){
   function pavilion(gx,gy){const postH=11, s=0.42;
     [[-s,-s],[s,-s],[s,s],[-s,s]].forEach(([dx,dy])=>
       lineP(buf,P(gx+dx,gy+dy,z),P(gx+dx,gy+dy,z+postH),GPAL.trunk));
-    const apex=P(gx,gy,z+postH+10), roof='#9a3820';
+    const apex=P(gx,gy,z+postH+10), roof='#5b6068';
     const rn=P(gx-0.6,gy-0.6,z+postH),re=P(gx+0.6,gy-0.6,z+postH),
           rs=P(gx+0.6,gy+0.6,z+postH),rw=P(gx-0.6,gy+0.6,z+postH);
     fillPoly(buf,[rn,re,apex],dark(roof,.30));
@@ -929,7 +930,7 @@ function isoHip(buf,P,w,h,rz,rh,tile){
 }
 // Muro de los Espíritus (影壁): plinto + muro de ladrillo con panel + tejadillo.
 function drawScreen(cfg){
-  const {w,h}=cfg, baseH=4, bodyH=15, brick='#9a6a4a', tile='#9a3820';
+  const {w,h}=cfg, baseH=4, bodyH=15, brick='#9a6a4a', tile='#5b6068';
   const {buf,P,OX,OY}=isoBuf(w,h, baseH+bodyH+9+8);
   isoPrism(buf,P,-0.28,-0.28,w-1+0.28,h-1+0.28, 0, baseH, PAL.stoneT, dark(PAL.stone,.06), PAL.stone,'stone');
   const z=baseH;
@@ -945,7 +946,7 @@ function drawScreen(cfg){
 }
 // Puerta Floral (垂花門): dos pilares con cabeza de flor colgante + tejado ornado.
 function drawGateArch(cfg){
-  const {w,h}=cfg, postH=16, red='#9c3c22', redD='#6a2614', tile='#9a3820', wood='#6a4a2a';
+  const {w,h}=cfg, postH=16, red='#9c3c22', redD='#6a2614', tile='#5b6068', wood='#6a4a2a';
   const {buf,P,OX,OY}=isoBuf(w,h, postH+16);
   const long=h>=w, ends = long ? [[0,0],[0,h-1]] : [[0,0],[w-1,0]];
   ends.forEach(([gx,gy])=>{
@@ -964,7 +965,7 @@ function drawGateArch(cfg){
 // Pieza 1×1 de MURO INTERIOR (orient 'x'/'y') o PORTÓN (gate=true), cohesionados.
 function drawWallPiece(cfg){
   const orient=cfg.orient, gate=cfg.gate;
-  const wallH=16, iwt=0.34, brick='#8a8070', tile=mix('#933c22','#000',.02), red='#9c3c22', redD='#6a2614';
+  const wallH=16, iwt=0.34, brick='#8a8070', tile=mix('#5b6068','#000',.02), red='#9c3c22', redD='#6a2614';
   const { buf, P, OX, OY } = isoBuf(1, 1, wallH + (gate ? 17 : 8));
   const aX = orient === 'x';
   const a = aX ? -0.5 : -iwt/2, c = aX ? 0.5 : iwt/2, b = aX ? -iwt/2 : -0.5, d = aX ? iwt/2 : 0.5;
