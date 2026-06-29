@@ -32,7 +32,7 @@
 <main class="adm" id="adm" hidden>
   <header class="adm-head">
     <div>
-      <p class="adm-eyebrow">Administración <span id="adm-build" style="opacity:.6;font-weight:400">· build 40</span></p>
+      <p class="adm-eyebrow">Administración <span id="adm-build" style="opacity:.6;font-weight:400">· build 41</span></p>
       <h1 class="adm-ttl">Panel de Haciendas</h1>
     </div>
     <div class="adm-head-actions">
@@ -145,7 +145,7 @@
 <script>
 (function () {
   'use strict';
-  console.log('%c[admin-haciendas] build 40 — tablero grande + fix margen paleta (hover/render)', 'color:#cda94e;font-weight:700');
+  console.log('%c[admin-haciendas] build 41 — rotar al mover + preview tras R (hover/render)', 'color:#cda94e;font-weight:700');
 
   async function boot() {
   // Supabase es asíncrono: esperamos a la sesión inicial antes del guard.
@@ -198,6 +198,7 @@
   let wallStart = null;  // [gx,gy] inicio de una muralla en línea (herramienta de muro)
   let deleteMode = false; // modo borrar: clic en una construcción la elimina al instante
   let pabMode = false;   // modo delimitar pabellón: hover resalta el área cerrada
+  let boardHover = null; // última celda [gx,gy] bajo el cursor (persiste entre renders: al rotar con R el preview no desaparece)
   let detailView = 'tablero';   // vista activa del detalle: 'casa' | 'mecenas' | 'tablero' (se conserva entre renders)
   let pabPending = null; // { cells:[[gx,gy],…] } área elegida pendiente de bautizar
   let tareaTipoSel = null; // tipo de edificio elegido en la pestaña «Tareas»
@@ -266,7 +267,7 @@
         </button>`;
     }).join('');
     host.querySelectorAll('.adm-listitem').forEach(b =>
-      b.addEventListener('click', () => { selectedId = b.dataset.id; boardSel = null; boardRot = 0; boardMovePos = null; wallStart = null; deleteMode = false; render(); }));
+      b.addEventListener('click', () => { selectedId = b.dataset.id; boardSel = null; boardRot = 0; boardMovePos = null; boardHover = null; wallStart = null; deleteMode = false; render(); }));
   }
 
   // ── Tablero de construcciones (rejilla HTML editable) ──
@@ -952,7 +953,7 @@
         // Dibuja la HUELLA real de colocación (verde/rojo) + la cara/puerta en (gx,gy).
         function drawPlacement(gx, gy, dim) {
           const mC = boardMovePos ? lista.find(x => x.pos[0] === boardMovePos[0] && x.pos[1] === boardMovePos[1]) : null;
-          const useTipo = mC ? mC.tipo : boardTipo, useRot = mC ? (mC.rot || 0) : boardRot, useOtras = mC ? lista.filter(x => x !== mC) : lista;
+          const useTipo = mC ? mC.tipo : boardTipo, useRot = boardRot, useOtras = mC ? lista.filter(x => x !== mC) : lista;
           const c = { pos: [gx, gy], tipo: useTipo, rot: useRot };
           const ok = HacBuild.puedeColocar(c, tierNow, useOtras, eTNow).ok;
           const fill = dim ? 'rgba(201,168,76,.18)' : (ok ? 'rgba(90,168,106,.42)' : 'rgba(192,82,74,.42)');
@@ -1017,21 +1018,24 @@
           h.mapa.construcciones.push(c); boardSel = null; saveHacienda(h); render();
         }
         if (confirmBtn) confirmBtn.addEventListener('click', doBuild);
-        repaint(null);   // estado inicial
+        // Repaint inicial en la última celda bajo el cursor (boardHover): al rotar
+        // con R, render() reconstruye el tablero pero el ratón NO se mueve, así que
+        // sin esto el preview desaparecería hasta el siguiente mousemove.
+        let hovKey = boardHover ? boardHover[0] + ',' + boardHover[1] : null, raf = 0, hovCell = boardHover;
+        repaint(boardHover);
 
         const toCell = (e) => { const r = canvas.getBoundingClientRect(); return cellFromXY((e.clientX - r.left) * (canvas.width / r.width), (e.clientY - r.top) * (canvas.height / r.height)); };
-        let hovKey = null, raf = 0, hovCell = null;
         canvas.addEventListener('mousemove', (e) => {
           coordTip.style.left = (e.clientX + 14) + 'px'; coordTip.style.top = (e.clientY + 16) + 'px';
           const cell = toCell(e);
-          if (!cell) { hideCoord(); if (hovKey !== null) { hovKey = null; repaint(null); } return; }
+          if (!cell) { hideCoord(); if (hovKey !== null) { hovKey = null; boardHover = null; repaint(null); } return; }
           const key = cell[0] + ',' + cell[1];
           coordTip.textContent = cell[0] + ', ' + cell[1]; coordTip.style.display = 'block';
           if (key === hovKey) return;
-          hovKey = key; hovCell = cell;
+          hovKey = key; hovCell = cell; boardHover = cell;
           if (!raf) raf = requestAnimationFrame(() => { raf = 0; repaint(hovCell); });
         });
-        canvas.addEventListener('mouseleave', () => { hideCoord(); hovKey = null; repaint(null); });
+        canvas.addEventListener('mouseleave', () => { hideCoord(); hovKey = null; boardHover = null; repaint(null); });
         canvas.addEventListener('click', (e) => {
           const cell = toCell(e); if (!cell) return;
           const gx = cell[0], gy = cell[1];
@@ -1058,7 +1062,7 @@
               return;
             }
             if (boardMovePos && boardMovePos[0] === occ.pos[0] && boardMovePos[1] === occ.pos[1]) boardMovePos = null;
-            else { boardMovePos = [occ.pos[0], occ.pos[1]]; boardSel = null; }
+            else { boardMovePos = [occ.pos[0], occ.pos[1]]; boardSel = null; boardRot = occ.rot || 0; }   // el fantasma arranca con la rotación del edificio; R la cambia
             render(); return;
           }
           if (deleteMode) return;
@@ -1066,9 +1070,9 @@
             const mC = h.mapa.construcciones.find(c => c.pos[0] === boardMovePos[0] && c.pos[1] === boardMovePos[1]);
             if (!mC) { boardMovePos = null; render(); return; }
             const otras = h.mapa.construcciones.filter(c => c !== mC);
-            const v = HacBuild.puedeColocar({ pos: [gx, gy], tipo: mC.tipo, rot: mC.rot || 0 }, tierNow, otras, eTNow);
+            const v = HacBuild.puedeColocar({ pos: [gx, gy], tipo: mC.tipo, rot: boardRot }, tierNow, otras, eTNow);
             if (!v.ok) { alert('No cabe aquí: ' + v.motivo); return; }
-            mC.pos = [gx, gy]; boardMovePos = null; saveHacienda(h); render(); return;
+            mC.pos = [gx, gy]; mC.rot = boardRot; boardMovePos = null; saveHacienda(h); render(); return;
           }
           if (muroMode) {
             if (!wallStart) { wallStart = [gx, gy]; render(); return; }
