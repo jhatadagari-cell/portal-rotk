@@ -289,19 +289,26 @@
     const _stageW = (_twoCol ? _detW - 296 - 18 : _detW) - 44;   // -44: padding del detalle + holgura
     const cellPx = Math.max(9, Math.min(46, Math.floor((_stageW - (COLS - 1) * 3) / COLS)));
 
+    // Índice de ocupación: recorremos las construcciones UNA vez y marcamos sus
+    // celdas. Antes el bucle llamaba a construccionEn(lista,…) por CADA celda
+    // (recorre toda la lista) → en Cao eran millones de ops/render. Ahora O(1)/celda.
+    const occMap = new Map();
+    const nombreDe = (id) => id ? (((h.miembros || []).find(m => m.id === id) || {}).nombre || '¿?') : 'sin dueño';
+    lista.forEach(c => {
+      const t = B.tipo(c.tipo); if (!t) return;
+      const f = B.footprintDe(c);
+      const due = nombreDe(c.dueno);
+      const abbr = t.nombre.slice(0, 3);
+      const moveSrc = boardMovePos && c.pos[0] === boardMovePos[0] && c.pos[1] === boardMovePos[1];
+      B.celdasOcupadas(c).forEach(([px, py]) => occMap.set(px + ',' + py, { t, anchor: c.pos[0] === px && c.pos[1] === py, f, due, abbr, moveSrc }));
+    });
     let cells = '';
     for (let gy = Y0; gy < GH + ringD; gy++) for (let gx = X0; gx < GW + ringD; gx++) {
       const ext = B.esCeldaExterior(gx, gy, tier, eT);   // celda del anillo exterior
       const extCls = ext ? ' ext' : '';
-      const c = B.construccionEn(lista, gx, gy);
-      const t = c ? B.tipo(c.tipo) : null;
-      if (t) {
-        const anchor = c.pos[0] === gx && c.pos[1] === gy;
-        const f = B.footprintDe(c);
-        const due = c.dueno ? (((h.miembros || []).find(m => m.id === c.dueno) || {}).nombre || '¿?') : 'sin dueño';
-        const abbr = t.nombre.slice(0, 3);
-        const moveSrc = boardMovePos && c.pos[0] === boardMovePos[0] && c.pos[1] === boardMovePos[1];
-        cells += `<div class="adm-cell occ${anchor ? ' anchor' : ''}${moveSrc ? ' move-src' : ''}${extCls}" data-gx="${gx}" data-gy="${gy}" style="--c:${esc(t.color)}" title="${esc(t.nombre)} ${f[0]}×${f[1]} · ${esc(due)}">${esc(abbr)}</div>`;
+      const o = occMap.get(gx + ',' + gy);
+      if (o) {
+        cells += `<div class="adm-cell occ${o.anchor ? ' anchor' : ''}${o.moveSrc ? ' move-src' : ''}${extCls}" data-gx="${gx}" data-gy="${gy}" style="--c:${esc(o.t.color)}" title="${esc(o.t.nombre)} ${o.f[0]}×${o.f[1]} · ${esc(o.due)}">${esc(o.abbr)}</div>`;
       } else {
         const sel = boardSel && boardSel[0] === gx && boardSel[1] === gy ? ' on' : '';
         cells += `<button class="adm-cell free${sel}${extCls}" data-gx="${gx}" data-gy="${gy}">·</button>`;
