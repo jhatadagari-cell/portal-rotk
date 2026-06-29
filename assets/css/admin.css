@@ -510,3 +510,6 @@ html{scrollbar-gutter:stable}
    rejilla, así que NO debe centrarse (si no, las celdas se desplazan respecto
    al overlay y la muralla deja de cuadrar). */
 .adm-grid-board{justify-content:start;margin:0 0 4px}
+/* Tablero en CANVAS (sustituye a la rejilla de miles de <div> — fluido a cualquier
+   tamaño). El buffer está a tamaño nativo; se escala con max-width si hace falta. */
+.adm-board-canvas{display:block;max-width:100%;height:auto;border-radius:6px;background:rgba(0,0,0,.18);cursor:crosshair;image-rendering:auto}
