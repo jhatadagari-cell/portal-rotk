@@ -249,12 +249,11 @@ function drawBuilding(cfg, layer) {
     orn(r0,1); orn(r1,-1);
   }
 
-  // ── Terraza imperial de mármol (须弥座) para edificios grandes ───────────
-  // Sustituye al zócalo de piedra: plinto de MÁRMOL claro, escalinatas con
-  // peldaños tallados (huella + contrahuella) y rampa central (御路), y una
-  // BALAUSTRADA de pilares (望柱) rodeando las caras frontales. Estilo Ciudad
-  // Prohibida (太和殿): el edificio no arranca a ras de suelo, se sube por la terraza.
-  const MB = { t:'#ece7dc', l:'#d3ccbd', r:'#c0b9a8', d:'#a59d8b', edge:'#8f8775', j:'#b3ab99' };
+  // ── Terraza de PIEDRA GRIS (台基) para edificios grandes ────────────────
+  // Plinto de piedra gris (青石) con escalinatas talladas (huella + contrahuella)
+  // y rampa central, y balaustrada de pilares. Gris (no mármol blanco, que sería
+  // Ming/Qing) para casar con la teja y el ladrillo Han.
+  const MB = { t:'#b7b4ab', l:'#9b988f', r:'#8b887f', d:'#75726a', edge:'#5d5b53', j:'#8d8a81' };
   const tov = 0.34;                                  // vuelo del plinto (cornisa)
   const swS = Math.max(0.75, (w-1)*0.30), swE = Math.max(0.75, (h-1)*0.30);
   const cxS = (w-1)/2, cyE = (h-1)/2;

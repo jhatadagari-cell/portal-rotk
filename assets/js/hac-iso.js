@@ -20,7 +20,7 @@ const HacIso = (function () {
   const TOP_MARGIN = 132;             // hueco arriba para edificios altos, murallas y torres
   const PAD_X = 40;                   // margen lateral para murallas y paseo de ronda
   const SPRITE_BASE = 'assets/img/iso/';
-  const SPRITE_VER = '32';  // súbelo al regenerar los PNG (cache-busting)
+  const SPRITE_VER = '33';  // súbelo al regenerar los PNG (cache-busting)
 
   // ── Color helpers (para el placeholder) ─────────────────────────────────
   const { hexToRgb, clamp255: cl } = HacUtil;
@@ -548,7 +548,7 @@ const HacIso = (function () {
       if (cam.length) {
         const set = new Set(cam.map(c => c.pos[0] + ',' + c.pos[1]));
         const isCam = (x, y) => set.has(x + ',' + y);
-        const pave = mix('#cdc2a6', casa, .05), curb = dark(pave, .34), joint = dark(pave, .16);
+        const pave = mix('#a99c78', casa, .03), curb = dark(pave, .34), joint = dark(pave, .16);   // sendero de tierra/gravilla apisonada (contrasta con el ladrillo gris del patio)
         cam.forEach(c => {
           const gx = c.pos[0], gy = c.pos[1], cx = X(gx, gy), cy = Y(gx, gy);
           const N = [cx, cy - TILE_H / 2], E = [cx + TILE_W / 2, cy], S = [cx, cy + TILE_H / 2], Wp = [cx - TILE_W / 2, cy];
