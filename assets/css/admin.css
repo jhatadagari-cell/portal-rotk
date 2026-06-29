@@ -513,3 +513,14 @@ html{scrollbar-gutter:stable}
 /* Tablero en CANVAS (sustituye a la rejilla de miles de <div> — fluido a cualquier
    tamaño). El buffer está a tamaño nativo; se escala con max-width si hace falta. */
 .adm-board-canvas{display:block;max-width:100%;height:auto;border-radius:6px;background:rgba(0,0,0,.18);cursor:crosshair;image-rendering:auto}
+.adm-board-canvas-wrap{position:relative;display:inline-block;max-width:100%}
+/* Botón flotante de confirmación de construcción, sobre el canvas, junto a la
+   huella seleccionada (evita bajar al raíl a pulsar «Construir»). */
+.adm-board-confirm{position:absolute;z-index:6;transform:translate(-50%,-100%);
+  display:inline-flex;align-items:center;gap:6px;cursor:pointer;white-space:nowrap;
+  font-family:'Cinzel Decorative',serif;font-size:11px;letter-spacing:.06em;text-transform:uppercase;font-weight:700;
+  color:var(--ink);background:var(--gold);border:1px solid var(--gold);border-radius:6px;padding:7px 13px;
+  box-shadow:0 3px 12px rgba(0,0,0,.5);animation:adm-confirm-pop .12s ease}
+.adm-board-confirm:hover{filter:brightness(1.08)}
+.adm-board-confirm[hidden]{display:none}
+@keyframes adm-confirm-pop{from{opacity:0;transform:translate(-50%,-100%) scale(.9)}to{opacity:1;transform:translate(-50%,-100%) scale(1)}}

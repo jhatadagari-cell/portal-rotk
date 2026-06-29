@@ -9,7 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700;900&family=Cinzel+Decorative:wght@400;700&family=IM+Fell+English:ital@0;1&family=Noto+Sans+SC:wght@300;400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/chrome.css?v=4">
 <link rel="stylesheet" href="assets/css/main.css">
-<link rel="stylesheet" href="assets/css/admin.css?v=37">
+<link rel="stylesheet" href="assets/css/admin.css?v=38">
 </head>
 <body>
 
@@ -32,7 +32,7 @@
 <main class="adm" id="adm" hidden>
   <header class="adm-head">
     <div>
-      <p class="adm-eyebrow">Administración <span id="adm-build" style="opacity:.6;font-weight:400">· build 38</span></p>
+      <p class="adm-eyebrow">Administración <span id="adm-build" style="opacity:.6;font-weight:400">· build 39</span></p>
       <h1 class="adm-ttl">Panel de Haciendas</h1>
     </div>
     <div class="adm-head-actions">
@@ -145,7 +145,7 @@
 <script>
 (function () {
   'use strict';
-  console.log('%c[admin-haciendas] build 38 — tablero en canvas (hover/render)', 'color:#cda94e;font-weight:700');
+  console.log('%c[admin-haciendas] build 39 — botón construir flotante (hover/render)', 'color:#cda94e;font-weight:700');
 
   async function boot() {
   // Supabase es asíncrono: esperamos a la sesión inicial antes del guard.
@@ -448,7 +448,10 @@
             ${moveBanner}
             ${pabBanner}
             <div class="adm-modebanner">${bannerHTML}<span class="kbd">R rotar · Esc salir</span></div>
-            <canvas class="adm-board-canvas" width="${canvasW}" height="${canvasH}" data-cell="${cellPx}" data-gap="${GAP}" aria-label="Tablero de construcción (rejilla ${COLS}×${ROWS})"></canvas>
+            <div class="adm-board-canvas-wrap">
+              <canvas class="adm-board-canvas" width="${canvasW}" height="${canvasH}" data-cell="${cellPx}" data-gap="${GAP}" aria-label="Tablero de construcción (rejilla ${COLS}×${ROWS})"></canvas>
+              <button type="button" id="board-confirm" class="adm-board-confirm" hidden>🔨 Construir aquí</button>
+            </div>
             <p class="adm-board-tip">${boardTip}</p>
             <div class="adm-legend">
               <span><i style="background:color-mix(in srgb,#5a8fd0 50%,transparent)"></i> administrativo</span>
@@ -946,43 +949,74 @@
         if (ringD > 0) { const lx = px(0), ly = py(0), w = GW * STRIDE - GAP, hh = GH * STRIDE - GAP; bx.strokeStyle = '#9a4e36'; bx.lineWidth = 3; bx.strokeRect(lx - 1.5, ly - 1.5, w + 3, hh + 3); bx.lineWidth = 1; }
 
         // ── Repintado (fondo cacheado + overlay de preview) ──
-        function repaint(hover) {
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
-          ctx.drawImage(bg, 0, 0);
-          if (boardSel && !pabMode) fillCell(boardSel[0], boardSel[1], 'rgba(201,168,76,.22)', '#cda94e');
-          if (pabMode && pabPending) { pabPending.cells.forEach(([rx, ry]) => fillCell(rx, ry, 'rgba(58,138,90,.34)')); return; }
-          if (!hover) return;
-          const gx = hover[0], gy = hover[1];
-          if (pabMode) {
-            const region = HacBuild.regionPabellon(h.mapa, tierNow, gx, gy);
-            const ok = HacBuild.regionValidaPabellon(h.mapa, tierNow, region);
-            region.forEach(([rx, ry]) => fillCell(rx, ry, ok ? 'rgba(58,138,90,.34)' : 'rgba(170,60,50,.28)'));
-            return;
-          }
-          if (muroMode && wallStart) {
-            lineCells(wallStart, [gx, gy]).cells.forEach(([lx, ly]) => { const ok = HacBuild.puedeColocar({ pos: [lx, ly], tipo: boardTipo, rot: 0 }, tierNow, lista, eTNow).ok; fillCell(lx, ly, ok ? 'rgba(90,168,106,.42)' : 'rgba(192,82,74,.42)', ok ? '#5aa86a' : '#c0524a'); });
-            return;
-          }
-          const occ = occMap.get(gx + ',' + gy);
-          if (deleteMode || (occ && !boardMovePos)) {
-            if (occ) { const c = cubre(gx, gy); if (c) HacBuild.celdasOcupadas(c).forEach(([dx, dy]) => fillCell(dx, dy, 'rgba(192,82,74,.32)', '#e0907a')); }
-            return;
-          }
-          if (occ) return;   // en modo mover sobre ocupado: no preview
-          // Preview de colocación (huella + cara/puerta).
+        // Dibuja la HUELLA real de colocación (verde/rojo) + la cara/puerta en (gx,gy).
+        function drawPlacement(gx, gy, dim) {
           const mC = boardMovePos ? lista.find(x => x.pos[0] === boardMovePos[0] && x.pos[1] === boardMovePos[1]) : null;
           const useTipo = mC ? mC.tipo : boardTipo, useRot = mC ? (mC.rot || 0) : boardRot, useOtras = mC ? lista.filter(x => x !== mC) : lista;
           const c = { pos: [gx, gy], tipo: useTipo, rot: useRot };
           const ok = HacBuild.puedeColocar(c, tierNow, useOtras, eTNow).ok;
-          HacBuild.celdasOcupadas(c).forEach(([dx, dy]) => fillCell(dx, dy, ok ? 'rgba(90,168,106,.42)' : 'rgba(192,82,74,.42)', ok ? '#5aa86a' : '#c0524a'));
+          const fill = dim ? 'rgba(201,168,76,.18)' : (ok ? 'rgba(90,168,106,.42)' : 'rgba(192,82,74,.42)');
+          const stroke = dim ? '#cda94e' : (ok ? '#5aa86a' : '#c0524a');
+          HacBuild.celdasOcupadas(c).forEach(([dx, dy]) => fillCell(dx, dy, fill, stroke));
           const f = HacBuild.footprintDe(c), rr = ((useRot % 4) + 4) % 4;
-          ctx.strokeStyle = '#e6c86a'; ctx.lineWidth = Math.max(2, CELL * 0.22); ctx.beginPath();
+          ctx.strokeStyle = dim ? '#cda94e' : '#e6c86a'; ctx.lineWidth = Math.max(2, CELL * 0.22); ctx.beginPath();
           if (rr === 0) { const X = px(gx + f[0] - 1) + CELL; ctx.moveTo(X, py(gy)); ctx.lineTo(X, py(gy + f[1] - 1) + CELL); }
           else if (rr === 1) { const Y = py(gy + f[1] - 1) + CELL; ctx.moveTo(px(gx), Y); ctx.lineTo(px(gx + f[0] - 1) + CELL, Y); }
           else if (rr === 2) { const X = px(gx); ctx.moveTo(X, py(gy)); ctx.lineTo(X, py(gy + f[1] - 1) + CELL); }
           else { const Y = py(gy); ctx.moveTo(px(gx), Y); ctx.lineTo(px(gx + f[0] - 1) + CELL, Y); }
           ctx.stroke(); ctx.lineWidth = 1;
+          return ok;
         }
+        function repaint(hover) {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(bg, 0, 0);
+          if (pabMode) {
+            if (pabPending) pabPending.cells.forEach(([rx, ry]) => fillCell(rx, ry, 'rgba(58,138,90,.34)'));
+            else if (hover) { const region = HacBuild.regionPabellon(h.mapa, tierNow, hover[0], hover[1]); const ok = HacBuild.regionValidaPabellon(h.mapa, tierNow, region); region.forEach(([rx, ry]) => fillCell(rx, ry, ok ? 'rgba(58,138,90,.34)' : 'rgba(170,60,50,.28)')); }
+            updateConfirm(); return;
+          }
+          if (muroMode) {
+            if (wallStart && hover) lineCells(wallStart, hover).cells.forEach(([lx, ly]) => { const ok = HacBuild.puedeColocar({ pos: [lx, ly], tipo: boardTipo, rot: 0 }, tierNow, lista, eTNow).ok; fillCell(lx, ly, ok ? 'rgba(90,168,106,.42)' : 'rgba(192,82,74,.42)', ok ? '#5aa86a' : '#c0524a'); });
+            updateConfirm(); return;
+          }
+          if (deleteMode) {
+            if (hover) { const occ = cubre(hover[0], hover[1]); if (occ) HacBuild.celdasOcupadas(occ).forEach(([dx, dy]) => fillCell(dx, dy, 'rgba(192,82,74,.32)', '#e0907a')); }
+            updateConfirm(); return;
+          }
+          // Construir / mover: huella REAL bajo el cursor; y si hay selección fijada
+          // (boardSel) distinta, se mantiene marcada en oro (ahí está el botón).
+          if (boardSel && !boardMovePos && !occMap.get(boardSel[0] + ',' + boardSel[1]) && (!hover || hover[0] !== boardSel[0] || hover[1] !== boardSel[1])) drawPlacement(boardSel[0], boardSel[1], true);
+          const tgt = hover || (!boardMovePos ? boardSel : null);
+          if (tgt) {
+            if (occMap.get(tgt[0] + ',' + tgt[1])) { if (!boardMovePos) { const c = cubre(tgt[0], tgt[1]); if (c) HacBuild.celdasOcupadas(c).forEach(([dx, dy]) => fillCell(dx, dy, 'rgba(192,82,74,.30)', '#e0907a')); } }
+            else drawPlacement(tgt[0], tgt[1]);
+          }
+          updateConfirm();
+        }
+        // Botón flotante «Construir aquí»: junto a la huella SELECCIONADA cuando la
+        // colocación es válida (modo construir). Evita bajar al raíl a confirmar.
+        const confirmBtn = document.getElementById('board-confirm');
+        function updateConfirm() {
+          if (!confirmBtn) return;
+          const sel = (!deleteMode && !pabMode && !muroMode && !boardMovePos) ? boardSel : null;
+          if (!sel || occMap.get(sel[0] + ',' + sel[1])) { confirmBtn.hidden = true; return; }
+          const c = { pos: [sel[0], sel[1]], tipo: boardTipo, rot: boardRot };
+          if (!HacBuild.puedeColocar(c, tierNow, lista, eTNow).ok) { confirmBtn.hidden = true; return; }
+          const f = HacBuild.footprintDe(c), scale = (canvas.clientWidth || canvas.width) / canvas.width;
+          let top = py(sel[1]) * scale - 8;                                   // encima de la huella
+          if (top < 24) top = (py(sel[1] + f[1] - 1) + CELL) * scale + 30;    // si no cabe arriba → debajo
+          confirmBtn.style.left = (px(sel[0]) + f[0] * STRIDE / 2) * scale + 'px';
+          confirmBtn.style.top = top + 'px';
+          confirmBtn.hidden = false;
+        }
+        function doBuild() {
+          if (!boardSel || deleteMode || pabMode || muroMode || boardMovePos) return;
+          const c = { pos: [boardSel[0], boardSel[1]], tipo: boardTipo, rot: boardRot, dueno: null, nivel: 1 };
+          const v = HacBuild.puedeColocar(c, tierNow, h.mapa.construcciones, eTNow);
+          if (!v.ok) { alert(v.motivo); return; }
+          h.mapa.construcciones.push(c); boardSel = null; saveHacienda(h); render();
+        }
+        if (confirmBtn) confirmBtn.addEventListener('click', doBuild);
         repaint(null);   // estado inicial
 
         const toCell = (e) => { const r = canvas.getBoundingClientRect(); return cellFromXY((e.clientX - r.left) * (canvas.width / r.width), (e.clientY - r.top) * (canvas.height / r.height)); };
