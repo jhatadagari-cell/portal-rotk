@@ -447,7 +447,8 @@ const EDIFICIOS = [
   { id:'instruccion',      w:3, h:3, roof:'#4d5158', baseH:5, bodyH:15, roofH:13, decor:'instruccion' },                                   // 校場 militar (gris hierro, más oscuro)
   { id:'academia',         w:3, h:3, roof:'#586460', baseH:5, bodyH:16, roofH:13, stories:true, bodyH2:9, roofH2:11, decor:'academia' },   // 太學 cultural (gris con pátina verdosa leve)
   { id:'cancilleria',      w:3, h:3, roof:'#535b67', baseH:6, bodyH:16, roofH:14, decor:'cancilleria' },                                   // 官署 administrativo (gris con pátina azulada leve)
-  { id:'mercado',          w:3, h:3, roof:'#5b6068', baseH:5, bodyH:15, roofH:13, decor:'market' },                                        // 市 mercado (toldo a rayas + mercader)
+  // 'mercado' ya NO se genera aquí: usa un sprite HECHO A MANO (puesto ilustrado)
+  // registrado en assets/js/iso-sprites-extra.js (bld-mercado-0.png).
   { id:'casa',             w:2, h:2, roof:'#5b6068', baseH:4, bodyH:12, roofH:11, decor:'casa' }                                           // 宅 casa de mecenas (cortina + farolillo)
 ];
 
