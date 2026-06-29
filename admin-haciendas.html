@@ -9,7 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700;900&family=Cinzel+Decorative:wght@400;700&family=IM+Fell+English:ital@0;1&family=Noto+Sans+SC:wght@300;400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/chrome.css?v=4">
 <link rel="stylesheet" href="assets/css/main.css">
-<link rel="stylesheet" href="assets/css/admin.css?v=31">
+<link rel="stylesheet" href="assets/css/admin.css?v=32">
 </head>
 <body>
 
@@ -419,7 +419,9 @@
           <div class="adm-board-stage">
             ${moveBanner}
             ${pabBanner}
-            <div class="adm-grid-board" style="grid-template-columns:repeat(${COLS},${cellPx}px);--cell:${cellPx}px">${cells}</div>
+            <div class="adm-grid-board" style="grid-template-columns:repeat(${COLS},${cellPx}px);--cell:${cellPx}px">${cells}${ringD > 0
+              ? `<div class="adm-board-wall" style="grid-column:${ringD + 1}/span ${GW};grid-row:${ringD + 1}/span ${GH}" title="Muralla exterior · dentro = recinto · fuera = terreno exterior" aria-hidden="true"></div>`
+              : ''}</div>
             <p class="adm-board-tip">${boardTip}</p>
           </div>
           <aside class="adm-board-rail">

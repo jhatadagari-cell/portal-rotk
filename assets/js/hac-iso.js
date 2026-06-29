@@ -105,12 +105,14 @@ const HacIso = (function () {
     const M = 1;                       // paseo de ronda: anillo de pavimento entre edificios y muros
     const e = M + 0.5 + wt;            // alcance exterior (cara externa del muro) en celdas
     const TERR = 3.4;                  // anchura del TERRITORIO exterior (campo) en celdas
-    // Edificios EXTERIORES (anillo perimetral, fuera de los muros): el lienzo crece
-    // lo justo para que se vean —solo hasta lo edificado + un margen—, no hasta todo
-    // el anillo comprado (que puede ser muy hondo y vacío). extCells = sus celdas,
-    // para no plantar árboles encima.
-    let extReach = 0;
-    const extCells = new Set();
+    // ── Edificios EXTERIORES (anillo perimetral, fuera de los muros) ────────
+    // El lienzo se extiende SOLO hacia donde hay edificios exteriores (crecimiento
+    // DIRECCIONAL, no simétrico) y abarca su SPRITE ENTERO —que sobresale mucho de
+    // la huella (tiendas, astas)— para que no se recorte. extCells = sus celdas
+    // (±1) → no plantar árboles encima.
+    const eoBase = e + TERR;                 // orla salvaje simétrica alrededor de la finca
+    let gxLo = -eoBase, gxHi = (GW - 1) + eoBase, gyLo = -eoBase, gyHi = (GH - 1) + eoBase;
+    const extCells = new Set(), extSprites = [];
     if (B && opts.mapa && Array.isArray(opts.mapa.construcciones)) {
       const eT = Number(opts.mapa.exteriorTier) || 0;
       opts.mapa.construcciones.forEach(c => {
@@ -118,18 +120,31 @@ const HacIso = (function () {
         if (!t || !t.exterior || !B.enExterior(c, tier, eT)) return;
         B.celdasOcupadas(c).forEach(([x, y]) => {
           for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) extCells.add((x + dx) + ',' + (y + dy));
-          extReach = Math.max(extReach, -x, -y, x - (GW - 1), y - (GH - 1));
+          gxLo = Math.min(gxLo, x - 1.5); gxHi = Math.max(gxHi, x + 1.5);   // orla de campo en torno a la huella
+          gyLo = Math.min(gyLo, y - 1.5); gyHi = Math.max(gyHi, y + 1.5);
         });
+        const m = META && META[spriteKey(c)];
+        if (m) extSprites.push({ c, m });
       });
     }
-    const eo = e + Math.max(TERR, extReach > 0 ? extReach + 2.5 : 0);   // alcance total del lienzo (finca + territorio + exterior edificado)
     // Holgura para que las COPAS de los árboles del territorio (altas y anchas)
     // no se recorten en el borde trasero (cielo) ni en los laterales.
     const SKY = 64, SIDEPAD = 26;
 
-    const W = Math.round(((GW - 1) + (GH - 1) + 4 * eo) * TILE_W / 2) + 2 * (PAD_X + SIDEPAD);
-    const originX = PAD_X + SIDEPAD + ((GH - 1) + 2 * eo) * TILE_W / 2 + TILE_W / 2, originY = TOP_MARGIN + SKY;
-    const H = originY + Math.round(((GW - 1) + (GH - 1) + 2 * eo) * TILE_H / 2) + TILE_H + 30;
+    // AABB de pantalla en coords PRE-ORIGEN (X0=(gx−gy)·TW/2, Y0=(gx+gy)·TH/2):
+    // las 4 esquinas del rombo de terreno + el rect de cada sprite exterior.
+    const X0 = (gx, gy) => (gx - gy) * TILE_W / 2, Y0 = (gx, gy) => (gx + gy) * TILE_H / 2;
+    let minX0 = X0(gxLo, gyHi), maxX0 = X0(gxHi, gyLo);     // esquinas O / E del rombo
+    let minY0 = Y0(gxLo, gyLo), maxY0 = Y0(gxHi, gyHi);     // esquinas N / S del rombo
+    extSprites.forEach(({ c, m }) => {
+      const sx = X0(c.pos[0], c.pos[1]), sy = Y0(c.pos[0], c.pos[1]);
+      minX0 = Math.min(minX0, sx - m.ox / SCALE); maxX0 = Math.max(maxX0, sx + (m.w - m.ox) / SCALE);
+      minY0 = Math.min(minY0, sy - m.oy / SCALE); maxY0 = Math.max(maxY0, sy + (m.h - m.oy) / SCALE);
+    });
+    const W = Math.round(maxX0 - minX0) + 2 * (PAD_X + SIDEPAD);
+    const originX = Math.round(PAD_X + SIDEPAD - minX0);
+    const originY = Math.round(TOP_MARGIN + SKY - minY0);
+    const H = originY + Math.round(maxY0) + TILE_H + 30;
     // Lienzo a SCALE× (más densidad): backing 2×, dibujo en coords lógicas.
     canvas.width = W * SCALE; canvas.height = H * SCALE;
     const g = canvas.getContext('2d');
@@ -259,17 +274,17 @@ const HacIso = (function () {
     }
     // Pinta el campo (saltando la huella del suelo de piedra) y reúne los props
     // con su posición «jittered», para colocarlos con orden de profundidad.
-    const tLo = Math.floor(-eo), tHX = Math.ceil(GW - 1 + eo), tHY = Math.ceil(GH - 1 + eo);
+    const txLo = Math.floor(gxLo), txHi = Math.ceil(gxHi), tyLo = Math.floor(gyLo), tyHi = Math.ceil(gyHi);
     const inFloor = (gx, gy) => gx >= loX && gx <= hiX && gy >= loY && gy <= hiY;
     const props = [];
-    for (let gy = tLo; gy <= tHY; gy++) for (let gx = tLo; gx <= tHX; gx++) {
+    for (let gy = tyLo; gy <= tyHi; gy++) for (let gx = txLo; gx <= txHi; gx++) {
       if (inFloor(gx, gy)) continue;
       const riv = isRiver(gx, gy);
       terrTile(gx, gy, riv);
       if (riv) continue;
       if (extCells.has(gx + ',' + gy)) continue;   // no plantar props sobre/junto a un edificio exterior
       // Orla exterior limpia: sin props en el anillo más externo (evita recortes).
-      if (gx === tLo || gx === tHX || gy === tLo || gy === tHY) continue;
+      if (gx === txLo || gx === txHi || gy === tyLo || gy === tyHi) continue;
       const nearWall = gx >= loX - 1 && gx <= hiX + 1 && gy >= loY - 1 && gy <= hiY + 1;
       if (nearWall) continue;
       const riverNear = hasWater && (isRiver(gx - 1, gy) || isRiver(gx + 1, gy) || isRiver(gx, gy - 1) || isRiver(gx, gy + 1));
