@@ -207,7 +207,28 @@
 .hacp-cp-sel{ flex:1; min-width:0; background:rgba(0,0,0,.35); color:var(--parch); border:1px solid rgba(201,168,76,.3); border-radius:5px; padding:4px 6px; font-size:12px; }
 .hacp-cp-btn{ background:rgba(201,168,76,.16); color:var(--gold); border:1px solid var(--hac,var(--gold)); border-radius:5px; padding:4px 11px; font-size:12px; cursor:pointer; white-space:nowrap; }
 .hacp-cp-btn:hover{ background:rgba(201,168,76,.32); color:#fff; }
+.hacp-cp-btn:disabled{ opacity:.45; cursor:not-allowed; }
+.hacp-cp-btn:disabled:hover{ background:rgba(201,168,76,.16); color:var(--gold); }
 .hacp-cp-flag{ color:#e0b85a; font-size:12px; }
+/* Botón de inventario (toggle) + panel de mochila/monedero desplegado a la derecha. */
+.hacp-cp-invbtn{ display:block; width:100%; margin-top:9px; text-align:center; }
+.hacp-cp-invbtn.on{ background:rgba(201,168,76,.32); color:#fff; }
+.hacp-inv{
+  position:absolute; left:calc(100% + 8px); bottom:0; width:190px; box-sizing:border-box;
+  background:rgba(11,10,7,.94); border:1px solid rgba(201,168,76,.42); border-radius:8px;
+  padding:10px 11px 11px; box-shadow:0 6px 22px rgba(0,0,0,.55); color:var(--parch);
+}
+@media(max-width:560px){ .hacp-inv{ position:static; left:auto; width:auto; margin-top:8px; } }
+.hacp-inv-h{ font:700 11px/1 'Cinzel Decorative',serif; letter-spacing:.06em; color:var(--gold); margin-bottom:8px; }
+.hacp-wallet{ font-size:13px; color:var(--parch); margin-bottom:8px; }
+.hacp-wallet b{ color:#e0b85a; font-variant-numeric:tabular-nums; }
+.hacp-inv-cap{ font-size:10.5px; color:var(--parch2); text-transform:uppercase; letter-spacing:.06em; margin-bottom:5px; }
+.hacp-inv-cap b{ color:var(--parch); }
+.hacp-inv-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:5px; margin-bottom:9px; }
+.hacp-slot{ aspect-ratio:1; border-radius:4px; background:rgba(255,255,255,.03); border:1px solid rgba(201,168,76,.18); }
+.hacp-store{ display:block; width:100%; text-align:center; }
+.hacp-inv-note{ font-size:10px; color:var(--parch2); opacity:.8; line-height:1.45; margin-top:6px; }
+.hacp-inv-soon{ opacity:.6; font-style:italic; }
 .hacp-cp-pts{ font-size:11px; color:var(--parch2); margin:3px 0 0; }
 .hacp-cp-pts b{ color:var(--parch); }
 .hacp-cp-earn{ color:#7fc9a0; }

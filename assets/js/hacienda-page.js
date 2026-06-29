@@ -410,7 +410,7 @@
     }
 
     // ── Panel de control del personaje (overlay sobre el visor) ──────────────
-    let charId = null, charSig = '';
+    let charId = null, charSig = '', invOpen = false;
     function charData(id) {
       const it = HacFolk.list().find(w => w.id === id);
       if (!it) return null;
@@ -425,7 +425,24 @@
       const fuera = !!it.fuera;
       const rest = it.misRestante || 0;
       const earned = window.HacPuntos ? HacPuntos.deMiembro(h.id, id) : 0;
-      return { it, aptId, aptDef, e, activa, enTarea, fuera, rest, mine: id === myId, puntos: puntosTotales(id), earned };
+      const money = (window.HacStats && HacStats.dinero) ? HacStats.dinero(id) : 0;   // (paso 1b) provisional → 0
+      return { it, aptId, aptDef, e, activa, enTarea, fuera, rest, mine: id === myId, puntos: puntosTotales(id), earned, money };
+    }
+    // Panel de inventario/monedero que se despliega a la derecha del panel del
+    // mecenas. Scaffolding: el dinero y los objetos llegarán al jugar misiones
+    // (paso 1b/3). «Guardar en casa» queda bloqueado hasta que tenga una casa.
+    function invPanelHTML(d) {
+      const SLOTS = 8, hasHome = false;   // (paso 3) aún no existe la "casa de mecenas"
+      const slots = Array.from({ length: SLOTS }, () => '<div class="hacp-slot"></div>').join('');
+      return `<div class="hacp-inv">
+        <div class="hacp-inv-h">🎒 Mochila de ${esc(d.it.name)}</div>
+        <div class="hacp-wallet">💰 Monedero: <b>${d.money}</b> <span class="hacp-inv-note">monedas</span></div>
+        <div class="hacp-inv-cap">Inventario <b>0/${SLOTS}</b></div>
+        <div class="hacp-inv-grid">${slots}</div>
+        <button type="button" class="hacp-cp-btn hacp-store" data-act="store"${hasHome ? '' : ' disabled'}>🏠 Guardar dinero en casa</button>
+        <div class="hacp-inv-note">${hasHome ? 'Lleva el dinero a casa para guardarlo a salvo.' : '🏠 Sin hogar: necesita una casa de mecenas para almacenar.'}</div>
+        <div class="hacp-inv-note hacp-inv-soon">El dinero y los objetos llegarán al jugar misiones (próximamente).</div>
+      </div>`;
     }
     function buildCharPanel(id) {
       const d = charData(id); if (!d) { closeCharPanel(); return; }
@@ -462,12 +479,18 @@
         </div>
         <div class="hacp-cp-act" id="hacp-cp-act">${d.it.inside ? '⌂ ' : ''}${esc(d.it.activity || 'Paseando por la finca')}</div>
         <div class="hacp-cp-energy" title="Energía ${d.e}%"><i id="hacp-cp-ebar" style="width:${d.e}%"></i></div>
-        ${mision}`;
+        ${mision}
+        ${d.mine ? `<button type="button" class="hacp-cp-btn hacp-cp-invbtn${invOpen ? ' on' : ''}" data-act="inv">🎒 ${invOpen ? 'Ocultar' : 'Inventario'} · 💰 ${d.money}</button>` : ''}
+        ${(d.mine && invOpen) ? invPanelHTML(d) : ''}`;
       charEl.querySelector('[data-act="close"]').addEventListener('click', deselect);
       const db = charEl.querySelector('[data-act="dispatch"]');
       if (db) db.addEventListener('click', () => { const s = charEl.querySelector('.hacp-cp-sel'); dispatch(s ? s.value : null); });
       const rb = charEl.querySelector('[data-act="release"]');
       if (rb) rb.addEventListener('click', release);
+      const ib = charEl.querySelector('[data-act="inv"]');
+      if (ib) ib.addEventListener('click', () => { invOpen = !invOpen; buildCharPanel(charId); });
+      const sb = charEl.querySelector('[data-act="store"]');
+      if (sb && !sb.disabled) sb.addEventListener('click', () => { /* paso 3: requiere casa de mecenas */ });
     }
     function sigOf(d) { return charId + '|' + (d.activa ? (d.enTarea ? 't' : 'g') : '-') + '|' + (d.mine ? 'me' : '-'); }
     // Retrato animado: pinta el sprite ACTUAL del mecenas (dir/andar/sentado) cada
