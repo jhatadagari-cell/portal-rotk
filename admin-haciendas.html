@@ -9,7 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700;900&family=Cinzel+Decorative:wght@400;700&family=IM+Fell+English:ital@0;1&family=Noto+Sans+SC:wght@300;400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/chrome.css?v=4">
 <link rel="stylesheet" href="assets/css/main.css">
-<link rel="stylesheet" href="assets/css/admin.css?v=39">
+<link rel="stylesheet" href="assets/css/admin.css?v=40">
 </head>
 <body>
 
@@ -32,7 +32,7 @@
 <main class="adm" id="adm" hidden>
   <header class="adm-head">
     <div>
-      <p class="adm-eyebrow">Administración <span id="adm-build" style="opacity:.6;font-weight:400">· build 41</span></p>
+      <p class="adm-eyebrow">Administración <span id="adm-build" style="opacity:.6;font-weight:400">· build 42</span></p>
       <h1 class="adm-ttl">Panel de Haciendas</h1>
     </div>
     <div class="adm-head-actions">
@@ -145,7 +145,7 @@
 <script>
 (function () {
   'use strict';
-  console.log('%c[admin-haciendas] build 41 — rotar al mover + preview tras R (hover/render)', 'color:#cda94e;font-weight:700');
+  console.log('%c[admin-haciendas] build 42 — lista de construidos junto al tablero + título paleta (hover/render)', 'color:#cda94e;font-weight:700');
 
   async function boot() {
   // Supabase es asíncrono: esperamos a la sesión inicial antes del guard.
@@ -445,24 +445,30 @@
           <button type="button" class="adm-mode pab" id="btn-pabmode" data-mode="pab" aria-pressed="${pabMode ? 'true' : 'false'}"${(pabAtMax && !pabMode) ? ' disabled' : ''}><span class="ic">⬚</span> Pabellón</button>
         </div>
         <div class="adm-editor">
-          <div class="adm-board-stage">
-            ${moveBanner}
-            ${pabBanner}
-            <div class="adm-modebanner">${bannerHTML}<span class="kbd">R rotar · Esc salir</span></div>
-            <div class="adm-board-canvas-wrap">
-              <canvas class="adm-board-canvas" width="${canvasW}" height="${canvasH}" data-cell="${cellPx}" data-gap="${GAP}" aria-label="Tablero de construcción (rejilla ${COLS}×${ROWS})"></canvas>
-              <button type="button" id="board-confirm" class="adm-board-confirm" hidden>🔨 Construir aquí</button>
+          <div class="adm-board-left">
+            <div class="adm-board-stage">
+              ${moveBanner}
+              ${pabBanner}
+              <div class="adm-modebanner">${bannerHTML}<span class="kbd">R rotar · Esc salir</span></div>
+              <div class="adm-board-canvas-wrap">
+                <canvas class="adm-board-canvas" width="${canvasW}" height="${canvasH}" data-cell="${cellPx}" data-gap="${GAP}" aria-label="Tablero de construcción (rejilla ${COLS}×${ROWS})"></canvas>
+                <button type="button" id="board-confirm" class="adm-board-confirm" hidden>🔨 Construir aquí</button>
+              </div>
+              <p class="adm-board-tip">${boardTip}</p>
+              <div class="adm-legend">
+                <span><i style="background:color-mix(in srgb,#5a8fd0 50%,transparent)"></i> administrativo</span>
+                <span><i style="background:color-mix(in srgb,#c0463a 50%,transparent)"></i> militar</span>
+                <span><i style="background:color-mix(in srgb,#4fa06a 50%,transparent)"></i> cultural</span>
+                <span><i style="background:rgba(108,142,74,.4)"></i> terreno exterior</span>
+              </div>
             </div>
-            <p class="adm-board-tip">${boardTip}</p>
-            <div class="adm-legend">
-              <span><i style="background:color-mix(in srgb,#5a8fd0 50%,transparent)"></i> administrativo</span>
-              <span><i style="background:color-mix(in srgb,#c0463a 50%,transparent)"></i> militar</span>
-              <span><i style="background:color-mix(in srgb,#4fa06a 50%,transparent)"></i> cultural</span>
-              <span><i style="background:rgba(108,142,74,.4)"></i> terreno exterior</span>
-            </div>
+            <h3 class="adm-built-h">Construido en esta finca <span class="adm-board-hint">consulta, reasigna dueño o ✕ para quitar</span></h3>
+            <ul class="adm-build-list">${items || '<li class="adm-empty">Sin construcciones todavía. Elige edificio en la paleta de la derecha y coloca en el tablero.</li>'}</ul>
+            ${pabSection}
           </div>
           <aside class="adm-rail">
             <div class="adm-palette">
+              <p class="adm-pal-title">🧱 Construir · elige un edificio</p>
               <input class="adm-pal-search" id="pal-search" placeholder="Filtrar edificios…" autocomplete="off">
               ${paletteHTML}
             </div>
@@ -481,8 +487,6 @@
             </div>
           </aside>
         </div>
-        <ul class="adm-build-list">${items || '<li class="adm-empty">Sin construcciones todavía. Elige edificio y casilla, y pulsa Construir.</li>'}</ul>
-        ${pabSection}
       </section>`;
   }
 
