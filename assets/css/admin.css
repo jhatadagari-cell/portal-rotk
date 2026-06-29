@@ -398,3 +398,109 @@ html{scrollbar-gutter:stable}
 .adm-pj-info{display:flex;flex-direction:column;gap:4px;min-width:0;align-items:flex-start}
 .adm-pj-item.on{border-left-color:var(--gold);background:rgba(201,168,76,.09)}
 @media(max-width:680px){ .adm-pj-grid{grid-template-columns:1fr} .adm-pj-preview{position:static;flex-direction:row;flex-wrap:wrap;justify-content:flex-start} }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   REWORK de usabilidad del detalle de hacienda (cabecera con stats, control
+   segmentado Casa/Mecenas/Tablero, barra de modos, paleta de edificios).
+   ═══════════════════════════════════════════════════════════════════════ */
+:root{ --mil:#c0463a; --cul:#4fa06a; --adm:#5a8fd0; --ok:#5aa86a; }
+
+/* Detalle: un poco más de aire y radio. */
+.adm-detail{border-radius:10px;padding:20px}
+.adm-detail-head{align-items:flex-start;flex-wrap:wrap;margin-bottom:14px}
+
+/* Cabecera: chips de resumen a la derecha. */
+.adm-stats{display:flex;gap:10px;flex-wrap:wrap;margin-left:auto}
+.adm-stat{background:rgba(0,0,0,.26);border:1px solid var(--line,rgba(201,168,76,.16));border-radius:8px;padding:8px 14px;min-width:82px}
+.adm-stat .k{font-family:'Cinzel Decorative',serif;font-size:8.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--parch2);opacity:.7}
+.adm-stat .v{font-family:'Noto Serif SC',serif;font-size:20px;font-weight:800;color:var(--parch);line-height:1.15;font-variant-numeric:tabular-nums}
+.adm-stat .v small{font-size:12px;color:var(--parch2);font-weight:400}
+.adm-stat.gold .v{color:var(--gold)}
+
+/* Control segmentado + vistas. */
+.adm-seg{display:inline-flex;gap:2px;background:rgba(0,0,0,.3);border:1px solid rgba(201,168,76,.16);border-radius:9px;padding:3px;margin:16px 0 18px}
+.adm-seg button{cursor:pointer;border:none;background:none;color:var(--parch2);font-family:'Cinzel Decorative',serif;font-size:11px;letter-spacing:.09em;text-transform:uppercase;padding:8px 18px;border-radius:7px;transition:all .15s}
+.adm-seg button:hover{color:var(--gold)}
+.adm-seg button[aria-selected=true]{background:var(--gold);color:var(--ink);font-weight:700}
+.adm-view{display:none}
+.adm-view.on{display:block}
+
+/* Tarjetas de la vista Casa. */
+.adm-card{background:rgba(0,0,0,.2);border:1px solid rgba(201,168,76,.16);border-radius:9px;padding:16px}
+.adm-card + .adm-card{margin-top:14px}
+.adm-card-h{font-family:'Cinzel Decorative',serif;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);margin:0 0 12px;display:flex;align-items:center;gap:8px}
+.adm-card-h .muted{color:var(--parch2);opacity:.65;text-transform:none;letter-spacing:0;font-family:'Noto Sans SC',sans-serif;font-size:11px;margin-left:auto;font-weight:400}
+
+/* Terreno exterior: escalera de tiers. */
+.adm-ext-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:8px;margin:10px 0}
+.adm-ext{text-align:center;border:1px solid rgba(201,168,76,.16);border-radius:7px;padding:9px 4px;background:rgba(0,0,0,.2)}
+.adm-ext.done{border-color:var(--ok);background:rgba(90,168,106,.10)}
+.adm-ext.next{border-color:var(--gold);background:rgba(201,168,76,.10)}
+.adm-ext .t{font-family:'Cinzel Decorative',serif;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--parch2);opacity:.7}
+.adm-ext .c{font-family:'Noto Serif SC',serif;font-size:15px;font-weight:800;color:var(--parch);font-variant-numeric:tabular-nums}
+.adm-ext.done .c{color:var(--ok)} .adm-ext.next .c{color:var(--gold)}
+
+/* Cargo como pill; competencias como chips por dominio. */
+.adm-cargo{background:rgba(201,168,76,.12);border:1px solid rgba(201,168,76,.3);border-radius:999px;padding:2px 10px}
+.adm-cargo-no{background:none;border-color:rgba(255,255,255,.08)}
+.adm-cdot{width:24px;height:22px;display:inline-grid;place-items:center;border-radius:5px;font-family:'Noto Sans SC',sans-serif;font-size:12px;cursor:pointer;border:1px solid #4a4536;opacity:.4;transition:all .14s;color:var(--parch);background:transparent;margin:0 1px}
+.adm-cdot:hover:not(.innate){opacity:.8}
+.adm-cdot.on{opacity:1}
+.adm-cdot.mil.on{border-color:var(--mil);background:color-mix(in srgb,var(--mil) 22%,transparent);color:#f0b6ad}
+.adm-cdot.cul.on{border-color:var(--cul);background:color-mix(in srgb,var(--cul) 22%,transparent);color:#aee6c2}
+.adm-cdot.adm.on{border-color:var(--adm);background:color-mix(in srgb,var(--adm) 22%,transparent);color:#bcd6f5}
+.adm-cdot.innate{cursor:default;box-shadow:inset 0 0 0 1px rgba(255,255,255,.22)}
+
+/* ── Editor: barra de modos + escenario + raíl de paleta ── */
+.adm-modebar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.adm-mode{display:inline-flex;align-items:center;gap:7px;cursor:pointer;font-family:'Cinzel Decorative',serif;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--parch2);background:rgba(255,255,255,.03);border:1px solid rgba(201,168,76,.16);border-radius:7px;padding:8px 13px;transition:all .15s}
+.adm-mode .ic{font-size:14px;line-height:1}
+.adm-mode:hover{color:var(--gold);border-color:rgba(201,168,76,.4)}
+.adm-mode[aria-pressed=true]{color:var(--ink);background:var(--gold);border-color:var(--gold);font-weight:700}
+.adm-mode.del[aria-pressed=true]{background:#b6493e;border-color:#b6493e;color:#fff}
+.adm-mode.pab[aria-pressed=true]{background:var(--cul);border-color:var(--cul);color:#0e1a12}
+
+.adm-editor{display:grid;grid-template-columns:minmax(0,1fr) 296px;gap:18px;align-items:start}
+@media(max-width:1040px){.adm-editor{grid-template-columns:1fr}}
+.adm-modebanner{display:flex;align-items:center;gap:9px;font-family:'Noto Sans SC',sans-serif;font-size:12px;color:var(--gold);background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.3);border-radius:7px;padding:8px 12px;margin-bottom:11px}
+.adm-modebanner b{color:var(--parch)}
+.adm-modebanner .kbd{font-family:ui-monospace,Menlo,monospace;font-size:10px;background:rgba(0,0,0,.4);border:1px solid rgba(201,168,76,.3);border-radius:4px;padding:1px 5px;color:var(--parch2);margin-left:auto}
+.adm-legend{display:flex;gap:14px;flex-wrap:wrap;font-family:'Noto Sans SC',sans-serif;font-size:11px;color:var(--parch2);margin-top:10px}
+.adm-legend span{display:inline-flex;align-items:center;gap:5px}
+.adm-legend i{width:11px;height:11px;border-radius:3px;display:inline-block}
+
+/* Paleta de edificios (sustituye al <select>). */
+.adm-rail{display:flex;flex-direction:column;gap:14px}
+.adm-palette{background:rgba(0,0,0,.22);border:1px solid rgba(201,168,76,.16);border-radius:9px;padding:12px}
+.adm-pal-search{width:100%;margin-bottom:10px;background:rgba(0,0,0,.3);border:1px solid rgba(201,168,76,.16);border-radius:6px;padding:7px 10px;color:var(--parch);font-family:'Noto Sans SC',sans-serif;font-size:12px;outline:none}
+.adm-pal-search:focus{border-color:var(--gold)}
+.adm-pal-group{margin-bottom:12px}
+.adm-pal-group:last-child{margin-bottom:0}
+.adm-pal-gh{font-family:'Cinzel Decorative',serif;font-size:9px;letter-spacing:.12em;text-transform:uppercase;margin:0 0 7px;display:flex;align-items:center;gap:7px;color:var(--parch2)}
+.adm-pal-gh .sw{width:9px;height:9px;border-radius:2px}
+.adm-pal-items{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.adm-pal{position:relative;cursor:pointer;text-align:left;background:rgba(255,255,255,.02);border:1px solid rgba(201,168,76,.16);border-radius:7px;padding:8px 9px;transition:all .14s}
+.adm-pal:hover{border-color:rgba(201,168,76,.4);background:rgba(201,168,76,.06)}
+.adm-pal[aria-pressed=true]{border-color:var(--gold);background:rgba(201,168,76,.13);box-shadow:inset 0 0 0 1px var(--gold)}
+.adm-pal .pz{font-family:'Noto Serif SC',serif;font-size:16px;font-weight:800;line-height:1;color:var(--pc,var(--gold))}
+.adm-pal .pn{font-family:'Noto Sans SC',sans-serif;font-size:11px;color:var(--parch);margin-top:3px;line-height:1.2}
+.adm-pal .pf{font-family:ui-monospace,Menlo,monospace;font-size:9.5px;color:var(--parch2);opacity:.7;margin-top:2px}
+.adm-pal .lock{position:absolute;top:6px;right:7px;font-size:9px;opacity:.75}
+
+/* Caja de selección: preview + rotar + construir. */
+.adm-selbox{background:rgba(0,0,0,.22);border:1px solid rgba(201,168,76,.16);border-radius:9px;padding:14px;text-align:center}
+.adm-selbox .pv{width:118px;height:96px;margin:0 auto 9px;border-radius:7px;display:grid;place-items:center;background:radial-gradient(circle at 50% 28%,rgba(201,168,76,.10),rgba(0,0,0,.32));border:1px solid rgba(201,168,76,.16)}
+.adm-selbox .pv img{max-width:104px;max-height:88px;image-rendering:auto}
+.adm-selbox .pv .swatch{width:90px;height:46px;border-radius:3px;background:repeating-linear-gradient(135deg,var(--pc,#c9a84c) 0 8px,rgba(0,0,0,.16) 8px 10px)}
+.adm-selbox .sn{font-family:'Noto Serif SC',serif;font-weight:700;color:var(--parch);font-size:14px}
+.adm-selbox .sn b{color:var(--gold)}
+.adm-selbox .sf{font-family:'Noto Sans SC',sans-serif;font-size:11px;color:var(--parch2);opacity:.8;margin-top:3px}
+.adm-selbox .adm-rotrow{display:flex;gap:8px;margin-top:12px}
+.adm-selbox .adm-rotrow .adm-btn{flex:1;justify-content:center}
+.adm-selbox .adm-rotrow .adm-btn-gold{flex:2}
+.adm-selnote{font-family:'Noto Sans SC',sans-serif;font-size:10.5px;color:var(--parch2);opacity:.8;line-height:1.5;margin:10px 0 0}
+.adm-selnote b{color:var(--gold)}
+.adm-selnote.lock b{color:#e0b46a}
+
+/* La rejilla centrada dentro del escenario. */
+.adm-grid-board{justify-content:center;margin:0 auto 4px}

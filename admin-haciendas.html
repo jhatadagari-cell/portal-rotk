@@ -9,7 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700;900&family=Cinzel+Decorative:wght@400;700&family=IM+Fell+English:ital@0;1&family=Noto+Sans+SC:wght@300;400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/chrome.css?v=4">
 <link rel="stylesheet" href="assets/css/main.css">
-<link rel="stylesheet" href="assets/css/admin.css?v=33">
+<link rel="stylesheet" href="assets/css/admin.css?v=34">
 </head>
 <body>
 
@@ -197,6 +197,7 @@
   let wallStart = null;  // [gx,gy] inicio de una muralla en línea (herramienta de muro)
   let deleteMode = false; // modo borrar: clic en una construcción la elimina al instante
   let pabMode = false;   // modo delimitar pabellón: hover resalta el área cerrada
+  let detailView = 'tablero';   // vista activa del detalle: 'casa' | 'mecenas' | 'tablero' (se conserva entre renders)
   let pabPending = null; // { cells:[[gx,gy],…] } área elegida pendiente de bautizar
   let tareaTipoSel = null; // tipo de edificio elegido en la pestaña «Tareas»
   // ── Estado de la pestaña «Personajes» ──
@@ -281,10 +282,11 @@
     const COLS = GW + ringD * 2, ROWS = GH + ringD * 2;
     // Tamaño de celda adaptativo: la rejilla (interior + anillo) DEBE caber en el
     // escenario SIN scroll horizontal. Medimos el ancho real del panel de detalle
-    // (menos el raíl de 264 + gap 24 cuando hay 2 columnas, viewport ≥980px).
+    // (menos su padding, el raíl de 296 y el gap 18 cuando el editor es de 2 columnas,
+    // viewport >1040px; ver .adm-editor en admin.css).
     const _detW = (document.getElementById('adm-detail') || {}).clientWidth || 760;
-    const _twoCol = window.innerWidth > 980;
-    const _stageW = (_twoCol ? _detW - 264 - 24 : _detW) - 16;   // -16: holgura/padding interno
+    const _twoCol = window.innerWidth > 1040;
+    const _stageW = (_twoCol ? _detW - 296 - 18 : _detW) - 44;   // -44: padding del detalle + holgura
     const cellPx = Math.max(9, Math.min(46, Math.floor((_stageW - (COLS - 1) * 3) / COLS)));
 
     let cells = '';
@@ -313,13 +315,29 @@
     if (!boardTipo || !disponibles.some(t => t.id === boardTipo)) boardTipo = disponibles[0] && disponibles[0].id;
     // Agrupado por categoría (suelos, muros, edificios, decoración) con <optgroup>
     // para encontrar rápido cada tipo. Dentro de cada grupo, por huella y tier.
-    const optOf = (t) => { const n = norm(t.footprint);
-      return `<option value="${t.id}"${t.id === boardTipo ? ' selected' : ''}>${esc(t.zh)} ${esc(t.nombre)} · ${n[0]}×${n[1]} · tier ${t.tierMin}</option>`; };
-    const tipos = B.CATEGORIAS.map(cat => {
-      const items = disponibles.filter(t => B.categoriaDe(t.id) === cat.key)
-        .sort((a, b) => { const na = norm(a.footprint), nb = norm(b.footprint); return na[0] - nb[0] || na[1] - nb[1] || a.tierMin - b.tierMin; });
-      return items.length ? `<optgroup label="${esc(cat.label)}">${items.map(optOf).join('')}</optgroup>` : '';
-    }).join('');
+    // Paleta visual (sustituye al <select>): edificios agrupados por DOMINIO
+    // (color), y suelos/muros/decoración por categoría. Los de clase llevan 🔒.
+    const _DOMS = [
+      { key: 'administrativo', label: 'Administrativo', sw: '#5a8fd0', cls: 'adm', zh: '政' },
+      { key: 'militar',        label: 'Militar',        sw: '#c0463a', cls: 'mil', zh: '军' },
+      { key: 'cultural',       label: 'Cultural',       sw: '#4fa06a', cls: 'cul', zh: '文' },
+    ];
+    const _bySize = (a, b) => { const na = norm(a.footprint), nb = norm(b.footprint); return na[0] - nb[0] || na[1] - nb[1] || a.tierMin - b.tierMin; };
+    const _palBtn = (t) => {
+      const n = norm(t.footprint), dom = _DOMS.find(d => d.key === t.dominio);
+      const pc = dom ? dom.sw : (t.color || '#c9a84c');
+      const lock = (t.restringido && dom) ? `<span class="lock" title="Solo aptitud ${esc(dom.label)}">🔒${dom.zh}</span>` : '';
+      return `<button type="button" class="adm-pal" data-tipo="${t.id}" aria-pressed="${t.id === boardTipo ? 'true' : 'false'}" style="--pc:${esc(pc)}" title="${esc(t.zh)} ${esc(t.nombre)} · ${n[0]}×${n[1]} · tier ${t.tierMin}">${lock}<span class="pz">${esc(t.zh)}</span><div class="pn">${esc(t.nombre)}</div><div class="pf">${n[0]}×${n[1]}${t.restringido ? ' · clase' : ''}</div></button>`;
+    };
+    const _palGroup = (label, sw, cls, list) => list.length
+      ? `<div class="adm-pal-group"><p class="adm-pal-gh ${cls}"><span class="sw" style="background:${sw}"></span>${esc(label)}</p><div class="adm-pal-items">${list.slice().sort(_bySize).map(_palBtn).join('')}</div></div>` : '';
+    const _edif = disponibles.filter(t => B.categoriaDe(t.id) === 'edificio');
+    const paletteHTML =
+      _DOMS.map(d => _palGroup(d.label, d.sw, d.cls, _edif.filter(t => t.dominio === d.key))).join('')
+      + _palGroup('Otros edificios', '#c9a84c', 'dec', _edif.filter(t => !_DOMS.some(d => d.key === t.dominio)))
+      + _palGroup('Suelos y jardines', '#6c8e4a', 'gnd', disponibles.filter(t => B.categoriaDe(t.id) === 'jardin'))
+      + _palGroup('Muros y puertas', '#8a8070', 'wal', disponibles.filter(t => B.categoriaDe(t.id) === 'muro'))
+      + _palGroup('Decoración', '#c9a84c', 'dec', disponibles.filter(t => B.categoriaDe(t.id) === 'decoracion'));
     // Tamaño efectivo del edificio elegido con la rotación actual.
     const fpSel = B.footprintDe({ tipo: boardTipo, rot: boardRot });
     // Herramienta de LÍNEA (murallas y caminos): dos clics → hilera recta.
@@ -412,39 +430,60 @@
       ? `<div class="adm-board-moving adm-board-pab">⬚ Delimitar pabellón — pasa el ratón por un área cerrada por murallas y haz clic para nombrarla <button type="button" class="adm-btn adm-btn-sm" id="btn-pab-exit">Salir</button></div>`
       : '';
     const pabSection = `
-      <h3 class="adm-members-ttl adm-pab-head">Pabellones <span class="adm-board-hint">${pabs.length}/${maxPab} · nivel ${tier}</span>
-        <button type="button" class="adm-btn adm-btn-sm adm-pabbtn${pabMode ? ' on' : ''}" id="btn-pabmode"${(pabAtMax && !pabMode) ? ' disabled title="Máximo de pabellones para este nivel"' : ''}>${pabMode ? 'Delimitando…' : '⬚ Delimitar pabellón'}</button></h3>
-      <ul class="adm-pab-list">${pabItems || '<li class="adm-empty">Sin pabellones. Cierra un área con murallas interiores y pulsa «Delimitar pabellón».</li>'}</ul>`;
+      <h3 class="adm-members-ttl adm-pab-head">Pabellones <span class="adm-board-hint">${pabs.length}/${maxPab} · nivel ${tier} · usa el modo «⬚ Pabellón» de la barra</span></h3>
+      <ul class="adm-pab-list">${pabItems || '<li class="adm-empty">Sin pabellones. Cierra un área con murallas interiores y usa el modo «⬚ Pabellón».</li>'}</ul>`;
 
+    const buildOn = !deleteMode && !pabMode && !muroMode && !movingC;
+    const bannerHTML = pabMode ? '<b>Delimitar pabellón</b> · clic dentro de un área cerrada por murallas para nombrarla.'
+      : movingC ? '<b>Mover</b> · clic en una casilla libre para soltar el edificio.'
+      : deleteMode ? '<b>Borrar</b> · clic en una construcción para quitarla.'
+      : muroMode ? `<b>${lineaNoun === 'camino' ? 'Camino' : 'Muralla'}</b> · clic en el inicio y luego en el final para trazar la hilera.`
+      : '<b>Construir</b> · elige un edificio en la paleta y haz clic en una casilla libre.';
+    const _doorTxt = tdef.linea ? 'se traza de inicio a fin' : '┤ borde dorado = puerta';
     return `
       <section class="adm-board">
-        <h3 class="adm-members-ttl">Tablero · construcciones <span class="adm-board-hint">rejilla ${GW}×${GH} · nivel ${tier}</span> <button type="button" class="adm-btn adm-btn-sm adm-trash${deleteMode ? ' on' : ''}" id="btn-delmode" title="Modo borrar">${deleteMode ? 'Borrando…' : '🗑 Borrar'}</button></h3>
-        <div class="adm-board-main">
+        <div class="adm-board-hint" style="margin-bottom:10px;display:block">Tablero · rejilla ${GW}×${GH} · nivel ${tier}</div>
+        <div class="adm-modebar" role="toolbar" aria-label="Herramientas del tablero">
+          <button type="button" class="adm-mode" data-mode="build" aria-pressed="${buildOn ? 'true' : 'false'}"><span class="ic">⌂</span> Construir</button>
+          <button type="button" class="adm-mode" data-mode="move" aria-pressed="${movingC ? 'true' : 'false'}"><span class="ic">✥</span> Mover</button>
+          <button type="button" class="adm-mode del" id="btn-delmode" data-mode="del" aria-pressed="${deleteMode ? 'true' : 'false'}"><span class="ic">🗑</span> Borrar</button>
+          <button type="button" class="adm-mode" data-mode="wall" aria-pressed="${(muroMode && buildOn === false && !deleteMode && !pabMode && !movingC) ? 'true' : 'false'}"><span class="ic">▦</span> Muralla</button>
+          <button type="button" class="adm-mode pab" id="btn-pabmode" data-mode="pab" aria-pressed="${pabMode ? 'true' : 'false'}"${(pabAtMax && !pabMode) ? ' disabled' : ''}><span class="ic">⬚</span> Pabellón</button>
+        </div>
+        <div class="adm-editor">
           <div class="adm-board-stage">
             ${moveBanner}
             ${pabBanner}
+            <div class="adm-modebanner">${bannerHTML}<span class="kbd">R rotar · Esc salir</span></div>
             <div class="adm-grid-board" style="grid-template-columns:repeat(${COLS},${cellPx}px);--cell:${cellPx}px">${cells}${ringD > 0
               ? `<div class="adm-board-wall" style="left:${ringD * (cellPx + 3) - 2}px;top:${ringD * (cellPx + 3) - 2}px;width:${GW * cellPx + (GW - 1) * 3 + 4}px;height:${GH * cellPx + (GH - 1) * 3 + 4}px" title="Muralla exterior · dentro = recinto · fuera = terreno exterior" aria-hidden="true"></div>`
               : ''}</div>
             <p class="adm-board-tip">${boardTip}</p>
+            <div class="adm-legend">
+              <span><i style="background:color-mix(in srgb,#5a8fd0 50%,transparent)"></i> administrativo</span>
+              <span><i style="background:color-mix(in srgb,#c0463a 50%,transparent)"></i> militar</span>
+              <span><i style="background:color-mix(in srgb,#4fa06a 50%,transparent)"></i> cultural</span>
+              <span><i style="background:rgba(108,142,74,.4)"></i> terreno exterior</span>
+            </div>
           </div>
-          <aside class="adm-board-rail">
-            <form class="adm-build-form" id="form-build">
-              <select name="tipo" id="board-tipo">${tipos}</select>
-              <div class="adm-build-row">
-                <button type="button" class="adm-btn adm-rot-btn" id="btn-rot" title="Rotar 90°">↻ ${fpSel[0]}×${fpSel[1]}</button>
-                <span class="adm-board-sel">${selTxt}</span>
-              </div>
-              <button type="submit" class="adm-btn adm-btn-gold"${buildDisabled ? ' disabled' : ''}>${buildLabel}</button>
+          <aside class="adm-rail">
+            <div class="adm-palette">
+              <input class="adm-pal-search" id="pal-search" placeholder="Filtrar edificios…" autocomplete="off">
+              ${paletteHTML}
+            </div>
+            <div class="adm-selbox" style="--pc:${esc(tdef.color || '#c9a84c')}">
+              <div class="pv">${tdef.linea
+                ? `<div class="swatch" aria-hidden="true"></div>`
+                : `<img src="assets/img/iso/${pvFile}.png?v=21" alt="${esc(tdef.nombre || '')}">`}</div>
+              <div class="sn"><b>${esc(tdef.zh || '')}</b> ${esc(tdef.nombre || '')}</div>
+              <div class="sf">${fpSel[0]}×${fpSel[1]} · ${_doorTxt}</div>
+              <form class="adm-rotrow" id="form-build">
+                <button type="button" class="adm-btn" id="btn-rot" title="Rotar 90°">↻ Rotar</button>
+                <button type="submit" class="adm-btn adm-btn-gold"${buildDisabled ? ' disabled' : ''}>${buildLabel}</button>
+              </form>
               ${motivoHTML}
-            </form>
-            <figure class="adm-build-pv">
-              ${tdef.linea
-                ? `<div class="adm-pv-swatch" style="--c:${esc(tdef.color || '#cdc2a6')}" aria-hidden="true"></div>`
-                : `<img src="assets/img/iso/${pvFile}.png?v=21" alt="${esc(tdef.nombre || '')}">`}
-              <figcaption><b>${esc(tdef.zh || '')} ${esc(tdef.nombre || '')}</b> · ${fpSel[0]}×${fpSel[1]}
-                <span class="adm-pv-door">${tdef.linea ? 'se traza de inicio a fin, como una muralla' : '┤ el borde dorado en la rejilla = la cara/puerta'}</span></figcaption>
-            </figure>
+              ${tdef.restringido ? `<p class="adm-selnote lock">Edificio de <b>clase</b>: solo los mecenas con la aptitud del dominio podrán hacer sus tareas dentro.</p>` : ''}
+            </div>
           </aside>
         </div>
         <ul class="adm-build-list">${items || '<li class="adm-empty">Sin construcciones todavía. Elige edificio y casilla, y pulsa Construir.</li>'}</ul>
@@ -516,7 +555,8 @@
         const on = ini || HacCompetencias.granted(h.id, pid).indexOf(d) >= 0;
         const def = HacCompetencias.def(d) || {};
         const ttl = (def.nombre || d) + (ini ? ' · innata (aptitud)' : (on ? ' · otorgada (clic para quitar)' : ' · clic para otorgar'));
-        return `<button type="button" class="adm-comp" data-dom="${d}"${ini ? ' disabled' : ''} title="${esc(ttl)}" style="border:1px solid ${on ? '#d8b65a' : '#555'};background:${on ? 'rgba(216,182,90,.18)' : 'transparent'};border-radius:4px;padding:1px 4px;margin:0 1px;cursor:${ini ? 'default' : 'pointer'};opacity:${ini ? '.9' : (on ? '1' : '.4')};font-size:13px;line-height:1.2">${def.icon || d[0]}</button>`;
+        const cls = d === 'militar' ? 'mil' : d === 'cultural' ? 'cul' : 'adm';
+        return `<button type="button" class="adm-comp adm-cdot ${cls}${on ? ' on' : ''}${ini ? ' innate' : ''}" data-dom="${d}"${ini ? ' disabled' : ''} title="${esc(ttl)}">${esc(def.zh || def.icon || d[0])}</button>`;
       }).join('') : '<span class="adm-hint">—</span>';
       return `
         <tr data-mid="${esc(m.id)}" data-pid="${esc(pid)}">
@@ -555,48 +595,73 @@
             ? 'Todos los personajes del registro ya son mecenas de esta hacienda.'
             : 'No hay personajes en el registro. Crea alguno en la pestaña <b>Personajes</b> para poder añadirlo como mecenas.'}</p>`;
 
+    const extTiers = [3, 4, 5, 6].filter(t => t <= extMaxT).map(t => {
+      const done = eT >= t, isNext = (t === nextExt && extDisponible);
+      return `<div class="adm-ext${done ? ' done' : isNext ? ' next' : ''}"><div class="t">Nivel ${t}</div><div class="c">${done ? ('✓ ' + HacBuild.ringDepth(t)) : HacBuild.costeExterior(t)}</div></div>`;
+    }).join('');
+
     host.innerHTML = `
       <div class="adm-detail-head" style="--hac:${esc(h.color || 'var(--gold)')}">
         <span class="adm-detail-zh">${esc(h.zh || '—')}</span>
-        <div>
+        <div class="adm-dh-main">
           <h2>${esc(h.nombre)}</h2>
-          <p class="adm-detail-tier">${esc(tInfo.zh)} ${esc(tInfo.nombre)} · <b>${prest}</b> prestigio <span class="adm-hint">(${pts} base + ${ledger} misiones)</span></p>
+          <p class="adm-detail-tier">${esc(tInfo.zh)} ${esc(tInfo.nombre)} · nivel ${tier}</p>
           <div class="adm-detail-actions">
             <a class="adm-btn adm-btn-gold" href="hacienda.html?id=${encodeURIComponent(h.id)}">Ver la hacienda ↗</a>
             <a class="adm-detail-link" href="hacienda.html?id=${encodeURIComponent(h.id)}" target="_blank">Abrir en otra pestaña ↗</a>
           </div>
         </div>
+        <div class="adm-stats">
+          <div class="adm-stat"><div class="k">Nivel</div><div class="v">${tier}</div></div>
+          <div class="adm-stat gold"><div class="k">Prestigio</div><div class="v">${prest}</div></div>
+          <div class="adm-stat gold"><div class="k">Tesorería</div><div class="v">${saldo}</div></div>
+          <div class="adm-stat"><div class="k">Mecenas</div><div class="v">${nMiembros}<small>/${cupo === Infinity ? '∞' : cupo}</small></div></div>
+        </div>
       </div>
 
       <div class="adm-prog"><div class="adm-prog-bar"><span style="width:${prog ? prog.pct : 100}%;background:${esc(h.color || 'var(--gold)')}"></span></div>
-        <p class="adm-prog-lbl">${progTxt}</p></div>
+        <p class="adm-prog-lbl">${progTxt} <span class="adm-hint" style="display:inline">· ${pts} base + ${ledger} misiones</span></p></div>
 
-      <div class="adm-gov" style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin:6px 0 4px">
-        <label style="font-size:13px">Fundador (líder):
-          <select id="adm-fundador" style="margin-left:4px">
-            <option value="">— sin fundador —</option>
-            ${(h.miembros || []).map(m => `<option value="${esc(m.id)}"${(h.mapa && h.mapa.fundador) === m.id ? ' selected' : ''}>${esc(m.nombre)}</option>`).join('')}
-          </select>
-        </label>
-        ${puedeSubir
-          ? `<button type="button" class="adm-btn adm-btn-gold" id="adm-confirm-tier">⬆ Confirmar subida a ${esc(tierPorNivel(alcanzable).nombre)} (nivel ${alcanzable})</button>`
-          : `<span class="adm-hint">Nivel ${tier} confirmado${prog ? ' · sube el prestigio para desbloquear el siguiente' : ' · máximo'}</span>`}
+      <div class="adm-seg" role="tablist">
+        <button type="button" role="tab" data-view="casa" aria-selected="${detailView === 'casa' ? 'true' : 'false'}">Casa</button>
+        <button type="button" role="tab" data-view="mecenas" aria-selected="${detailView === 'mecenas' ? 'true' : 'false'}">Mecenas</button>
+        <button type="button" role="tab" data-view="tablero" aria-selected="${detailView === 'tablero' ? 'true' : 'false'}">Tablero</button>
       </div>
 
-      <div class="adm-gov" style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin:0 0 8px">
-        <span style="font-size:13px">🏛 Tesorería: <b>${saldo}</b> pts${gastado ? ` <span class="adm-hint">(${gastado} gastados de ${prest})</span>` : ''}</span>
-        <span class="adm-hint">${eT >= 3 ? `Exterior nivel ${eT} · anillo de ${ringD} celdas` : 'Sin terreno exterior'}</span>
-        ${extDisponible
-          ? `<button type="button" class="adm-btn adm-btn-gold" id="adm-buy-ext"${extAsequible ? '' : ' disabled'} title="${extAsequible ? 'Amplía el anillo exterior a ' + HacBuild.ringDepth(nextExt) + ' celdas' : 'Tesorería insuficiente'}">🏕 ${eT >= 3 ? 'Ampliar' : 'Comprar'} terreno exterior (nivel ${nextExt}) · ${extCoste} pts</button>`
-          : eT >= extMaxT
-          ? '<span class="adm-hint">Exterior al máximo</span>'
-          : `<span class="adm-hint">Sube la casa a nivel ${nextExt} para ${eT >= 3 ? 'ampliar' : 'comprar'} el exterior</span>`}
-      </div>
+      <!-- ── Vista: Casa ── -->
+      <div class="adm-view${detailView === 'casa' ? ' on' : ''}" data-view="casa">
+        <div class="adm-card">
+          <h3 class="adm-card-h">Gobierno de la casa</h3>
+          <div class="adm-gov" style="display:flex;flex-wrap:wrap;gap:14px;align-items:center">
+            <label style="font-size:13px">Fundador (líder):
+              <select id="adm-fundador" style="margin-left:4px">
+                <option value="">— sin fundador —</option>
+                ${(h.miembros || []).map(m => `<option value="${esc(m.id)}"${(h.mapa && h.mapa.fundador) === m.id ? ' selected' : ''}>${esc(m.nombre)}</option>`).join('')}
+              </select>
+            </label>
+            ${puedeSubir
+              ? `<button type="button" class="adm-btn adm-btn-gold" id="adm-confirm-tier">⬆ Confirmar subida a ${esc(tierPorNivel(alcanzable).nombre)} (nivel ${alcanzable})</button>`
+              : `<span class="adm-hint">Nivel ${tier} confirmado${prog ? ' · sube el prestigio para desbloquear el siguiente' : ' · máximo'}</span>`}
+          </div>
+        </div>
 
-      <details class="adm-edit"${editOpen ? ' open' : ''}>
-        <summary>Editar datos de la casa</summary>
-        <form id="form-edit">
-          <div class="adm-grid">
+        <div class="adm-card">
+          <h3 class="adm-card-h">Terreno exterior <span class="muted">${eT >= 3 ? `nivel ${eT} · anillo de ${ringD} celdas` : 'sin comprar'} · 🏛 ${saldo} de tesorería</span></h3>
+          <p class="adm-info" style="font-size:11.5px;margin:0 0 4px">Ensancha el anillo donde van los edificios exteriores. Escalonado, nunca por encima del nivel de la casa.</p>
+          <div class="adm-ext-grid">${extTiers}</div>
+          <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+            ${extDisponible
+              ? `<button type="button" class="adm-btn adm-btn-gold" id="adm-buy-ext"${extAsequible ? '' : ' disabled'} title="${extAsequible ? 'Amplía el anillo exterior a ' + HacBuild.ringDepth(nextExt) + ' celdas' : 'Tesorería insuficiente'}">🏕 ${eT >= 3 ? 'Ampliar' : 'Comprar'} terreno exterior (nivel ${nextExt}) · ${extCoste} pts</button>`
+              : eT >= extMaxT
+              ? '<span class="adm-hint">Exterior al máximo</span>'
+              : `<span class="adm-hint">Sube la casa a nivel ${nextExt} para ${eT >= 3 ? 'ampliar' : 'comprar'} el exterior</span>`}
+          </div>
+        </div>
+
+        <div class="adm-card">
+          <h3 class="adm-card-h">Datos de la casa</h3>
+          <form id="form-edit">
+            <div class="adm-grid">
             <label>Nombre<input name="nombre" value="${esc(h.nombre)}"></label>
             <label>Sello 漢字 (opcional)<input name="zh" value="${esc(h.zh || '')}" maxlength="6" placeholder="漢字 decorativo"></label>
             <label>Color<input name="color" type="color" value="${esc(h.color || '#c9a84c')}"></label>
@@ -615,22 +680,32 @@
             <label class="adm-col2">Lema<input name="lema" value="${esc(h.lema || '')}"></label>
             <label class="adm-col2">Descripción<textarea name="descripcion" rows="2">${esc(h.descripcion || '')}</textarea></label>
           </div>
-          <div class="adm-edit-actions">
-            <button type="submit" class="adm-btn adm-btn-gold">Guardar cambios</button>
-            <button type="button" class="adm-btn adm-btn-danger" id="btn-del-hac">Borrar hacienda</button>
+            <div class="adm-edit-actions">
+              <button type="submit" class="adm-btn adm-btn-gold">Guardar cambios</button>
+              <button type="button" class="adm-btn adm-btn-danger" id="btn-del-hac">Borrar hacienda</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- ── Vista: Mecenas ── -->
+      <div class="adm-view${detailView === 'mecenas' ? ' on' : ''}" data-view="mecenas">
+        <div class="adm-card">
+          <h3 class="adm-card-h">Mecenas <span class="muted">${nMiembros}/${cupo === Infinity ? '∞' : cupo} · cupo nivel ${tier} · clic en un dominio para otorgar/quitar competencia</span></h3>
+          <div style="overflow-x:auto">
+          <table class="adm-table">
+            <thead><tr><th>Nombre</th><th>Puntos</th><th>Cargo</th><th>Competencias</th><th>Nota</th><th></th></tr></thead>
+            <tbody>${filas || `<tr><td colspan="6" class="adm-empty">Sin mecenas todavía.</td></tr>`}</tbody>
+          </table>
           </div>
-        </form>
-      </details>
+          ${addMemberForm}
+        </div>
+      </div>
 
-      <h3 class="adm-members-ttl">Mecenas · cargo según sus puntos <span class="adm-board-hint">${nMiembros}/${cupo === Infinity ? '∞' : cupo} · cupo nivel ${tier}</span></h3>
-      <table class="adm-table">
-        <thead><tr><th>Nombre</th><th>Puntos</th><th>Cargo</th><th>Comp.</th><th>Nota</th><th></th></tr></thead>
-        <tbody>${filas || `<tr><td colspan="6" class="adm-empty">Sin mecenas todavía.</td></tr>`}</tbody>
-      </table>
-
-      ${addMemberForm}
-
-      ${boardHTML(h, tier)}
+      <!-- ── Vista: Tablero ── -->
+      <div class="adm-view${detailView === 'tablero' ? ' on' : ''}" data-view="tablero">
+        ${boardHTML(h, tier)}
+      </div>
     `;
 
     wireDetail(h);
@@ -638,6 +713,25 @@
 
   // ── Eventos del detalle ──
   function wireDetail(h) {
+    // Control segmentado del detalle: Casa / Mecenas / Tablero. Recuerda la vista
+    // activa en `detailView` para que los re-render del tablero no la reseteen.
+    document.querySelectorAll('#adm-detail .adm-seg button').forEach(b => b.addEventListener('click', () => {
+      detailView = b.dataset.view;
+      document.querySelectorAll('#adm-detail .adm-seg button').forEach(x => x.setAttribute('aria-selected', x === b ? 'true' : 'false'));
+      document.querySelectorAll('#adm-detail .adm-view').forEach(v => v.classList.toggle('on', v.dataset.view === detailView));
+    }));
+
+    // Atajos del editor de tablero (una sola vez): R rota · Esc sale del modo.
+    if (!window._admBoardKeys) {
+      window._admBoardKeys = true;
+      document.addEventListener('keydown', (e) => {
+        if (e.target.closest('input,textarea,select')) return;
+        if (detailView !== 'tablero' || !selectedId) return;
+        if (e.key === 'r' || e.key === 'R') { boardRot = (boardRot + 1) % 4; render(); }
+        else if (e.key === 'Escape') { deleteMode = false; pabMode = false; pabPending = null; boardMovePos = null; wallStart = null; render(); }
+      });
+    }
+
     // Editar puntos de un miembro (input + botones ±).
     document.querySelectorAll('#adm-detail tr[data-mid]').forEach(tr => {
       const mid = tr.dataset.mid;
@@ -764,9 +858,35 @@
       const eTNow = Number(h.mapa.exteriorTier) || 0;   // nivel del anillo exterior comprado
       const enPos = (gx, gy) => h.mapa.construcciones.find(c => c.pos[0] === gx && c.pos[1] === gy);
 
-      // Elegir tipo de edificio (preview de tamaño se actualiza al re-render).
-      const ts = document.getElementById('board-tipo');
-      if (ts) ts.addEventListener('change', () => { boardTipo = ts.value; wallStart = null; boardSel = null; pabMode = false; pabPending = null; render(); });
+      // Paleta de edificios (sustituye al <select>): elegir tipo de edificio.
+      document.querySelectorAll('#adm-detail .adm-pal').forEach(b => b.addEventListener('click', () => {
+        boardTipo = b.dataset.tipo; wallStart = null; boardSel = null; deleteMode = false; pabMode = false; pabPending = null; boardMovePos = null; render();
+      }));
+      // Filtro de la paleta (oculta items sin re-render, para no perder el foco).
+      const palSearch = document.getElementById('pal-search');
+      if (palSearch) palSearch.addEventListener('input', () => {
+        const q = palSearch.value.trim().toLowerCase();
+        document.querySelectorAll('#adm-detail .adm-pal').forEach(b => {
+          b.style.display = (!q || (b.textContent + ' ' + b.dataset.tipo).toLowerCase().indexOf(q) >= 0) ? '' : 'none';
+        });
+        document.querySelectorAll('#adm-detail .adm-pal-group').forEach(g => {
+          g.style.display = [...g.querySelectorAll('.adm-pal')].some(b => b.style.display !== 'none') ? '' : 'none';
+        });
+      });
+      // Barra de modos: build/move/wall (del y pab conservan sus handlers por id).
+      document.querySelectorAll('#adm-detail .adm-mode[data-mode]').forEach(b => {
+        const m = b.dataset.mode;
+        if (m === 'del' || m === 'pab') return;   // los gestionan #btn-delmode / #btn-pabmode
+        b.addEventListener('click', () => {
+          deleteMode = false; pabMode = false; pabPending = null; boardMovePos = null; wallStart = null; boardSel = null;
+          if (m === 'wall') boardTipo = 'muralla';
+          else if (m === 'build' && HacBuild.esLinea(boardTipo)) {
+            const d = HacBuild.CONSTRUCCIONES.filter(t => t.tierMin <= tierNow && !HacBuild.esLinea(t.id) && HacBuild.categoriaDe(t.id) === 'edificio');
+            if (d[0]) boardTipo = d[0].id;
+          }
+          render();
+        });
+      });
       const muroMode = HacBuild.esLinea(boardTipo);
       // Celdas de una línea recta ortogonal a→b (sin diagonal) + su rotación.
       const lineCells = (a, b) => {
