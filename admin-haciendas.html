@@ -902,16 +902,28 @@
       // Preview de colocación (huella verde/roja + puerta) y de borrado (hover
       // sobre un edificio puesto lo resalta; clic lo quita).
       const board = document.querySelector('#adm-detail .adm-grid-board');
-      const cellAt = (gx, gy) => board && board.querySelector('.adm-cell[data-gx="' + gx + '"][data-gy="' + gy + '"]');
+      // cellAt por ÍNDICE directo (las celdas se pintan en orden gy→gx, así que
+      // children[iy*COLS+ix] es la celda) — O(1), sin querySelector por atributo,
+      // que era carísimo en tableros grandes (anillo exterior = miles de celdas).
+      const _gd = HacBuild.gridDims(tierNow), _GW = _gd[0], _GH = _gd[1];
+      const _ringD = HacBuild.ringDepth(eTNow);
+      const _COLS = _GW + _ringD * 2, _ROWS = _GH + _ringD * 2, _X0 = -_ringD, _Y0 = -_ringD;
+      const cellAt = (gx, gy) => {
+        const ix = gx - _X0, iy = gy - _Y0;
+        if (!board || ix < 0 || iy < 0 || ix >= _COLS || iy >= _ROWS) return null;
+        return board.children[iy * _COLS + ix] || null;
+      };
       const cubre = (gx, gy) => HacBuild.construccionEn(h.mapa.construcciones, gx, gy);
-      function clearMarks() {
-        if (board) board.querySelectorAll('.pv-ok,.pv-bad,.pv-front-r,.pv-front-b,.pv-front-l,.pv-front-t,.hov-del,.pv-pab,.pv-pab-bad').forEach(el =>
-          el.classList.remove('pv-ok', 'pv-bad', 'pv-front-r', 'pv-front-b', 'pv-front-l', 'pv-front-t', 'hov-del', 'pv-pab', 'pv-pab-bad'));
-      }
+      // Marcas de preview: rastreamos las celdas marcadas para limpiarlas en
+      // O(marcadas) en vez de escanear TODO el tablero con querySelectorAll.
+      const _MARKCLS = ['pv-ok', 'pv-bad', 'pv-front-r', 'pv-front-b', 'pv-front-l', 'pv-front-t', 'hov-del', 'pv-pab', 'pv-pab-bad'];
+      let marked = [];
+      const mark = (el, cls) => { if (el) { el.classList.add(cls); marked.push(el); } };
+      function clearMarks() { for (let i = 0; i < marked.length; i++) marked[i].classList.remove(..._MARKCLS); marked.length = 0; }
       // Resalta el área de pabellón (región cerrada) bajo el cursor o la pendiente.
       function showPabRegion(cells, ok) {
         clearMarks();
-        (cells || []).forEach(([rx, ry]) => { const el = cellAt(rx, ry); if (el) el.classList.add(ok ? 'pv-pab' : 'pv-pab-bad'); });
+        (cells || []).forEach(([rx, ry]) => mark(cellAt(rx, ry), ok ? 'pv-pab' : 'pv-pab-bad'));
       }
       // Tinte permanente de las regiones de los pabellones ya delimitados (en vivo
       // desde su semilla → se mueven con las murallas). Solo fuera del modo delimitar.
@@ -936,9 +948,7 @@
         const useOtras = mC ? h.mapa.construcciones.filter(x => x !== mC) : h.mapa.construcciones;
         const c = { pos: pos, tipo: useTipo, rot: useRot };
         const ok = HacBuild.puedeColocar(c, tierNow, useOtras, eTNow).ok;
-        HacBuild.celdasOcupadas(c).forEach(([gx, gy]) => {
-          const el = cellAt(gx, gy); if (el) el.classList.add(ok ? 'pv-ok' : 'pv-bad');
-        });
+        HacBuild.celdasOcupadas(c).forEach(([gx, gy]) => mark(cellAt(gx, gy), ok ? 'pv-ok' : 'pv-bad'));
         // CARA/PUERTA según la rotación (4 direcciones): rot0 +x derecha,
         // rot1 +y abajo, rot2 -x izquierda, rot3 -y arriba. Línea + ticks.
         const f = HacBuild.footprintDe(c);
@@ -948,13 +958,11 @@
         else if (r === 1) { const fy = pos[1] + f[1] - 1; for (let gx = pos[0]; gx < pos[0] + f[0]; gx++) marca.push([gx, fy, 'pv-front-b']); }
         else if (r === 2) { const fx = pos[0]; for (let gy = pos[1]; gy < pos[1] + f[1]; gy++) marca.push([fx, gy, 'pv-front-l']); }
         else { const fy = pos[1]; for (let gx = pos[0]; gx < pos[0] + f[0]; gx++) marca.push([gx, fy, 'pv-front-t']); }
-        marca.forEach(([gx, gy, cls]) => { const el = cellAt(gx, gy); if (el) el.classList.add(cls); });
+        marca.forEach(([gx, gy, cls]) => mark(cellAt(gx, gy), cls));
       }
       function showDelete(c) {
         clearMarks();
-        HacBuild.celdasOcupadas(c).forEach(([gx, gy]) => {
-          const el = cellAt(gx, gy); if (el) el.classList.add('hov-del');
-        });
+        HacBuild.celdasOcupadas(c).forEach(([gx, gy]) => mark(cellAt(gx, gy), 'hov-del'));
       }
       // Resalta la hilera recta de muralla desde wallStart hasta `end`.
       function showWallPreview(end) {
@@ -962,7 +970,7 @@
         if (!wallStart) return;
         lineCells(wallStart, end).cells.forEach(([gx, gy]) => {
           const ok = HacBuild.puedeColocar({ pos: [gx, gy], tipo: boardTipo, rot: 0 }, tierNow, h.mapa.construcciones, eTNow).ok;
-          const el = cellAt(gx, gy); if (el) el.classList.add(ok ? 'pv-ok' : 'pv-bad');
+          mark(cellAt(gx, gy), ok ? 'pv-ok' : 'pv-bad');
         });
       }
       // Tooltip de coordenadas que sigue al cursor mientras se construye.
