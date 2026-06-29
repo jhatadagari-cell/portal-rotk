@@ -178,10 +178,11 @@ const HacFolk = (function () {
     // decidan acercarse a descansar en la hierba).
     const gardenCells = [];
     garden.forEach(k => { if (set.has(k)) { const p = k.split(',').map(Number); gardenCells.push(p); } });
-    // Celda de SALIDA hacia el exterior (para las expediciones): la transitable más
-    // al FRENTE (mayor x+y, hacia el espectador) y cercana al eje del portón sur.
+    // Celda de SALIDA hacia el exterior (expediciones): la transitable en el EJE del
+    // portón sur (午門, columna central gateC) y lo más al FRENTE posible (mayor y) →
+    // así el mecenas sale justo por la puerta de la muralla, no por una esquina.
     let exitCell = null, bestE = -Infinity; const gateC = Math.floor((GW - 1) / 2);
-    cells.forEach(([x, y]) => { const sc = (x + y) * 10 - Math.abs(x - gateC); if (sc > bestE) { bestE = sc; exitCell = [x, y]; } });
+    cells.forEach(([x, y]) => { const sc = y * 100 - Math.abs(x - gateC) * 1000; if (sc > bestE) { bestE = sc; exitCell = [x, y]; } });
     return { set, cells, cam, camCells, garden, gardenCells, water, GW, GH, ownByMember, buildings, visitable, gates, exitCell, exitKey: exitCell ? exitCell[0] + ',' + exitCell[1] : null };
   }
 
