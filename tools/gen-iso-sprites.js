@@ -745,7 +745,8 @@ const DECOR_HALL = {
     marketFlag(buf, P, fi.flanks[1][0] + fi.out[0] * 1.1, fi.flanks[1][1] + fi.out[1] * 1.1, ctx.baseH + ctx.bodyH + 8);
     marketStall(buf, P, fi.flanks[0][0] + fi.out[0] * 1.0, fi.flanks[0][1] + fi.out[1] * 1.0);
     marketAwning(buf, P, fi, ctx);                                            // toldo encima del frente
-    merchant(buf, P, fi.cx + fi.out[0] * 0.85, fi.cy + fi.out[1] * 0.85);     // mercader DENTRO, centrado y al frente
+    // El MERCADER ya no se hornea aquí: lo dibuja hac-folk como personaje real
+    // (mismo estilo que los mecenas) parado al frente del mercado.
   },
   // 校場: estandartes de guerra flanqueando + panoplia de armas en el frente.
   instruccion: (buf, P, ctx) => {

@@ -81,6 +81,7 @@ const HacFolk = (function () {
   // ── Modelo pixel-art (HacChar) ────────────────────────────────────────────
   const SCALE = (window.HacIso && HacIso.SCALE) || 2;   // px de dispositivo por px lógico
   const SPRITE_DISP = 1;                                // px de dispositivo por px del sprite (1 = ratio entero, nítido)
+  const MERCHANT_LOOK = { robe: '#3f6e9c', accent: '#d4a83a', piel: 1, pelo: 1 };   // aspecto del mercader
   const spriteCache = new Map();                        // key → canvas ya con contorno
   // Dirección de 8 según el vector de movimiento en pantalla (no en la rejilla):
   // +gx va a la derecha-abajo, +gy a la izquierda-abajo en el isométrico.
@@ -194,7 +195,15 @@ const HacFolk = (function () {
     // camina por el campo hasta perderse / aparece allí al volver.
     const outNear = exitCell ? [exitCell[0], exitCell[1] + 2.3] : null;   // justo fuera del vano
     const outFar = exitCell ? [exitCell[0], exitCell[1] + 4.8] : null;    // lejos, donde se oculta/aparece
-    return { set, cells, cam, camCells, garden, gardenCells, water, GW, GH, ownByMember, buildings, visitable, gates, exitCell, exitKey: exitCell ? exitCell[0] + ',' + exitCell[1] : null, outNear, outFar };
+    // MERCADER: personaje fijo (mismo render que los mecenas) parado al frente de
+    // cada mercado, mirando al cliente. Se dibuja como actor, no es un walker.
+    const merchants = [];
+    visitable.forEach(b => {
+      if (b.tipo !== 'mercado' || !b.spotCell) return;
+      merchants.push({ id: 'mkt@' + b.id, name: 'Mercader', aptitud: '', aspecto: MERCHANT_LOOK,
+        fx: b.spotCell[0] + 0.35, fy: b.spotCell[1] + 0.35, dir: 'S', phase: 0, moving: false, state: 'stand', bowing: false });
+    });
+    return { set, cells, cam, camCells, garden, gardenCells, water, GW, GH, ownByMember, buildings, visitable, gates, merchants, exitCell, exitKey: exitCell ? exitCell[0] + ',' + exitCell[1] : null, outNear, outFar };
   }
 
   // Ruta de `start` a la primera celda de `goalKeys` sobre celdas transitables,
@@ -1025,6 +1034,8 @@ const HacFolk = (function () {
     // Portones: hojas animadas (overlay; el sprite no las trae). Primero, para
     // quedar bajo los banners y bocadillos. Coste mínimo: 2 polígonos por portón.
     if (wk && wk.gates) wk.gates.forEach(gate => overlays.push({ draw: (g) => drawGate(g, gate) }));
+    // Mercader(es): personajes fijos al frente de cada mercado (mismo render).
+    if (wk && wk.merchants) wk.merchants.forEach(mk => actors.push({ fx: mk.fx, fy: mk.fy, draw: (g, lx, ly) => drawWalker(g, lx, ly, mk, { banner: false }) }));
     walkers.forEach(w => {
       if (w.id === selectedId) return;                 // el seleccionado va en overlay (encima)
       if (w.insideId) return;                          // DENTRO de un edificio: oculto (su presencia la anuncia el banner 匾額)
