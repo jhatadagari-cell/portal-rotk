@@ -502,5 +502,8 @@ html{scrollbar-gutter:stable}
 .adm-selnote b{color:var(--gold)}
 .adm-selnote.lock b{color:#e0b46a}
 
-/* La rejilla centrada dentro del escenario. */
-.adm-grid-board{justify-content:center;margin:0 auto 4px}
+/* La rejilla alineada a la IZQUIERDA: el overlay de la muralla exterior se
+   posiciona en absoluto con left/top calculados desde el origen (0,0) de la
+   rejilla, así que NO debe centrarse (si no, las celdas se desplazan respecto
+   al overlay y la muralla deja de cuadrar). */
+.adm-grid-board{justify-content:start;margin:0 0 4px}
