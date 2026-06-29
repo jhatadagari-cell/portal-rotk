@@ -446,7 +446,8 @@ const EDIFICIOS = [
   //    DECORACIÓN (estandartes/estelas/tambores) + un tinte de pátina muy sutil.
   { id:'instruccion',      w:3, h:3, roof:'#4d5158', baseH:5, bodyH:15, roofH:13, decor:'instruccion' },                                   // 校場 militar (gris hierro, más oscuro)
   { id:'academia',         w:3, h:3, roof:'#586460', baseH:5, bodyH:16, roofH:13, stories:true, bodyH2:9, roofH2:11, decor:'academia' },   // 太學 cultural (gris con pátina verdosa leve)
-  { id:'cancilleria',      w:3, h:3, roof:'#535b67', baseH:6, bodyH:16, roofH:14, decor:'cancilleria' }                                    // 官署 administrativo (gris con pátina azulada leve)
+  { id:'cancilleria',      w:3, h:3, roof:'#535b67', baseH:6, bodyH:16, roofH:14, decor:'cancilleria' },                                   // 官署 administrativo (gris con pátina azulada leve)
+  { id:'mercado',          w:3, h:3, roof:'#5b6068', baseH:5, bodyH:15, roofH:13, decor:'market' }                                         // 市 mercado (toldo a rayas + mercader)
 ];
 
 // ── Compuestos: L, U y anillo (alas rectangulares unidas en escuadra) ─────
@@ -640,7 +641,78 @@ function plaque(buf, P, ctx, color) {
   const mid = [(pts[0][0] + pts[1][0]) / 2, (pts[0][1] + pts[1][1]) / 2 - 1.3];
   for (let k = -1; k <= 1; k++) px(buf, Math.round(mid[0] + k * 3), Math.round(mid[1]), hexToRgb(gold), 230);
 }
+// ── Mercado (市): mercader, mostrador con género, toldo a rayas y banderola ──
+// Un mercader de pie (túnica azul clara, faja ocre, gorro 幘) mirando al frente.
+// Grande y con buen contraste para que se lea bien "el mercader dentro".
+function merchant(buf, P, gx, gy) {
+  const b = P(gx, gy, 0), cx = Math.round(b[0]), cy = Math.round(b[1]);
+  const robe = '#3f6e9c', robeD = '#2c4f72', robeL = '#5a89b4', sash = '#d4a83a', skin = '#e2b288', cap = '#241d15', beard = '#3a2c20';
+  fillPoly(buf, [[cx - 4, cy], [cx + 4, cy], [cx + 2.8, cy - 12], [cx - 2.8, cy - 12]], robe);          // túnica (más alta)
+  fillPoly(buf, [[cx - 4, cy], [cx - 0.8, cy], [cx - 1.6, cy - 12], [cx - 2.8, cy - 12]], robeD);        // sombra izq
+  fillPoly(buf, [[cx + 1.5, cy - 12], [cx + 2.8, cy - 12], [cx + 4, cy], [cx + 2.6, cy]], robeL);        // luz der
+  fillPoly(buf, [[cx - 2.8, cy - 11.5], [cx - 5.4, cy - 7], [cx - 4, cy - 5.8], [cx - 1.8, cy - 10]], robe);  // manga izq
+  fillPoly(buf, [[cx + 2.8, cy - 11.5], [cx + 5.4, cy - 7], [cx + 4, cy - 5.8], [cx + 1.8, cy - 10]], robeD); // manga der
+  fillEllipse(buf, cx - 4.8, cy - 6, 1.2, 1.2, skin); fillEllipse(buf, cx + 4.8, cy - 6, 1.2, 1.2, skin);     // manos
+  fillPoly(buf, [[cx - 3.3, cy - 6.3], [cx + 3.3, cy - 6.3], [cx + 3.1, cy - 8.4], [cx - 3.1, cy - 8.4]], sash); // faja
+  lineP(buf, [cx, cy - 11.8], [cx - 2, cy - 8], robeD); lineP(buf, [cx, cy - 11.8], [cx + 2, cy - 8], robeD);    // cuello cruzado
+  fillEllipse(buf, cx, cy - 14.4, 2.5, 2.9, skin);                                                       // cabeza
+  fillEllipse(buf, cx, cy - 12.4, 1.6, 1.4, beard);                                                       // barba
+  fillEllipse(buf, cx, cy - 16.2, 2.7, 1.8, cap);                                                         // gorro 幘
+  fillPoly(buf, [[cx - 2.7, cy - 16.2], [cx + 2.7, cy - 16.2], [cx + 2.4, cy - 14.6], [cx - 2.4, cy - 14.6]], cap);
+  px(buf, cx - 1, cy - 14.3, hexToRgb('#2a1c12'), 255); px(buf, cx + 1, cy - 14.3, hexToRgb('#2a1c12'), 255);   // ojos
+}
+// Mostrador de madera con género: rollos de tela, ánfora y cesto de fruta.
+function marketStall(buf, P, gx, gy) {
+  const wd = '#7a5430', wdL = '#9a7044', wdD = '#4e351c';
+  pcube(buf, P, gx, gy, 0.46, 0, 4.4, wdL, wdD, wd);
+  const t = P(gx, gy, 4.6);
+  [['#b23b2e', -4], ['#caa23a', -1], ['#3a6ea5', 2]].forEach(([c, dx]) => {   // rollos de tela
+    fillEllipse(buf, t[0] + dx, t[1] - 1.4, 1.5, 1.0, dark(c, .1));
+    fillEllipse(buf, t[0] + dx, t[1] - 2.2, 1.5, 0.7, light(c, .22));
+  });
+  fillEllipse(buf, t[0] + 5.2, t[1] - 1.5, 1.7, 2.4, '#5a4530'); fillEllipse(buf, t[0] + 5.2, t[1] - 3.1, 0.9, 0.7, '#3a2c1c');   // ánfora
+  fillEllipse(buf, t[0] - 6.6, t[1] - 0.6, 2.1, 1.3, '#8a6a3a');                                                                 // cesto
+  [-0.8, 0, 0.8].forEach(d => fillEllipse(buf, t[0] - 6.6 + d * 1.9, t[1] - 1.7, 0.85, 0.75, '#c43a2a'));                        // fruta
+}
+// Asta con banderola larga de mercado (市招/酒旗): crema con borde rojo.
+function marketFlag(buf, P, gx, gy, topZ) {
+  const pole = '#6a5030', poleD = '#46341e';
+  lineP(buf, P(gx, gy, 0), P(gx, gy, topZ), pole);
+  lineP(buf, [P(gx, gy, 0)[0] + 1, P(gx, gy, 0)[1]], [P(gx, gy, topZ)[0] + 1, P(gx, gy, topZ)[1]], poleD);
+  const a = P(gx, gy, topZ - 1), x = a[0], y0 = a[1], cloth = '#e3d4a6', clothD = '#c8b888', edge = '#b23b2e';
+  fillPoly(buf, [[x, y0], [x + 9, y0 + 1.5], [x + 9, y0 + 26], [x, y0 + 24]], cloth);
+  fillPoly(buf, [[x, y0], [x + 2.6, y0 + 0.5], [x + 2.6, y0 + 24], [x, y0 + 24]], clothD);
+  lineP(buf, [x + 9, y0 + 1.5], [x + 9, y0 + 26], edge); lineP(buf, [x, y0 + 24], [x + 9, y0 + 26], edge);
+  for (let k = 0; k < 3; k++) px(buf, Math.round(x + 4.6), Math.round(y0 + 7 + k * 5), hexToRgb('#7a1f16'), 230);   // 市 sugerido
+}
+// Toldo a rayas volado sobre la fachada del frente (corre por la cara, sin tapar
+// al mercader: cuelga por encima de su cabeza).
+function marketAwning(buf, P, fi, ctx) {
+  const along = fi.face === 'E';
+  const u0 = -0.15, u1 = (along ? (ctx.h - 1) : (ctx.w - 1)) + 0.15;
+  const fixed = along ? (ctx.w - 1) : (ctx.h - 1), out = 0.95;
+  const zTop = ctx.baseH + ctx.bodyH + 1, zFront = zTop - 5;
+  const pt = (u, o, z) => along ? P(fixed + o, u, z) : P(u, fixed + o, z);
+  const stripeA = '#c8693a', stripeB = '#e8c9a0', n = 6;
+  for (let i = 0; i < n; i++) {
+    const a = u0 + (u1 - u0) * i / n, b = u0 + (u1 - u0) * (i + 1) / n;
+    fillPoly(buf, [pt(a, 0, zTop), pt(b, 0, zTop), pt(b, out, zFront), pt(a, out, zFront)], i % 2 ? stripeA : stripeB);
+  }
+  lineP(buf, pt(u0, out, zFront), pt(u1, out, zFront), '#5a3320');
+  [u0 + 0.12, u1 - 0.12].forEach(u => lineP(buf, pt(u, out, 0), pt(u, out, zFront), '#6a4a2a'));   // postes
+}
+
 const DECOR_HALL = {
+  // 市: toldo a rayas + mostrador con género a un lado + mercader centrado +
+  // banderola de mercado. El mercader se pinta el ÚLTIMO → siempre visible.
+  market: (buf, P, ctx) => {
+    const fi = frontInfo(ctx);
+    // banderola en un flanco, mostrador en el otro (ambos asomando al frente)
+    marketFlag(buf, P, fi.flanks[1][0] + fi.out[0] * 1.1, fi.flanks[1][1] + fi.out[1] * 1.1, ctx.baseH + ctx.bodyH + 8);
+    marketStall(buf, P, fi.flanks[0][0] + fi.out[0] * 1.0, fi.flanks[0][1] + fi.out[1] * 1.0);
+    marketAwning(buf, P, fi, ctx);                                            // toldo encima del frente
+    merchant(buf, P, fi.cx + fi.out[0] * 0.85, fi.cy + fi.out[1] * 0.85);     // mercader DENTRO, centrado y al frente
+  },
   // 校場: estandartes de guerra flanqueando + panoplia de armas en el frente.
   instruccion: (buf, P, ctx) => {
     const fi = frontInfo(ctx);
