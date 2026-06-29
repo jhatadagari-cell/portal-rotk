@@ -37,6 +37,22 @@
     const glifo = (h.zh && h.zh.trim()) ? h.zh : tInfo.zh;
     // Dimensiones de la rejilla (rectangular) de este nivel.
     const dims = window.HacBuild ? HacBuild.gridDims(tier) : [2 + tier, 2 + tier];
+    // Prestigio colectivo (base + misiones) y progreso hasta el SIGUIENTE nivel
+    // (null si ya está en el máximo) → barra superpuesta en el visor iso.
+    const ledger = window.HacPuntos ? HacPuntos.totalHacienda(h.id) : 0;
+    const prest  = HacCalc.prestigio(h, ledger);
+    const prog   = HacCalc.progresoHacia(prest, tInfo);
+    const prestBar = `
+      <div class="hacp-iso-prestige" aria-hidden="true">
+        <span class="hacp-isop-zh">${esc(tInfo.zh)}</span>
+        <div class="hacp-isop-body">
+          <div class="hacp-isop-top"><b>${prest.toLocaleString('es')}</b> prestigio · <span>Nivel ${tier} · ${esc(tInfo.nombre)}</span></div>
+          <div class="hacp-isop-bar"><span style="width:${prog ? prog.pct : 100}%;background:${esc(color)}"></span></div>
+          <div class="hacp-isop-lbl">${prog
+            ? `Faltan <b>${prog.faltan.toLocaleString('es')}</b> para ${esc(prog.sig.zh)} ${esc(prog.sig.nombre)}`
+            : '★ Nivel máximo alcanzado'}</div>
+        </div>
+      </div>`;
 
     // Botón de configuración: solo para el admin (gestiona ESTA hacienda).
     const esAdmin = !!(window.Auth && Auth.isAdmin && Auth.isAdmin());
@@ -68,6 +84,7 @@
           <div class="hacp-iso-wrap" id="hacp-iso-wrap">
             <canvas class="hacp-iso" id="hacp-iso"
               role="img" aria-label="Plano isométrico de la finca de ${esc(h.nombre)}"></canvas>
+            ${prestBar}
             <button type="button" class="hacp-fs-btn" id="hacp-fs-btn" aria-label="Ver en pantalla completa" title="Ver en pantalla completa">
               <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path class="hacp-fs-expand" d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>

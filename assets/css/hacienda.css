@@ -106,6 +106,23 @@
   font-family:'Noto Sans SC',sans-serif; font-size:10.5px; color:var(--parch2);
   background:rgba(0,0,0,.45); padding:3px 7px; border-radius:10px; opacity:.7;
 }
+/* Prestigio de la casa + progreso al siguiente nivel, superpuesto arriba del
+   visor (pointer-events:none → no estorba al arrastrar/zoom). */
+.hacp-iso-prestige{
+  position:absolute; top:8px; left:8px; z-index:3; pointer-events:none;
+  display:flex; align-items:center; gap:10px; max-width:min(330px,calc(100% - 56px));
+  background:rgba(11,10,7,.72); border:1px solid rgba(201,168,76,.32);
+  border-radius:8px; padding:7px 12px 8px;
+}
+.hacp-isop-zh{ font-family:'Noto Serif SC',serif; font-size:26px; font-weight:900; color:var(--gold); line-height:1; flex-shrink:0; }
+.hacp-isop-body{ min-width:0; flex:1; }
+.hacp-isop-top{ font-family:'Noto Sans SC',sans-serif; font-size:12px; color:var(--parch); white-space:nowrap; }
+.hacp-isop-top b{ color:var(--gold); font-weight:700; font-variant-numeric:tabular-nums; }
+.hacp-isop-top span{ color:var(--parch2); opacity:.85; }
+.hacp-isop-bar{ height:5px; border-radius:4px; overflow:hidden; background:rgba(255,255,255,.1); border:1px solid rgba(201,168,76,.14); margin:5px 0 3px; }
+.hacp-isop-bar span{ display:block; height:100%; border-radius:4px; transition:width .5s ease; }
+.hacp-isop-lbl{ font-family:'Noto Sans SC',sans-serif; font-size:10px; color:var(--parch2); opacity:.9; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.hacp-isop-lbl b{ color:var(--gold); }
 /* Botón de pantalla completa (esquina superior derecha del visor). */
 .hacp-fs-btn{
   position:absolute; top:8px; right:8px; z-index:3;
