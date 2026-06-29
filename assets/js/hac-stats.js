@@ -42,6 +42,7 @@ const HacStats = (function () {
       militar: Number(r.xp_militar) || 0, cultural: Number(r.xp_cultural) || 0,
       administrativo: Number(r.xp_administrativo) || 0,
       cap: Number(r.cap_inventario) || 8, inv, ahorro: Number(r.ahorro) || 0,
+      casaPos: r.casa_pos || null,
     };
   }
   async function load() {
@@ -60,9 +61,12 @@ const HacStats = (function () {
   function reload() { readyPromise = load(); return readyPromise; }
 
   function row(mid) { return cache.find(r => r.miembroId === mid) || null; }
-  function ensure(mid) { let r = row(mid); if (!r) { r = { miembroId: mid, dinero: 0, militar: 0, cultural: 0, administrativo: 0, cap: 8, inv: [], ahorro: 0 }; cache.push(r); } return r; }
+  function ensure(mid) { let r = row(mid); if (!r) { r = { miembroId: mid, dinero: 0, militar: 0, cultural: 0, administrativo: 0, cap: 8, inv: [], ahorro: 0, casaPos: null }; cache.push(r); } return r; }
   function dinero(mid) { const r = row(mid); return r ? r.dinero : 0; }
   function ahorro(mid) { const r = row(mid); return r ? r.ahorro : 0; }
+  function casaPos(mid) { const r = row(mid); return r ? r.casaPos : null; }
+  // Conjunto de posiciones "gx,gy" de casas YA compradas por algún mecenas.
+  function casasReclamadas() { const s = new Set(); cache.forEach(r => { if (r.casaPos) s.add(r.casaPos); }); return s; }
   function xp(mid, dom) { const r = row(mid); return r ? (r[dom] || 0) : 0; }
   function capInventario(mid) { const r = row(mid); return r ? r.cap : 8; }
   function inventario(mid) { const r = row(mid); return r ? r.inv.slice() : []; }
@@ -74,7 +78,7 @@ const HacStats = (function () {
       const { error } = await client.from(TABLE).upsert({
         miembro_id: r.miembroId, dinero: r.dinero, xp_militar: r.militar, xp_cultural: r.cultural,
         xp_administrativo: r.administrativo, cap_inventario: r.cap, inventario: r.inv, ahorro: r.ahorro,
-        actualizado: new Date().toISOString(),
+        casa_pos: r.casaPos, actualizado: new Date().toISOString(),
       });
       if (error) throw error;
     } catch (e) { console.error('[HacStats] persist', e); }
@@ -88,6 +92,16 @@ const HacStats = (function () {
     if (!cuanto) return 0;
     r.dinero -= cuanto; r.ahorro += cuanto; persist(r);
     return cuanto;
+  }
+  // Compra (reclama) una casa libre de la finca por `precio`. Una sola escritura
+  // (descuenta dinero + fija casa_pos). Devuelve {ok, motivo}.
+  function comprarCasa(mid, pos, precio) {
+    if (!mid || !pos) return { ok: false, motivo: 'Casa inválida' };
+    const r = ensure(mid);
+    if (r.casaPos) return { ok: false, motivo: 'Ya tienes casa' };
+    if (r.dinero < (precio || 0)) return { ok: false, motivo: 'No tienes suficiente dinero' };
+    r.dinero -= (precio || 0); r.casaPos = pos; persist(r);
+    return { ok: true };
   }
   // Saca del ahorro al monedero. n omitido = saca TODO. Devuelve lo retirado.
   function sacar(mid, n) {
@@ -143,6 +157,6 @@ const HacStats = (function () {
     return { ok: true };
   }
 
-  return { ready, reload, dinero, ahorro, xp, nivel, progresoNivel, award, comprar, guardar, sacar, inventario, capInventario, ocupadas, recompensaExped, DOMS, dbOk: () => ok, TABLE };
+  return { ready, reload, dinero, ahorro, casaPos, casasReclamadas, comprarCasa, xp, nivel, progresoNivel, award, comprar, guardar, sacar, inventario, capInventario, ocupadas, recompensaExped, DOMS, dbOk: () => ok, TABLE };
 })();
 if (typeof window !== 'undefined') window.HacStats = HacStats;

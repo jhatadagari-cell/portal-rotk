@@ -317,6 +317,21 @@
       const mid = String(m.id);
       return ((h.mapa && h.mapa.construcciones) || []).find(c => c.tipo === 'casa' && c.dueno != null && String(c.dueno) === mid) || null;
     }
+    const PRECIO_CASA = 150;
+    const casaKey = (c) => c.pos[0] + ',' + c.pos[1];
+    const casasFinca = () => ((h.mapa && h.mapa.construcciones) || []).filter(c => c.tipo === 'casa');
+    // Casa de un mecenas: la asignada por el admin (dueño) O la que él COMPRÓ (casa_pos).
+    function miCasa(personajeId) {
+      if (casaDe(personajeId)) return casaDe(personajeId);
+      const pos = (window.HacStats && HacStats.casaPos) ? HacStats.casaPos(personajeId) : null;
+      return pos ? (casasFinca().find(c => casaKey(c) === pos) || null) : null;
+    }
+    // Primera casa LIBRE: ni asignada por el admin ni comprada por ningún mecenas.
+    function casaLibre() {
+      const reclamadas = (window.HacStats && HacStats.casasReclamadas) ? HacStats.casasReclamadas() : new Set();
+      const asignadas = new Set(casasFinca().filter(c => c.dueno != null).map(casaKey));
+      return casasFinca().find(c => !asignadas.has(casaKey(c)) && !reclamadas.has(casaKey(c))) || null;
+    }
     // Coste de una misión según si el mecenas DOMINA el dominio del edificio (suave).
     function costeMision(dominio) {
       const competente = window.HacCompetencias && dominio && HacCompetencias.has(h.id, myId, myApt, dominio);
@@ -490,7 +505,7 @@
       }
       const earned = window.HacPuntos ? HacPuntos.deMiembro(h.id, id) : 0;
       const money = (window.HacStats && HacStats.dinero) ? HacStats.dinero(id) : 0;   // monedero (XP/dinero reales)
-      const home = !!casaDe(id);                                                       // ¿tiene casa asignada?
+      const home = !!miCasa(id);                                                       // ¿tiene casa (asignada o comprada)?
       const ahorro = (window.HacStats && HacStats.ahorro) ? HacStats.ahorro(id) : 0;   // dinero a salvo en casa
       // "Poder personal": nivel 武/文/政 derivado del XP de cada dominio.
       const stats = (window.HacStats && HacStats.progresoNivel)
@@ -514,14 +529,22 @@
       }).join('');
       const canStore = hasHome && d.mine && d.money > 0;
       const canTake = hasHome && d.mine && d.ahorro > 0;
-      const homeBtns = hasHome
-        ? `<div class="hacp-home-row">
+      const libre = (!hasHome && d.mine) ? casaLibre() : null;
+      const canBuyHome = !!libre && d.money >= PRECIO_CASA;
+      let homeBtns;
+      if (hasHome) {
+        homeBtns = `<div class="hacp-home-row">
             <button type="button" class="hacp-cp-btn hacp-store" data-act="store"${canStore ? '' : ' disabled'}>🏠 Guardar</button>
             <button type="button" class="hacp-cp-btn hacp-take" data-act="take"${canTake ? '' : ' disabled'}>👛 Sacar</button>
           </div>
-          <div class="hacp-inv-note">Guarda el monedero a salvo en casa, o saca de tu ahorro para gastar.</div>`
-        : `<button type="button" class="hacp-cp-btn hacp-store" data-act="store" disabled>🏠 Guardar dinero en casa</button>
-           <div class="hacp-inv-note">🏠 Sin hogar: necesita una Casa de Mecenas (que se la asigne el fundador) para almacenar.</div>`;
+          <div class="hacp-inv-note">Guarda el monedero a salvo en casa, o saca de tu ahorro para gastar.</div>`;
+      } else if (libre) {
+        homeBtns = `<button type="button" class="hacp-cp-btn hacp-buyhome" data-act="buyhome"${canBuyHome ? '' : ' disabled'}>🏠 Comprar casa · 💰 ${PRECIO_CASA}</button>
+          <div class="hacp-inv-note">Compra una Casa de Mecenas libre de la finca para guardar tu dinero a salvo.${canBuyHome ? '' : ' (Aún no te llega el dinero.)'}</div>`;
+      } else {
+        homeBtns = `<button type="button" class="hacp-cp-btn hacp-store" data-act="store" disabled>🏠 Guardar dinero en casa</button>
+          <div class="hacp-inv-note">🏠 Sin casas libres: pide al fundador que construya una <b>Casa de Mecenas</b> (宅) en la finca.</div>`;
+      }
       return `<div class="hacp-inv">
         <div class="hacp-inv-h">🎒 Mochila de ${esc(d.it.name)}</div>
         <div class="hacp-wallet">💰 Monedero: <b>${d.money}</b> <span class="hacp-inv-note">monedas</span></div>
@@ -624,6 +647,15 @@
         const n = HacStats.sacar(myId);                   // saca TODO el ahorro al monedero
         if (n > 0) { toast(`👛 Sacaste ${n} 💰 de casa`); buildCharPanel(charId); }
         else toast('No tienes ahorro que sacar');
+      });
+      const bh = charEl.querySelector('[data-act="buyhome"]');
+      if (bh && !bh.disabled) bh.addEventListener('click', () => {
+        if (!myId || !window.HacStats) return;
+        const lib = casaLibre();                          // re-evalúa por si otra ya la compró
+        if (!lib) { toast('Ya no hay casas libres'); buildCharPanel(charId); return; }
+        const res = HacStats.comprarCasa(myId, casaKey(lib), PRECIO_CASA);
+        if (res.ok) { toast(`🏠 ¡Compraste una casa por ${PRECIO_CASA} 💰!`); buildCharPanel(charId); }
+        else toast(res.motivo || 'No se pudo comprar la casa');
       });
     }
     function sigOf(d) { return charId + '|' + (d.activa ? (d.enTarea ? 't' : 'g') : '-') + '|' + (d.mine ? 'me' : '-'); }
