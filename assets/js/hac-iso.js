@@ -20,7 +20,7 @@ const HacIso = (function () {
   const TOP_MARGIN = 132;             // hueco arriba para edificios altos, murallas y torres
   const PAD_X = 40;                   // margen lateral para murallas y paseo de ronda
   const SPRITE_BASE = 'assets/img/iso/';
-  const SPRITE_VER = '27';  // súbelo al regenerar los PNG (cache-busting)
+  const SPRITE_VER = '28';  // súbelo al regenerar los PNG (cache-busting)
 
   // ── Color helpers (para el placeholder) ─────────────────────────────────
   const { hexToRgb, clamp255: cl } = HacUtil;
@@ -276,6 +276,27 @@ const HacIso = (function () {
     // con su posición «jittered», para colocarlos con orden de profundidad.
     const txLo = Math.floor(gxLo), txHi = Math.ceil(gxHi), tyLo = Math.floor(gyLo), tyHi = Math.ceil(gyHi);
     const inFloor = (gx, gy) => gx >= loX && gx <= hiX && gy >= loY && gy <= hiY;
+    // Exclusión de props bajo la SILUETA real de un edificio exterior (no solo su
+    // huella ±1): el arte sobresale mucho —p.ej. la torre y la explanada de tierra
+    // del campamento— y, sin esto, se plantarían árboles/bambú encima o por
+    // delante (rompiendo la oclusión). Muestreamos el alpha del sprite ya cargado.
+    const extAlpha = extSprites.map(({ c, m }) => {
+      const img = SPRITES[spriteKey(c)];
+      if (!img || !img.width) return null;
+      try {
+        const oc = document.createElement('canvas'); oc.width = img.width; oc.height = img.height;
+        const og = oc.getContext('2d'); og.drawImage(img, 0, 0);
+        return { ax: Math.round(X(c.pos[0], c.pos[1]) * SCALE - m.ox), ay: Math.round(Y(c.pos[0], c.pos[1]) * SCALE - m.oy), w: img.width, h: img.height, data: og.getImageData(0, 0, img.width, img.height).data };
+      } catch (e) { return null; }
+    }).filter(Boolean);
+    const underExtSprite = (gx, gy) => {
+      const px = X(gx, gy) * SCALE, py = Y(gx, gy) * SCALE;
+      for (const s of extAlpha) {
+        const ix = Math.round(px - s.ax), iy = Math.round(py - s.ay);
+        if (ix >= 0 && iy >= 0 && ix < s.w && iy < s.h && s.data[(iy * s.w + ix) * 4 + 3] > 40) return true;
+      }
+      return false;
+    };
     const props = [];
     for (let gy = tyLo; gy <= tyHi; gy++) for (let gx = txLo; gx <= txHi; gx++) {
       if (inFloor(gx, gy)) continue;
@@ -283,6 +304,7 @@ const HacIso = (function () {
       terrTile(gx, gy, riv);
       if (riv) continue;
       if (extCells.has(gx + ',' + gy)) continue;   // no plantar props sobre/junto a un edificio exterior
+      if (underExtSprite(gx, gy)) continue;         // ni bajo la silueta de su sprite (torre, explanada…)
       // Orla exterior limpia: sin props en el anillo más externo (evita recortes).
       if (gx === txLo || gx === txHi || gy === tyLo || gy === tyHi) continue;
       const nearWall = gx >= loX - 1 && gx <= hiX + 1 && gy >= loY - 1 && gy <= hiY + 1;

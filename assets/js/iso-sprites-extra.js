@@ -9,5 +9,5 @@
   // Campamento militar (8×10): vista ÚNICA a partir de la ilustración (un solo
   // sprite, sin cuantizar para no perder los degradados). No rota: spriteKey en
   // hac-iso cae a '-0' para cualquier rotación. Anclaje (ox,oy) afinado al footprint.
-  window.ISO_SPRITES_META['bld-campamento-0'] = { ox: 396, oy: 57, w: 719, h: 441, webp: true };
+  window.ISO_SPRITES_META['bld-campamento-0'] = { ox: 396, oy: 58, w: 720, h: 443, webp: true };
 })();
