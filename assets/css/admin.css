@@ -168,11 +168,12 @@ html{scrollbar-gutter:stable}
 .adm-board-main{display:grid;grid-template-columns:minmax(0,1fr) 264px;gap:24px;align-items:start;margin-bottom:14px}
 .adm-board-stage{min-width:0}
 .adm-board-rail{display:flex;flex-direction:column;gap:14px}
-.adm-grid-board{display:grid;gap:3px;justify-content:start;margin:0 0 12px;max-width:100%;overflow:auto}
+.adm-grid-board{position:relative;display:grid;gap:3px;justify-content:start;margin:0 0 12px;max-width:100%;overflow:auto}
 /* Muralla exterior: bordea el bloque interior (recinto) para distinguirlo del
-   terreno exterior comprado (anillo verde). Overlay colocado como item del grid
-   → respeta el gap sin cálculos de píxeles. No captura clics. */
-.adm-board-wall{pointer-events:none;align-self:stretch;justify-self:stretch;border:4px solid #9a4e36;box-shadow:inset 0 0 0 2px #cdc6b5,inset 0 0 6px rgba(0,0,0,.35);border-radius:3px;z-index:3}
+   terreno exterior comprado (anillo verde). Overlay en ABSOLUTO sobre el grid
+   (no como item del grid: si no, el auto-placement empuja las celdas alrededor).
+   No captura clics. */
+.adm-board-wall{position:absolute;pointer-events:none;box-sizing:border-box;border:4px solid #9a4e36;box-shadow:inset 0 0 0 2px #cdc6b5,inset 0 0 6px rgba(0,0,0,.35);border-radius:3px;z-index:3}
 /* El form de construir, apilado dentro del raíl. */
 .adm-board-rail .adm-build-form{flex-direction:column;align-items:stretch;gap:9px;margin-bottom:0}
 .adm-board-rail .adm-build-form select{width:100%}
