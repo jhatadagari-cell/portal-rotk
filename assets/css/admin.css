@@ -191,8 +191,11 @@ html{scrollbar-gutter:stable}
   font-family:'Noto Sans SC',sans-serif;font-size:12px;font-weight:700;letter-spacing:.02em;
   color:#1a120a;background:var(--gold,#c9a84c);padding:2px 7px;border-radius:3px;
   box-shadow:0 2px 8px rgba(0,0,0,.45);white-space:nowrap}
-.adm-cell{position:relative;width:var(--cell,30px);height:var(--cell,30px);border-radius:2px;display:flex;align-items:center;justify-content:center;line-height:1;padding:0;overflow:hidden;border:1px solid rgba(201,168,76,.18)}
-.adm-cell.free{background:rgba(255,255,255,.02);color:var(--parch2);opacity:.4;cursor:pointer;transition:all .14s;font-family:'Noto Serif SC',serif;font-size:14px}
+.adm-cell{position:relative;width:var(--cell,30px);height:var(--cell,30px);border-radius:2px;display:flex;align-items:center;justify-content:center;line-height:1;padding:0;overflow:hidden;border:1px solid rgba(201,168,76,.18);contain:layout style}
+/* SIN transition: en tableros grandes (Cao, miles de celdas) `transition:all`
+   arrancaba decenas de animaciones de fondo al barrer el ratón → tormenta de
+   repintado. El :hover sigue, pero instantáneo (y el preview verde da el feedback). */
+.adm-cell.free{background:rgba(255,255,255,.02);color:var(--parch2);opacity:.4;cursor:pointer;font-family:'Noto Serif SC',serif;font-size:14px}
 .adm-cell.free:hover{opacity:.9;background:rgba(201,168,76,.12);border-color:rgba(201,168,76,.4)}
 .adm-cell.free.on{opacity:1;background:rgba(201,168,76,.22);border-color:var(--gold);box-shadow:0 0 0 1px var(--gold)}
 .adm-cell.occ{background:color-mix(in srgb,var(--c,#888) 38%,transparent);border-color:color-mix(in srgb,var(--c,#888) 65%,transparent);color:#fff;font-family:'Noto Sans SC',sans-serif;font-weight:700;font-size:9px;letter-spacing:-.2px}
