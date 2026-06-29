@@ -453,17 +453,16 @@ const HacIso = (function () {
     const gate = (gc, y0, y1) => {
       const a = gc - 1.5, c = gc + 1.5, gh = WD.h + 6;
       box(a, y0, c, y1, 0, gh, wTop, wL, wR); texFace('S', y1, a, c, 0, gh); cap(a, y0, c, y1, gh);
-      // vano + dos hojas rojas con dintel (cara sur, y=y1)
+      // Vano ABIERTO (pasaje) con las dos hojas rojas BATIDAS hacia dentro (se ve el
+      // canto): los mecenas entran y salen por aquí. (La animación cerrada→abierta
+      // al acercarse vendrá luego.)
       const dz = gh * 0.6, doorCol = mix('#7a241a', casa, .03);
       poly([Pg(gc - 0.62, y1, 0), Pg(gc + 0.62, y1, 0), Pg(gc + 0.62, y1, dz + 0.7), Pg(gc - 0.62, y1, dz + 0.7)], dark9);
-      poly([Pg(gc - 0.58, y1, 0), Pg(gc - 0.02, y1, 0), Pg(gc - 0.02, y1, dz), Pg(gc - 0.58, y1, dz)], doorCol);
-      poly([Pg(gc + 0.02, y1, 0), Pg(gc + 0.58, y1, 0), Pg(gc + 0.58, y1, dz), Pg(gc + 0.02, y1, dz)], doorCol);
-      seg(Pg(gc, y1, 0), Pg(gc, y1, dz), dark(doorCol, .45));
+      poly([Pg(gc - 0.58, y1, 0), Pg(gc - 0.58, y1 - 0.5, 0), Pg(gc - 0.58, y1 - 0.5, dz), Pg(gc - 0.58, y1, dz)], doorCol);
+      poly([Pg(gc + 0.58, y1, 0), Pg(gc + 0.58, y1 - 0.5, 0), Pg(gc + 0.58, y1 - 0.5, dz), Pg(gc + 0.58, y1, dz)], doorCol);
+      seg(Pg(gc - 0.58, y1 - 0.5, 0), Pg(gc - 0.58, y1 - 0.5, dz), dark(doorCol, .45));
+      seg(Pg(gc + 0.58, y1 - 0.5, 0), Pg(gc + 0.58, y1 - 0.5, dz), dark(doorCol, .45));
       seg(Pg(gc - 0.62, y1, dz + 0.5), Pg(gc + 0.62, y1, dz + 0.5), capCol);
-      g.fillStyle = gold;                                   // tachones 門釘
-      for (const lf of [-1, 1]) for (let r = 0; r < 4; r++) for (let cc = 0; cc < 3; cc++) {
-        const p = Pg(gc + lf * (0.10 + cc * 0.16), y1, dz * (0.22 + r * 0.2)); g.beginPath(); g.arc(p[0], p[1], 1.1, 0, 7); g.fill();
-      }
       // torre-puerta (城樓): cuerpo de madera + friso turquesa + columnas rojas
       const tz = gh, bh = 11, wood = mix('#6a4a2a', casa, .03);
       box(a, y0, c, y1, tz, tz + bh, light(wood, .08), dark(wood, .22), dark(wood, .38));

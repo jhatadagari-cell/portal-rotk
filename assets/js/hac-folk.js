@@ -183,7 +183,11 @@ const HacFolk = (function () {
     // así el mecenas sale justo por la puerta de la muralla, no por una esquina.
     let exitCell = null, bestE = -Infinity; const gateC = Math.floor((GW - 1) / 2);
     cells.forEach(([x, y]) => { const sc = y * 100 - Math.abs(x - gateC) * 1000; if (sc > bestE) { bestE = sc; exitCell = [x, y]; } });
-    return { set, cells, cam, camCells, garden, gardenCells, water, GW, GH, ownByMember, buildings, visitable, gates, exitCell, exitKey: exitCell ? exitCell[0] + ',' + exitCell[1] : null };
+    // Waypoints EXTERIORES en el eje del portón (fuera de la muralla): el mecenas
+    // camina por el campo hasta perderse / aparece allí al volver.
+    const outNear = exitCell ? [exitCell[0], exitCell[1] + 2.3] : null;   // justo fuera del vano
+    const outFar = exitCell ? [exitCell[0], exitCell[1] + 4.8] : null;    // lejos, donde se oculta/aparece
+    return { set, cells, cam, camCells, garden, gardenCells, water, GW, GH, ownByMember, buildings, visitable, gates, exitCell, exitKey: exitCell ? exitCell[0] + ',' + exitCell[1] : null, outNear, outFar };
   }
 
   // Ruta de `start` a la primera celda de `goalKeys` sobre celdas transitables,
@@ -311,21 +315,28 @@ const HacFolk = (function () {
     w.path = path; w.state = 'yendo'; w.goalBid = b.id; w.moving = false;
   }
 
-  // EXPEDICIÓN (misión FUERA de la finca): camina al portón y "sale del mapa".
+  // EXPEDICIÓN (misión FUERA): camina al portón sur y SIGUE hacia el exterior
+  // (waypoints fuera de la muralla) hasta perderse de vista; luego se oculta.
   function startExpedition(w) {
     const e = wk.exitCell;
     if (!e) { endMission(w); return; }
     const path = bfs([Math.round(w.fx), Math.round(w.fy)], new Set([wk.exitKey]));
     if (!path) { endMission(w); return; }
+    if (wk.outNear) path.push(wk.outNear);
+    if (wk.outFar) path.push(wk.outFar);                              // cruza el vano y se aleja por el campo
     w.path = path; w.state = 'exped-out'; w.goalBid = null; w.insideId = null; w.task = null; w.moving = false;
   }
-  // Vuelve del exterior: reaparece en el portón y camina a un punto de paseo.
+  // Vuelve: APARECE en el exterior (lejos), camina hacia la puerta y ENTRA.
   function startReturn(w) {
     const e = wk.exitCell || [Math.round(w.fx), Math.round(w.fy)];
-    w.fx = e[0]; w.fy = e[1]; w.tx = e[0]; w.ty = e[1];                // reaparece en la salida
+    const far = wk.outFar || e;
+    w.fx = far[0]; w.fy = far[1]; w.tx = far[0]; w.ty = far[1];        // reaparece FUERA, a lo lejos
     const goal = (wk.camCells.length && R.next() < 0.7) ? wk.camCells[rnd(wk.camCells.length)] : wk.cells[rnd(wk.cells.length)];
-    const path = bfs(e, new Set([goal[0] + ',' + goal[1]]));
-    if (!path || !path.length) { endMission(w); return; }
+    const inside = bfs(e, new Set([goal[0] + ',' + goal[1]])) || [e];
+    const path = [];
+    if (wk.outNear) path.push(wk.outNear);                            // se acerca al portón desde fuera
+    path.push(e);                                                     // cruza el vano
+    path.push.apply(path, inside);                                    // y entra a la finca
     w.path = path; w.state = 'exped-in'; w.moving = false;
   }
   // Sale del edificio: a la celda de aproximación y luego a un punto de paseo.
