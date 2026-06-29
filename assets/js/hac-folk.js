@@ -199,9 +199,12 @@ const HacFolk = (function () {
     // cada mercado, mirando al cliente. Se dibuja como actor, no es un walker.
     const merchants = [];
     visitable.forEach(b => {
-      if (b.tipo !== 'mercado' || !b.spotCell) return;
+      if (b.tipo !== 'mercado') return;
+      // Se planta en la celda de APROXIMACIÓN (DELANTE del puesto), no en el spot
+      // interior: así no queda tapado por el sprite grande del puesto y mira al cliente.
+      const at = b.approach || b.spotCell; if (!at) return;
       merchants.push({ id: 'mkt@' + b.id, name: 'Mercader', aptitud: '', aspecto: MERCHANT_LOOK,
-        fx: b.spotCell[0] + 0.35, fy: b.spotCell[1] + 0.35, dir: 'S', phase: 0, moving: false, state: 'stand', bowing: false });
+        fx: at[0], fy: at[1], dir: 'S', phase: 0, moving: false, state: 'stand', bowing: false });
     });
     return { set, cells, cam, camCells, garden, gardenCells, water, GW, GH, ownByMember, buildings, visitable, gates, merchants, exitCell, exitKey: exitCell ? exitCell[0] + ',' + exitCell[1] : null, outNear, outFar };
   }
