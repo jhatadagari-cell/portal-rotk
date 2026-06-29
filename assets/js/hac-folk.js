@@ -82,6 +82,10 @@ const HacFolk = (function () {
   const SCALE = (window.HacIso && HacIso.SCALE) || 2;   // px de dispositivo por px lógico
   const SPRITE_DISP = 1;                                // px de dispositivo por px del sprite (1 = ratio entero, nítido)
   const MERCHANT_LOOK = { robe: '#3f6e9c', accent: '#d4a83a', piel: 1, pelo: 1 };   // aspecto del mercader
+  const MKT_CRIES = ['好茶！', '客官，请！', '上等好茶', '新茶到！', '茶香满！', '来看看吧'];
+  const MKT_DIRS = ['S', 'SE', 'SW', 'E', 'S', 'SE'];   // mira sobre todo al cliente (sur)
+  // RNG propio del mercader (NO toca el stream compartido R → no desincroniza el sim).
+  function mrand(mk) { mk._r = (mk._r * 1664525 + 1013904223) >>> 0; return mk._r / 4294967296; }
   const spriteCache = new Map();                        // key → canvas ya con contorno
   // Dirección de 8 según el vector de movimiento en pantalla (no en la rejilla):
   // +gx va a la derecha-abajo, +gy a la izquierda-abajo en el isométrico.
@@ -203,8 +207,15 @@ const HacFolk = (function () {
       // Se planta en la celda de APROXIMACIÓN (DELANTE del puesto), no en el spot
       // interior: así no queda tapado por el sprite grande del puesto y mira al cliente.
       const at = b.approach || b.spotCell; if (!at) return;
-      merchants.push({ id: 'mkt@' + b.id, name: 'Mercader', aptitud: '', aspecto: MERCHANT_LOOK,
-        fx: at[0], fy: at[1], dir: 'S', phase: 0, moving: false, state: 'stand', bowing: false });
+      const ax = at[0], ay = at[1];
+      // Pequeño "itinerario": la celda de delante + vecinas TRANSITABLES por las que
+      // pasea atendiendo el puesto (máx 3).
+      const stations = [[ax, ay]];
+      [[ax - 1, ay], [ax + 1, ay], [ax, ay + 1]].forEach(([sx, sy]) => { if (stations.length < 3 && set.has(sx + ',' + sy)) stations.push([sx, sy]); });
+      let seed = 2166136261; const sid = 'mkt@' + b.id; for (let i = 0; i < sid.length; i++) { seed = (seed ^ sid.charCodeAt(i)) * 16777619 >>> 0; }
+      merchants.push({ id: sid, name: 'Mercader', aptitud: '', aspecto: MERCHANT_LOOK,
+        fx: ax, fy: ay, tx: ax, ty: ay, dir: 'S', phase: 0, moving: false, state: 'idle', bowing: false,
+        stations, timer: 1 + (seed % 100) / 30, speech: null, speechT: 0, _r: seed });
     });
     return { set, cells, cam, camCells, garden, gardenCells, water, GW, GH, ownByMember, buildings, visitable, gates, merchants, exitCell, exitKey: exitCell ? exitCell[0] + ',' + exitCell[1] : null, outNear, outFar };
   }
@@ -754,6 +765,7 @@ const HacFolk = (function () {
     encounters();
     hails(dt);
     stepGates(dt);
+    stepMerchants(dt);
   }
 
   // Apertura/cierre de los portones: se abre si hay un mecenas cerca de la celda
@@ -776,6 +788,40 @@ const HacFolk = (function () {
       const target = near ? 1 : 0;
       const sp = (target > gate.open ? 4.5 : 2.6) * dt;   // abre más rápido de lo que cierra
       gate.open = target > gate.open ? Math.min(target, gate.open + sp) : Math.max(target, gate.open - sp);
+    }
+  }
+
+  // Vida del MERCADER (flavor, local): atiende el puesto — pasea entre un par de
+  // sitios, se gira, pregona su mercancía y hace una reverencia 抱拳 si pasa alguien.
+  const MKT_SPD = 1.5;
+  function stepMerchants(dt) {
+    if (!wk || !wk.merchants || !wk.merchants.length) return;
+    for (const mk of wk.merchants) {
+      if (mk.speechT > 0) { mk.speechT -= dt; if (mk.speechT <= 0) mk.speech = null; }
+      // ¿hay un mecenas cerca? → reverencia de bienvenida (solo parado).
+      let near = false;
+      for (let i = 0; i < walkers.length; i++) { const w = walkers[i]; if (w.insideId || w.state === 'fuera') continue; const dx = w.fx - mk.fx, dy = w.fy - mk.fy; if (dx * dx + dy * dy <= 1.7 * 1.7) { near = true; break; } }
+      if (mk.state === 'walking') {
+        const dx = mk.tx - mk.fx, dy = mk.ty - mk.fy, d = Math.hypot(dx, dy);
+        if (d < 0.06) { mk.fx = mk.tx; mk.fy = mk.ty; mk.moving = false; mk.state = 'idle'; mk.timer = 2 + mrand(mk) * 4; mk.dir = 'S'; }
+        else { const s = Math.min(d, MKT_SPD * dt); mk.fx += dx / d * s; mk.fy += dy / d * s; mk.moving = true; mk.phase += dt * 6; const fd = faceFromGrid(dx, dy); if (fd) mk.dir = fd; }
+        mk.bowing = false;
+        continue;
+      }
+      // Parado: si pasa un cliente, reverencia; si no, decide qué hacer al expirar el timer.
+      mk.bowing = near;
+      if (near && !mk.speech && mrand(mk) < 0.02) { mk.speech = '抱拳'; mk.speechT = 1.6; }
+      mk.timer -= dt;
+      if (mk.timer > 0) continue;
+      const r = mrand(mk);
+      if (r < 0.30 && mk.stations.length > 1) {                   // pasea a otro sitio del puesto
+        let s, tries = 0; do { s = mk.stations[Math.floor(mrand(mk) * mk.stations.length)]; } while (++tries < 4 && s[0] === Math.round(mk.fx) && s[1] === Math.round(mk.fy));
+        mk.tx = s[0]; mk.ty = s[1]; mk.state = 'walking';
+      } else if (r < 0.68) {                                       // pregona su mercancía
+        mk.speech = MKT_CRIES[Math.floor(mrand(mk) * MKT_CRIES.length)]; mk.speechT = 2.4; mk.timer = 4 + mrand(mk) * 5;
+      } else {                                                     // se gira a mirar
+        mk.dir = MKT_DIRS[Math.floor(mrand(mk) * MKT_DIRS.length)]; mk.timer = 3 + mrand(mk) * 4;
+      }
     }
   }
 
@@ -1069,6 +1115,8 @@ const HacFolk = (function () {
       if (!w.speech) return;
       overlays.push({ draw: (g) => { const p = logic(w.fx, w.fy); speechBubble(g, p[0], p[1], w.speech); } });
     });
+    // Pregones del mercader.
+    if (wk && wk.merchants) wk.merchants.forEach(mk => { if (mk.speech) overlays.push({ draw: (g) => { const p = logic(mk.fx, mk.fy); speechBubble(g, p[0], p[1], mk.speech); } }); });
 
     iso._hacSigns = signs;
     HacIso.frame(iso, actors, overlays);
