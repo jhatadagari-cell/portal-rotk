@@ -95,9 +95,9 @@ const HacIso = (function () {
     // Murallas: datos del nivel (necesarios para dimensionar el lienzo).
     const WALLS = {
       1: { h: 12, wt: 0.26, base: mix('#bcae90', casa, .04), cap: false,   cren: false, towers: false, tex: 'rammed', gate: false },
-      2: { h: 18, wt: 0.32, base: mix('#d2cab6', casa, .04), cap: 'stone', cren: false, towers: false, tex: 'block',  gate: false },
-      3: { h: 24, wt: 0.36, base: mix('#dfd8c6', casa, .04), cap: 'tile',  cren: true,  towers: false, tex: 'block',  gate: true },
-      4: { h: 31, wt: 0.42, base: mix('#e8e1d0', casa, .04), cap: 'tile',  cren: true,  towers: true,  tex: 'block',  gate: true }
+      2: { h: 18, wt: 0.32, base: mix('#c2b491', casa, .04), cap: 'stone', cren: false, towers: false, tex: 'block',  gate: false },
+      3: { h: 24, wt: 0.36, base: mix('#c7ba93', casa, .04), cap: 'tile',  cren: true,  towers: false, tex: 'block',  gate: true },
+      4: { h: 31, wt: 0.42, base: mix('#cdc098', casa, .04), cap: 'tile',  cren: true,  towers: true,  tex: 'block',  gate: true }
     };
     const wallLvl = ({ 1: 1, 2: 2, 3: 3, 4: 4, 5: 4, 6: 4 })[tier] || 1;
     const WD = WALLS[wallLvl];
@@ -175,14 +175,13 @@ const HacIso = (function () {
       poly([T(N), T(E), T(S), T(Wc)], cTop, dark(cTop, 0.42));
     };
 
-    // ── Suelo: grandes losas de piedra clara talladas (estilo palacio) ──────
-    // No es un ajedrez de celdas: el solar se embaldosa con LOSAS GRANDES (2×2
-    // celdas) de caliza pálida, con junta fina recogida y bisel tallado (aristas
-    // traseras iluminadas, delanteras en sombra). La variación tonal entre losas
-    // es mínima para que el conjunto sea cohesivo y blanco, no manchado.
+    // ── Suelo: patio embaldosado con LADRILLO GRIS (青砖), estilo Han ───────
+    // Losas grandes (2×2 celdas) de ladrillo gris cocido —no mármol blanco, que
+    // sería palaciego tardío—, con junta fina y bisel tallado. Variación tonal
+    // mínima para un conjunto cohesivo.
     const frac = (n) => n - Math.floor(n);
     const hash = (gx, gy) => frac(Math.sin(gx * 127.1 + gy * 311.7) * 43758.5453);
-    const stoneBase = mix('#d8d2c3', casa, 0.04);     // caliza blanco hueso, apenas teñida
+    const stoneBase = mix('#9e9b90', casa, 0.04);     // ladrillo gris cocido (青砖), apenas teñido
     const jointCol  = dark(stoneBase, 0.30);          // junta fina entre losas
     const moss      = mix('#5c6b3a', stoneBase, 0.5); // musgo verdoso (parcos)
     const grass     = mix('#3f5a2c', casa, 0.04);
