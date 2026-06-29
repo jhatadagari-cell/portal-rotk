@@ -327,8 +327,16 @@
         const tasks = (window.HacTareas && HacTareas.byTipo) ? HacTareas.byTipo(ty.tipo) : [];
         tasks.forEach(tk => out.push({ taskId: tk.id, nombre: tk.nombre || tk.verbo || 'Tarea', dominio: ty.dominio, duracionSeg: tk.duracionSeg || 60 }));
       });
+      // EXPEDICIONES (misiones FUERA de la finca): el mecenas sale por el portón,
+      // se ausenta y vuelve. Una por dominio. (XP/dinero llegan en el paso 1b.)
+      EXPEDICIONES.forEach(e => out.push({ taskId: 'exped:' + e.dom, nombre: e.nombre, dominio: e.dom, duracionSeg: 120, exped: true }));
       return out;
     }
+    const EXPEDICIONES = [
+      { dom: 'militar',        nombre: '武 Patrulla fronteriza (fuera)' },
+      { dom: 'cultural',       nombre: '文 Embajada · viaje de estudios (fuera)' },
+      { dom: 'administrativo', nombre: '政 Recaudar tributos (fuera)' },
+    ];
     const fmtDur = (s) => (s < 60) ? Math.round(s) + 's' : Math.round(s / 60) + ' min';
     // Puntos de un mecenas: base (admin) + ganados en misiones (ledger propio).
     function basePuntos(id) { const m = (h.miembros || []).find(x => x.personajeId === id); return m ? (Number(m.puntos) || 0) : 0; }
@@ -346,8 +354,9 @@
       const hardDone = clock() > o.inicioMs + (o.duracionSeg || 60) * 1000 + 90000;   // saludo+viaje+tarea, con margen
       const liveDone = _wasOnMission && !onM;                                          // el sim la acaba de completar
       if (hardDone || liveDone) {
-        const task = (window.HacTareas && HacTareas.get) ? HacTareas.get(o.targetId) : null;
-        const dom = (task && window.HacBuild) ? (HacBuild.tipo(task.tipo) || {}).dominio : null;
+        let dom = null;
+        if (o.tipo === 'expedicion') dom = String(o.targetId || '').replace('exped:', '') || null;
+        else { const task = (window.HacTareas && HacTareas.get) ? HacTareas.get(o.targetId) : null; dom = (task && window.HacBuild) ? (HacBuild.tipo(task.tipo) || {}).dominio : null; }
         const r = HacPuntos.recompensa(costeMision(dom), o.duracionSeg || 60);
         HacPuntos.award(h.id, myId, r);
         HacOrdenes.clear(h.id, myId);   // optimista: la quita del caché ya
@@ -376,7 +385,7 @@
       if (!myId || !taskId || !window.HacOrdenes) return;
       const t = availableTasks().find(x => x.taskId === taskId); if (!t) return;
       if (window.HacEnergia) HacEnergia.spend(h.id, myId, costeMision(t.dominio));   // la misión cuesta energía
-      HacOrdenes.set({ haciendaId: h.id, miembroId: myId, tipo: 'mision', targetId: taskId, duracionSeg: t.duracionSeg })
+      HacOrdenes.set({ haciendaId: h.id, miembroId: myId, tipo: t.exped ? 'expedicion' : 'mision', targetId: taskId, duracionSeg: t.duracionSeg })
         .then(applyOrders).catch(e => console.warn('[orden] set', e));
     }
     function release() {
@@ -413,9 +422,10 @@
       // de la TAREA contado desde que LLEGA (el countdown empieza al iniciar la tarea).
       const activa = !!it.onMission;
       const enTarea = !!it.misEnTarea;
+      const fuera = !!it.fuera;
       const rest = it.misRestante || 0;
       const earned = window.HacPuntos ? HacPuntos.deMiembro(h.id, id) : 0;
-      return { it, aptId, aptDef, e, activa, enTarea, rest, mine: id === myId, puntos: puntosTotales(id), earned };
+      return { it, aptId, aptDef, e, activa, enTarea, fuera, rest, mine: id === myId, puntos: puntosTotales(id), earned };
     }
     function buildCharPanel(id) {
       const d = charData(id); if (!d) { closeCharPanel(); return; }
@@ -427,7 +437,9 @@
       let mision = '';
       if (d.mine) {
         if (d.activa) {
-          const flag = d.enTarea ? `⚒ En la tarea · <b id="hacp-cp-rest">${d.rest}s</b>` : `⚒ De camino a la tarea…`;
+          const flag = d.fuera ? `🧭 En expedición · vuelve en <b id="hacp-cp-rest">${d.rest}s</b>`
+            : d.enTarea ? `⚒ En la tarea · <b id="hacp-cp-rest">${d.rest}s</b>`
+            : `⚒ De camino…`;
           mision = `<div class="hacp-cp-mis hacp-cp-mis-on"><span class="hacp-cp-flag">${flag}</span><button type="button" class="hacp-cp-btn" data-act="release">Liberar</button></div>`;
         } else {
           const tasks = availableTasks();   // por TAREA (deduplicada por tipo), con su duración propia

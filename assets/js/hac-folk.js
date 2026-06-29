@@ -57,7 +57,7 @@ const HacFolk = (function () {
   const SER_FIELDS = ['fx', 'fy', 'tx', 'ty', 'moving', 'dir', 'state', 'path', 'goalBid', 'insideId',
     'task', 'taskTimer', 'strollTimer', 'wait', 'idleTimer', 'gardenCd', 'socialCd',
     'chatWith', 'chatLead', 'chatRole', 'bowing', 'convo', 'convoIdx', 'turnTimer', 'speech',
-    'meetWith', 'meetLead', 'meetTimer', 'restIntent', 'phase', 'onMission', 'missionTimer', 'missionEndMs', 'missionDoneFor'];
+    'meetWith', 'meetLead', 'meetTimer', 'restIntent', 'phase', 'onMission', 'missionTimer', 'missionEndMs', 'missionDoneFor', 'outTimer'];
 
   const { hexToRgb, reduced, neigh } = HacUtil;
   // rnd/rng ahora tiran del stream determinista R (no de Math.random), así que
@@ -178,7 +178,11 @@ const HacFolk = (function () {
     // decidan acercarse a descansar en la hierba).
     const gardenCells = [];
     garden.forEach(k => { if (set.has(k)) { const p = k.split(',').map(Number); gardenCells.push(p); } });
-    return { set, cells, cam, camCells, garden, gardenCells, water, GW, GH, ownByMember, buildings, visitable, gates };
+    // Celda de SALIDA hacia el exterior (para las expediciones): la transitable más
+    // al FRENTE (mayor x+y, hacia el espectador) y cercana al eje del portón sur.
+    let exitCell = null, bestE = -Infinity; const gateC = Math.floor((GW - 1) / 2);
+    cells.forEach(([x, y]) => { const sc = (x + y) * 10 - Math.abs(x - gateC); if (sc > bestE) { bestE = sc; exitCell = [x, y]; } });
+    return { set, cells, cam, camCells, garden, gardenCells, water, GW, GH, ownByMember, buildings, visitable, gates, exitCell, exitKey: exitCell ? exitCell[0] + ',' + exitCell[1] : null };
   }
 
   // Ruta de `start` a la primera celda de `goalKeys` sobre celdas transitables,
@@ -306,6 +310,23 @@ const HacFolk = (function () {
     w.path = path; w.state = 'yendo'; w.goalBid = b.id; w.moving = false;
   }
 
+  // EXPEDICIÓN (misión FUERA de la finca): camina al portón y "sale del mapa".
+  function startExpedition(w) {
+    const e = wk.exitCell;
+    if (!e) { endMission(w); return; }
+    const path = bfs([Math.round(w.fx), Math.round(w.fy)], new Set([wk.exitKey]));
+    if (!path) { endMission(w); return; }
+    w.path = path; w.state = 'exped-out'; w.goalBid = null; w.insideId = null; w.task = null; w.moving = false;
+  }
+  // Vuelve del exterior: reaparece en el portón y camina a un punto de paseo.
+  function startReturn(w) {
+    const e = wk.exitCell || [Math.round(w.fx), Math.round(w.fy)];
+    w.fx = e[0]; w.fy = e[1]; w.tx = e[0]; w.ty = e[1];                // reaparece en la salida
+    const goal = (wk.camCells.length && R.next() < 0.7) ? wk.camCells[rnd(wk.camCells.length)] : wk.cells[rnd(wk.cells.length)];
+    const path = bfs(e, new Set([goal[0] + ',' + goal[1]]));
+    if (!path || !path.length) { endMission(w); return; }
+    w.path = path; w.state = 'exped-in'; w.moving = false;
+  }
   // Sale del edificio: a la celda de aproximación y luego a un punto de paseo.
   function startLeave(w) {
     const b = wk.buildings.get(w.insideId);
@@ -332,6 +353,14 @@ const HacFolk = (function () {
       // En misión, la TAREA dura su duración COMPLETA contada DESDE QUE LLEGA aquí
       // (no desde que se mandó): así el countdown empieza al iniciar la tarea.
       if (w.onMission) w.taskTimer = (w.order && w.order.durMs) ? w.order.durMs / 1000 : (task ? task.duracionSeg : 60);
+    } else if (w.state === 'exped-out') {
+      // Llegó al portón → "sale del mapa" (oculto) hasta que se cumpla la duración
+      // de la misión contada desde su inicio (el resto lo pasa fuera).
+      w.moving = false; w.path = null; w.state = 'fuera';
+      const o = w.order, t = nowSimMs(), endOut = o ? o.startMs + (o.durMs || 120000) : t;
+      w.outTimer = Math.max(2, (endOut - t) / 1000);
+    } else if (w.state === 'exped-in') {
+      endMission(w);   // de vuelta dentro de la finca → misión cumplida
     } else if (w.state === 'saliendo') {
       w.state = 'paseando'; w.strollTimer = rng(2, 6); w.wait = rng(0.2, 0.8); w.task = null;
     }
@@ -616,7 +645,10 @@ const HacFolk = (function () {
       if (w.socialCd > 0) w.socialCd -= dt;
       missionGate(w);
       switch (w.state) {
-        case 'saludo': w.phase += dt * 0.5; w.missionTimer -= dt; if (w.missionTimer <= 0) { w.bowing = false; startMissionVisit(w); } break;
+        case 'saludo': w.phase += dt * 0.5; w.missionTimer -= dt; if (w.missionTimer <= 0) { w.bowing = false; (w.order && w.order.tipo === 'expedicion') ? startExpedition(w) : startMissionVisit(w); } break;
+        case 'exped-out':
+        case 'exped-in': followPath(w, dt, SPD); break;
+        case 'fuera': w.outTimer -= dt; if (w.outTimer <= 0) startReturn(w); break;
         case 'tarea': w.taskTimer -= dt; w.phase += dt * 1.2; if (w.taskTimer <= 0) { if (w.onMission) endMission(w); else startLeave(w); } break;
         case 'yendo':
         case 'saliendo': followPath(w, dt, SPD); break;
@@ -917,6 +949,7 @@ const HacFolk = (function () {
     walkers.forEach(w => {
       if (w.id === selectedId) return;                 // el seleccionado va en overlay (encima)
       if (w.insideId) return;                          // DENTRO de un edificio: oculto (su presencia la anuncia el banner 匾額)
+      if (w.state === 'fuera') return;                 // EN EXPEDICIÓN fuera de la finca: oculto hasta volver
       actors.push({ fx: w.fx, fy: w.fy, draw: (g, lx, ly) => drawWalker(g, lx, ly, w, { banner: false }) });
       // El nombre va en overlay (siempre encima, sin recorte de región).
       overlays.push({ draw: (g) => { const p = logic(w.fx, w.fy); banner(g, p[0], p[1] - bannerDy, w, false); } });
@@ -936,7 +969,7 @@ const HacFolk = (function () {
 
     // Mecenas SELECCIONADO: siempre encima, resaltado (aunque esté dentro/detrás).
     const sel = walkers.find(w => w.id === selectedId);
-    if (sel) overlays.push({ draw: (g) => drawWalker(g, logic(sel.fx, sel.fy)[0], logic(sel.fx, sel.fy)[1], sel, { highlight: true }) });
+    if (sel && sel.state !== 'fuera') overlays.push({ draw: (g) => drawWalker(g, logic(sel.fx, sel.fy)[0], logic(sel.fx, sel.fy)[1], sel, { highlight: true }) });
 
     // Bocadillos de las charlas: capa overlay, encima de todo y sin oclusión.
     walkers.forEach(w => {
@@ -1090,6 +1123,9 @@ const HacFolk = (function () {
   // Texto de lo que está haciendo un mecenas ahora mismo.
   function activityText(w) {
     if (w.state === 'saludo') return 'Recibe tus órdenes';
+    if (w.state === 'fuera') return 'En expedición fuera de la finca';
+    if (w.state === 'exped-out') return 'Saliendo de la finca';
+    if (w.state === 'exped-in') return 'Regresando de la expedición';
     if (w.state === 'a-descansar') return 'Buscando un rincón de hierba';
     if (w.state === 'contemplando') return 'Contemplando el jardín';
     if (w.state === 'tumbado') return 'Descansando entre las plantas';
@@ -1122,8 +1158,10 @@ const HacFolk = (function () {
       const b = w.insideId && wk ? wk.buildings.get(w.insideId) : null;
       const inside = b ? (b.dueno ? memberName(b.dueno) : b.nombre) : null;
       const enTarea = !!w.onMission && w.state === 'tarea';
+      const fuera = w.state === 'fuera';
       return { id: w.id, name: w.name, color: w.color, inside, activity: activityText(w),
-        onMission: !!w.onMission, misEnTarea: enTarea, misRestante: enTarea ? Math.max(0, Math.ceil(w.taskTimer)) : null };
+        onMission: !!w.onMission, misEnTarea: enTarea, fuera,
+        misRestante: enTarea ? Math.max(0, Math.ceil(w.taskTimer)) : (fuera ? Math.max(0, Math.ceil(w.outTimer)) : null) };
     });
   }
   function select(id) { selectedId = id || null; if (!running) paint(); pushState(); }
