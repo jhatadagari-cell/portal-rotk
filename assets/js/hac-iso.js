@@ -20,7 +20,7 @@ const HacIso = (function () {
   const TOP_MARGIN = 132;             // hueco arriba para edificios altos, murallas y torres
   const PAD_X = 40;                   // margen lateral para murallas y paseo de ronda
   const SPRITE_BASE = 'assets/img/iso/';
-  const SPRITE_VER = '34';  // súbelo al regenerar los PNG (cache-busting)
+  const SPRITE_VER = '35';  // súbelo al regenerar los PNG (cache-busting)
 
   // ── Color helpers (para el placeholder) ─────────────────────────────────
   const { hexToRgb, clamp255: cl } = HacUtil;

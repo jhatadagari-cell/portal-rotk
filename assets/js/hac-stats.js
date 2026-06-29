@@ -41,7 +41,7 @@ const HacStats = (function () {
       miembroId: r.miembro_id, dinero: Number(r.dinero) || 0,
       militar: Number(r.xp_militar) || 0, cultural: Number(r.xp_cultural) || 0,
       administrativo: Number(r.xp_administrativo) || 0,
-      cap: Number(r.cap_inventario) || 8, inv,
+      cap: Number(r.cap_inventario) || 8, inv, ahorro: Number(r.ahorro) || 0,
     };
   }
   async function load() {
@@ -60,8 +60,9 @@ const HacStats = (function () {
   function reload() { readyPromise = load(); return readyPromise; }
 
   function row(mid) { return cache.find(r => r.miembroId === mid) || null; }
-  function ensure(mid) { let r = row(mid); if (!r) { r = { miembroId: mid, dinero: 0, militar: 0, cultural: 0, administrativo: 0, cap: 8, inv: [] }; cache.push(r); } return r; }
+  function ensure(mid) { let r = row(mid); if (!r) { r = { miembroId: mid, dinero: 0, militar: 0, cultural: 0, administrativo: 0, cap: 8, inv: [], ahorro: 0 }; cache.push(r); } return r; }
   function dinero(mid) { const r = row(mid); return r ? r.dinero : 0; }
+  function ahorro(mid) { const r = row(mid); return r ? r.ahorro : 0; }
   function xp(mid, dom) { const r = row(mid); return r ? (r[dom] || 0) : 0; }
   function capInventario(mid) { const r = row(mid); return r ? r.cap : 8; }
   function inventario(mid) { const r = row(mid); return r ? r.inv.slice() : []; }
@@ -72,11 +73,21 @@ const HacStats = (function () {
       const client = await sb();
       const { error } = await client.from(TABLE).upsert({
         miembro_id: r.miembroId, dinero: r.dinero, xp_militar: r.militar, xp_cultural: r.cultural,
-        xp_administrativo: r.administrativo, cap_inventario: r.cap, inventario: r.inv,
+        xp_administrativo: r.administrativo, cap_inventario: r.cap, inventario: r.inv, ahorro: r.ahorro,
         actualizado: new Date().toISOString(),
       });
       if (error) throw error;
     } catch (e) { console.error('[HacStats] persist', e); }
+  }
+
+  // Guarda A SALVO en casa: mueve dinero del monedero al ahorro (requiere casa).
+  // n omitido = guarda TODO lo que lleva encima. Devuelve lo guardado.
+  function guardar(mid, n) {
+    const r = ensure(mid);
+    const cuanto = Math.max(0, Math.min(r.dinero, n == null ? r.dinero : n));
+    if (!cuanto) return 0;
+    r.dinero -= cuanto; r.ahorro += cuanto; persist(r);
+    return cuanto;
   }
 
   // Curva de nivel: cada nivel n→n+1 cuesta 50·n XP (acumulado: 25·n·(n-1)).
@@ -124,6 +135,6 @@ const HacStats = (function () {
     return { ok: true };
   }
 
-  return { ready, reload, dinero, xp, nivel, progresoNivel, award, comprar, inventario, capInventario, ocupadas, recompensaExped, DOMS, dbOk: () => ok, TABLE };
+  return { ready, reload, dinero, ahorro, xp, nivel, progresoNivel, award, comprar, guardar, inventario, capInventario, ocupadas, recompensaExped, DOMS, dbOk: () => ok, TABLE };
 })();
 if (typeof window !== 'undefined') window.HacStats = HacStats;

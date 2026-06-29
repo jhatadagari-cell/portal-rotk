@@ -26,12 +26,14 @@ create table if not exists public.mecenas_stats (
   xp_administrativo  integer not null default 0,
   cap_inventario     integer not null default 8,        -- tamaño del inventario (ampliable en el mercado)
   inventario         jsonb   not null default '[]'::jsonb, -- objetos comprados [{id, n}]
+  ahorro             integer not null default 0,        -- dinero guardado A SALVO en casa (requiere casa de mecenas)
   actualizado        timestamptz not null default now()
 );
 
 -- Si la tabla ya existía de una versión previa, añade las columnas nuevas.
 alter table public.mecenas_stats add column if not exists cap_inventario integer not null default 8;
 alter table public.mecenas_stats add column if not exists inventario jsonb not null default '[]'::jsonb;
+alter table public.mecenas_stats add column if not exists ahorro integer not null default 0;
 
 alter table public.mecenas_stats enable row level security;
 

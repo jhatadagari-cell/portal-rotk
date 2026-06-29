@@ -309,6 +309,14 @@
     const myId = _isMember ? _myPj.id : null;
     const myApt = _myPj ? _myPj.aptitud : '';
     const hasMarket = ((h.mapa && h.mapa.construcciones) || []).some(c => c.tipo === 'mercado');
+    // Casa de un mecenas = construcción 'casa' cuyo DUEÑO es su miembro (asignado en
+    // el admin). El walker.id es el personajeId; el dueño de la casa es el id de miembro.
+    function casaDe(personajeId) {
+      const m = (h.miembros || []).find(x => x.personajeId === personajeId);
+      if (!m) return null;
+      const mid = String(m.id);
+      return ((h.mapa && h.mapa.construcciones) || []).find(c => c.tipo === 'casa' && c.dueno != null && String(c.dueno) === mid) || null;
+    }
     // Coste de una misión según si el mecenas DOMINA el dominio del edificio (suave).
     function costeMision(dominio) {
       const competente = window.HacCompetencias && dominio && HacCompetencias.has(h.id, myId, myApt, dominio);
@@ -460,17 +468,19 @@
       }
       const earned = window.HacPuntos ? HacPuntos.deMiembro(h.id, id) : 0;
       const money = (window.HacStats && HacStats.dinero) ? HacStats.dinero(id) : 0;   // monedero (XP/dinero reales)
+      const home = !!casaDe(id);                                                       // ¿tiene casa asignada?
+      const ahorro = (window.HacStats && HacStats.ahorro) ? HacStats.ahorro(id) : 0;   // dinero a salvo en casa
       // "Poder personal": nivel 武/文/政 derivado del XP de cada dominio.
       const stats = (window.HacStats && HacStats.progresoNivel)
         ? HacStats.DOMS.map(dom => { const p = HacStats.progresoNivel(id, dom); return { dom, nivel: p.nivel, pct: p.pct, xp: p.xp, falta: p.falta }; })
         : null;
-      return { it, aptId, aptDef, e, eFull, eRegenMin, activa, enTarea, fuera, exped, rest, mine: id === myId, puntos: puntosTotales(id), earned, money, stats };
+      return { it, aptId, aptDef, e, eFull, eRegenMin, activa, enTarea, fuera, exped, rest, mine: id === myId, puntos: puntosTotales(id), earned, money, home, ahorro, stats };
     }
     // Panel de inventario/monedero que se despliega a la derecha del panel del
     // mecenas. Scaffolding: el dinero y los objetos llegarán al jugar misiones
     // (paso 1b/3). «Guardar en casa» queda bloqueado hasta que tenga una casa.
     function invPanelHTML(d) {
-      const hasHome = false;   // (paso siguiente) aún no existe la "casa de mecenas"
+      const hasHome = !!d.home;   // tiene una "Casa de Mecenas" asignada
       const cap = (window.HacStats && HacStats.capInventario) ? HacStats.capInventario(d.it.id) : 8;
       const items = (window.HacStats && HacStats.inventario) ? HacStats.inventario(d.it.id) : [];
       // Aplana por cantidad y rellena hasta `cap` con ranuras vacías.
@@ -480,14 +490,16 @@
         const def = flat[i];
         return def ? `<div class="hacp-slot full" title="${esc(def.nombre)} ${esc(def.zh || '')}">${def.icon || '∎'}</div>` : '<div class="hacp-slot"></div>';
       }).join('');
+      const canStore = hasHome && d.mine && d.money > 0;
       return `<div class="hacp-inv">
         <div class="hacp-inv-h">🎒 Mochila de ${esc(d.it.name)}</div>
         <div class="hacp-wallet">💰 Monedero: <b>${d.money}</b> <span class="hacp-inv-note">monedas</span></div>
+        ${hasHome ? `<div class="hacp-wallet hacp-vault">🏠 En casa: <b>${d.ahorro}</b> <span class="hacp-inv-note">a salvo</span></div>` : ''}
         <div class="hacp-inv-cap">Inventario <b>${flat.length}/${cap}</b></div>
         <div class="hacp-inv-grid">${slots}</div>
         ${marketBtnHTML()}
-        <button type="button" class="hacp-cp-btn hacp-store" data-act="store"${hasHome ? '' : ' disabled'}>🏠 Guardar dinero en casa</button>
-        <div class="hacp-inv-note">${hasHome ? 'Lleva el dinero a casa para guardarlo a salvo.' : '🏠 Sin hogar: necesita una casa de mecenas para almacenar.'}</div>
+        <button type="button" class="hacp-cp-btn hacp-store" data-act="store"${canStore ? '' : ' disabled'}>🏠 Guardar dinero en casa</button>
+        <div class="hacp-inv-note">${hasHome ? 'Lleva todo el monedero a casa y guárdalo a salvo.' : '🏠 Sin hogar: necesita una Casa de Mecenas (que se la asigne el fundador) para almacenar.'}</div>
       </div>`;
     }
     // Botón para abrir la tienda, solo si la finca tiene un mercado construido.
@@ -565,7 +577,12 @@
       const shb = charEl.querySelector('[data-act="shop"]');
       if (shb) shb.addEventListener('click', openShop);
       const sb = charEl.querySelector('[data-act="store"]');
-      if (sb && !sb.disabled) sb.addEventListener('click', () => { /* paso 3: requiere casa de mecenas */ });
+      if (sb && !sb.disabled) sb.addEventListener('click', () => {
+        if (!myId || !window.HacStats) return;
+        const n = HacStats.guardar(myId);                 // mueve TODO el monedero al ahorro de casa
+        if (n > 0) { toast(`🏠 Guardaste ${n} 💰 a salvo en casa`); buildCharPanel(charId); }
+        else toast('No llevas dinero que guardar');
+      });
     }
     function sigOf(d) { return charId + '|' + (d.activa ? (d.enTarea ? 't' : 'g') : '-') + '|' + (d.mine ? 'me' : '-'); }
     // Retrato animado: pinta el sprite ACTUAL del mecenas (dir/andar/sentado) cada

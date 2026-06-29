@@ -447,7 +447,8 @@ const EDIFICIOS = [
   { id:'instruccion',      w:3, h:3, roof:'#4d5158', baseH:5, bodyH:15, roofH:13, decor:'instruccion' },                                   // 校場 militar (gris hierro, más oscuro)
   { id:'academia',         w:3, h:3, roof:'#586460', baseH:5, bodyH:16, roofH:13, stories:true, bodyH2:9, roofH2:11, decor:'academia' },   // 太學 cultural (gris con pátina verdosa leve)
   { id:'cancilleria',      w:3, h:3, roof:'#535b67', baseH:6, bodyH:16, roofH:14, decor:'cancilleria' },                                   // 官署 administrativo (gris con pátina azulada leve)
-  { id:'mercado',          w:3, h:3, roof:'#5b6068', baseH:5, bodyH:15, roofH:13, decor:'market' }                                         // 市 mercado (toldo a rayas + mercader)
+  { id:'mercado',          w:3, h:3, roof:'#5b6068', baseH:5, bodyH:15, roofH:13, decor:'market' },                                        // 市 mercado (toldo a rayas + mercader)
+  { id:'casa',             w:2, h:2, roof:'#5b6068', baseH:4, bodyH:12, roofH:11, decor:'casa' }                                           // 宅 casa de mecenas (cortina + farolillo)
 ];
 
 // ── Compuestos: L, U y anillo (alas rectangulares unidas en escuadra) ─────
@@ -702,7 +703,40 @@ function marketAwning(buf, P, fi, ctx) {
   [u0 + 0.12, u1 - 0.12].forEach(u => lineP(buf, pt(u, out, 0), pt(u, out, zFront), '#6a4a2a'));   // postes
 }
 
+// ── Casa de mecenas (宅): cortina de puerta, tinaja de agua y farolillo rojo ──
+function doorCurtain(buf, P, fi, ctx) {
+  const z1 = ctx.baseH + ctx.bodyH * 0.5, z0 = ctx.baseH * 0.2;
+  const indigo = '#46506e', indigoD = '#343c54', cream = '#d8cba8';
+  const on = (u, z) => fi.face === 'E' ? P(ctx.w - 1, fi.cy + u, z) : P(fi.cx + u, ctx.h - 1, z);
+  for (let i = 0; i < 5; i++) { const u0 = -0.32 + i * 0.135, u1 = u0 + 0.115;
+    fillPoly(buf, [on(u0, z0), on(u1, z0), on(u1, z1), on(u0, z1)], i % 2 ? indigo : indigoD); }
+  fillPoly(buf, [on(-0.36, z1), on(0.36, z1), on(0.36, z1 + 1.7), on(-0.36, z1 + 1.7)], cream);   // cenefa superior
+}
+function waterVat(buf, P, gx, gy) {
+  const c = P(gx, gy, 0);
+  fillEllipse(buf, c[0], c[1] - 3.4, 3.2, 3.8, '#4a5560');
+  fillEllipse(buf, c[0] - 1, c[1] - 4.4, 1.1, 1.5, '#5d6a76');
+  fillEllipse(buf, c[0], c[1] - 6.6, 2.6, 1.3, '#39424c');
+  fillEllipse(buf, c[0], c[1] - 6.8, 1.9, 0.9, '#22282e');
+}
+function redLantern(buf, P, gx, gy, topZ) {
+  lineP(buf, P(gx, gy, topZ), P(gx, gy, topZ - 3), '#3a2a18');
+  const c = P(gx, gy, topZ - 6);
+  fillEllipse(buf, c[0], c[1], 2.6, 3.2, '#b42a1c');
+  fillEllipse(buf, c[0] - 0.8, c[1] - 0.9, 1.0, 1.4, '#d8503a');
+  lineP(buf, [c[0] - 2.4, c[1]], [c[0] + 2.4, c[1]], '#7e1810');
+  fillEllipse(buf, c[0], c[1] - 3.2, 1.3, 0.6, '#7e1810'); fillEllipse(buf, c[0], c[1] + 3.2, 1.3, 0.6, '#7e1810');
+  fillPoly(buf, [[c[0] - 1, c[1] + 3.4], [c[0] + 1, c[1] + 3.4], [c[0] + 0.6, c[1] + 5], [c[0] - 0.6, c[1] + 5]], '#caa23a');   // borla
+}
+
 const DECOR_HALL = {
+  // 宅: cortina de puerta + tinaja de agua + farolillo rojo → se lee como hogar.
+  casa: (buf, P, ctx) => {
+    const fi = frontInfo(ctx);
+    doorCurtain(buf, P, fi, ctx);
+    waterVat(buf, P, fi.flanks[0][0] + fi.out[0] * 0.7, fi.flanks[0][1] + fi.out[1] * 0.7);
+    redLantern(buf, P, fi.flanks[1][0] + fi.out[0] * 0.55, fi.flanks[1][1] + fi.out[1] * 0.55, ctx.baseH + ctx.bodyH - 1);
+  },
   // 市: toldo a rayas + mostrador con género a un lado + mercader centrado +
   // banderola de mercado. El mercader se pinta el ÚLTIMO → siempre visible.
   market: (buf, P, ctx) => {

@@ -232,6 +232,8 @@
 .hacp-inv-h{ font:700 11px/1 'Cinzel Decorative',serif; letter-spacing:.06em; color:var(--gold); margin-bottom:8px; }
 .hacp-wallet{ font-size:13px; color:var(--parch); margin-bottom:8px; }
 .hacp-wallet b{ color:#e0b85a; font-variant-numeric:tabular-nums; }
+.hacp-vault{ margin-top:-3px; }
+.hacp-vault b{ color:#7fc9a0; }
 .hacp-inv-cap{ font-size:10.5px; color:var(--parch2); text-transform:uppercase; letter-spacing:.06em; margin-bottom:5px; }
 .hacp-inv-cap b{ color:var(--parch); }
 .hacp-inv-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:5px; margin-bottom:9px; }
