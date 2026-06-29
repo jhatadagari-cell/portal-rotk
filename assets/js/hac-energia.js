@@ -62,6 +62,21 @@ const HacEnergia = (function () {
     return Math.max(0, Math.min(MAX, r.energia + regen));
   }
 
+  // Suma energía (p.ej. comida del mercado), topada a MAX, y persiste.
+  async function add(hid, mid, amount) {
+    const nowMs = now();
+    const nv = Math.max(0, Math.min(MAX, current(hid, mid) + (amount || 0)));
+    const i = cache.findIndex(r => r.haciendaId === hid && r.miembroId === mid);
+    const rec = { haciendaId: hid, miembroId: mid, energia: nv, tsMs: nowMs };
+    if (i >= 0) cache[i] = rec; else cache.push(rec);     // optimista
+    try {
+      const client = await sb();
+      const { error } = await client.from(TABLE).upsert({ hacienda_id: hid, miembro_id: mid, energia: nv, energia_ts: nowMs });
+      if (error) throw error;
+    } catch (e) { console.error('[HacEnergia] add', e); }
+    return nv;
+  }
+
   // Segundos hasta llenar al MÁX desde ahora (0 si ya está llena).
   function tiempoLleno(hid, mid) {
     const c = current(hid, mid);
@@ -85,6 +100,6 @@ const HacEnergia = (function () {
     return nv;
   }
 
-  return { ready, reload, current, tiempoLleno, spend, dbOk: () => ok, MAX, COSTE_MISION, REGEN_POR_SEG, REGEN_POR_MIN: REGEN_POR_SEG * 60, TABLE };
+  return { ready, reload, current, tiempoLleno, spend, add, dbOk: () => ok, MAX, COSTE_MISION, REGEN_POR_SEG, REGEN_POR_MIN: REGEN_POR_SEG * 60, TABLE };
 })();
 if (typeof window !== 'undefined') window.HacEnergia = HacEnergia;

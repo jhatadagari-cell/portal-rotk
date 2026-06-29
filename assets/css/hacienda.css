@@ -254,6 +254,51 @@
   .hacp-folk-panel{ flex:none; width:auto; max-height:200px; }
   .hacp-char-panel{ width:calc(100% - 16px); }
 }
+/* ── Mercado: acceso + ranuras llenas + overlay de tienda ──────────────── */
+.hacp-folk-shop{ display:block; width:100%; margin:0 0 9px; padding:6px 8px;
+  background:rgba(201,168,76,.16); color:var(--gold); border:1px solid var(--hac,var(--gold));
+  border-radius:5px; font:700 11px 'Cinzel Decorative',serif; letter-spacing:.06em; cursor:pointer; }
+.hacp-folk-shop:hover{ background:rgba(201,168,76,.32); color:#fff; }
+.hacp-cp-shop{ display:block; width:100%; margin-top:8px; text-align:center; }
+.hacp-slot.full{ display:flex; align-items:center; justify-content:center; font-size:15px;
+  background:rgba(201,168,76,.12); border-color:rgba(201,168,76,.4); cursor:default; }
+
+.hacp-shop{ position:absolute; inset:0; z-index:40; display:flex; align-items:center; justify-content:center;
+  background:rgba(6,5,3,.62); -webkit-backdrop-filter:blur(2px); backdrop-filter:blur(2px); padding:14px; box-sizing:border-box; }
+.hacp-shop[hidden]{ display:none; }
+.hacp-shop-box{ position:relative; width:min(560px,94%); max-height:88%; overflow-y:auto; box-sizing:border-box;
+  background:rgba(13,11,7,.97); border:1px solid rgba(201,168,76,.45); border-radius:10px;
+  padding:16px 16px 18px; box-shadow:0 10px 40px rgba(0,0,0,.6); color:var(--parch); }
+.hacp-shop-x{ position:absolute; top:8px; right:10px; width:24px; height:24px; padding:0; line-height:1;
+  background:none; border:0; color:var(--parch2); cursor:pointer; font-size:15px; opacity:.7; }
+.hacp-shop-x:hover{ opacity:1; color:#fff; }
+.hacp-shop-h{ font:900 18px 'Noto Serif SC',serif; color:var(--gold); display:flex; align-items:center; gap:8px; padding-right:26px; }
+.hacp-shop-zh{ font-size:22px; }
+.hacp-shop-money{ margin-left:auto; font:700 14px 'Noto Sans SC',sans-serif; color:var(--parch); }
+.hacp-shop-money b{ color:#e0b85a; font-variant-numeric:tabular-nums; }
+.hacp-shop-sub{ font-size:11px; color:var(--parch2); opacity:.85; margin:4px 0 12px; }
+.hacp-shop-note{ font-size:12px; color:#e0b85a; background:rgba(201,168,76,.1); border:1px solid rgba(201,168,76,.3);
+  border-radius:6px; padding:7px 10px; margin-bottom:12px; }
+.hacp-shop-lockttl{ font:700 10px 'Cinzel Decorative',serif; letter-spacing:.08em; text-transform:uppercase;
+  color:var(--parch2); opacity:.7; margin:16px 0 8px; }
+.hacp-shop-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:8px; }
+.hacp-item{ display:flex; align-items:center; gap:8px; padding:8px 9px;
+  background:rgba(255,255,255,.03); border:1px solid rgba(201,168,76,.2); border-radius:7px; }
+.hacp-item.locked{ opacity:.5; }
+.hacp-item-ic{ font-size:22px; flex:0 0 auto; width:26px; text-align:center; }
+.hacp-item-main{ flex:1; min-width:0; }
+.hacp-item-name{ font:700 12.5px 'Noto Sans SC',sans-serif; color:var(--parch); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.hacp-item-name .zh{ font-family:'Noto Serif SC',serif; color:var(--parch2); opacity:.7; font-weight:400; font-size:11px; }
+.hacp-item-ef{ font-size:10.5px; color:#7fc9a0; margin-top:2px; }
+.hacp-item.t-inventario .hacp-item-ef{ color:#e0b85a; }
+.hacp-item.t-mascota .hacp-item-ef{ color:#d8a0d0; }
+.hacp-item.t-comida .hacp-item-ef{ color:#7fc9a0; }
+.hacp-item-buy{ flex:0 0 auto; background:rgba(201,168,76,.16); color:var(--gold); border:1px solid var(--hac,var(--gold));
+  border-radius:5px; padding:5px 9px; font:700 12px 'Noto Sans SC',sans-serif; cursor:pointer; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.hacp-item-buy:hover{ background:rgba(201,168,76,.32); color:#fff; }
+.hacp-item-buy:disabled{ opacity:.4; cursor:not-allowed; }
+.hacp-item-lock{ flex:0 0 auto; font-size:10px; color:var(--parch2); white-space:nowrap; }
+
 /* Tooltip con el nombre del pabellón al pasar el ratón por su patio. */
 .hacp-pab-tip{
   position:fixed; z-index:60; display:none; pointer-events:none;

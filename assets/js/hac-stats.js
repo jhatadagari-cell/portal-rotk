@@ -35,10 +35,13 @@ const HacStats = (function () {
     return client;
   }
   function rowToObj(r) {
+    let inv = [];
+    try { inv = Array.isArray(r.inventario) ? r.inventario : (r.inventario ? JSON.parse(r.inventario) : []); } catch (e) { inv = []; }
     return {
       miembroId: r.miembro_id, dinero: Number(r.dinero) || 0,
       militar: Number(r.xp_militar) || 0, cultural: Number(r.xp_cultural) || 0,
       administrativo: Number(r.xp_administrativo) || 0,
+      cap: Number(r.cap_inventario) || 8, inv,
     };
   }
   async function load() {
@@ -57,8 +60,24 @@ const HacStats = (function () {
   function reload() { readyPromise = load(); return readyPromise; }
 
   function row(mid) { return cache.find(r => r.miembroId === mid) || null; }
+  function ensure(mid) { let r = row(mid); if (!r) { r = { miembroId: mid, dinero: 0, militar: 0, cultural: 0, administrativo: 0, cap: 8, inv: [] }; cache.push(r); } return r; }
   function dinero(mid) { const r = row(mid); return r ? r.dinero : 0; }
   function xp(mid, dom) { const r = row(mid); return r ? (r[dom] || 0) : 0; }
+  function capInventario(mid) { const r = row(mid); return r ? r.cap : 8; }
+  function inventario(mid) { const r = row(mid); return r ? r.inv.slice() : []; }
+  function ocupadas(mid) { const r = row(mid); return r ? r.inv.reduce((s, it) => s + (it.n || 1), 0) : 0; }
+
+  async function persist(r) {
+    try {
+      const client = await sb();
+      const { error } = await client.from(TABLE).upsert({
+        miembro_id: r.miembroId, dinero: r.dinero, xp_militar: r.militar, xp_cultural: r.cultural,
+        xp_administrativo: r.administrativo, cap_inventario: r.cap, inventario: r.inv,
+        actualizado: new Date().toISOString(),
+      });
+      if (error) throw error;
+    } catch (e) { console.error('[HacStats] persist', e); }
+  }
 
   // Curva de nivel: cada nivel n→n+1 cuesta 50·n XP (acumulado: 25·n·(n-1)).
   // Nivel 1 = 0 XP, 2 = 50, 3 = 150, 4 = 300, 5 = 500…
@@ -82,21 +101,29 @@ const HacStats = (function () {
 
   async function award(mid, gain) {
     if (!mid || !gain) return;
-    let r = row(mid);
-    if (!r) { r = { miembroId: mid, dinero: 0, militar: 0, cultural: 0, administrativo: 0 }; cache.push(r); }
+    const r = ensure(mid);
     if (gain.dinero) r.dinero += gain.dinero;
     if (gain.xp) for (const d of DOMS) if (gain.xp[d]) r[d] += gain.xp[d];
-    try {
-      const client = await sb();
-      const { error } = await client.from(TABLE).upsert({
-        miembro_id: mid, dinero: r.dinero, xp_militar: r.militar, xp_cultural: r.cultural,
-        xp_administrativo: r.administrativo, actualizado: new Date().toISOString(),
-      });
-      if (error) throw error;
-    } catch (e) { console.error('[HacStats] award', e); }
+    persist(r);
     return r;
   }
 
-  return { ready, reload, dinero, xp, nivel, progresoNivel, award, recompensaExped, DOMS, dbOk: () => ok, TABLE };
+  // Compra de un artículo del mercado: descuenta dinero y aplica el efecto en una
+  // sola escritura (XP / ampliación de inventario / objeto guardado). La energía
+  // (comida) la añade quien llama vía HacEnergia. Devuelve {ok, motivo}.
+  function comprar(mid, item) {
+    if (!mid || !item) return { ok: false, motivo: 'Artículo inválido' };
+    const r = ensure(mid), ef = item.efecto || {};
+    if (r.dinero < item.precio) return { ok: false, motivo: 'No tienes suficiente dinero' };
+    if (ef.guardable && ocupadas(mid) >= r.cap) return { ok: false, motivo: 'Inventario lleno' };
+    r.dinero -= item.precio;
+    if (ef.xp) for (const d of DOMS) if (ef.xp[d]) r[d] += ef.xp[d];
+    if (ef.capInv) r.cap += ef.capInv;
+    if (ef.guardable) { const e = r.inv.find(x => x.id === item.id); if (e) e.n = (e.n || 1) + 1; else r.inv.push({ id: item.id, n: 1 }); }
+    persist(r);
+    return { ok: true };
+  }
+
+  return { ready, reload, dinero, xp, nivel, progresoNivel, award, comprar, inventario, capInventario, ocupadas, recompensaExped, DOMS, dbOk: () => ok, TABLE };
 })();
 if (typeof window !== 'undefined') window.HacStats = HacStats;

@@ -282,6 +282,15 @@
     // deseleccionaría). Así puedes usar el selector y los botones sin perder el zoom.
     if (charEl) ['pointerdown', 'pointerup', 'wheel', 'click'].forEach(ev =>
       charEl.addEventListener(ev, (e) => e.stopPropagation(), { passive: false }));
+    // Acceso directo a la tienda del mercado (si la finca tiene uno).
+    const hasMarketEarly = ((h.mapa && h.mapa.construcciones) || []).some(c => c.tipo === 'mercado');
+    if (hasMarketEarly && panel) {
+      const mb = document.createElement('button');
+      mb.type = 'button'; mb.className = 'hacp-folk-shop'; mb.textContent = '🛒 Mercado';
+      mb.addEventListener('click', (e) => { e.stopPropagation(); openShop(); });
+      const ttl = panel.querySelector('.hacp-folk-ttl');
+      if (ttl) ttl.insertAdjacentElement('afterend', mb); else panel.insertBefore(mb, listEl);
+    }
     let pop = null;
     const hidePop = () => { if (pop) { pop.remove(); pop = null; } };
     const clock = () => (window.HacClock && HacClock.now) ? HacClock.now() : Date.now();
@@ -299,6 +308,7 @@
     const _isMember = _myPj && (h.miembros || []).some(m => m.personajeId === _myPj.id);
     const myId = _isMember ? _myPj.id : null;
     const myApt = _myPj ? _myPj.aptitud : '';
+    const hasMarket = ((h.mapa && h.mapa.construcciones) || []).some(c => c.tipo === 'mercado');
     // Coste de una misión según si el mecenas DOMINA el dominio del edificio (suave).
     function costeMision(dominio) {
       const competente = window.HacCompetencias && dominio && HacCompetencias.has(h.id, myId, myApt, dominio);
@@ -456,17 +466,29 @@
     // mecenas. Scaffolding: el dinero y los objetos llegarán al jugar misiones
     // (paso 1b/3). «Guardar en casa» queda bloqueado hasta que tenga una casa.
     function invPanelHTML(d) {
-      const SLOTS = 8, hasHome = false;   // (paso 3) aún no existe la "casa de mecenas"
-      const slots = Array.from({ length: SLOTS }, () => '<div class="hacp-slot"></div>').join('');
+      const hasHome = false;   // (paso siguiente) aún no existe la "casa de mecenas"
+      const cap = (window.HacStats && HacStats.capInventario) ? HacStats.capInventario(d.it.id) : 8;
+      const items = (window.HacStats && HacStats.inventario) ? HacStats.inventario(d.it.id) : [];
+      // Aplana por cantidad y rellena hasta `cap` con ranuras vacías.
+      const flat = [];
+      items.forEach(it => { const def = window.HacTienda && HacTienda.get(it.id); for (let k = 0; k < (it.n || 1); k++) flat.push(def); });
+      const slots = Array.from({ length: cap }, (_, i) => {
+        const def = flat[i];
+        return def ? `<div class="hacp-slot full" title="${esc(def.nombre)} ${esc(def.zh || '')}">${def.icon || '∎'}</div>` : '<div class="hacp-slot"></div>';
+      }).join('');
       return `<div class="hacp-inv">
         <div class="hacp-inv-h">🎒 Mochila de ${esc(d.it.name)}</div>
         <div class="hacp-wallet">💰 Monedero: <b>${d.money}</b> <span class="hacp-inv-note">monedas</span></div>
-        <div class="hacp-inv-cap">Inventario <b>0/${SLOTS}</b></div>
+        <div class="hacp-inv-cap">Inventario <b>${flat.length}/${cap}</b></div>
         <div class="hacp-inv-grid">${slots}</div>
+        ${marketBtnHTML()}
         <button type="button" class="hacp-cp-btn hacp-store" data-act="store"${hasHome ? '' : ' disabled'}>🏠 Guardar dinero en casa</button>
         <div class="hacp-inv-note">${hasHome ? 'Lleva el dinero a casa para guardarlo a salvo.' : '🏠 Sin hogar: necesita una casa de mecenas para almacenar.'}</div>
-        <div class="hacp-inv-note hacp-inv-soon">El dinero y los objetos llegarán al jugar misiones (próximamente).</div>
       </div>`;
+    }
+    // Botón para abrir la tienda, solo si la finca tiene un mercado construido.
+    function marketBtnHTML() {
+      return hasMarket ? `<button type="button" class="hacp-cp-btn hacp-cp-shop" data-act="shop">🛒 Comprar en el mercado</button>` : '';
     }
     // Texto transparente de energía: % + ritmo de regeneración + cuánto falta para
     // llenar (para TU mecenas; para los demás, solo el %).
@@ -523,6 +545,8 @@
       if (rb) rb.addEventListener('click', release);
       const ib = charEl.querySelector('[data-act="inv"]');
       if (ib) ib.addEventListener('click', () => { invOpen = !invOpen; buildCharPanel(charId); });
+      const shb = charEl.querySelector('[data-act="shop"]');
+      if (shb) shb.addEventListener('click', openShop);
       const sb = charEl.querySelector('[data-act="store"]');
       if (sb && !sb.disabled) sb.addEventListener('click', () => { /* paso 3: requiere casa de mecenas */ });
     }
@@ -559,6 +583,63 @@
       const eb = charEl.querySelector('#hacp-cp-ebar'); if (eb) eb.style.width = d.e + '%';
       const el = charEl.querySelector('#hacp-cp-elabel'); if (el) el.innerHTML = energyLabel(d);
       const rt = charEl.querySelector('#hacp-cp-rest'); if (rt && d.activa) rt.textContent = fmtClock(d.rest);
+    }
+
+    // ── Tienda del mercado (overlay) ─────────────────────────────────────────
+    // Artículos por tier (el mercado "mejora" con el nivel de la finca): los de
+    // tier ≤ nivel se pueden comprar; los de tier mayor salen bloqueados. La
+    // compra gasta el dinero del mecenas propio y aplica el efecto al momento.
+    let shopEl = null;
+    function ensureShopEl() {
+      if (shopEl) return shopEl;
+      shopEl = document.createElement('div');
+      shopEl.className = 'hacp-shop'; shopEl.id = 'hacp-shop'; shopEl.hidden = true;
+      vp.appendChild(shopEl);
+      ['pointerdown', 'pointerup', 'wheel', 'click'].forEach(ev => shopEl.addEventListener(ev, (e) => e.stopPropagation(), { passive: false }));
+      return shopEl;
+    }
+    function itemCardHTML(item, locked) {
+      const money = window.HacStats ? HacStats.dinero(myId) : 0;
+      const noMoney = money < item.precio;
+      const disabled = locked || !myId || noMoney;
+      const btn = locked
+        ? `<span class="hacp-item-lock">🔒 Nivel ${item.tier}</span>`
+        : `<button type="button" class="hacp-item-buy" data-buy="${esc(item.id)}"${disabled ? ' disabled' : ''}>💰 ${item.precio}</button>`;
+      return `<div class="hacp-item${locked ? ' locked' : ''}${item.tipo ? ' t-' + item.tipo : ''}">
+        <div class="hacp-item-ic">${item.icon || '∎'}</div>
+        <div class="hacp-item-main">
+          <div class="hacp-item-name">${esc(item.nombre)} <span class="zh">${esc(item.zh || '')}</span></div>
+          <div class="hacp-item-ef">${esc(HacTienda.efectoTexto(item))}</div>
+        </div>${btn}</div>`;
+    }
+    function buildShop() {
+      const el = ensureShopEl();
+      const money = window.HacStats ? HacStats.dinero(myId) : 0;
+      const disp = HacTienda.disponibles(tier), block = HacTienda.bloqueados(tier);
+      const note = !myId ? `<div class="hacp-shop-note">Entra con tu mecenas en esta finca para comprar.</div>` : '';
+      el.innerHTML = `
+        <div class="hacp-shop-box">
+          <button type="button" class="hacp-shop-x" data-act="shop-close" aria-label="Cerrar">✕</button>
+          <div class="hacp-shop-h"><span class="hacp-shop-zh">市</span> Mercado <span class="hacp-shop-money">💰 <b id="hacp-shop-money">${money}</b></span></div>
+          <div class="hacp-shop-sub">Surtido según el nivel de la finca (nivel ${tier}). Sube de nivel para desbloquear más.</div>
+          ${note}
+          <div class="hacp-shop-grid">${disp.map(i => itemCardHTML(i, false)).join('')}</div>
+          ${block.length ? `<div class="hacp-shop-lockttl">Se desbloquean al subir de nivel</div><div class="hacp-shop-grid">${block.map(i => itemCardHTML(i, true)).join('')}</div>` : ''}
+        </div>`;
+      el.querySelector('[data-act="shop-close"]').addEventListener('click', closeShop);
+      el.querySelectorAll('[data-buy]').forEach(b => b.addEventListener('click', () => buyItem(HacTienda.get(b.dataset.buy))));
+    }
+    function openShop() { if (!hasMarket) return; buildShop(); ensureShopEl().hidden = false; }
+    function closeShop() { if (shopEl) shopEl.hidden = true; }
+    function buyItem(item) {
+      if (!item || !myId || !window.HacStats) return;
+      if (item.tier > tier) { toast('🔒 Necesita una finca de nivel ' + item.tier); return; }
+      const res = HacStats.comprar(myId, item);
+      if (!res.ok) { toast(res.motivo || 'No se pudo comprar'); return; }
+      if (item.efecto && item.efecto.energia && window.HacEnergia) HacEnergia.add(h.id, myId, item.efecto.energia);
+      toast(`${item.icon || ''} ${item.nombre} · ${HacTienda.efectoTexto(item)}`.trim());
+      buildShop();                 // refresca dinero y botones
+      if (charId) buildCharPanel(charId);   // refresca monedero/inventario/energía
     }
 
     function itemHTML(m, sel) {
