@@ -642,9 +642,17 @@ const HacFolk = (function () {
     if (t >= o.startMs && t < winEnd && !w.onMission && w.missionDoneFor !== o.startMs) {
       if (w.chatWith) endChat(w);
       if (w.meetWith) abortMeet(w);
-      w.onMission = true;
-      w.state = 'saludo'; w.bowing = true; w.missionTimer = SALUTE_SEC;
-      w.moving = false; w.path = null; w.speech = null; w.dir = 'S';
+      w.onMission = true; w.moving = false; w.speech = null; w.dir = 'S'; w.path = null;
+      const elapsed = t - o.startMs;
+      if (o.tipo === 'expedicion') {
+        // Reanudación por FASE según el tiempo transcurrido (p.ej. tras recargar):
+        // ya fuera, o ya de vuelta, en vez de re-hacer la salida desde casa.
+        if (elapsed >= dur) { startReturn(w); }                                  // debería estar volviendo → aparece fuera y entra
+        else if (elapsed >= SALUTE_SEC * 1000) { w.state = 'fuera'; w.outTimer = Math.max(2, (o.startMs + dur - t) / 1000); }   // ya fuera (oculto)
+        else { w.state = 'saludo'; w.bowing = true; w.missionTimer = SALUTE_SEC - elapsed / 1000; }   // saludo (lo que quede)
+      } else {
+        w.state = 'saludo'; w.bowing = true; w.missionTimer = SALUTE_SEC;
+      }
     } else if (w.onMission && t >= winEnd) {
       endMission(w);   // seguridad: no debería colgarse más allá del tope
     }

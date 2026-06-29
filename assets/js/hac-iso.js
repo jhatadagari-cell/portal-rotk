@@ -453,15 +453,13 @@ const HacIso = (function () {
     const gate = (gc, y0, y1) => {
       const a = gc - 1.5, c = gc + 1.5, gh = WD.h + 6;
       box(a, y0, c, y1, 0, gh, wTop, wL, wR); texFace('S', y1, a, c, 0, gh); cap(a, y0, c, y1, gh);
-      // Vano ABIERTO (pasaje) con las dos hojas rojas BATIDAS hacia dentro (se ve el
-      // canto): los mecenas entran y salen por aquí. (La animación cerrada→abierta
-      // al acercarse vendrá luego.)
+      // Vano ABIERTO (pasaje oscuro) con las dos hojas rojas PLEGADAS planas a los
+      // lados (sin batir hacia dentro): los mecenas entran y salen por aquí. (La
+      // animación cerrada→abierta al acercarse vendrá luego.)
       const dz = gh * 0.6, doorCol = mix('#7a241a', casa, .03);
       poly([Pg(gc - 0.62, y1, 0), Pg(gc + 0.62, y1, 0), Pg(gc + 0.62, y1, dz + 0.7), Pg(gc - 0.62, y1, dz + 0.7)], dark9);
-      poly([Pg(gc - 0.58, y1, 0), Pg(gc - 0.58, y1 - 0.5, 0), Pg(gc - 0.58, y1 - 0.5, dz), Pg(gc - 0.58, y1, dz)], doorCol);
-      poly([Pg(gc + 0.58, y1, 0), Pg(gc + 0.58, y1 - 0.5, 0), Pg(gc + 0.58, y1 - 0.5, dz), Pg(gc + 0.58, y1, dz)], doorCol);
-      seg(Pg(gc - 0.58, y1 - 0.5, 0), Pg(gc - 0.58, y1 - 0.5, dz), dark(doorCol, .45));
-      seg(Pg(gc + 0.58, y1 - 0.5, 0), Pg(gc + 0.58, y1 - 0.5, dz), dark(doorCol, .45));
+      poly([Pg(gc - 0.62, y1, 0), Pg(gc - 0.5, y1, 0), Pg(gc - 0.5, y1, dz), Pg(gc - 0.62, y1, dz)], doorCol);   // hoja izq plegada
+      poly([Pg(gc + 0.5, y1, 0), Pg(gc + 0.62, y1, 0), Pg(gc + 0.62, y1, dz), Pg(gc + 0.5, y1, dz)], doorCol);   // hoja der plegada
       seg(Pg(gc - 0.62, y1, dz + 0.5), Pg(gc + 0.62, y1, dz + 0.5), capCol);
       // torre-puerta (城樓): cuerpo de madera + friso turquesa + columnas rojas
       const tz = gh, bh = 11, wood = mix('#6a4a2a', casa, .03);
