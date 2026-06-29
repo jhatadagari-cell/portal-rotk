@@ -491,6 +491,15 @@
         return def ? `<div class="hacp-slot full" title="${esc(def.nombre)} ${esc(def.zh || '')}">${def.icon || '∎'}</div>` : '<div class="hacp-slot"></div>';
       }).join('');
       const canStore = hasHome && d.mine && d.money > 0;
+      const canTake = hasHome && d.mine && d.ahorro > 0;
+      const homeBtns = hasHome
+        ? `<div class="hacp-home-row">
+            <button type="button" class="hacp-cp-btn hacp-store" data-act="store"${canStore ? '' : ' disabled'}>🏠 Guardar</button>
+            <button type="button" class="hacp-cp-btn hacp-take" data-act="take"${canTake ? '' : ' disabled'}>👛 Sacar</button>
+          </div>
+          <div class="hacp-inv-note">Guarda el monedero a salvo en casa, o saca de tu ahorro para gastar.</div>`
+        : `<button type="button" class="hacp-cp-btn hacp-store" data-act="store" disabled>🏠 Guardar dinero en casa</button>
+           <div class="hacp-inv-note">🏠 Sin hogar: necesita una Casa de Mecenas (que se la asigne el fundador) para almacenar.</div>`;
       return `<div class="hacp-inv">
         <div class="hacp-inv-h">🎒 Mochila de ${esc(d.it.name)}</div>
         <div class="hacp-wallet">💰 Monedero: <b>${d.money}</b> <span class="hacp-inv-note">monedas</span></div>
@@ -498,8 +507,7 @@
         <div class="hacp-inv-cap">Inventario <b>${flat.length}/${cap}</b></div>
         <div class="hacp-inv-grid">${slots}</div>
         ${marketBtnHTML()}
-        <button type="button" class="hacp-cp-btn hacp-store" data-act="store"${canStore ? '' : ' disabled'}>🏠 Guardar dinero en casa</button>
-        <div class="hacp-inv-note">${hasHome ? 'Lleva todo el monedero a casa y guárdalo a salvo.' : '🏠 Sin hogar: necesita una Casa de Mecenas (que se la asigne el fundador) para almacenar.'}</div>
+        ${homeBtns}
       </div>`;
     }
     // Botón para abrir la tienda, solo si la finca tiene un mercado construido.
@@ -582,6 +590,13 @@
         const n = HacStats.guardar(myId);                 // mueve TODO el monedero al ahorro de casa
         if (n > 0) { toast(`🏠 Guardaste ${n} 💰 a salvo en casa`); buildCharPanel(charId); }
         else toast('No llevas dinero que guardar');
+      });
+      const tk = charEl.querySelector('[data-act="take"]');
+      if (tk && !tk.disabled) tk.addEventListener('click', () => {
+        if (!myId || !window.HacStats) return;
+        const n = HacStats.sacar(myId);                   // saca TODO el ahorro al monedero
+        if (n > 0) { toast(`👛 Sacaste ${n} 💰 de casa`); buildCharPanel(charId); }
+        else toast('No tienes ahorro que sacar');
       });
     }
     function sigOf(d) { return charId + '|' + (d.activa ? (d.enTarea ? 't' : 'g') : '-') + '|' + (d.mine ? 'me' : '-'); }

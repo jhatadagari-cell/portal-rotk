@@ -239,6 +239,8 @@
 .hacp-inv-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:5px; margin-bottom:9px; }
 .hacp-slot{ aspect-ratio:1; border-radius:4px; background:rgba(255,255,255,.03); border:1px solid rgba(201,168,76,.18); }
 .hacp-store{ display:block; width:100%; text-align:center; }
+.hacp-home-row{ display:flex; gap:6px; }
+.hacp-home-row .hacp-cp-btn{ flex:1; text-align:center; padding-left:6px; padding-right:6px; }
 .hacp-inv-note{ font-size:10px; color:var(--parch2); opacity:.8; line-height:1.45; margin-top:6px; }
 .hacp-inv-soon{ opacity:.6; font-style:italic; }
 .hacp-cp-pts{ font-size:11px; color:var(--parch2); margin:3px 0 0; }

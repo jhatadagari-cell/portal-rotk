@@ -89,6 +89,14 @@ const HacStats = (function () {
     r.dinero -= cuanto; r.ahorro += cuanto; persist(r);
     return cuanto;
   }
+  // Saca del ahorro al monedero. n omitido = saca TODO. Devuelve lo retirado.
+  function sacar(mid, n) {
+    const r = ensure(mid);
+    const cuanto = Math.max(0, Math.min(r.ahorro, n == null ? r.ahorro : n));
+    if (!cuanto) return 0;
+    r.ahorro -= cuanto; r.dinero += cuanto; persist(r);
+    return cuanto;
+  }
 
   // Curva de nivel: cada nivel n→n+1 cuesta 50·n XP (acumulado: 25·n·(n-1)).
   // Nivel 1 = 0 XP, 2 = 50, 3 = 150, 4 = 300, 5 = 500…
@@ -135,6 +143,6 @@ const HacStats = (function () {
     return { ok: true };
   }
 
-  return { ready, reload, dinero, ahorro, xp, nivel, progresoNivel, award, comprar, guardar, inventario, capInventario, ocupadas, recompensaExped, DOMS, dbOk: () => ok, TABLE };
+  return { ready, reload, dinero, ahorro, xp, nivel, progresoNivel, award, comprar, guardar, sacar, inventario, capInventario, ocupadas, recompensaExped, DOMS, dbOk: () => ok, TABLE };
 })();
 if (typeof window !== 'undefined') window.HacStats = HacStats;
