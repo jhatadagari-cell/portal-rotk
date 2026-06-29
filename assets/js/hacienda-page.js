@@ -460,7 +460,11 @@
       }
       const earned = window.HacPuntos ? HacPuntos.deMiembro(h.id, id) : 0;
       const money = (window.HacStats && HacStats.dinero) ? HacStats.dinero(id) : 0;   // monedero (XP/dinero reales)
-      return { it, aptId, aptDef, e, eFull, eRegenMin, activa, enTarea, fuera, exped, rest, mine: id === myId, puntos: puntosTotales(id), earned, money };
+      // "Poder personal": nivel 武/文/政 derivado del XP de cada dominio.
+      const stats = (window.HacStats && HacStats.progresoNivel)
+        ? HacStats.DOMS.map(dom => { const p = HacStats.progresoNivel(id, dom); return { dom, nivel: p.nivel, pct: p.pct, xp: p.xp, falta: p.falta }; })
+        : null;
+      return { it, aptId, aptDef, e, eFull, eRegenMin, activa, enTarea, fuera, exped, rest, mine: id === myId, puntos: puntosTotales(id), earned, money, stats };
     }
     // Panel de inventario/monedero que se despliega a la derecha del panel del
     // mecenas. Scaffolding: el dinero y los objetos llegarán al jugar misiones
@@ -499,6 +503,18 @@
       const full = d.e >= 100 ? ' · al máximo' : (d.eFull > 0 ? ` · lleno en ${fmtClock(d.eFull)}` : '');
       return `${pct}${regen}${full}`;
     }
+    // Bloque de stats 武/文/政: nivel (derivado del XP) + barra hacia el siguiente.
+    const DOM_NOMBRE = { militar: 'Militar', cultural: 'Cultural', administrativo: 'Administrativo' };
+    const DOM_COLOR = { militar: '#b23b2e', cultural: '#3a8a5a', administrativo: '#3a6ea5' };
+    function statsHTML(d) {
+      if (!d.stats) return '';
+      const chips = d.stats.map(s => `<div class="hacp-cp-stat" title="${DOM_GLYPH[s.dom]} ${DOM_NOMBRE[s.dom]} · nivel ${s.nivel} · ${s.xp} XP${s.falta ? ` · faltan ${s.falta} para subir` : ''}">
+        <span class="hacp-cp-stat-g" style="color:${DOM_COLOR[s.dom]}">${DOM_GLYPH[s.dom]}</span>
+        <span class="hacp-cp-stat-n">${s.nivel}</span>
+        <i class="hacp-cp-stat-bar"><b style="width:${Math.round(s.pct * 100)}%;background:${DOM_COLOR[s.dom]}"></b></i>
+      </div>`).join('');
+      return `<div class="hacp-cp-stats" id="hacp-cp-stats">${chips}</div>`;
+    }
     function buildCharPanel(id) {
       const d = charData(id); if (!d) { closeCharPanel(); return; }
       let comp = '';
@@ -535,6 +551,7 @@
         <div class="hacp-cp-act" id="hacp-cp-act">${d.it.inside ? '⌂ ' : ''}${esc(d.it.activity || 'Paseando por la finca')}</div>
         <div class="hacp-cp-energy" title="Energía ${d.e}%"><i id="hacp-cp-ebar" style="width:${d.e}%"></i></div>
         <div class="hacp-cp-elabel" id="hacp-cp-elabel">${energyLabel(d)}</div>
+        ${statsHTML(d)}
         ${mision}
         ${d.mine ? `<button type="button" class="hacp-cp-btn hacp-cp-invbtn${invOpen ? ' on' : ''}" data-act="inv">🎒 ${invOpen ? 'Ocultar' : 'Inventario'} · 💰 ${d.money}</button>` : ''}
         ${(d.mine && invOpen) ? invPanelHTML(d) : ''}`;
@@ -582,6 +599,7 @@
       const act = charEl.querySelector('#hacp-cp-act'); if (act) act.textContent = (d.it.inside ? '⌂ ' : '') + (d.it.activity || 'Paseando por la finca');
       const eb = charEl.querySelector('#hacp-cp-ebar'); if (eb) eb.style.width = d.e + '%';
       const el = charEl.querySelector('#hacp-cp-elabel'); if (el) el.innerHTML = energyLabel(d);
+      const st = charEl.querySelector('#hacp-cp-stats'); if (st) st.outerHTML = statsHTML(d);
       const rt = charEl.querySelector('#hacp-cp-rest'); if (rt && d.activa) rt.textContent = fmtClock(d.rest);
     }
 

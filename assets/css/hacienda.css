@@ -201,6 +201,14 @@
 .hacp-cp-energy i{ display:block; height:100%; background:linear-gradient(90deg,#e0b85a,#7fc9a0); transition:width .4s ease; }
 .hacp-cp-elabel{ font-size:11px; color:var(--parch2); margin:4px 0 0; }
 .hacp-cp-elabel b{ color:#e0b85a; }
+/* Stats 武/文/政: nivel (del XP) + barra hacia el siguiente. */
+.hacp-cp-stats{ display:flex; gap:6px; margin:8px 0 2px; }
+.hacp-cp-stat{ flex:1; min-width:0; display:flex; align-items:center; gap:4px; cursor:help;
+  background:rgba(255,255,255,.03); border:1px solid rgba(201,168,76,.16); border-radius:5px; padding:3px 6px; }
+.hacp-cp-stat-g{ font:900 14px 'Noto Serif SC',serif; line-height:1; flex:0 0 auto; }
+.hacp-cp-stat-n{ font:700 13px 'Noto Sans SC',sans-serif; color:var(--parch); font-variant-numeric:tabular-nums; flex:0 0 auto; }
+.hacp-cp-stat-bar{ flex:1 1 auto; height:3px; border-radius:2px; background:rgba(255,255,255,.12); overflow:hidden; }
+.hacp-cp-stat-bar b{ display:block; height:100%; transition:width .4s ease; }
 .hacp-cp-mis{ margin-top:9px; border-top:1px solid rgba(201,168,76,.18); padding-top:8px; }
 .hacp-cp-mis-on{ display:flex; align-items:center; gap:8px; }
 .hacp-cp-mis-on .hacp-cp-btn{ margin-left:auto; }
