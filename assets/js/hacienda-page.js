@@ -788,7 +788,23 @@
       el.querySelectorAll('[data-mov]').forEach(b => b.addEventListener('click', () => { const r = HacStats.meterEnCasa(myId, b.dataset.mov); if (!r.ok) toast(r.motivo); refrescar(); }));
       el.querySelectorAll('[data-take]').forEach(b => b.addEventListener('click', () => { const r = HacStats.sacarDeCasa(myId, b.dataset.take); if (!r.ok) toast(r.motivo); refrescar(); }));
     }
-    function openHome() { if (!myId || !miCasa(myId)) return; buildHome(); ensureHomeEl().hidden = false; }
+    // El mecenas CAMINA hasta su casa y, al llegar, se abre el panel de gestiones.
+    let homeTimer = null;
+    function openHome() {
+      if (!myId || !window.HacStats) return;
+      const casa = miCasa(myId); if (!casa) return;
+      const bid = casa.pos[0] + ',' + casa.pos[1];
+      let opened = false;
+      const doOpen = () => { if (opened) return; opened = true; if (homeTimer) { clearTimeout(homeTimer); homeTimer = null; } buildHome(); ensureHomeEl().hidden = false; };
+      const r = HacFolk.goHome ? HacFolk.goHome(myId, bid, doOpen) : false;
+      if (opened) return;                 // ya estaba en casa / sin ruta → abrió al instante
+      if (!r) { doOpen(); return; }       // ocupado (misión) o sin API → abre directamente
+      // Echó a andar: sigue al mecenas con la cámara y abre al llegar (fallback 8 s).
+      HacFolk.select(myId);
+      if (cam && cam.focusFollow) cam.focusFollow(() => HacFolk.position(myId), 3.2);
+      toast('🚶 Tu mecenas va a casa…');
+      homeTimer = setTimeout(doOpen, 8000);
+    }
     function closeHome() { if (homeEl) homeEl.hidden = true; }
 
     function itemHTML(m, sel) {

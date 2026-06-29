@@ -306,6 +306,25 @@ const HacFolk = (function () {
     return true;
   }
 
+  // "IR A CASA" (local, no compartido): el jugador manda a SU mecenas a una casa
+  // concreta (buildingId = "gx,gy"); al llegar entra y dispara onArrive (abrir el
+  // panel de gestiones). Devuelve 'walking' si echó a andar, 'now' si abre ya (sin
+  // ruta / ya está), false si está ocupado (misión/expedición). Cosmético: el
+  // campo `errand` no se serializa, así que un snapshot lo descarta sin problema.
+  function goHome(id, buildingId, onArrive) {
+    const w = walkers.find(x => x.id === id); if (!w || !wk) return false;
+    if (w.onMission || ['exped-out', 'exped-in', 'fuera', 'saludo'].indexOf(w.state) >= 0) return false;
+    const b = buildingId ? wk.buildings.get(buildingId) : null;
+    const callNow = () => { if (onArrive) try { onArrive(); } catch (e) {} };
+    if (!b || !b.approachKey) { callNow(); return 'now'; }
+    const path = bfs([Math.round(w.fx), Math.round(w.fy)], new Set([b.approachKey]));
+    if (!path) { callNow(); return 'now'; }
+    path.push(b.spotCell);
+    w.insideId = null; w.speech = null; w.chatWith = null; w.meetWith = null;   // corta lo que esté haciendo
+    w.path = path; w.state = 'yendo'; w.goalBid = b.id; w.errand = 'home'; w._homeCb = onArrive; w.moving = false;
+    return 'walking';
+  }
+
   // Visita FORZADA por una misión: la orden lleva una TAREA (taskId); vamos al
   // edificio de SU tipo MÁS CERCANO al mecenas (determinista). Si no hay, deambula.
   function startMissionVisit(w) {
@@ -357,6 +376,13 @@ const HacFolk = (function () {
   }
 
   function onPathDone(w) {
+    if (w.state === 'yendo' && w.errand === 'home') {
+      // Llegó a su casa: entra, "descansa" un rato y abre el panel de gestiones.
+      w.errand = null; w.state = 'tarea'; w.insideId = w.goalBid; w.phase = R.next() * 6.28;
+      w.task = { verbo: 'Descansando', lugar: 'su casa' }; w.taskTimer = 18; w.path = null;
+      const cb = w._homeCb; w._homeCb = null; if (cb) try { cb(); } catch (e) {}
+      return;
+    }
     if (w.state === 'yendo') {
       w.state = 'tarea'; w.insideId = w.goalBid; w.phase = R.next() * 6.28;
       // Elige una tarea del edificio (varias por tipo) y su duración configurada;
@@ -1262,6 +1288,6 @@ const HacFolk = (function () {
     if (!running) { paint(); pushState(); }
   }
 
-  return { start, stop, list, select, selected, position, buildings, buildingTypes, setOrders, drawAvatar };
+  return { start, stop, list, select, selected, position, buildings, buildingTypes, setOrders, drawAvatar, goHome };
 })();
 if (typeof window !== 'undefined') window.HacFolk = HacFolk;
