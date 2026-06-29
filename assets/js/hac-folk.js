@@ -138,7 +138,7 @@ const HacFolk = (function () {
         const id = c.pos[0] + ',' + c.pos[1], def = (B && B.tipo(c.tipo)) || {};
         let sx = 0, sy = 0; cells.forEach(p => { sx += p[0]; sy += p[1]; });
         const cx = Math.round(sx / cells.length), cy = Math.round(sy / cells.length);
-        buildings.set(id, { id, tipo: c.tipo, cx, cy, cells, altura: def.altura || 24, dueno: c.dueno || null, nombre: def.nombre || 'Edificio', dominio: def.dominio || null });
+        buildings.set(id, { id, tipo: c.tipo, cx, cy, cells, altura: def.altura || 24, dueno: c.dueno || null, nombre: def.nombre || 'Edificio', dominio: def.dominio || null, restringido: !!def.restringido });
       }
       if (PASS.has(c.tipo)) return;
       if (B && B.esSuelo && B.esSuelo(c.tipo)) {
@@ -261,18 +261,22 @@ const HacFolk = (function () {
   // Elige un edificio a visitar, sesgado por el DOMINIO del mecenas (militar va
   // a edificios militares, etc.) y por su cargo (los altos frecuentan los salones
   // administrativos/nobles). Con frecuencia, el propio.
+  // Edificios de CLASE (restringido): solo entra quien DOMINA su dominio.
+  function puedeEntrar(w, b) { return !b.restringido || (b.dominio && (w.dominios || []).indexOf(b.dominio) >= 0); }
   function chooseBuilding(w) {
     if (!wk.visitable.length) return null;
-    if (w.homeBid && R.next() < 0.5) { const b = wk.buildings.get(w.homeBid); if (b && b.visitable) return b; }
+    if (w.homeBid && R.next() < 0.5) { const b = wk.buildings.get(w.homeBid); if (b && b.visitable && puedeEntrar(w, b)) return b; }
     const doms = w.dominios || [], noble = (w.cargoTier || 0) >= 2;
-    const weighted = [];
+    const weighted = [], libres = [];
     wk.visitable.forEach(b => {
+      if (!puedeEntrar(w, b)) return;            // bloqueo duro: no apto → no entra
+      libres.push(b);
       let wt = 1;
       if (b.dominio && doms.indexOf(b.dominio) >= 0) wt += 4;
       if (noble && b.dominio === 'administrativo') wt += 2;
       for (let i = 0; i < wt; i++) weighted.push(b);
     });
-    return weighted.length ? weighted[rnd(weighted.length)] : wk.visitable[rnd(wk.visitable.length)];
+    return weighted.length ? weighted[rnd(weighted.length)] : (libres.length ? libres[rnd(libres.length)] : null);
   }
 
   // Intenta arrancar una visita: traza el camino a la puerta y entra en 'yendo'.

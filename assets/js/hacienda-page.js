@@ -288,12 +288,25 @@
       const base = (window.HacEnergia && HacEnergia.COSTE_MISION) || 34;
       return competente ? Math.round(base * 0.5) : base;
     }
+    // ¿Mi mecenas DOMINA un dominio? (aptitud inicial ∪ competencias otorgadas)
+    function dominaDominio(dominio) {
+      return !!(window.HacCompetencias && dominio && HacCompetencias.has(h.id, myId, myApt, dominio));
+    }
+    // ¿Mi mecenas puede hacer la tarea de un tipo de edificio? Los edificios de
+    // CLASE (restringido) solo admiten a quien domina su dominio (bloqueo DURO).
+    function puedeTipo(tipo) {
+      const def = (window.HacBuild && HacBuild.tipo) ? HacBuild.tipo(tipo) : null;
+      if (!def || !def.restringido) return true;
+      return dominaDominio(def.dominio);
+    }
     // Tareas disponibles para mandar: una por TAREA (por tipo de edificio), no por
     // instancia → si hay 4 cuarteles, sale una sola y el sim irá al más cercano.
+    // Las tareas de edificios restringidos se OCULTAN si mi mecenas no es apto.
     function availableTasks() {
       const types = HacFolk.buildingTypes ? HacFolk.buildingTypes() : [];
       const out = [];
       types.forEach(ty => {
+        if (!puedeTipo(ty.tipo)) return;
         const tasks = (window.HacTareas && HacTareas.byTipo) ? HacTareas.byTipo(ty.tipo) : [];
         tasks.forEach(tk => out.push({ taskId: tk.id, nombre: tk.nombre || tk.verbo || 'Tarea', dominio: ty.dominio, duracionSeg: tk.duracionSeg || 60 }));
       });

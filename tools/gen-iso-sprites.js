@@ -438,7 +438,11 @@ const EDIFICIOS = [
     tiers:[{bodyH:14,roofH:13},{bodyH:11,roofH:11}] },
   { id:'salon-doble',      w:4, h:8, roof:'#bb3c1e', baseH:9, bodyH:21, roofH:18, stairs:true, stories:true, bodyH2:11, roofH2:14 },
   { id:'gran-recinto',     w:5, h:8, roof:'#c43c1a', baseH:10, bodyH:24, roofH:20, stairs:true, tier0Ins:0.55, tierIns:0.5,
-    tiers:[{bodyH:14,roofH:13},{bodyH:11,roofH:11}] }
+    tiers:[{bodyH:14,roofH:13},{bodyH:11,roofH:11}] },
+  // ── Edificios de CLASE (tareas restringidas a la aptitud del dominio) ────
+  { id:'instruccion',      w:3, h:3, roof:'#4a4a52', baseH:5, bodyH:15, roofH:13 },                                   // 校場 militar (techo de hierro/pizarra)
+  { id:'academia',         w:3, h:3, roof:'#3a7a4a', baseH:5, bodyH:16, roofH:13, stories:true, bodyH2:9, roofH2:11 }, // 太學 cultural (teja vidriada verde)
+  { id:'cancilleria',      w:3, h:3, roof:'#2f5a86', baseH:6, bodyH:16, roofH:14 }                                     // 官署 administrativo (teja vidriada azul)
 ];
 
 // ── Compuestos: L, U y anillo (alas rectangulares unidas en escuadra) ─────

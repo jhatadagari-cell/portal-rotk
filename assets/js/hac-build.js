@@ -65,6 +65,10 @@ const HacBuild = (function () {
     { id: 'salon-largo', dominio: 'administrativo',       nombre: 'Salón Alargado',     zh: '长殿', capa: 'edificio', footprint: [3, 5], tierMin: 3, unico: false, cargoMin: null,    color: '#bb3c1e', altura: 44, desc: 'Salón de planta alargada para audiencias numerosas.' },
     { id: 'salon-banquete', dominio: 'administrativo',    nombre: 'Salón de Banquetes', zh: '宴殿', capa: 'edificio', footprint: [3, 7], tierMin: 4, unico: false, cargoMin: null,    color: '#b83a1c', altura: 48, desc: 'Largo salón donde la casa celebra sus grandes banquetes.' },
     { id: 'cuartel', dominio: 'militar',           nombre: 'Cuartel',            zh: '营房', capa: 'edificio', footprint: [4, 5], tierMin: 3, unico: false, cargoMin: null,    color: '#6a6a5a', altura: 28, desc: 'Barracones de la guarnición: tropa, oficiales y pertrechos.' },
+    // ── Edificios de CLASE: sus tareas SOLO las puede hacer quien DOMINA el dominio (restringido) ──
+    { id: 'instruccion', dominio: 'militar',        nombre: 'Campo de Instrucción', zh: '校場', capa: 'edificio', footprint: [3, 3], tierMin: 2, unico: false, cargoMin: null, color: '#4a4a52', altura: 33, restringido: true, desc: 'Patio de armas donde se adiestra a la tropa. Solo los de aptitud militar (军) pueden entrenar aquí.' },
+    { id: 'academia', dominio: 'cultural',          nombre: 'Academia',           zh: '太學', capa: 'edificio', footprint: [3, 3], tierMin: 2, unico: false, cargoMin: null, color: '#3a7a4a', altura: 38, restringido: true, desc: 'Aulas de estudio, caligrafía y clásicos. Solo los de aptitud cultural (文) pueden estudiar aquí.' },
+    { id: 'cancilleria', dominio: 'administrativo', nombre: 'Cancillería',        zh: '官署', capa: 'edificio', footprint: [3, 3], tierMin: 2, unico: false, cargoMin: null, color: '#2f5a86', altura: 34, restringido: true, desc: 'Despacho de registros y gobierno de la casa. Solo los de aptitud administrativa (政) pueden despachar aquí.' },
     { id: 'campamento', dominio: 'militar',        nombre: 'Campamento Militar', zh: '军营', capa: 'edificio', footprint: [8, 10], tierMin: 3, unico: false, cargoMin: null, color: '#7a6a4a', altura: 46, exterior: true, desc: 'Campamento de tropas: tiendas, empalizada, hoguera y caballerizas. Solo en terreno exterior.' },
     { id: 'gran-palacio', dominio: 'administrativo',      nombre: 'Gran Palacio',       zh: '大宮', capa: 'edificio', footprint: [4, 7], tierMin: 6, unico: true,  cargoMin: null,    color: '#c43c1a', altura: 70, desc: 'El palacio mayor: triple alero sobre el eje ceremonial de la casa.' },
     // ── Compuestos (huella en L, U o anillo · campo `mask`) ────────────────
@@ -153,6 +157,9 @@ const HacBuild = (function () {
     'salon-largo':      { verbo: 'En audiencia',            lugar: 'el salón alargado' },
     'salon-banquete':   { verbo: 'En el banquete',          lugar: 'el salón de banquetes' },
     cuartel:            { verbo: 'Entrenando',              lugar: 'el cuartel' },
+    instruccion:        { verbo: 'Adiestrándose',          lugar: 'el campo de instrucción' },
+    academia:           { verbo: 'Estudiando los clásicos',lugar: 'la academia' },
+    cancilleria:        { verbo: 'Despachando asuntos',    lugar: 'la cancillería' },
     'gran-palacio':     { verbo: 'En ceremonia',            lugar: 'el gran palacio' },
     'ala-l':            { verbo: 'Deliberando',             lugar: 'el ala en escuadra' },
     'ala-l-mayor':      { verbo: 'Deliberando',             lugar: 'el ala en L' },
