@@ -32,7 +32,7 @@
 <main class="adm" id="adm" hidden>
   <header class="adm-head">
     <div>
-      <p class="adm-eyebrow">Administración</p>
+      <p class="adm-eyebrow">Administración <span id="adm-build" style="opacity:.6;font-weight:400">· build 37</span></p>
       <h1 class="adm-ttl">Panel de Haciendas</h1>
     </div>
     <div class="adm-head-actions">
@@ -145,6 +145,7 @@
 <script>
 (function () {
   'use strict';
+  console.log('%c[admin-haciendas] build 37 — tablero optimizado (hover/render)', 'color:#cda94e;font-weight:700');
 
   async function boot() {
   // Supabase es asíncrono: esperamos a la sesión inicial antes del guard.
