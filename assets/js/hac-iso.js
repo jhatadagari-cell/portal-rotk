@@ -105,7 +105,24 @@ const HacIso = (function () {
     const M = 1;                       // paseo de ronda: anillo de pavimento entre edificios y muros
     const e = M + 0.5 + wt;            // alcance exterior (cara externa del muro) en celdas
     const TERR = 3.4;                  // anchura del TERRITORIO exterior (campo) en celdas
-    const eo = e + TERR;              // alcance total del lienzo (finca + territorio)
+    // Edificios EXTERIORES (anillo perimetral, fuera de los muros): el lienzo crece
+    // lo justo para que se vean —solo hasta lo edificado + un margen—, no hasta todo
+    // el anillo comprado (que puede ser muy hondo y vacío). extCells = sus celdas,
+    // para no plantar árboles encima.
+    let extReach = 0;
+    const extCells = new Set();
+    if (B && opts.mapa && Array.isArray(opts.mapa.construcciones)) {
+      const eT = Number(opts.mapa.exteriorTier) || 0;
+      opts.mapa.construcciones.forEach(c => {
+        const t = B.tipo(c.tipo);
+        if (!t || !t.exterior || !B.enExterior(c, tier, eT)) return;
+        B.celdasOcupadas(c).forEach(([x, y]) => {
+          for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) extCells.add((x + dx) + ',' + (y + dy));
+          extReach = Math.max(extReach, -x, -y, x - (GW - 1), y - (GH - 1));
+        });
+      });
+    }
+    const eo = e + Math.max(TERR, extReach > 0 ? extReach + 2.5 : 0);   // alcance total del lienzo (finca + territorio + exterior edificado)
     // Holgura para que las COPAS de los árboles del territorio (altas y anchas)
     // no se recorten en el borde trasero (cielo) ni en los laterales.
     const SKY = 64, SIDEPAD = 26;
@@ -250,6 +267,7 @@ const HacIso = (function () {
       const riv = isRiver(gx, gy);
       terrTile(gx, gy, riv);
       if (riv) continue;
+      if (extCells.has(gx + ',' + gy)) continue;   // no plantar props sobre/junto a un edificio exterior
       // Orla exterior limpia: sin props en el anillo más externo (evita recortes).
       if (gx === tLo || gx === tHX || gy === tLo || gy === tHY) continue;
       const nearWall = gx >= loX - 1 && gx <= hiX + 1 && gy >= loY - 1 && gy <= hiY + 1;

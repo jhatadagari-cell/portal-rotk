@@ -399,7 +399,14 @@ const HacBuild = (function () {
   // se borran del `mapa`.
   function construccionesValidas(mapa, tier) {
     const lista = (mapa && Array.isArray(mapa.construcciones)) ? mapa.construcciones : [];
-    return lista.filter(c => tipo(c.tipo) && dentroDeRejilla(c, tier));
+    const eT = Number(mapa && mapa.exteriorTier) || 0;
+    return lista.filter(c => {
+      const t = tipo(c.tipo);
+      if (!t) return false;
+      // Los edificios exteriores viven en el anillo (coords fuera de la rejilla);
+      // los normales, dentro de la rejilla.
+      return t.exterior ? enExterior(c, tier, eT) : dentroDeRejilla(c, tier);
+    });
   }
 
   // Sanea un `mapa` venido de fuera (BD, semilla) al shape canónico.
@@ -407,8 +414,12 @@ const HacBuild = (function () {
     const lista = (mapa && Array.isArray(mapa.construcciones)) ? mapa.construcciones : [];
     const construcciones = lista.reduce((acc, c) => {
       if (!c || !tipo(c.tipo) || !Array.isArray(c.pos)) return acc;
-      const gx = Math.max(0, Math.floor(Number(c.pos[0]) || 0));
-      const gy = Math.max(0, Math.floor(Number(c.pos[1]) || 0));
+      // Los edificios exteriores se colocan en el anillo (coords negativas / fuera
+      // de la rejilla): NO se pueden recortar a 0; los normales sí.
+      const ext = !!tipo(c.tipo).exterior;
+      const fx = Math.floor(Number(c.pos[0]) || 0), fy = Math.floor(Number(c.pos[1]) || 0);
+      const gx = ext ? fx : Math.max(0, fx);
+      const gy = ext ? fy : Math.max(0, fy);
       acc.push({
         pos: [gx, gy],
         tipo: c.tipo,
