@@ -9,7 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700;900&family=Cinzel+Decorative:wght@400;700&family=IM+Fell+English:ital@0;1&family=Noto+Sans+SC:wght@300;400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/chrome.css?v=4">
 <link rel="stylesheet" href="assets/css/main.css">
-<link rel="stylesheet" href="assets/css/admin.css?v=38">
+<link rel="stylesheet" href="assets/css/admin.css?v=39">
 </head>
 <body>
 
@@ -32,7 +32,7 @@
 <main class="adm" id="adm" hidden>
   <header class="adm-head">
     <div>
-      <p class="adm-eyebrow">Administración <span id="adm-build" style="opacity:.6;font-weight:400">· build 39</span></p>
+      <p class="adm-eyebrow">Administración <span id="adm-build" style="opacity:.6;font-weight:400">· build 40</span></p>
       <h1 class="adm-ttl">Panel de Haciendas</h1>
     </div>
     <div class="adm-head-actions">
@@ -145,7 +145,7 @@
 <script>
 (function () {
   'use strict';
-  console.log('%c[admin-haciendas] build 39 — botón construir flotante (hover/render)', 'color:#cda94e;font-weight:700');
+  console.log('%c[admin-haciendas] build 40 — tablero grande + fix margen paleta (hover/render)', 'color:#cda94e;font-weight:700');
 
   async function boot() {
   // Supabase es asíncrono: esperamos a la sesión inicial antes del guard.
@@ -295,9 +295,9 @@
     // ENTERO quepa en el escenario (ancho y alto) sin scroll.
     const GAP = 2;
     const _wFit = Math.floor((_stageW - (COLS - 1) * GAP) / COLS);
-    const _stageH = Math.max(260, (window.innerHeight || 800) * 0.62);
+    const _stageH = Math.max(420, (window.innerHeight || 800) * 0.84);
     const _hFit = Math.floor((_stageH - (ROWS - 1) * GAP) / ROWS);
-    const cellPx = Math.max(4, Math.min(40, _wFit, _hFit));
+    const cellPx = Math.max(4, Math.min(54, _wFit, _hFit));
     const STRIDE = cellPx + GAP;
     const canvasW = COLS * STRIDE - GAP, canvasH = ROWS * STRIDE - GAP;
 
@@ -311,9 +311,9 @@
     // Paleta visual (sustituye al <select>): edificios agrupados por DOMINIO
     // (color), y suelos/muros/decoración por categoría. Los de clase llevan 🔒.
     const _DOMS = [
-      { key: 'administrativo', label: 'Administrativo', sw: '#5a8fd0', cls: 'adm', zh: '政' },
-      { key: 'militar',        label: 'Militar',        sw: '#c0463a', cls: 'mil', zh: '军' },
-      { key: 'cultural',       label: 'Cultural',       sw: '#4fa06a', cls: 'cul', zh: '文' },
+      { key: 'administrativo', label: 'Administrativo', sw: '#5a8fd0', cls: 'dadm', zh: '政' },
+      { key: 'militar',        label: 'Militar',        sw: '#c0463a', cls: 'dmil', zh: '军' },
+      { key: 'cultural',       label: 'Cultural',       sw: '#4fa06a', cls: 'dcul', zh: '文' },
     ];
     const _bySize = (a, b) => { const na = norm(a.footprint), nb = norm(b.footprint); return na[0] - nb[0] || na[1] - nb[1] || a.tierMin - b.tierMin; };
     const _palBtn = (t) => {
@@ -549,7 +549,7 @@
         const on = ini || HacCompetencias.granted(h.id, pid).indexOf(d) >= 0;
         const def = HacCompetencias.def(d) || {};
         const ttl = (def.nombre || d) + (ini ? ' · innata (aptitud)' : (on ? ' · otorgada (clic para quitar)' : ' · clic para otorgar'));
-        const cls = d === 'militar' ? 'mil' : d === 'cultural' ? 'cul' : 'adm';
+        const cls = d === 'militar' ? 'dmil' : d === 'cultural' ? 'dcul' : 'dadm';
         return `<button type="button" class="adm-comp adm-cdot ${cls}${on ? ' on' : ''}${ini ? ' innate' : ''}" data-dom="${d}"${ini ? ' disabled' : ''} title="${esc(ttl)}">${esc(def.zh || def.icon || d[0])}</button>`;
       }).join('') : '<span class="adm-hint">—</span>';
       return `
