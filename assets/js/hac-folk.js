@@ -82,7 +82,8 @@ const HacFolk = (function () {
   const SCALE = (window.HacIso && HacIso.SCALE) || 2;   // px de dispositivo por px lógico
   const SPRITE_DISP = 1;                                // px de dispositivo por px del sprite (1 = ratio entero, nítido)
   const MERCHANT_LOOK = { robe: '#3f6e9c', accent: '#d4a83a', piel: 1, pelo: 1 };   // aspecto del mercader
-  const MKT_CRIES = ['好茶！', '客官，请！', '上等好茶', '新茶到！', '茶香满！', '来看看吧'];
+  const MKT_CRIES = ['¡Buen té!', '¡Pasad y ved!', '¡Té recién llegado!', '¡Té de las montañas!', '¡El mejor de la comarca!', '¡Probad, señor!', '¡Hojas de primavera!'];
+  const MKT_SALUDOS = ['¡Bienvenido, señor!', '¡Adelante, adelante!', '¡Honráis mi puesto!', '¿Un buen té?'];
   const MKT_DIRS = ['S', 'SE', 'SW', 'E', 'S', 'SE'];   // mira sobre todo al cliente (sur)
   // RNG propio del mercader (NO toca el stream compartido R → no desincroniza el sim).
   function mrand(mk) { mk._r = (mk._r * 1664525 + 1013904223) >>> 0; return mk._r / 4294967296; }
@@ -810,7 +811,7 @@ const HacFolk = (function () {
       }
       // Parado: si pasa un cliente, reverencia; si no, decide qué hacer al expirar el timer.
       mk.bowing = near;
-      if (near && !mk.speech && mrand(mk) < 0.02) { mk.speech = '抱拳'; mk.speechT = 1.6; }
+      if (near && !mk.speech && mrand(mk) < 0.02) { mk.speech = MKT_SALUDOS[Math.floor(mrand(mk) * MKT_SALUDOS.length)]; mk.speechT = 1.8; }
       mk.timer -= dt;
       if (mk.timer > 0) continue;
       const r = mrand(mk);
