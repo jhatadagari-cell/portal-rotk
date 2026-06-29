@@ -35,14 +35,13 @@ const HacStats = (function () {
     return client;
   }
   function rowToObj(r) {
-    let inv = [];
-    try { inv = Array.isArray(r.inventario) ? r.inventario : (r.inventario ? JSON.parse(r.inventario) : []); } catch (e) { inv = []; }
+    const parseInv = (v) => { try { return Array.isArray(v) ? v : (v ? JSON.parse(v) : []); } catch (e) { return []; } };
     return {
       miembroId: r.miembro_id, dinero: Number(r.dinero) || 0,
       militar: Number(r.xp_militar) || 0, cultural: Number(r.xp_cultural) || 0,
       administrativo: Number(r.xp_administrativo) || 0,
-      cap: Number(r.cap_inventario) || 8, inv, ahorro: Number(r.ahorro) || 0,
-      casaPos: r.casa_pos || null,
+      cap: Number(r.cap_inventario) || 8, inv: parseInv(r.inventario), ahorro: Number(r.ahorro) || 0,
+      casaPos: r.casa_pos || null, casaInv: parseInv(r.casa_inv),
     };
   }
   async function load() {
@@ -61,16 +60,22 @@ const HacStats = (function () {
   function reload() { readyPromise = load(); return readyPromise; }
 
   function row(mid) { return cache.find(r => r.miembroId === mid) || null; }
-  function ensure(mid) { let r = row(mid); if (!r) { r = { miembroId: mid, dinero: 0, militar: 0, cultural: 0, administrativo: 0, cap: 8, inv: [], ahorro: 0, casaPos: null }; cache.push(r); } return r; }
+  function ensure(mid) { let r = row(mid); if (!r) { r = { miembroId: mid, dinero: 0, militar: 0, cultural: 0, administrativo: 0, cap: 8, inv: [], ahorro: 0, casaPos: null, casaInv: [] }; cache.push(r); } return r; }
   function dinero(mid) { const r = row(mid); return r ? r.dinero : 0; }
   function ahorro(mid) { const r = row(mid); return r ? r.ahorro : 0; }
   function casaPos(mid) { const r = row(mid); return r ? r.casaPos : null; }
   // Conjunto de posiciones "gx,gy" de casas YA compradas por algún mecenas.
   function casasReclamadas() { const s = new Set(); cache.forEach(r => { if (r.casaPos) s.add(r.casaPos); }); return s; }
+  // miembroId (=personajeId) del dueño de una casa en "gx,gy", o null.
+  function duenoDeCasa(pos) { const r = cache.find(x => x.casaPos === pos); return r ? r.miembroId : null; }
   function xp(mid, dom) { const r = row(mid); return r ? (r[dom] || 0) : 0; }
   function capInventario(mid) { const r = row(mid); return r ? r.cap : 8; }
   function inventario(mid) { const r = row(mid); return r ? r.inv.slice() : []; }
+  function casaInventario(mid) { const r = row(mid); return r ? r.casaInv.slice() : []; }
   function ocupadas(mid) { const r = row(mid); return r ? r.inv.reduce((s, it) => s + (it.n || 1), 0) : 0; }
+  const cuenta = (arr) => arr.reduce((s, it) => s + (it.n || 1), 0);
+  function quita(arr, id) { const e = arr.find(x => x.id === id); if (!e) return false; e.n = (e.n || 1) - 1; if (e.n <= 0) arr.splice(arr.indexOf(e), 1); return true; }
+  function mete(arr, id) { const e = arr.find(x => x.id === id); if (e) e.n = (e.n || 1) + 1; else arr.push({ id, n: 1 }); }
 
   async function persist(r) {
     try {
@@ -78,7 +83,7 @@ const HacStats = (function () {
       const { error } = await client.from(TABLE).upsert({
         miembro_id: r.miembroId, dinero: r.dinero, xp_militar: r.militar, xp_cultural: r.cultural,
         xp_administrativo: r.administrativo, cap_inventario: r.cap, inventario: r.inv, ahorro: r.ahorro,
-        casa_pos: r.casaPos, actualizado: new Date().toISOString(),
+        casa_pos: r.casaPos, casa_inv: r.casaInv, actualizado: new Date().toISOString(),
       });
       if (error) throw error;
     } catch (e) { console.error('[HacStats] persist', e); }
@@ -157,6 +162,31 @@ const HacStats = (function () {
     return { ok: true };
   }
 
-  return { ready, reload, dinero, ahorro, casaPos, casasReclamadas, comprarCasa, xp, nivel, progresoNivel, award, comprar, guardar, sacar, inventario, capInventario, ocupadas, recompensaExped, DOMS, dbOk: () => ok, TABLE };
+  // Mete un objeto de la MOCHILA al almacén de CASA (requiere casa).
+  function meterEnCasa(mid, id) {
+    const r = ensure(mid);
+    if (!r.casaPos) return { ok: false, motivo: 'No tienes casa' };
+    if (!quita(r.inv, id)) return { ok: false, motivo: 'No llevas ese objeto' };
+    mete(r.casaInv, id); persist(r); return { ok: true };
+  }
+  // Saca un objeto de CASA a la MOCHILA (respeta la capacidad de la mochila).
+  function sacarDeCasa(mid, id) {
+    const r = ensure(mid);
+    if (cuenta(r.inv) >= r.cap) return { ok: false, motivo: 'Mochila llena' };
+    if (!quita(r.casaInv, id)) return { ok: false, motivo: 'No está en casa' };
+    mete(r.inv, id); persist(r); return { ok: true };
+  }
+  // ADMIN: libera la casa de un mecenas (al expulsarlo). Update PARCIAL (solo
+  // casa_pos) para no pisar el dinero/inventario que el jugador haya cambiado.
+  async function liberarCasa(mid) {
+    const r = row(mid); if (r) r.casaPos = null;        // optimista en caché
+    try {
+      const client = await sb();
+      const { error } = await client.from(TABLE).update({ casa_pos: null }).eq('miembro_id', mid);
+      if (error) throw error;
+    } catch (e) { console.error('[HacStats] liberarCasa', e); }
+  }
+
+  return { ready, reload, dinero, ahorro, casaPos, casasReclamadas, duenoDeCasa, comprarCasa, liberarCasa, xp, nivel, progresoNivel, award, comprar, guardar, sacar, meterEnCasa, sacarDeCasa, inventario, casaInventario, capInventario, ocupadas, recompensaExped, DOMS, dbOk: () => ok, TABLE };
 })();
 if (typeof window !== 'undefined') window.HacStats = HacStats;

@@ -318,7 +318,8 @@
       return ((h.mapa && h.mapa.construcciones) || []).find(c => c.tipo === 'casa' && c.dueno != null && String(c.dueno) === mid) || null;
     }
     const PRECIO_CASA = 150;
-    const casaKey = (c) => c.pos[0] + ',' + c.pos[1];
+    // Clave de casa con id de finca (evita colisiones "gx,gy" entre haciendas).
+    const casaKey = (c) => h.id + '@' + c.pos[0] + ',' + c.pos[1];
     const casasFinca = () => ((h.mapa && h.mapa.construcciones) || []).filter(c => c.tipo === 'casa');
     // Casa de un mecenas: la asignada por el admin (dueño) O la que él COMPRÓ (casa_pos).
     function miCasa(personajeId) {
@@ -533,11 +534,8 @@
       const canBuyHome = !!libre && d.money >= PRECIO_CASA;
       let homeBtns;
       if (hasHome) {
-        homeBtns = `<div class="hacp-home-row">
-            <button type="button" class="hacp-cp-btn hacp-store" data-act="store"${canStore ? '' : ' disabled'}>🏠 Guardar</button>
-            <button type="button" class="hacp-cp-btn hacp-take" data-act="take"${canTake ? '' : ' disabled'}>👛 Sacar</button>
-          </div>
-          <div class="hacp-inv-note">Guarda el monedero a salvo en casa, o saca de tu ahorro para gastar.</div>`;
+        homeBtns = `<button type="button" class="hacp-cp-btn hacp-gohome" data-act="gohome">🏠 Ir a casa</button>
+          <div class="hacp-inv-note">En tu casa guardas el dinero a salvo y almacenas objetos.</div>`;
       } else if (libre) {
         homeBtns = `<button type="button" class="hacp-cp-btn hacp-buyhome" data-act="buyhome"${canBuyHome ? '' : ' disabled'}>🏠 Comprar casa · 💰 ${PRECIO_CASA}</button>
           <div class="hacp-inv-note">Compra una Casa de Mecenas libre de la finca para guardar tu dinero a salvo.${canBuyHome ? '' : ' (Aún no te llega el dinero.)'}</div>`;
@@ -634,20 +632,8 @@
       if (ib) ib.addEventListener('click', () => { invOpen = !invOpen; buildCharPanel(charId); });
       const shb = charEl.querySelector('[data-act="shop"]');
       if (shb) shb.addEventListener('click', openShop);
-      const sb = charEl.querySelector('[data-act="store"]');
-      if (sb && !sb.disabled) sb.addEventListener('click', () => {
-        if (!myId || !window.HacStats) return;
-        const n = HacStats.guardar(myId);                 // mueve TODO el monedero al ahorro de casa
-        if (n > 0) { toast(`🏠 Guardaste ${n} 💰 a salvo en casa`); buildCharPanel(charId); }
-        else toast('No llevas dinero que guardar');
-      });
-      const tk = charEl.querySelector('[data-act="take"]');
-      if (tk && !tk.disabled) tk.addEventListener('click', () => {
-        if (!myId || !window.HacStats) return;
-        const n = HacStats.sacar(myId);                   // saca TODO el ahorro al monedero
-        if (n > 0) { toast(`👛 Sacaste ${n} 💰 de casa`); buildCharPanel(charId); }
-        else toast('No tienes ahorro que sacar');
-      });
+      const gh = charEl.querySelector('[data-act="gohome"]');
+      if (gh) gh.addEventListener('click', openHome);
       const bh = charEl.querySelector('[data-act="buyhome"]');
       if (bh && !bh.disabled) bh.addEventListener('click', () => {
         if (!myId || !window.HacStats) return;
@@ -750,6 +736,60 @@
       buildShop();                 // refresca dinero y botones
       if (charId) buildCharPanel(charId);   // refresca monedero/inventario/energía
     }
+
+    // ── Casa (gestiones del hogar): overlay con dinero + objetos ─────────────
+    // "Ir a casa" abre este panel; allí guardas/sacas dinero y mueves objetos
+    // entre la mochila y el almacén de la casa.
+    let homeEl = null;
+    function ensureHomeEl() {
+      if (homeEl) return homeEl;
+      homeEl = document.createElement('div');
+      homeEl.className = 'hacp-shop hacp-home-ov'; homeEl.id = 'hacp-home'; homeEl.hidden = true;
+      vp.appendChild(homeEl);
+      ['pointerdown', 'pointerup', 'wheel', 'click'].forEach(ev => homeEl.addEventListener(ev, (e) => e.stopPropagation(), { passive: false }));
+      return homeEl;
+    }
+    function objChip(it, dir) {
+      const def = window.HacTienda && HacTienda.get(it.id), ic = def ? def.icon : '∎', nm = def ? def.nombre : it.id;
+      const cnt = (it.n || 1) > 1 ? ` ×${it.n}` : '';
+      return dir === 'store'
+        ? `<button type="button" class="hacp-obj" data-mov="${esc(it.id)}" title="Guardar en casa">${ic} ${esc(nm)}${cnt} →</button>`
+        : `<button type="button" class="hacp-obj" data-take="${esc(it.id)}" title="Llevar a la mochila">← ${ic} ${esc(nm)}${cnt}</button>`;
+    }
+    function buildHome() {
+      const el = ensureHomeEl();
+      const money = HacStats.dinero(myId), ahorro = HacStats.ahorro(myId);
+      const mochila = HacStats.inventario(myId), casa = HacStats.casaInventario(myId);
+      const cap = HacStats.capInventario(myId), nMo = mochila.reduce((s, i) => s + (i.n || 1), 0);
+      const me = HacFolk.list().find(w => w.id === myId), nm = me ? me.name : 'tu mecenas';
+      const moch = mochila.length ? mochila.map(it => objChip(it, 'store')).join('') : '<span class="hacp-inv-note">Mochila vacía</span>';
+      const enc = casa.length ? casa.map(it => objChip(it, 'take')).join('') : '<span class="hacp-inv-note">Nada guardado</span>';
+      el.innerHTML = `
+        <div class="hacp-shop-box">
+          <button type="button" class="hacp-shop-x" data-act="home-close" aria-label="Cerrar">✕</button>
+          <div class="hacp-shop-h"><span class="hacp-shop-zh">宅</span> Casa de ${esc(nm)}</div>
+          <div class="hacp-shop-sub">Aquí tu dinero y tus objetos están a salvo (no se pierden en expediciones).</div>
+          <div class="hacp-home-money">
+            <span>💰 Monedero: <b>${money}</b></span><span>🏠 En casa: <b class="g">${ahorro}</b></span>
+          </div>
+          <div class="hacp-home-row2">
+            <button type="button" class="hacp-cp-btn" data-act="home-store"${money > 0 ? '' : ' disabled'}>🏠 Guardar todo</button>
+            <button type="button" class="hacp-cp-btn" data-act="home-take"${ahorro > 0 ? '' : ' disabled'}>👛 Sacar todo</button>
+          </div>
+          <div class="hacp-home-objs">
+            <div class="hacp-home-col"><div class="hacp-home-colh">🎒 Mochila <span>${nMo}/${cap}</span></div><div class="hacp-home-list">${moch}</div></div>
+            <div class="hacp-home-col"><div class="hacp-home-colh">🏠 Almacén de casa</div><div class="hacp-home-list">${enc}</div></div>
+          </div>
+        </div>`;
+      el.querySelector('[data-act="home-close"]').addEventListener('click', closeHome);
+      const refrescar = () => { buildHome(); if (charId) buildCharPanel(charId); };
+      const ms = el.querySelector('[data-act="home-store"]'); if (ms && !ms.disabled) ms.addEventListener('click', () => { const n = HacStats.guardar(myId); if (n > 0) toast(`🏠 Guardaste ${n} 💰`); refrescar(); });
+      const mt = el.querySelector('[data-act="home-take"]'); if (mt && !mt.disabled) mt.addEventListener('click', () => { const n = HacStats.sacar(myId); if (n > 0) toast(`👛 Sacaste ${n} 💰`); refrescar(); });
+      el.querySelectorAll('[data-mov]').forEach(b => b.addEventListener('click', () => { const r = HacStats.meterEnCasa(myId, b.dataset.mov); if (!r.ok) toast(r.motivo); refrescar(); }));
+      el.querySelectorAll('[data-take]').forEach(b => b.addEventListener('click', () => { const r = HacStats.sacarDeCasa(myId, b.dataset.take); if (!r.ok) toast(r.motivo); refrescar(); }));
+    }
+    function openHome() { if (!myId || !miCasa(myId)) return; buildHome(); ensureHomeEl().hidden = false; }
+    function closeHome() { if (homeEl) homeEl.hidden = true; }
 
     function itemHTML(m, sel) {
       const mine = m.id === myId;

@@ -239,9 +239,22 @@
 .hacp-inv-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:5px; margin-bottom:9px; }
 .hacp-slot{ aspect-ratio:1; border-radius:4px; background:rgba(255,255,255,.03); border:1px solid rgba(201,168,76,.18); }
 .hacp-store{ display:block; width:100%; text-align:center; }
-.hacp-buyhome{ display:block; width:100%; text-align:center; }
+.hacp-buyhome,.hacp-gohome{ display:block; width:100%; text-align:center; }
 .hacp-home-row{ display:flex; gap:6px; }
 .hacp-home-row .hacp-cp-btn{ flex:1; text-align:center; padding-left:6px; padding-right:6px; }
+/* Panel "Casa": reusa el overlay .hacp-shop; añade dinero y dos columnas de objetos. */
+.hacp-home-ov .hacp-shop-box{ width:min(460px,94%); }
+.hacp-home-money{ display:flex; gap:14px; flex-wrap:wrap; font:600 14px 'Noto Sans SC',sans-serif; color:var(--parch); margin:4px 0 10px; }
+.hacp-home-money b{ color:#e0b85a; font-variant-numeric:tabular-nums; }
+.hacp-home-money b.g{ color:#7fc9a0; }
+.hacp-home-row2{ display:flex; gap:8px; margin-bottom:14px; }
+.hacp-home-row2 .hacp-cp-btn{ flex:1; text-align:center; }
+.hacp-home-objs{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.hacp-home-colh{ font:700 10.5px 'Cinzel Decorative',serif; letter-spacing:.06em; text-transform:uppercase; color:var(--hac,var(--gold)); opacity:.85; margin-bottom:6px; display:flex; justify-content:space-between; }
+.hacp-home-colh span{ color:var(--parch2); }
+.hacp-home-list{ display:flex; flex-direction:column; gap:4px; min-height:40px; background:rgba(255,255,255,.02); border:1px solid rgba(201,168,76,.14); border-radius:6px; padding:6px; }
+.hacp-obj{ text-align:left; background:rgba(201,168,76,.1); color:var(--parch); border:1px solid rgba(201,168,76,.22); border-radius:5px; padding:4px 7px; font:600 12px 'Noto Sans SC',sans-serif; cursor:pointer; }
+.hacp-obj:hover{ background:rgba(201,168,76,.26); color:#fff; }
 .hacp-inv-note{ font-size:10px; color:var(--parch2); opacity:.8; line-height:1.45; margin-top:6px; }
 .hacp-inv-soon{ opacity:.6; font-style:italic; }
 .hacp-cp-pts{ font-size:11px; color:var(--parch2); margin:3px 0 0; }

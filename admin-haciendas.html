@@ -142,6 +142,7 @@
 <script src="assets/js/hac-perfiles.js?v=1"></script>
 <script src="assets/js/hac-competencias.js?v=1"></script>
 <script src="assets/js/hac-puntos.js?v=1"></script>
+<script src="assets/js/hac-stats.js?v=6"></script>
 <script>
 (function () {
   'use strict';
@@ -180,6 +181,7 @@
   if (window.HacCompetencias) await HacCompetencias.ready();
   // Puntos de misión (para el prestigio colectivo y confirmar la subida de nivel).
   if (window.HacPuntos) await HacPuntos.ready();
+  if (window.HacStats) await HacStats.ready();   // claims de casas (para proteger su borrado)
 
   const { haciendaPuntos, tierDePuntos, progresoHacia, rangoDePuntos, clampTier, nivelEfectivo, tierPorNivel, maxMiembros } = HacCalc;
   const RANGOS = (typeof HAC_RANGOS !== 'undefined') ? HAC_RANGOS : [];
@@ -243,6 +245,16 @@
   // revierte recargando.
   function saveHacienda(h) {
     HacStore.upsert(norm(h)).catch(onWriteError('guardar'));
+  }
+
+  // Si la construcción es una CASA que un mecenas COMPRÓ, devuelve {pid, mid, nombre};
+  // si no, null. Sirve para impedir borrarla (hay que expulsar antes al dueño).
+  function casaClaim(h, c) {
+    if (!c || c.tipo !== 'casa' || !window.HacStats || !HacStats.duenoDeCasa) return null;
+    const pid = HacStats.duenoDeCasa(h.id + '@' + c.pos[0] + ',' + c.pos[1]);
+    if (!pid) return null;
+    const m = (h.miembros || []).find(x => x.personajeId === pid);
+    return { pid, mid: m ? m.id : null, nombre: m ? m.nombre : 'un mecenas' };
   }
 
   // ── Render lista ──
@@ -747,6 +759,15 @@
         b.addEventListener('click', () => commit((Number(input.value) || 0) + Number(b.dataset.step))));
       tr.querySelector('.adm-del').addEventListener('click', () => {
         if (!confirm('¿Quitar a este mecenas de la hacienda?')) return;
+        const m = h.miembros.find(x => x.id === mid);
+        // ¿Tiene una casa COMPRADA en esta finca? → 2ª confirmación + liberar la casa.
+        const pid = m ? m.personajeId : null;
+        const cp = (pid && window.HacStats && HacStats.casaPos) ? (HacStats.casaPos(pid) || '') : '';
+        const tieneCasa = cp.indexOf(h.id + '@') === 0;
+        if (tieneCasa) {
+          if (!confirm(`⚠ ${m.nombre} tiene una casa comprada en esta hacienda. Al expulsarlo PERDERÁ su casa (el dinero/objetos guardados quedarán inaccesibles). ¿Expulsar de todos modos?`)) return;
+          if (HacStats.liberarCasa) HacStats.liberarCasa(pid);   // libera la casa (casa_pos = null)
+        }
         h.miembros = h.miembros.filter(x => x.id !== mid);
         saveHacienda(h);
         render();
@@ -1055,7 +1076,11 @@
           }
           const occ = cubre(gx, gy);
           if (occ) {
-            if (deleteMode) { h.mapa.construcciones = h.mapa.construcciones.filter(x => x !== occ); saveHacienda(h); render(); return; }
+            if (deleteMode) {
+              const cl = casaClaim(h, occ);
+              if (cl) { alert(`No puedes eliminar esta casa: pertenece a ${cl.nombre}. Para quitarla, expulsa antes a ese mecenas de la hacienda.`); return; }
+              h.mapa.construcciones = h.mapa.construcciones.filter(x => x !== occ); saveHacienda(h); render(); return;
+            }
             const selDef = HacBuild.tipo(boardTipo);
             if (selDef && selDef.puerta && occ.tipo === 'muralla') {
               const g2 = { pos: [occ.pos[0], occ.pos[1]], tipo: boardTipo, rot: occ.rot || 0, dueno: null, nivel: 1 };
@@ -1176,6 +1201,8 @@
       document.querySelectorAll('#adm-detail .adm-build-del').forEach(b =>
         b.addEventListener('click', () => {
           const gx = Number(b.dataset.gx), gy = Number(b.dataset.gy);
+          const cl = casaClaim(h, h.mapa.construcciones.find(c => c.pos[0] === gx && c.pos[1] === gy));
+          if (cl) { alert(`No puedes eliminar esta casa: pertenece a ${cl.nombre}. Para quitarla, expulsa antes a ese mecenas de la hacienda.`); return; }
           h.mapa.construcciones = h.mapa.construcciones.filter(c => !(c.pos[0] === gx && c.pos[1] === gy));
           saveHacienda(h);
           render();
