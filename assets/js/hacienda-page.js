@@ -356,6 +356,13 @@
       { dom: 'administrativo', nombre: '政 Recaudar tributos (fuera)' },
     ];
     const DOM_GLYPH = { militar: '武', cultural: '文', administrativo: '政' };
+    // Riesgo de una expedición: base 30 %, −3 % por nivel del dominio (mín. 5 %).
+    // Subir de nivel (misiones/tomos del mercado) hace las expediciones más seguras.
+    function failChance(dom) {
+      const nivel = (window.HacStats && HacStats.nivel && dom) ? HacStats.nivel(myId, dom) : 1;
+      return Math.max(0.05, 0.30 - (nivel - 1) * 0.03);
+    }
+    const expeditionFailed = (dom) => Math.random() < failChance(dom);
     const fmtDur = (s) => (s < 60) ? Math.round(s) + 's' : Math.round(s / 60) + ' min';
     // Cuenta atrás legible: «1m 45s» / «45s».
     const fmtClock = (s) => { s = Math.max(0, Math.round(s)); const m = Math.floor(s / 60), r = s % 60; return m ? `${m}m ${r}s` : `${r}s`; };
@@ -378,6 +385,21 @@
         let dom = null;
         if (o.tipo === 'expedicion') dom = String(o.targetId || '').replace('exped:', '') || null;
         else { const task = (window.HacTareas && HacTareas.get) ? HacTareas.get(o.targetId) : null; dom = (task && window.HacBuild) ? (HacBuild.tipo(task.tipo) || {}).dominio : null; }
+        // Las EXPEDICIONES (fuera de la finca) pueden FALLAR: a más nivel del dominio,
+        // menos riesgo. Al fallar pierdes parte del MONEDERO (el ahorro de casa está a
+        // salvo) y no traes botín ni prestigio. Las misiones DENTRO no fallan.
+        if (o.tipo === 'expedicion' && expeditionFailed(dom)) {
+          let lost = 0;
+          if (window.HacStats) {
+            const wallet = HacStats.dinero(myId);
+            lost = Math.round(wallet * 0.5);                         // pierde la mitad de lo que llevaba encima
+            if (lost > 0) HacStats.award(myId, { dinero: -lost });
+          }
+          HacOrdenes.clear(h.id, myId);
+          toast(lost > 0 ? `❌ Expedición fallida · perdiste ${lost} 💰 del monedero` : '❌ Expedición fallida · sin botín');
+          _wasOnMission = false; applyOrders();
+          return;
+        }
         const r = HacPuntos.recompensa(costeMision(dom), o.duracionSeg || 60);
         HacPuntos.award(h.id, myId, r);
         // Expediciones: además del prestigio a la casa, dan dinero + XP PERSONAL al mecenas.
@@ -551,8 +573,13 @@
           mision = `<div class="hacp-cp-mis hacp-cp-mis-on"><span class="hacp-cp-flag">${flag}</span><button type="button" class="hacp-cp-btn" data-act="release">Liberar</button></div>`;
         } else {
           const tasks = availableTasks();   // por TAREA (deduplicada por tipo), con su duración propia
-          const opts = tasks.map(t => `<option value="${esc(t.taskId)}">${esc(t.nombre)} · ${fmtDur(t.duracionSeg)} · −${costeMision(t.dominio)}⚡</option>`).join('');
-          if (tasks.length) mision = `<div class="hacp-cp-mis"><label class="hacp-cp-lbl">Enviar a misión</label><div class="hacp-cp-row"><select class="hacp-cp-sel">${opts}</select><button type="button" class="hacp-cp-btn hacp-cp-go" data-act="dispatch">Enviar</button></div></div>`;
+          const opts = tasks.map(t => {
+            const riesgo = t.exped ? ` · ⚠${Math.round(failChance(t.dominio) * 100)}%` : '';
+            return `<option value="${esc(t.taskId)}">${esc(t.nombre)} · ${fmtDur(t.duracionSeg)} · −${costeMision(t.dominio)}⚡${riesgo}</option>`;
+          }).join('');
+          const hayExped = tasks.some(t => t.exped);
+          const nota = hayExped ? `<div class="hacp-inv-note">⚠ Las expediciones pueden fallar y perderías la mitad del <b>monedero</b> (el dinero de casa está a salvo). Sube de nivel para arriesgar menos.</div>` : '';
+          if (tasks.length) mision = `<div class="hacp-cp-mis"><label class="hacp-cp-lbl">Enviar a misión</label><div class="hacp-cp-row"><select class="hacp-cp-sel">${opts}</select><button type="button" class="hacp-cp-btn hacp-cp-go" data-act="dispatch">Enviar</button></div>${nota}</div>`;
         }
       }
       charEl.innerHTML = `
