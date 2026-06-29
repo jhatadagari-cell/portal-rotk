@@ -337,6 +337,7 @@
       { dom: 'cultural',       nombre: '文 Embajada · viaje de estudios (fuera)' },
       { dom: 'administrativo', nombre: '政 Recaudar tributos (fuera)' },
     ];
+    const DOM_GLYPH = { militar: '武', cultural: '文', administrativo: '政' };
     const fmtDur = (s) => (s < 60) ? Math.round(s) + 's' : Math.round(s / 60) + ' min';
     // Puntos de un mecenas: base (admin) + ganados en misiones (ledger propio).
     function basePuntos(id) { const m = (h.miembros || []).find(x => x.personajeId === id); return m ? (Number(m.puntos) || 0) : 0; }
@@ -359,8 +360,15 @@
         else { const task = (window.HacTareas && HacTareas.get) ? HacTareas.get(o.targetId) : null; dom = (task && window.HacBuild) ? (HacBuild.tipo(task.tipo) || {}).dominio : null; }
         const r = HacPuntos.recompensa(costeMision(dom), o.duracionSeg || 60);
         HacPuntos.award(h.id, myId, r);
+        // Expediciones: además del prestigio a la casa, dan dinero + XP PERSONAL al mecenas.
+        let extra = '';
+        if (o.tipo === 'expedicion' && window.HacStats) {
+          const rec = HacStats.recompensaExped(dom, o.duracionSeg || 120);
+          HacStats.award(myId, { dinero: rec.dinero, xp: rec.dom ? { [rec.dom]: rec.xp } : null });
+          extra = ` · +${rec.dinero}💰 · +${rec.xp} XP ${DOM_GLYPH[rec.dom] || ''}`.trimEnd();
+        }
         HacOrdenes.clear(h.id, myId);   // optimista: la quita del caché ya
-        toast('+' + r + ' puntos · misión cumplida');
+        toast('+' + r + ' puntos · misión cumplida' + extra);
         _wasOnMission = false;
         applyOrders();                  // re-sincroniza el sim sin la orden
         return;
@@ -405,7 +413,7 @@
     function deselect() {
       HacFolk.select(null);
       closeCharPanel();
-      if (cam && cam.reset) cam.reset();
+      if (cam && cam.stopFollow) cam.stopFollow();   // deja de seguir, PERO mantiene el zoom/posición actual (sin zoom-out)
       renderList();
     }
 
@@ -425,7 +433,7 @@
       const fuera = !!it.fuera;
       const rest = it.misRestante || 0;
       const earned = window.HacPuntos ? HacPuntos.deMiembro(h.id, id) : 0;
-      const money = (window.HacStats && HacStats.dinero) ? HacStats.dinero(id) : 0;   // (paso 1b) provisional → 0
+      const money = (window.HacStats && HacStats.dinero) ? HacStats.dinero(id) : 0;   // monedero (XP/dinero reales)
       return { it, aptId, aptDef, e, activa, enTarea, fuera, rest, mine: id === myId, puntos: puntosTotales(id), earned, money };
     }
     // Panel de inventario/monedero que se despliega a la derecha del panel del
@@ -561,12 +569,14 @@
     if (window.HacEnergia) HacEnergia.ready().then(refresh);
     if (window.HacCompetencias) HacCompetencias.ready().then(refresh);
     if (window.HacPuntos) HacPuntos.ready().then(refresh);
+    if (window.HacStats) HacStats.ready().then(refresh);
     if (window.HacOrdenes) {
       HacOrdenes.ready().then(applyOrders);
       setInterval(() => {
         if (window.HacEnergia) HacEnergia.reload();
         if (window.HacCompetencias) HacCompetencias.reload();
         if (window.HacPuntos) HacPuntos.reload();
+        if (window.HacStats) HacStats.reload();
         HacOrdenes.reload().then(applyOrders);
       }, 5000);
     }
