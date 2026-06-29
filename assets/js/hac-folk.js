@@ -214,7 +214,7 @@ const HacFolk = (function () {
       const stations = [[ax, ay]];
       [[ax - 1, ay], [ax + 1, ay], [ax, ay + 1]].forEach(([sx, sy]) => { if (stations.length < 3 && set.has(sx + ',' + sy)) stations.push([sx, sy]); });
       let seed = 2166136261; const sid = 'mkt@' + b.id; for (let i = 0; i < sid.length; i++) { seed = (seed ^ sid.charCodeAt(i)) * 16777619 >>> 0; }
-      merchants.push({ id: sid, name: 'Mercader', aptitud: '', aspecto: MERCHANT_LOOK,
+      merchants.push({ id: sid, bid: b.id, name: 'Mercader', aptitud: '', aspecto: MERCHANT_LOOK,
         fx: ax, fy: ay, tx: ax, ty: ay, dir: 'S', phase: 0, moving: false, state: 'idle', bowing: false,
         stations, timer: 1 + (seed % 100) / 30, speech: null, speechT: 0, _r: seed });
     });
@@ -400,6 +400,12 @@ const HacFolk = (function () {
   }
 
   function onPathDone(w) {
+    if (w.state === 'a-curiosear') {
+      // Llegó al puesto: se queda mirando el género 15-30 s, de cara al mostrador.
+      w.state = 'curioseando'; w.idleTimer = w.browseDur || 20; w.moving = false; w.path = null; w.phase = 0;
+      if (w.browseFace) { const fd = faceFromGrid(w.browseFace[0] - w.fx, w.browseFace[1] - w.fy); if (fd) w.dir = fd; }
+      return;
+    }
     if (w.state === 'yendo' && w.errand === 'home') {
       // Llegó a su casa: entra, "descansa" un rato y abre el panel de gestiones.
       w.errand = null; w.state = 'tarea'; w.insideId = w.goalBid; w.phase = R.next() * 6.28;
@@ -720,8 +726,17 @@ const HacFolk = (function () {
     walkers.forEach(w => {
       if (w.gardenCd > 0) w.gardenCd -= dt;
       if (w.socialCd > 0) w.socialCd -= dt;
+      if (w.browseCd > 0) w.browseCd -= dt;
       missionGate(w);
       switch (w.state) {
+        // Curiosear el mercado (flavor LOCAL, sin R): va al puesto, mira el género
+        // un rato y vuelve a pasear. Una misión lo saca (lo gestiona missionGate).
+        case 'a-curiosear': followPath(w, dt, SPD); break;
+        case 'curioseando':
+          w.idleTimer -= dt; w.phase += dt * 0.4;
+          if (w.browseFace) { const fd = faceFromGrid(w.browseFace[0] - w.fx, w.browseFace[1] - w.fy); if (fd) w.dir = fd; }
+          if (w.idleTimer <= 0) { w.state = 'paseando'; w.strollTimer = 1.2; w.wait = 0.4; w.browseFace = null; }
+          break;
         case 'saludo': w.phase += dt * 0.5; w.missionTimer -= dt; if (w.missionTimer <= 0) { w.bowing = false; (w.order && w.order.tipo === 'expedicion') ? startExpedition(w) : startMissionVisit(w); } break;
         case 'exped-out':
         case 'exped-in': followPath(w, dt, SPD); break;
@@ -792,6 +807,31 @@ const HacFolk = (function () {
     }
   }
 
+  // Al pregonar, los mecenas que PASEAN cerca pueden picar (25%) y acercarse a
+  // curiosear el género 15-30 s. Flavor LOCAL (RNG del mercader, sin tocar R): no
+  // los bloquea — una misión los saca (missionGate manda). Máx 2 por pregón.
+  const BROWSE_OK = ['paseando', 'saliendo'];
+  function attractBrowsers(mk) {
+    const b = mk.bid && wk ? wk.buildings.get(mk.bid) : null; if (!b) return;
+    let pulled = 0;
+    for (let i = 0; i < walkers.length && pulled < 2; i++) {
+      const w = walkers[i];
+      if (w.onMission || (w.browseCd || 0) > 0 || BROWSE_OK.indexOf(w.state) < 0) continue;
+      const dx = w.fx - mk.fx, dy = w.fy - mk.fy;
+      if (dx * dx + dy * dy > 25) continue;            // "a cierta distancia" (~5 celdas)
+      if (mrand(mk) < 0.25 && startBrowse(w, b, mk)) pulled++;
+    }
+  }
+  function startBrowse(w, b, mk) {
+    const goals = (mk.stations || []).map(s => s[0] + ',' + s[1]);
+    if (b.approachKey) goals.push(b.approachKey);
+    const path = bfs([Math.round(w.fx), Math.round(w.fy)], new Set(goals));
+    if (!path) return false;
+    w.path = path; w.state = 'a-curiosear'; w.moving = false; w.speech = null; w.chatWith = null; w.meetWith = null;
+    w.browseDur = 15 + mrand(mk) * 15;                 // 15-30 s (sin R)
+    w.browseFace = [b.cx, b.cy]; w.browseCd = 45 + mrand(mk) * 30;
+    return true;
+  }
   // Vida del MERCADER (flavor, local): atiende el puesto — pasea entre un par de
   // sitios, se gira, pregona su mercancía y hace una reverencia 抱拳 si pasa alguien.
   const MKT_SPD = 1.5;
@@ -820,6 +860,7 @@ const HacFolk = (function () {
         mk.tx = s[0]; mk.ty = s[1]; mk.state = 'walking';
       } else if (r < 0.68) {                                       // pregona su mercancía
         mk.speech = MKT_CRIES[Math.floor(mrand(mk) * MKT_CRIES.length)]; mk.speechT = 2.4; mk.timer = 4 + mrand(mk) * 5;
+        attractBrowsers(mk);                                       // puede atraer curiosos al puesto
       } else {                                                     // se gira a mirar
         mk.dir = MKT_DIRS[Math.floor(mrand(mk) * MKT_DIRS.length)]; mk.timer = 3 + mrand(mk) * 4;
       }
@@ -1268,6 +1309,8 @@ const HacFolk = (function () {
     if (w.state === 'fuera') return 'En expedición fuera de la finca';
     if (w.state === 'exped-out') return 'Saliendo de la finca';
     if (w.state === 'exped-in') return 'Regresando de la expedición';
+    if (w.state === 'a-curiosear') return 'Atraído por el mercado';
+    if (w.state === 'curioseando') return 'Curioseando el género del mercado';
     if (w.state === 'a-descansar') return 'Buscando un rincón de hierba';
     if (w.state === 'contemplando') return 'Contemplando el jardín';
     if (w.state === 'tumbado') return 'Descansando entre las plantas';
