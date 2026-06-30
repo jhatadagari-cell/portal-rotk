@@ -67,8 +67,16 @@ const HacSolicitudes = (function () {
     const { error } = await c.from(TABLE).update({ estado, decided_at: fechaIso || null }).eq('id', id);
     if (error) throw error;
   }
+  // ADMIN: borra la(s) solicitud(es) de un personaje (al expulsarlo de la hacienda),
+  // para que su pertenencia no quede 'aprobada' fantasma. RLS admin permite el delete.
+  async function borrarDePersonaje(personajeId) {
+    if (!personajeId) return;
+    const c = await sb();
+    const { error } = await c.from(TABLE).delete().eq('personaje_id', personajeId);
+    if (error) throw error;
+  }
 
-  return { mine, crear, cancelar, pendientes, decidir, TABLE };
+  return { mine, crear, cancelar, pendientes, decidir, borrarDePersonaje, TABLE };
 })();
 
 if (typeof window !== 'undefined') window.HacSolicitudes = HacSolicitudes;

@@ -138,7 +138,7 @@
 <script src="assets/js/personajes-data.js?v=2"></script>
 <script src="assets/js/hac-char.js?v=6"></script>
 <script src="assets/js/hac-personajes.js?v=3"></script>
-<script src="assets/js/hac-solicitudes.js?v=1"></script>
+<script src="assets/js/hac-solicitudes.js?v=2"></script>
 <script src="assets/js/hac-perfiles.js?v=1"></script>
 <script src="assets/js/hac-competencias.js?v=1"></script>
 <script src="assets/js/hac-puntos.js?v=1"></script>
@@ -779,6 +779,11 @@
           if (HacStats.liberarCasa) HacStats.liberarCasa(pid);   // libera la casa (casa_pos = null)
         }
         h.miembros = h.miembros.filter(x => x.id !== mid);
+        // Borra también su solicitud (si la tuviera) para que no quede pertenencia
+        // 'aprobada' fantasma que le impida pedir entrada a otra casa.
+        if (pid && window.HacSolicitudes && HacSolicitudes.borrarDePersonaje) {
+          HacSolicitudes.borrarDePersonaje(pid).catch(e => console.warn('[admin] borrar solicitud al expulsar', e));
+        }
         saveHacienda(h);
         render();
       });

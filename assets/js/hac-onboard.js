@@ -334,16 +334,15 @@ const HacOnboard = (function () {
       if (window.HacStore && HacStore.ready) await withTimeout(HacStore.ready(), 5000, null);
       const sol = window.HacSolicitudes ? await withTimeout(HacSolicitudes.mine(), 5000, null) : null;
       if (sol && sol.estado === 'aprobada') {
-        // La pertenencia REAL vive en h.miembros; la solicitud solo registra el ingreso.
-        // Si el jugador abandonó la finca (o lo expulsaron), la solicitud quedó
-        // OBSOLETA → límpiala y trátalo como no-miembro (evita la pertenencia fantasma).
+        // La solicitud 'aprobada' (BD) es la fuente de verdad de tu pertenencia. NO se
+        // borra por un desajuste con h.miembros (eso destruía solicitudes válidas y te
+        // dejaba sin casa en todos los navegadores). Solo es OBSOLETA si la hacienda ya
+        // no existe; el abandono/expulsión limpian la solicitud en su propio flujo.
         const stored = window.HacStore ? HacStore.all() : [];
         const hm = window.HacStore ? HacStore.get(sol.haciendaId) : null;
-        const sigueMiembro = !!(hm && (hm.miembros || []).some(m => m.personajeId === pj.id));
-        if (sigueMiembro) return renderMember(user, pj, sol);
-        if (!stored.length) return renderMember(user, pj, sol);   // store no cargó: no arriesgues a borrar
-        try { await HacSolicitudes.cancelar(sol.id); } catch (e) { console.warn('[onboard] limpiar solicitud obsoleta', e); }
-        // cae a renderPicker (ya no es miembro)
+        if (hm || !stored.length) return renderMember(user, pj, sol);   // la casa existe (o el store no cargó) → confía en la BD
+        try { await HacSolicitudes.cancelar(sol.id); } catch (e) { console.warn('[onboard] limpiar solicitud de hacienda inexistente', e); }
+        // la hacienda fue borrada → cae a renderPicker
       } else if (sol && sol.estado === 'pendiente') return renderPending(user, pj, sol);
       renderPicker(user, pj);
     } catch (e) {
