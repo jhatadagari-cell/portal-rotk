@@ -450,6 +450,29 @@ html.hacp-pseudofs, html.hacp-pseudofs body{ overflow:hidden; }
 .hacp-item-buy:disabled{ opacity:.4; cursor:not-allowed; }
 .hacp-item-lock{ flex:0 0 auto; font-size:10px; color:var(--parch2); white-space:nowrap; }
 
+/* Abandonar la hacienda: botón discreto de peligro al pie del panel + overlay de aviso */
+.hacp-cp-leave{ display:block; width:100%; margin-top:10px; background:none; border:1px solid rgba(178,59,46,.5);
+  color:#d98a7e; font-size:11px; padding:5px 11px; }
+.hacp-cp-leave:hover{ background:rgba(178,59,46,.18); border-color:#b23b2e; color:#f0b8ad; }
+.hacp-leave-h{ color:#e2786a; }
+.hacp-leave-cols{ display:flex; gap:10px; margin:4px 0 14px; }
+.hacp-leave-col{ flex:1; min-width:0; border:1px solid rgba(201,168,76,.2); border-radius:8px; padding:9px 11px; background:rgba(255,255,255,.02); }
+.hacp-leave-col.lose{ border-color:rgba(178,59,46,.35); background:rgba(178,59,46,.07); }
+.hacp-leave-colh{ font:700 10px 'Cinzel Decorative',serif; letter-spacing:.07em; text-transform:uppercase; margin-bottom:6px; }
+.hacp-leave-col.keep .hacp-leave-colh{ color:#7fc9a0; }
+.hacp-leave-col.lose .hacp-leave-colh{ color:#e2786a; }
+.hacp-leave-col ul{ list-style:none; margin:0; padding:0; }
+.hacp-leave-col li{ font-size:11.5px; color:var(--parch); padding:3px 0; line-height:1.35; border-top:1px solid rgba(255,255,255,.05); }
+.hacp-leave-col li:first-child{ border-top:0; }
+.hacp-leave-col li.muted{ color:var(--parch2); opacity:.6; }
+.hacp-leave-cap{ color:var(--parch2); opacity:.7; font-size:10px; }
+.hacp-leave-actions{ display:flex; gap:10px; justify-content:flex-end; }
+.hacp-leave-go{ background:rgba(178,59,46,.2); border-color:#b23b2e; color:#f0b8ad; font-weight:700; }
+.hacp-leave-go:hover{ background:rgba(178,59,46,.38); color:#fff; }
+.hacp-leave-go.armed{ background:#b23b2e; color:#fff; border-color:#e2786a; animation:leavePulse 1s ease infinite; }
+@keyframes leavePulse{ 0%,100%{ box-shadow:0 0 0 0 rgba(226,120,106,.5); } 50%{ box-shadow:0 0 0 5px rgba(226,120,106,0); } }
+@media (max-width:600px){ .hacp-leave-cols{ flex-direction:column; } }
+
 /* Tooltip con el nombre del pabellón al pasar el ratón por su patio. */
 .hacp-pab-tip{
   position:fixed; z-index:60; display:none; pointer-events:none;

@@ -208,6 +208,26 @@ const HacStats = (function () {
     if (!quita(r.casaInv, id)) return { ok: false, motivo: 'No está en casa' };
     mete(r.inv, id); persist(r); return { ok: true };
   }
+  // ABANDONO (lo decide el PROPIO jugador): se marcha de la hacienda llevándose
+  // su progreso (xp), lo equipado, la mochila (ya limitada por `cap`) y el dinero
+  // que le quepa en los BOLSILLOS (`bolsillo`). Deja atrás la casa (propiedad +
+  // bóveda `ahorro` + objetos guardados) y las monedas que no le caben encima.
+  // Devuelve un resumen {dineroLlevado, dineroPerdido, ahorroPerdido, objetosCasa, casa}.
+  function abandonar(mid, bolsillo) {
+    const r = ensure(mid);
+    const tope = Math.max(0, bolsillo | 0);
+    const llevado = Math.min(r.dinero, tope);
+    const resumen = {
+      dineroLlevado: llevado,
+      dineroPerdido: Math.max(0, r.dinero - llevado),
+      ahorroPerdido: r.ahorro,
+      objetosCasa: cuenta(r.casaInv),
+      casa: !!r.casaPos,
+    };
+    r.dinero = llevado; r.ahorro = 0; r.casaInv = []; r.casaPos = null;
+    persist(r);
+    return resumen;
+  }
   // ADMIN: libera la casa de un mecenas (al expulsarlo). Update PARCIAL (solo
   // casa_pos) para no pisar el dinero/inventario que el jugador haya cambiado.
   async function liberarCasa(mid) {
@@ -219,6 +239,6 @@ const HacStats = (function () {
     } catch (e) { console.error('[HacStats] liberarCasa', e); }
   }
 
-  return { ready, reload, dinero, ahorro, casaPos, casasReclamadas, duenoDeCasa, comprarCasa, liberarCasa, xp, nivel, progresoNivel, bonus, nivelTotal, equipados, equipar, desequipar, MAX_EQUIP, award, comprar, guardar, sacar, darItem, meterEnCasa, sacarDeCasa, inventario, casaInventario, capInventario, ocupadas, recompensaExped, DOMS, dbOk: () => ok, TABLE };
+  return { ready, reload, dinero, ahorro, casaPos, casasReclamadas, duenoDeCasa, comprarCasa, liberarCasa, abandonar, xp, nivel, progresoNivel, bonus, nivelTotal, equipados, equipar, desequipar, MAX_EQUIP, award, comprar, guardar, sacar, darItem, meterEnCasa, sacarDeCasa, inventario, casaInventario, capInventario, ocupadas, recompensaExped, DOMS, dbOk: () => ok, TABLE };
 })();
 if (typeof window !== 'undefined') window.HacStats = HacStats;

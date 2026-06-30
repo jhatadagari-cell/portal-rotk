@@ -405,6 +405,10 @@
       return ((h.mapa && h.mapa.construcciones) || []).find(c => c.tipo === 'casa' && c.dueno != null && String(c.dueno) === mid) || null;
     }
     const PRECIO_CASA = 150;
+    // Tope de monedas que caben en los BOLSILLOS (lo que te llevas al abandonar la
+    // finca). El resto del dinero vive a salvo en la casa (宅). Sin casa, solo
+    // conservas hasta este tope si te marchas.
+    const BOLSILLO_MAX = 200;
     // Clave de casa con id de finca (evita colisiones "gx,gy" entre haciendas).
     const casaKey = (c) => h.id + '@' + c.pos[0] + ',' + c.pos[1];
     const casasFinca = () => ((h.mapa && h.mapa.construcciones) || []).filter(c => c.tipo === 'casa');
@@ -724,7 +728,8 @@
         ${d.mine ? `<button type="button" class="hacp-cp-btn hacp-cp-equipbtn" data-act="equip">⚔ Equipo${d.equipN ? ` · ${d.equipN}/3` : ''}</button>` : ''}
         ${mision}
         ${d.mine ? `<button type="button" class="hacp-cp-btn hacp-cp-invbtn${invOpen ? ' on' : ''}" data-act="inv">🎒 ${invOpen ? 'Ocultar' : 'Inventario'} · 💰 ${d.money}</button>` : ''}
-        ${(d.mine && invOpen) ? invPanelHTML(d) : ''}`;
+        ${(d.mine && invOpen) ? invPanelHTML(d) : ''}
+        ${d.mine ? `<button type="button" class="hacp-cp-btn hacp-cp-leave" data-act="leave">Abandonar la hacienda</button>` : ''}`;
       lastStatsSig = JSON.stringify(d.stats || 0);   // recién pintadas: marca su firma
       charEl.querySelector('[data-act="close"]').addEventListener('click', deselect);
       const db = charEl.querySelector('[data-act="dispatch"]');
@@ -741,6 +746,8 @@
       if (gh) gh.addEventListener('click', openHome);
       const eqb = charEl.querySelector('[data-act="equip"]');
       if (eqb) eqb.addEventListener('click', openEquip);
+      const lvb = charEl.querySelector('[data-act="leave"]');
+      if (lvb) lvb.addEventListener('click', openLeave);
       const bh = charEl.querySelector('[data-act="buyhome"]');
       if (bh && !bh.disabled) bh.addEventListener('click', () => {
         if (!myId || !window.HacStats) return;
@@ -846,6 +853,96 @@
       toast(`${item.icon || ''} ${item.nombre} · ${HacTienda.efectoTexto(item)}`.trim());
       buildShop();                 // refresca dinero y botones
       if (charId) buildCharPanel(charId);   // refresca monedero/inventario/energía
+    }
+
+    // ── Abandonar la hacienda (lo decide el jugador) ─────────────────────────
+    // Overlay con resumen claro de lo que TE LLEVAS y lo que DEJAS ATRÁS, más
+    // doble confirmación (abrir el aviso + pulsar dos veces el botón) para que no
+    // ocurra por error. Te marchas con stats + equipo + mochila + monedas que
+    // quepan en los bolsillos; dejas la casa (propiedad, bóveda y objetos).
+    let leaveEl = null;
+    function ensureLeaveEl() {
+      if (leaveEl) return leaveEl;
+      leaveEl = document.createElement('div');
+      leaveEl.className = 'hacp-shop hacp-leave-ov'; leaveEl.id = 'hacp-leave'; leaveEl.hidden = true;
+      vp.appendChild(leaveEl);
+      ['pointerdown', 'pointerup', 'wheel', 'click'].forEach(ev => leaveEl.addEventListener(ev, (e) => e.stopPropagation(), { passive: false }));
+      leaveEl.addEventListener('click', (e) => { if (e.target === leaveEl) closeLeave(); });
+      return leaveEl;
+    }
+    function buildLeave() {
+      const el = ensureLeaveEl(), S = window.HacStats;
+      const money = S ? S.dinero(myId) : 0;
+      const ahorro = (S && S.ahorro) ? S.ahorro(myId) : 0;
+      const cap = (S && S.capInventario) ? S.capInventario(myId) : 8;
+      const invN = (S && S.ocupadas) ? S.ocupadas(myId) : 0;
+      const casaItems = ((S && S.casaInventario) ? S.casaInventario(myId) : []).reduce((s, it) => s + (it.n || 1), 0);
+      const hasHome = !!miCasa(myId);   // asignada por el admin O comprada
+      const eqN = (S && S.equipados) ? S.equipados(myId).length : 0;
+      const llevado = Math.min(money, BOLSILLO_MAX);
+      const perdido = Math.max(0, money - BOLSILLO_MAX);
+      const nadaPierde = !hasHome && !ahorro && !casaItems && !perdido;
+      el.innerHTML = `
+        <div class="hacp-shop-box hacp-leave-box">
+          <button type="button" class="hacp-shop-x" data-act="leave-close" aria-label="Cerrar">✕</button>
+          <div class="hacp-shop-h hacp-leave-h">⚠ Abandonar ${esc(h.nombre || 'la hacienda')}</div>
+          <div class="hacp-shop-sub">Tu mecenas se marchará de esta finca. <b>Esto no se puede deshacer.</b></div>
+          <div class="hacp-leave-cols">
+            <div class="hacp-leave-col keep">
+              <div class="hacp-leave-colh">Te llevas</div>
+              <ul>
+                <li>Tu progreso (niveles 武 文 政)</li>
+                <li>Lo que llevas equipado${eqN ? ` · ${eqN}/3` : ''}</li>
+                <li>Tu mochila · ${invN}/${cap} objetos</li>
+                <li>💰 ${llevado} monedas en los bolsillos${perdido ? ` <span class="hacp-leave-cap">(caben ${BOLSILLO_MAX})</span>` : ''}</li>
+              </ul>
+            </div>
+            <div class="hacp-leave-col lose">
+              <div class="hacp-leave-colh">Dejas atrás</div>
+              <ul>
+                ${hasHome ? `<li>🏠 Tu casa de esta finca</li>` : `<li class="muted">No tienes casa aquí</li>`}
+                ${ahorro ? `<li>💰 ${ahorro} a salvo en casa</li>` : ''}
+                ${casaItems ? `<li>📦 ${casaItems} objetos guardados en casa</li>` : ''}
+                ${perdido ? `<li>💰 ${perdido} monedas que no caben encima</li>` : ''}
+                ${nadaPierde ? `<li class="muted">Nada más</li>` : ''}
+              </ul>
+            </div>
+          </div>
+          <div class="hacp-leave-actions">
+            <button type="button" class="hacp-cp-btn" data-act="leave-cancel">Cancelar</button>
+            <button type="button" class="hacp-cp-btn hacp-leave-go" data-act="leave-go">Abandonar la hacienda</button>
+          </div>
+        </div>`;
+      el.querySelector('[data-act="leave-close"]').addEventListener('click', closeLeave);
+      el.querySelector('[data-act="leave-cancel"]').addEventListener('click', closeLeave);
+      const go = el.querySelector('[data-act="leave-go"]');
+      let armed = false, t = null;
+      go.addEventListener('click', () => {
+        if (!armed) {   // primer toque: ARMA el botón (segunda confirmación)
+          armed = true; go.classList.add('armed'); go.textContent = 'Pulsa otra vez para confirmar';
+          t = setTimeout(() => { armed = false; go.classList.remove('armed'); go.textContent = 'Abandonar la hacienda'; }, 4000);
+          return;
+        }
+        if (t) clearTimeout(t);
+        doLeave();
+      });
+    }
+    function openLeave() { if (!myId || !_isMember) return; buildLeave(); ensureLeaveEl().hidden = false; }
+    function closeLeave() { if (leaveEl) leaveEl.hidden = true; }
+    async function doLeave() {
+      if (!myId || !_isMember || !window.HacStore) return;
+      closeLeave();
+      const me = (h.miembros || []).find(m => m.personajeId === myId);
+      if (!me) { toast('No formas parte de esta hacienda'); return; }
+      // Libera la casa ASIGNADA por el admin (dueno = id de miembro) en el mapa.
+      if (h.mapa && Array.isArray(h.mapa.construcciones)) {
+        h.mapa.construcciones.forEach(c => { if (c.tipo === 'casa' && c.dueno != null && String(c.dueno) === String(me.id)) c.dueno = null; });
+      }
+      h.miembros = (h.miembros || []).filter(m => m.personajeId !== myId);   // sale de la lista
+      if (window.HacStats && HacStats.abandonar) HacStats.abandonar(myId, BOLSILLO_MAX);   // mochila/equipo/xp + bolsillos; libera casa COMPRADA
+      try { await HacStore.upsert(h); } catch (e) { console.error('[abandonar]', e); }     // persiste los miembros
+      toast('🚪 Has abandonado la hacienda…');
+      setTimeout(() => { location.href = 'haciendas.html'; }, 800);
     }
 
     // ── Casa (gestiones del hogar): overlay con dinero + objetos ─────────────
