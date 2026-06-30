@@ -248,6 +248,19 @@
   border-radius:5px; padding:5px 10px; font:700 12px 'Noto Sans SC',sans-serif; cursor:pointer; }
 .hacp-mis-go:hover{ background:rgba(201,168,76,.32); color:#fff; }
 .hacp-mis-go:disabled{ opacity:.4; cursor:not-allowed; }
+/* Aviso clicable sobre tu mecenas cuando espera en el tablón (solo local). */
+.hacp-cta{ position:absolute; z-index:30; transform:translate(-50%,-100%);
+  white-space:nowrap; cursor:pointer; border:1px solid #fff2c0; border-radius:14px; padding:5px 13px;
+  background:linear-gradient(180deg,#f3dd92,#caa23a); color:#2a1c0e; font:800 12px 'Noto Sans SC',sans-serif;
+  box-shadow:0 3px 12px rgba(0,0,0,.5), 0 0 0 2px rgba(201,168,76,.45);
+  animation:ctaPulse 1.1s ease-in-out infinite; }
+.hacp-cta[hidden]{ display:none; }
+.hacp-cta:hover{ background:linear-gradient(180deg,#fff1b2,#d8b24a); }
+.hacp-cta::after{ content:''; position:absolute; left:50%; bottom:-7px; transform:translateX(-50%);
+  border-left:7px solid transparent; border-right:7px solid transparent; border-top:8px solid #caa23a;
+  filter:drop-shadow(0 2px 1px rgba(0,0,0,.4)); }
+@keyframes ctaPulse{ 0%,100%{ transform:translate(-50%,-100%) scale(1); } 50%{ transform:translate(-50%,-100%) scale(1.06); } }
+@media (prefers-reduced-motion:reduce){ .hacp-cta{ animation:none; } }
 .hacp-cp-mis{ margin-top:9px; border-top:1px solid rgba(201,168,76,.18); padding-top:8px; }
 .hacp-cp-mis-on{ display:flex; align-items:center; gap:8px; }
 .hacp-cp-mis-on .hacp-cp-btn{ margin-left:auto; }

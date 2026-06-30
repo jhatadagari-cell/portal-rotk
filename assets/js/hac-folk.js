@@ -456,8 +456,10 @@ const HacFolk = (function () {
 
   function onPathDone(w) {
     if (w.state === 'a-consultar') {
-      // Llegó al edificio principal: se planta, mira al funcionario y muestra 📜.
-      w.state = 'consultando'; w.idleTimer = 60; w.moving = false; w.path = null; w.phase = 0; w.speech = '📜';
+      // Llegó al edificio principal: se planta y mira al funcionario. El AVISO de
+      // "revisar el tablón" lo pinta la página como botón DOM (local del jugador),
+      // no como bocadillo (que verían todos y molestaría a los diálogos).
+      w.state = 'consultando'; w.idleTimer = 60; w.moving = false; w.path = null; w.phase = 0; w.speech = null;
       if (w.consultFace) { const fd = faceFromGrid(w.consultFace[0] - w.fx, w.consultFace[1] - w.fy); if (fd) w.dir = fd; }
       return;
     }
@@ -807,9 +809,9 @@ const HacFolk = (function () {
         // un rato y vuelve a pasear. Una misión lo saca (lo gestiona missionGate).
         case 'a-consultar': followPath(w, dt, SPD); break;
         case 'consultando':
-          w.idleTimer -= dt; w.phase += dt * 0.4; w.speech = '📜';
+          w.idleTimer -= dt; w.phase += dt * 0.4;
           if (w.consultFace) { const fd = faceFromGrid(w.consultFace[0] - w.fx, w.consultFace[1] - w.fy); if (fd) w.dir = fd; }
-          if (w.idleTimer <= 0) { w.state = 'paseando'; w.strollTimer = 1.2; w.speech = null; w.consultFace = null; }
+          if (w.idleTimer <= 0) { w.state = 'paseando'; w.strollTimer = 1.2; w.consultFace = null; }
           break;
         case 'a-curiosear': followPath(w, dt, SPD); break;
         case 'curioseando':

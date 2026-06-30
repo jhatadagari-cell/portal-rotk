@@ -1005,6 +1005,32 @@
       hidePop(); deselect();
     });
     document.addEventListener('pointerdown', (e) => { if (pop && !pop.contains(e.target) && !vp.contains(e.target)) hidePop(); });
+
+    // ── Aviso CLICABLE "revisar tablón" sobre TU mecenas (DOM, solo local) ──────
+    // No es un bocadillo (que verían todos y se solaparía con los diálogos): es un
+    // botón llamativo en su propia capa, pegado a la cabeza de tu mecenas cuando
+    // espera en el tablón. Al pulsarlo se abren las misiones.
+    const cta = document.createElement('button');
+    cta.type = 'button'; cta.className = 'hacp-cta'; cta.hidden = true; cta.textContent = '📜 Revisar misiones';
+    vp.appendChild(cta);
+    ['pointerdown', 'pointerup', 'wheel', 'click'].forEach(ev => cta.addEventListener(ev, (e) => e.stopPropagation(), { passive: false }));
+    cta.addEventListener('click', openMissionBoard);
+    const FEETdev = (window.HacChar && HacChar.H) ? HacChar.H - 5 : 51;   // px (dispositivo) cabeza→pies
+    (function tickCTA() {
+      const on = !!(myId && HacFolk.consultando && HacFolk.consultando(myId)) && (!boardEl || boardEl.hidden);
+      if (on) {
+        const p = HacFolk.position(myId), r = iso.getBoundingClientRect(), vr = vp.getBoundingClientRect();
+        if (p && r.width && iso.width) {
+          const sx = r.left + p[0] * S / iso.width * r.width;
+          const feetY = r.top + p[1] * S / iso.height * r.height;
+          const headCss = FEETdev * r.height / iso.height;            // alto del sprite en px CSS
+          cta.style.left = Math.round(sx - vr.left) + 'px';
+          cta.style.top = Math.round(feetY - vr.top - headCss - 6) + 'px';
+          cta.hidden = false;
+        }
+      } else if (!cta.hidden) cta.hidden = true;
+      requestAnimationFrame(tickCTA);
+    })();
   }
 
   // Espera a la carga de Supabase (HacStore.ready) y al DOM antes de pintar.
