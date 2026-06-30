@@ -1308,7 +1308,7 @@ const HacFolk = (function () {
     const npcDy = bannerDy;
     if (wk && wk.merchants) wk.merchants.forEach(mk => {
       actors.push({ fx: mk.fx, fy: mk.fy, draw: (g, lx, ly) => drawWalker(g, lx, ly, mk, { banner: false }) });
-      overlays.push({ draw: (g) => { const p = logic(mk.fx, mk.fy); npcBanner(g, p[0], p[1] - npcDy, mk.name, '🛒'); } });
+      overlays.push({ draw: (g) => { const p = logic(mk.fx, mk.fy); npcBanner(g, p[0], p[1] - npcDy, mk.name, '市'); } });
     });
     if (wk && wk.clerks) wk.clerks.forEach(ck => {
       actors.push({ fx: ck.fx, fy: ck.fy, draw: (g, lx, ly) => drawWalker(g, lx, ly, ck, { banner: false }) });

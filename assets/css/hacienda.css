@@ -381,7 +381,7 @@ html.hacp-pseudofs, html.hacp-pseudofs body{ overflow:hidden; }
     min-height:56px; justify-content:center; padding:7px 2px; cursor:pointer;
     background:rgba(201,168,76,.12); border:1px solid rgba(201,168,76,.26); border-radius:11px; color:var(--parch); }
   .hacp-mobar-btn:active{ background:rgba(201,168,76,.34); transform:scale(.97); }
-  .hacp-mobar-btn .ic{ font-size:21px; line-height:1; }
+  .hacp-mobar-btn .ic{ font-family:'Noto Serif SC','Noto Sans SC',serif; font-weight:700; font-size:22px; line-height:1; color:var(--gold); }
   .hacp-mobar-btn .lb{ font:800 10.5px 'Noto Sans SC',sans-serif; color:var(--gold); white-space:nowrap; }
   /* Panel del personaje = HOJA inferior por ENCIMA de la barra; alto acotado, scroll. */
   .hacp-char-panel{ left:5px; right:5px; bottom:70px; width:auto; max-width:none; max-height:62dvh; overflow-y:auto; }

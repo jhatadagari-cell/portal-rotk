@@ -93,7 +93,7 @@
             </button>
             <span class="hacp-iso-hint">arrastra para mover · pellizca o ctrl+rueda para zoom</span>
             <div class="hacp-char-panel" id="hacp-char-panel" hidden></div>
-            <button type="button" class="hacp-folk-fab" id="hacp-folk-fab" aria-label="Ver mecenas" title="Ver mecenas" hidden>🧑 <span id="hacp-folk-fab-n"></span></button>
+            <button type="button" class="hacp-folk-fab" id="hacp-folk-fab" aria-label="Ver mecenas" title="Ver mecenas" hidden>众 <span id="hacp-folk-fab-n"></span></button>
             <aside class="hacp-folk-panel" id="hacp-folk-panel" hidden>
               <div class="hacp-folk-head">
                 <h3 class="hacp-folk-ttl">Mecenas en la finca</h3>
@@ -251,8 +251,19 @@
       window.dispatchEvent(new Event('resize'));                       // reencuadra el visor
       document.dispatchEvent(new CustomEvent('hacp-fs', { detail: o }));
     };
+    let vpHome = null;
     function setPseudo(v) {
       pseudo = v;
+      // iOS: un ancestro con transform/filter convierte position:fixed en relativo a
+      // ese ancestro → el visor no cubría la pantalla y todo se veía superpuesto.
+      // Lo sacamos a <body> mientras dure la pantalla completa y lo devolvemos al salir.
+      if (v) {
+        if (!vpHome) vpHome = { parent: vp.parentNode, next: vp.nextSibling };
+        document.body.appendChild(vp);
+      } else if (vpHome) {
+        vpHome.parent.insertBefore(vp, vpHome.next);
+        vpHome = null;
+      }
       document.documentElement.classList.toggle('hacp-pseudofs', v);
       vp.classList.toggle('hacp-pseudofs-el', v);
       update();
@@ -337,7 +348,7 @@
     const hasMarketEarly = ((h.mapa && h.mapa.construcciones) || []).some(c => c.tipo === 'mercado');
     if (hasMarketEarly && panel) {
       const mb = document.createElement('button');
-      mb.type = 'button'; mb.className = 'hacp-folk-shop'; mb.textContent = '🛒 Mercado';
+      mb.type = 'button'; mb.className = 'hacp-folk-shop'; mb.textContent = '市 Mercado';
       mb.addEventListener('click', (e) => { e.stopPropagation(); openShop(); });
       listEl.parentNode.insertBefore(mb, listEl);   // arriba del listado, dentro del cuerpo
     }
@@ -376,10 +387,10 @@
       b.addEventListener('click', (e) => { e.stopPropagation(); fn(); });
       return b;
     };
-    if (myId) mobar.appendChild(moBtn('🧑', 'Tu mecenas', () => gotoMember(myId)));
-    if (myId && hasMain) mobar.appendChild(moBtn('📜', 'Misiones', openMissionBoard));
-    if (myId && hasMarket) mobar.appendChild(moBtn('🛒', 'Mercado', openShop));
-    mobar.appendChild(moBtn('👥', 'Mecenas', () => folkCollapse(false)));
+    if (myId) mobar.appendChild(moBtn('士', 'Tu mecenas', () => gotoMember(myId)));
+    if (myId && hasMain) mobar.appendChild(moBtn('檄', 'Misiones', openMissionBoard));
+    if (myId && hasMarket) mobar.appendChild(moBtn('市', 'Mercado', openShop));
+    mobar.appendChild(moBtn('众', 'Mecenas', () => folkCollapse(false)));
     ['pointerdown', 'pointerup', 'wheel', 'click'].forEach(ev => mobar.addEventListener(ev, (e) => e.stopPropagation(), { passive: false }));
     vp.appendChild(mobar);
     // Casa de un mecenas = construcción 'casa' cuyo DUEÑO es su miembro (asignado en
@@ -641,7 +652,7 @@
     }
     // Botón para abrir la tienda, solo si la finca tiene un mercado construido.
     function marketBtnHTML() {
-      return hasMarket ? `<button type="button" class="hacp-cp-btn hacp-cp-shop" data-act="shop">🛒 Comprar en el mercado</button>` : '';
+      return hasMarket ? `<button type="button" class="hacp-cp-btn hacp-cp-shop" data-act="shop">市 Comprar en el mercado</button>` : '';
     }
     // Texto transparente de energía: % + ritmo de regeneración + cuánto falta para
     // llenar (para TU mecenas; para los demás, solo el %).
