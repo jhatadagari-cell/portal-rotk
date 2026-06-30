@@ -228,13 +228,24 @@ const HacFolk = (function () {
       mainBid = princ.pos[0] + ',' + princ.pos[1];
       const mb = buildings.get(mainBid);
       if (mb && mb.approach) {
-        // Se pone en la celda de aproximación (transitable). Solo se desplaza medio
-        // tile a un lado si ESA celda vecina también es transitable (si no, se
-        // quedaría encima de la muralla u otro bloqueo).
-        let cfx = mb.approach[0], cfy = mb.approach[1];
-        if (set.has((cfx + 1) + ',' + cfy)) cfx += 0.5;
-        else if (set.has((cfx - 1) + ',' + cfy)) cfx -= 0.5;
-        else if (set.has(cfx + ',' + (cfy + 1))) cfy += 0.5;
+        // Coloca al funcionario en una celda ABIERTA cerca de la entrada: transitable
+        // y cuyas vecinas HACIA LA CÁMARA (+x,+y) no sean muro (si no, una muralla/
+        // portón delante lo taparía). Elige la más adelantada (mayor gx+gy) y cercana.
+        const ax = mb.approach[0], ay = mb.approach[1];
+        const inGrid = (x, y) => x >= 0 && y >= 0 && x < GW && y < GH;
+        const abierta = (x, y) => set.has(x + ',' + y)
+          && (!inGrid(x + 1, y) || set.has((x + 1) + ',' + y))
+          && (!inGrid(x, y + 1) || set.has(x + ',' + (y + 1)));
+        let best = null, bestS = -Infinity;
+        for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
+          if (Math.abs(dx) + Math.abs(dy) > 2) continue;
+          const x = ax + dx, y = ay + dy; if (!abierta(x, y)) continue;
+          const s = (x + y) - (Math.abs(dx) + Math.abs(dy)) * 0.15;   // adelantada + cercana
+          if (s > bestS) { bestS = s; best = [x, y]; }
+        }
+        const sp = best || [ax, ay];
+        let cfx = sp[0], cfy = sp[1];   // medio tile a un lado solo si la vecina es transitable
+        if (set.has((cfx + 1) + ',' + cfy)) cfx += 0.5; else if (set.has((cfx - 1) + ',' + cfy)) cfx -= 0.5;
         clerks.push({ id: 'clerk@' + mainBid, name: 'Funcionario', aptitud: 'administrador', aspecto: {}, fx: cfx, fy: cfy, dir: 'S', phase: 0, moving: false, state: 'stand', bowing: false, _r: 0x9e3779b9 });
         // Huecos en SEMICÍRCULO al frente del tablón donde los curiosos se asoman.
         const cax = mb.approach[0], cay = mb.approach[1];
