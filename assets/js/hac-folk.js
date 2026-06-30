@@ -1044,8 +1044,12 @@ const HacFolk = (function () {
     NE: { w: 48, h: 75, ax: 36, ay: 75, seatY: 47, seatDx: -12 },
   };
   const HORSE_VIEW = { E: 'SE', SE: 'SE', S: 'SE', SW: 'SW', W: 'SW', NW: 'NW', N: 'NW', NE: 'NE' };
-  const horseImg = {}; let horseReady = false;
-  if (typeof Image !== 'undefined') {
+  const horseImg = {}; let horseReady = false, horseLoadStarted = false;
+  // Carga DIFERIDA: los 28 frames del caballo solo se piden la primera vez que de
+  // verdad se necesita una montura (no en cada finca aunque nadie vaya montado).
+  function ensureHorses() {
+    if (horseLoadStarted || typeof Image === 'undefined') return;
+    horseLoadStarted = true;
     let n = 0; const need = 4 * HORSE_NF;
     ['SW', 'SE', 'NW', 'NE'].forEach(v => {
       horseImg[v] = [];
@@ -1058,7 +1062,11 @@ const HacFolk = (function () {
   // ¿Va montado este walker? (de momento solo un flag de depuración global para
   // previsualizar; el disparador real —p.ej. expediciones militares— vendrá luego.)
   if (typeof window !== 'undefined' && /[?&]mount=1/.test(window.location.search || '')) window.__HAC_MOUNT_ALL = true;   // previsualización
-  function isMounted(w) { return !!(w && (w.mounted || (typeof window !== 'undefined' && window.__HAC_MOUNT_ALL))) && horseReady; }
+  function isMounted(w) {
+    const want = !!(w && (w.mounted || (typeof window !== 'undefined' && window.__HAC_MOUNT_ALL)));
+    if (want) ensureHorses();
+    return want && horseReady;
+  }
   // Dibuja el caballo (frame del ciclo según el paso) bajo el jinete sentado en la silla.
   function drawMount(g, lx, ly, w, moving) {
     const v = HORSE_VIEW[w.dir || 'S'] || 'SW', m = HORSE_META[v], arr = horseImg[v];
