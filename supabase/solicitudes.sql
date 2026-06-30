@@ -44,10 +44,13 @@ create policy solicitudes_owner_insert
   on public.solicitudes for insert
   with check ( user_id = auth.uid() and estado = 'pendiente' );
 
+-- El jugador puede BORRAR cualquiera de SUS solicitudes (cancelar la pendiente O
+-- "marcharse": al abandonar una hacienda hay que poder borrar la 'aprobada'; si no,
+-- queda una solicitud fantasma que bloquea pedir entrada a otra casa).
 drop policy if exists solicitudes_owner_cancel on public.solicitudes;
 create policy solicitudes_owner_cancel
   on public.solicitudes for delete
-  using ( user_id = auth.uid() and estado = 'pendiente' );
+  using ( user_id = auth.uid() );
 
 -- El ADMIN ve TODAS y decide (aprobar/rechazar). Mismo email que el resto.
 drop policy if exists solicitudes_admin_all on public.solicitudes;

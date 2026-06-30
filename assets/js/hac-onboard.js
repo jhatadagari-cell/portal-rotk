@@ -392,10 +392,22 @@ const HacOnboard = (function () {
         await HacSolicitudes.crear({ personajeId: pj.id, haciendaId: btn.dataset.join });
         renderPlayer(user, pj);
       } catch (err) {
+        const m = (err && err.message) || '';
+        // Auto-cura: si choca con una solicitud FANTASMA (p.ej. 'aprobada' de una casa
+        // que abandonaste), bórrala y reintenta una vez.
+        if (/duplicate|unique/i.test(m)) {
+          try {
+            const vieja = await HacSolicitudes.mine();
+            if (vieja) {
+              await HacSolicitudes.cancelar(vieja.id);
+              await HacSolicitudes.crear({ personajeId: pj.id, haciendaId: btn.dataset.join });
+              renderPlayer(user, pj); return;
+            }
+          } catch (e2) { /* cae al mensaje de error normal */ }
+        }
         host.querySelectorAll('[data-join]').forEach(b => b.disabled = false);
         btn.textContent = 'Solicitar entrada';
-        const m = (err && err.message) || '';
-        if (errEl) { errEl.textContent = /duplicate|unique/i.test(m) ? 'Ya tienes una solicitud activa.' : 'No se pudo enviar: ' + (m || 'error'); errEl.hidden = false; }
+        if (errEl) { errEl.textContent = /duplicate|unique/i.test(m) ? 'Ya tienes una solicitud activa en otra casa.' : 'No se pudo enviar: ' + (m || 'error'); errEl.hidden = false; }
       }
     }));
   }
