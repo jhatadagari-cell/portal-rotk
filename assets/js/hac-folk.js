@@ -228,7 +228,14 @@ const HacFolk = (function () {
       mainBid = princ.pos[0] + ',' + princ.pos[1];
       const mb = buildings.get(mainBid);
       if (mb && mb.approach) {
-        clerks.push({ id: 'clerk@' + mainBid, name: 'Funcionario', aptitud: 'administrador', aspecto: {}, fx: mb.approach[0] + 0.55, fy: mb.approach[1], dir: 'S', phase: 0, moving: false, state: 'stand', bowing: false, _r: 0x9e3779b9 });
+        // Se pone en la celda de aproximación (transitable). Solo se desplaza medio
+        // tile a un lado si ESA celda vecina también es transitable (si no, se
+        // quedaría encima de la muralla u otro bloqueo).
+        let cfx = mb.approach[0], cfy = mb.approach[1];
+        if (set.has((cfx + 1) + ',' + cfy)) cfx += 0.5;
+        else if (set.has((cfx - 1) + ',' + cfy)) cfx -= 0.5;
+        else if (set.has(cfx + ',' + (cfy + 1))) cfy += 0.5;
+        clerks.push({ id: 'clerk@' + mainBid, name: 'Funcionario', aptitud: 'administrador', aspecto: {}, fx: cfx, fy: cfy, dir: 'S', phase: 0, moving: false, state: 'stand', bowing: false, _r: 0x9e3779b9 });
         // Huecos en SEMICÍRCULO al frente del tablón donde los curiosos se asoman.
         const cax = mb.approach[0], cay = mb.approach[1];
         [[-2, 0], [2, 0], [-1, 1], [1, 1], [0, 2], [-2, 1], [2, 1]].forEach(([ox, oy]) => {
