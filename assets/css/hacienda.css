@@ -381,6 +381,7 @@ html.hacp-pseudofs, html.hacp-pseudofs body{ overflow:hidden; }
   /* En el home, los controles de misión del panel sobran (los lleva la sección
      Misiones); solo se conserva el estado de la misión ACTIVA. */
   .hacp-mobile .hacp-cp-board, .hacp-mobile .hacp-cp-mis:not(.hacp-cp-mis-on){ display:none; }
+  .hacp-mobile .hacp-cp-esc{ display:none; }   /* en móvil, Escaramuzas vive en la barra inferior */
   .hacp-mobile .hacp-finca{ transform:none; margin:0; width:100%; }
   .hacp-mobile .hacp-iso-area{ margin:0; }
   /* El visor iso es la CAPA DE FONDO a pantalla completa (sección Hacienda). */
@@ -508,7 +509,14 @@ html.hacp-pseudofs, html.hacp-pseudofs body{ overflow:hidden; }
 .hacp-wound-txt{ margin-left:auto; font-size:10.5px; color:var(--parch2); }
 .hacp-cp-bonos{ margin-top:8px; padding:6px 9px; font-size:11px; line-height:1.5; text-align:center;
   background:rgba(201,168,76,.08); border:1px solid rgba(201,168,76,.22); border-radius:6px; color:var(--parch2); }
-/* ── Escaramuzas (sección móvil) ──────────────────────────────────────── */
+/* ── Escaramuzas (sección móvil Y overlay de escritorio) ──────────────── */
+/* fila genérica (también la usa el listado de bandas en el overlay de escritorio) */
+.hacp-mrow{ display:flex; align-items:center; gap:10px; padding:9px 11px; margin-bottom:7px;
+  background:rgba(255,255,255,.03); border:1px solid rgba(201,168,76,.2); border-radius:9px; }
+.hacp-mrow-main{ flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; }
+.hacp-mrow-main b{ font:700 13px 'Noto Sans SC',sans-serif; color:var(--parch); }
+.hacp-mrow-main span{ font-size:11px; color:var(--parch2); }
+.hacp-esc-ov .hacp-shop-box{ width:min(460px,94%); }
 .hacp-esc-h{ font:900 18px 'Noto Serif SC',serif; color:var(--gold); margin-bottom:12px; }
 .hacp-esc-sub{ font:400 12px 'Noto Sans SC',sans-serif; color:var(--parch2); margin-left:6px; }
 .hacp-esc-card{ background:rgba(255,255,255,.03); border:1px solid rgba(201,168,76,.22); border-radius:10px; padding:13px 13px; margin-bottom:16px; }
