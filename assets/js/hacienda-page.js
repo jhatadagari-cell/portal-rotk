@@ -142,7 +142,7 @@
   function enablePanZoom(vp, cv) {
     if (!vp || !cv) return;
     let scale = 1, tx = 0, ty = 0, fit = 1;
-    const clampS = (s) => Math.max(fit * 0.6, Math.min(fit * 8, s));
+    const clampS = (s) => Math.max(fit * 0.6, Math.min(fit * 14, s));
     const apply = () => { cv.style.transform = 'translate(' + tx + 'px,' + ty + 'px) scale(' + scale + ')'; };
     function fitView() {
       const vw = vp.clientWidth, vh = vp.clientHeight;
@@ -1382,7 +1382,7 @@
           <div class="hacp-mtab-body" data-mtb="exped" hidden></div>
         </div>
         <div class="hacp-msec-pane" data-pane="mapa"><div class="hacp-msec-soon">🗺<br><b>Mapa</b><br>Pronto: las haciendas de otros jugadores y de NPCs.</div></div>
-        <div class="hacp-msec-pane" data-pane="escaramuzas"><div class="hacp-msec-soon">⚔<br><b>Escaramuzas</b><br>Expediciones cooperativas para varios jugadores. Muy pronto.</div></div>`;
+        <div class="hacp-msec-pane" data-pane="escaramuzas"><div class="hacp-esc" data-esc-body></div></div>`;
       document.body.appendChild(sec);
 
       // Personaje (home): reubica el panel del personaje como contenido de la sección.
@@ -1412,9 +1412,89 @@
         body.appendChild(el); el.hidden = false; el.classList.add('hacp-board-inline');
       }
 
+      // ── ESCARAMUZAS (cooperativo): lobby — montar banda / listar / unirse / salir ──
+      // (El lanzamiento, la salida animada y el reparto de botín/heridas/cooldown
+      //  llegan en la siguiente sub-fase; aquí queda el "vestíbulo" de bandas.)
+      const COSTE_BANDA = (plazas) => plazas * 40;     // 2→80, 3→120, 4→160
+      const myName = ((h.miembros || []).find(m => m.personajeId === myId) || {}).nombre || 'Tú';
+      let escPlazas = 3;
+      const escBody = () => sec.querySelector('[data-esc-body]');
+      function renderEscaramuzas() {
+        const body = escBody(); if (!body) return;
+        if (!myId) { body.innerHTML = '<div class="hacp-msec-soon">兵<br><b>Escaramuzas</b><br>Únete a esta hacienda con tu mecenas para participar.</div>'; return; }
+        if (!window.HacEscaramuzas || !HacEscaramuzas.dbOk()) {
+          body.innerHTML = '<div class="hacp-msec-soon">兵<br><b>Escaramuzas</b><br>Aún no disponibles en el servidor.</div>'; return;
+        }
+        const mine = HacEscaramuzas.miBanda(h.id, myId);
+        if (mine) { body.innerHTML = bandaPropiaHTML(mine); const sl = body.querySelector('[data-salir]'); if (sl) sl.addEventListener('click', () => salirBanda(mine.id)); return; }
+        const dinero = window.HacStats ? HacStats.dinero(myId) : 0;
+        const coste = COSTE_BANDA(escPlazas), sinDinero = dinero < coste;
+        const abiertas = HacEscaramuzas.abiertas(h.id).filter(b => b.miembros.length < b.plazas);
+        const lista = abiertas.map(b => `
+          <div class="hacp-mrow"><div class="hacp-mrow-main"><b>Banda de ${esc(b.hostNombre || 'un mecenas')}</b>
+            <span>${b.miembros.length}/${b.plazas} · dif. ${b.dificultad}</span></div>
+            <button class="hacp-cp-btn" data-unir="${esc(b.id)}">Unirse</button></div>`).join('')
+          || '<div class="hacp-inv-note">No hay bandas abiertas. ¡Monta la tuya!</div>';
+        body.innerHTML = `
+          <div class="hacp-esc-h">兵 Escaramuzas <span class="hacp-esc-sub">expediciones cooperativas</span></div>
+          <div class="hacp-esc-card">
+            <div class="hacp-esc-ttl">Montar una banda</div>
+            <div class="hacp-esc-note">Salís varios mecenas a una expedición militar más dura. Pagas por montarla; si volvéis con éxito recuperas el coste +25% y tu parte del botín.</div>
+            <div class="hacp-esc-plazas">${[2, 3, 4].map(p => `<button class="hacp-esc-p${p === escPlazas ? ' on' : ''}" data-plazas="${p}">${p} plazas</button>`).join('')}</div>
+            <button class="hacp-cp-btn hacp-esc-crear" data-crear${sinDinero ? ' disabled' : ''}>Montar banda · 💰 ${coste}${sinDinero ? ' (te falta)' : ''}</button>
+          </div>
+          <div class="hacp-esc-ttl2">Bandas abiertas</div>${lista}`;
+        body.querySelectorAll('[data-plazas]').forEach(b => b.addEventListener('click', () => { escPlazas = +b.dataset.plazas; renderEscaramuzas(); }));
+        const cr = body.querySelector('[data-crear]'); if (cr && !cr.disabled) cr.addEventListener('click', crearBanda);
+        body.querySelectorAll('[data-unir]').forEach(b => b.addEventListener('click', () => unirBanda(b.dataset.unir)));
+      }
+      function bandaPropiaHTML(b) {
+        const esHost = b.hostId === myId;
+        const roster = b.miembros.map(m => `<li class="hacp-esc-m${m.id === b.hostId ? ' host' : ''}">${esc(m.nombre || 'mecenas')}${m.id === b.hostId ? ' · capitán' : ''}${m.id === myId ? ' (tú)' : ''}</li>`).join('');
+        let accion = '';
+        if (b.estado === 'abierta') {
+          const puede = b.miembros.length >= 2;
+          accion = `<button class="hacp-cp-btn" data-lanzar disabled title="Próximamente">${esHost ? '⚔ Lanzar (próximamente)' : 'Esperando al capitán…'}</button>
+            <div class="hacp-esc-note">${puede ? 'Listos para partir cuando el capitán lance.' : 'Hacen falta al menos 2 mecenas para partir.'} El lanzamiento, la salida y el reparto llegan en la próxima actualización.</div>
+            <button class="hacp-cp-btn hacp-esc-salir" data-salir>${esHost ? 'Disolver la banda' : 'Salir de la banda'}</button>`;
+        } else if (b.estado === 'en_curso') {
+          accion = `<div class="hacp-esc-note">La banda está en la expedición.</div>`;
+        }
+        return `<div class="hacp-esc-h">兵 Tu banda <span class="hacp-esc-sub">${b.miembros.length}/${b.plazas}</span></div>
+          <div class="hacp-esc-card"><div class="hacp-esc-ttl">Expedición militar · dif. ${b.dificultad}</div>
+            <ul class="hacp-esc-roster">${roster}</ul>${accion}</div>`;
+      }
+      async function crearBanda() {
+        const coste = COSTE_BANDA(escPlazas);
+        if (!window.HacStats || HacStats.dinero(myId) < coste) { toast('No tienes suficiente dinero'); return; }
+        try {
+          await HacStats.award(myId, { dinero: -coste });
+          await HacEscaramuzas.crear({ haciendaId: h.id, hostId: myId, hostNombre: myName, plazas: escPlazas, dificultad: 4 + (escPlazas - 2), coste });
+          toast('⚔ Banda montada · esperando mecenas'); renderEscaramuzas(); if (charId) buildCharPanel(charId);
+        } catch (e) { toast((e && e.message) || 'No se pudo montar'); await HacEscaramuzas.reload(); renderEscaramuzas(); }
+      }
+      async function unirBanda(id) {
+        try { await HacEscaramuzas.unir(id, { id: myId, nombre: myName }); toast('Te has unido a la banda'); renderEscaramuzas(); }
+        catch (e) { toast((e && e.message) || 'No se pudo unir'); await HacEscaramuzas.reload(); renderEscaramuzas(); }
+      }
+      async function salirBanda(id) {
+        const band = HacEscaramuzas.miBanda(h.id, myId);
+        const refund = (band && band.hostId === myId && band.estado === 'abierta') ? band.coste : 0;
+        try {
+          const r = await HacEscaramuzas.salir(id, myId);
+          if (refund > 0 && r.disuelta && window.HacStats) { await HacStats.award(myId, { dinero: refund }); toast('Banda disuelta · coste devuelto'); }
+          else toast(r.disuelta ? 'Banda disuelta' : 'Has salido de la banda');
+          renderEscaramuzas(); if (charId) buildCharPanel(charId);
+        } catch (e) { toast((e && e.message) || 'No se pudo salir'); await HacEscaramuzas.reload(); renderEscaramuzas(); }
+      }
+      if (window.HacEscaramuzas) HacEscaramuzas.ready();
+      let mActive = 'personaje';
+      setInterval(() => { if (mActive === 'escaramuzas' && window.HacEscaramuzas) HacEscaramuzas.reload().then(() => { if (mActive === 'escaramuzas') renderEscaramuzas(); }); }, 6000);
+
       function mgo(id) {
         // Cierra cualquier modal (tienda/equipo/casa/abandonar) al cambiar de sección.
         [shopEl, equipEl, homeEl, leaveEl].forEach(e => { if (e) e.hidden = true; });
+        mActive = id;
         SEC.forEach(s => navBtns[s.id].classList.toggle('on', s.id === id));
         sec.querySelectorAll('.hacp-msec-pane').forEach(p => p.classList.toggle('on', p.dataset.pane === id));
         const isHac = (id === 'hacienda');
@@ -1428,12 +1508,14 @@
           }
         }
         if (id === 'misiones') { renderInternas(); }
+        if (id === 'escaramuzas') { if (window.HacEscaramuzas) HacEscaramuzas.reload().then(renderEscaramuzas); else renderEscaramuzas(); }
         if (isHac) {
           // El visor pasó a pantalla completa al añadir .hacp-mobile, DESPUÉS de fitView →
           // recalcula el encuadre al tamaño real y, ya en el frame siguiente, hace zoom
           // al mecenas (focusFollow usa el `fit` recién calculado).
           window.dispatchEvent(new Event('resize'));
-          if (myId && cam && cam.focusFollow) requestAnimationFrame(() => cam.focusFollow(() => HacFolk.position(myId), 3.0));
+          // En móvil el visor es enorme: acércate bien al mecenas (zoom alto).
+          if (myId && cam && cam.focusFollow) requestAnimationFrame(() => cam.focusFollow(() => HacFolk.position(myId), 8));
         }
       }
       mgo('personaje');   // landing por defecto

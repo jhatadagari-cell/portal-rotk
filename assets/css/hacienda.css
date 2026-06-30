@@ -377,7 +377,7 @@ html.hacp-pseudofs, html.hacp-pseudofs body{ overflow:hidden; }
   body.hacp-mobile #nav, body.hacp-mobile footer, body.hacp-mobile #back-top, body.hacp-mobile #corner-vignette,
   .hacp-mobile .hacp-hero, .hacp-mobile .hacp-finca-ttl, .hacp-mobile .hacp-finca-sub,
   .hacp-mobile .hacp-admin, .hacp-mobile .hacp-iso-hint, .hacp-mobile .hacp-mobar,
-  .hacp-mobile .hacp-detail{ display:none !important; }
+  .hacp-mobile .hacp-back, .hacp-mobile .hacp-detail{ display:none !important; }
   /* En el home, los controles de misión del panel sobran (los lleva la sección
      Misiones); solo se conserva el estado de la misión ACTIVA. */
   .hacp-mobile .hacp-cp-board, .hacp-mobile .hacp-cp-mis:not(.hacp-cp-mis-on){ display:none; }
@@ -508,6 +508,23 @@ html.hacp-pseudofs, html.hacp-pseudofs body{ overflow:hidden; }
 .hacp-wound-txt{ margin-left:auto; font-size:10.5px; color:var(--parch2); }
 .hacp-cp-bonos{ margin-top:8px; padding:6px 9px; font-size:11px; line-height:1.5; text-align:center;
   background:rgba(201,168,76,.08); border:1px solid rgba(201,168,76,.22); border-radius:6px; color:var(--parch2); }
+/* ── Escaramuzas (sección móvil) ──────────────────────────────────────── */
+.hacp-esc-h{ font:900 18px 'Noto Serif SC',serif; color:var(--gold); margin-bottom:12px; }
+.hacp-esc-sub{ font:400 12px 'Noto Sans SC',sans-serif; color:var(--parch2); margin-left:6px; }
+.hacp-esc-card{ background:rgba(255,255,255,.03); border:1px solid rgba(201,168,76,.22); border-radius:10px; padding:13px 13px; margin-bottom:16px; }
+.hacp-esc-ttl{ font:700 14px 'Noto Sans SC',sans-serif; color:var(--parch); margin-bottom:6px; }
+.hacp-esc-ttl2{ font:700 10px 'Cinzel Decorative',serif; letter-spacing:.08em; text-transform:uppercase; color:var(--parch2); opacity:.8; margin:4px 0 8px; }
+.hacp-esc-note{ font-size:11.5px; line-height:1.5; color:var(--parch2); margin-bottom:11px; }
+.hacp-esc-plazas{ display:flex; gap:7px; margin-bottom:12px; }
+.hacp-esc-p{ flex:1; min-height:40px; background:rgba(201,168,76,.1); border:1px solid rgba(201,168,76,.28);
+  border-radius:9px; color:var(--parch2); font:700 12px 'Noto Sans SC',sans-serif; cursor:pointer; }
+.hacp-esc-p.on{ background:rgba(201,168,76,.28); color:var(--gold); }
+.hacp-esc-crear{ width:100%; }
+.hacp-esc-roster{ list-style:none; margin:0 0 12px; padding:0; }
+.hacp-esc-m{ font:600 13px 'Noto Sans SC',sans-serif; color:var(--parch); padding:7px 2px; border-top:1px solid rgba(255,255,255,.05); }
+.hacp-esc-m:first-child{ border-top:0; }
+.hacp-esc-m.host{ color:var(--gold); }
+.hacp-esc-roster + button, .hacp-esc-card button.hacp-cp-btn{ width:100%; margin-top:7px; }
 /* Popup de info de edificio (al pulsar su cuerpo en el plano) */
 .hacp-bld-pop{ position:fixed; z-index:9999; width:min(248px,80vw); padding:10px 12px; box-sizing:border-box;
   background:rgba(13,11,7,.97); border:1px solid rgba(201,168,76,.45); border-radius:8px;
