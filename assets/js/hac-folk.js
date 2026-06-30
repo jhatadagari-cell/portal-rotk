@@ -426,6 +426,12 @@ const HacFolk = (function () {
     path.push.apply(path, inside);                                    // y entra a la finca
     w.path = path; w.state = 'exped-in'; w.moving = false;
   }
+  // ¿Está el mecenas MÁS ALLÁ de la rejilla interior (fuera de la muralla)? Solo en
+  // expedición se sale; cualquier otra cosa ahí fuera es un mecenas varado.
+  function fueraDeFinca(w) {
+    if (!wk) return false;
+    return w.fx < -0.5 || w.fy < -0.5 || w.fx > wk.GW - 0.5 || w.fy > wk.GH - 0.5;
+  }
   // Trae de vuelta a un mecenas que quedó FUERA de la finca (expedición cortada):
   // camina del campo al vano del portón y entra. R-free (rutas fijas).
   function enterFromOutside(w) {
@@ -752,8 +758,7 @@ const HacFolk = (function () {
     if (w.order) w.missionDoneFor = w.order.startMs;   // marca ESTA orden como cumplida (no re-activar)
     w.onMission = false; w.bowing = false; w.missionTask = null;
     // Si terminó FUERA de la finca (expedición cumplida/cortada fuera), que entre.
-    const k = Math.round(w.fx) + ',' + Math.round(w.fy);
-    if (wk && wk.set && !wk.set.has(k) && !w.insideId) { enterFromOutside(w); return; }
+    if (!w.insideId && fueraDeFinca(w)) { enterFromOutside(w); return; }
     if (w.insideId) startLeave(w);
     else { w.state = 'paseando'; w.strollTimer = rng(2, 6); w.path = null; w.moving = false; }
   }
@@ -789,12 +794,11 @@ const HacFolk = (function () {
       if (w.gardenCd > 0) w.gardenCd -= dt;
       if (w.socialCd > 0) w.socialCd -= dt;
       if (w.browseCd > 0) w.browseCd -= dt;
-      // Auto-recuperación: si quedó VARADO fuera de la finca y no está en tránsito
-      // de expedición, que vuelva a entrar (arregla mecenas atascados fuera).
-      if (w.state !== 'exped-out' && w.state !== 'exped-in' && w.state !== 'fuera' && !w.insideId && wk.set) {
-        const k = Math.round(w.fx) + ',' + Math.round(w.fy);
-        if (!wk.set.has(k)) enterFromOutside(w);
-      }
+      // Auto-recuperación: si quedó VARADO FUERA de la rejilla (más allá de la
+      // muralla) y no está en tránsito de expedición, que vuelva a entrar. OJO: se
+      // comprueba por LÍMITES de rejilla, no por `set` (hay muchas celdas válidas
+      // fuera de `set`: puertas, bordes… comprobarlo así mandaba a TODOS al portón).
+      if (w.state !== 'exped-out' && w.state !== 'exped-in' && w.state !== 'fuera' && !w.insideId && fueraDeFinca(w)) enterFromOutside(w);
       missionGate(w);
       switch (w.state) {
         // Curiosear el mercado (flavor LOCAL, sin R): va al puesto, mira el género
