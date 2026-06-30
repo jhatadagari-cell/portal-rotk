@@ -1031,6 +1031,53 @@ const HacFolk = (function () {
   }
 
   // ── Dibujo (coords LÓGICAS; el ctx ya está a escala SCALE) ────────────────
+  // ── MONTURA (caballo) ──────────────────────────────────────────────────────
+  // Ciclo de andar: 4 direcciones (SW/SE/NW/NE, las diagonales del motor) × 7
+  // frames, en px de DISPOSITIVO, con ancla en los cascos (ax,ay). Las 8 direcciones
+  // del walker se mapean a las 4 vistas. `seatY` = altura de la silla sobre el suelo;
+  // `seatDx` = desplazamiento lateral del jinete (a afinar a ojo con ?mount=1).
+  const HORSE_NF = 7;
+  const HORSE_META = {
+    SW: { w: 56, h: 69, ax: 18, ay: 69, seatY: 40, seatDx: 9 },
+    SE: { w: 55, h: 68, ax: 15, ay: 68, seatY: 40, seatDx: 12 },
+    NW: { w: 50, h: 76, ax: 11, ay: 76, seatY: 47, seatDx: 13 },
+    NE: { w: 48, h: 75, ax: 36, ay: 75, seatY: 47, seatDx: -12 },
+  };
+  const HORSE_VIEW = { E: 'SE', SE: 'SE', S: 'SE', SW: 'SW', W: 'SW', NW: 'NW', N: 'NW', NE: 'NE' };
+  const horseImg = {}; let horseReady = false;
+  if (typeof Image !== 'undefined') {
+    let n = 0; const need = 4 * HORSE_NF;
+    ['SW', 'SE', 'NW', 'NE'].forEach(v => {
+      horseImg[v] = [];
+      for (let i = 0; i < HORSE_NF; i++) {
+        const im = new Image(); im.onload = () => { if (++n >= need) horseReady = true; };
+        im.src = 'assets/img/iso/horse-' + v + '-' + i + '.png?v=2'; horseImg[v].push(im);
+      }
+    });
+  }
+  // ¿Va montado este walker? (de momento solo un flag de depuración global para
+  // previsualizar; el disparador real —p.ej. expediciones militares— vendrá luego.)
+  if (typeof window !== 'undefined' && /[?&]mount=1/.test(window.location.search || '')) window.__HAC_MOUNT_ALL = true;   // previsualización
+  function isMounted(w) { return !!(w && (w.mounted || (typeof window !== 'undefined' && window.__HAC_MOUNT_ALL))) && horseReady; }
+  // Dibuja el caballo (frame del ciclo según el paso) bajo el jinete sentado en la silla.
+  function drawMount(g, lx, ly, w, moving) {
+    const v = HORSE_VIEW[w.dir || 'S'] || 'SW', m = HORSE_META[v], arr = horseImg[v];
+    const fi = moving ? (Math.floor(w.phase * 1.6) % HORSE_NF) : 0;   // 0 = en reposo
+    const img = arr && arr[fi];
+    const fx = lx * SCALE, fy = ly * SCALE;
+    g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.imageSmoothingEnabled = false;
+    if (img) g.drawImage(img, Math.round(fx - m.ax), Math.round(fy - m.ay), m.w, m.h);
+    // Jinete: sprite del mecenas quieto (sentado), elevado hasta la silla.
+    const cv = window.HacChar ? spriteFor(w, w.dir || 'S', 0, 'stand') : null;
+    if (cv) {
+      const FEET = HacChar.H - 5;
+      const dx = Math.round(fx - HacChar.W * 0.5 + (m.seatDx || 0));
+      const dy = Math.round(fy - FEET - m.seatY);
+      g.drawImage(cv, dx, dy, HacChar.W, HacChar.H);
+    }
+    g.restore();
+  }
+
   function drawWalker(g, lx, ly, w, o) {
     o = o || {};
     // Glow del seleccionado (en coords lógicas, bajo los pies).
@@ -1044,7 +1091,9 @@ const HacFolk = (function () {
     const pose = (w.state === 'tumbado') ? 'sit' : (w.bowing ? 'bow' : 'stand');
     const cv = window.HacChar ? spriteFor(w, w.dir || 'S', frame, pose) : null;
     const disp = SPRITE_DISP, FEET = HacChar ? HacChar.H - 5 : 51;
-    if (cv) {
+    if (isMounted(w)) {
+      drawMount(g, lx, ly, w, moving);   // caballo (ciclo de andar) + jinete sobre la silla
+    } else if (cv) {
       // Blit en espacio de DISPOSITIVO (transform identidad) para que el pixel-art
       // quede nítido (igual que los sprites de edificio). Pies del sprite sobre (lx,ly).
       g.save();
