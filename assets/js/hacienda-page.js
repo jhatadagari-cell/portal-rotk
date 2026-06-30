@@ -285,6 +285,17 @@
     // deseleccionaría). Así puedes usar el selector y los botones sin perder el zoom.
     if (charEl) ['pointerdown', 'pointerup', 'wheel', 'click'].forEach(ev =>
       charEl.addEventListener(ev, (e) => e.stopPropagation(), { passive: false }));
+    // Tooltip propio de las stats (el title nativo no llega a salir porque las
+    // tarjetas se reconstruyen cada segundo). Delegado en charEl (que persiste).
+    let statTip = null;
+    const placeTip = (x, y) => { statTip.style.left = Math.min(x + 13, window.innerWidth - statTip.offsetWidth - 8) + 'px'; statTip.style.top = Math.max(6, y - 10) + 'px'; };
+    function hideStatTip() { if (statTip) statTip.style.display = 'none'; }
+    if (charEl) {
+      const tipOf = (e) => (e.target.closest && e.target.closest('.hacp-cp-stat'));
+      charEl.addEventListener('mouseover', (e) => { const c = tipOf(e); if (!c || !c.dataset.tip) return; if (!statTip) { statTip = document.createElement('div'); statTip.className = 'hacp-stat-tip'; document.body.appendChild(statTip); } statTip.textContent = c.dataset.tip; statTip.style.display = 'block'; placeTip(e.clientX, e.clientY); });
+      charEl.addEventListener('mousemove', (e) => { if (statTip && statTip.style.display === 'block' && tipOf(e)) placeTip(e.clientX, e.clientY); });
+      charEl.addEventListener('mouseout', (e) => { if (tipOf(e)) hideStatTip(); });
+    }
     // La lista de mecenas también vive DENTRO del visor → no debe burbujear al pan/tap.
     ['pointerdown', 'pointerup', 'wheel', 'click'].forEach(ev =>
       panel.addEventListener(ev, (e) => e.stopPropagation(), { passive: false }));
@@ -507,7 +518,7 @@
     }
 
     // ── Panel de control del personaje (overlay sobre el visor) ──────────────
-    let charId = null, charSig = '', invOpen = false;
+    let charId = null, charSig = '', invOpen = false, lastStatsSig = '';
     function charData(id) {
       const it = HacFolk.list().find(w => w.id === id);
       if (!it) return null;
@@ -600,15 +611,19 @@
     }
     // Bloque de stats 武/文/政: nivel (derivado del XP) + barra hacia el siguiente.
     const DOM_NOMBRE = { militar: 'Militar', cultural: 'Cultural', administrativo: 'Administrativo' };
+    const DOM_ABBR = { militar: 'Militar', cultural: 'Cultural', administrativo: 'Admin.' };
     const DOM_COLOR = { militar: '#b23b2e', cultural: '#3a8a5a', administrativo: '#3a6ea5' };
     function statsHTML(d) {
       if (!d.stats) return '';
-      const chips = d.stats.map(s => `<div class="hacp-cp-stat" title="${DOM_GLYPH[s.dom]} ${DOM_NOMBRE[s.dom]} · nivel ${s.nivel}${s.bonus ? ` (+${s.bonus} de equipo)` : ''} · ${s.xp} XP${s.falta ? ` · faltan ${s.falta} para subir` : ''}">
-        <span class="hacp-cp-stat-g" style="color:${DOM_COLOR[s.dom]}">${DOM_GLYPH[s.dom]}</span>
-        <span class="hacp-cp-stat-n">${s.total}${s.bonus ? `<i class="hacp-cp-stat-eq">+${s.bonus}</i>` : ''}</span>
-        <i class="hacp-cp-stat-bar"><b style="width:${Math.round(s.pct * 100)}%;background:${DOM_COLOR[s.dom]}"></b></i>
-      </div>`).join('');
-      return `<div class="hacp-cp-stats" id="hacp-cp-stats">${chips}</div>`;
+      const chips = d.stats.map(s => {
+        const tip = `${DOM_GLYPH[s.dom]} ${DOM_NOMBRE[s.dom]} · nivel ${s.nivel}${s.bonus ? ` (+${s.bonus} de equipo)` : ''} · ${s.xp} XP${s.falta ? ` · faltan ${s.falta} para el siguiente nivel` : ''}`;
+        return `<div class="hacp-cp-stat" data-tip="${esc(tip)}" title="${esc(tip)}">
+          <span class="hacp-cp-stat-h"><span class="hacp-cp-stat-g" style="color:${DOM_COLOR[s.dom]}">${DOM_GLYPH[s.dom]}</span><span class="hacp-cp-stat-nm">${DOM_ABBR[s.dom]}</span></span>
+          <span class="hacp-cp-stat-n">${s.total}${s.bonus ? `<i class="hacp-cp-stat-eq">+${s.bonus}</i>` : ''}</span>
+          <i class="hacp-cp-stat-bar"><b style="width:${Math.round(s.pct * 100)}%;background:${DOM_COLOR[s.dom]}"></b></i>
+        </div>`;
+      }).join('');
+      return `<div class="hacp-cp-stats" id="hacp-cp-stats"><div class="hacp-cp-statslbl">Poder personal <span>· nivel por dominio</span></div><div class="hacp-cp-statsrow">${chips}</div></div>`;
     }
     function buildCharPanel(id) {
       const d = charData(id); if (!d) { closeCharPanel(); return; }
@@ -653,6 +668,7 @@
         ${mision}
         ${d.mine ? `<button type="button" class="hacp-cp-btn hacp-cp-invbtn${invOpen ? ' on' : ''}" data-act="inv">🎒 ${invOpen ? 'Ocultar' : 'Inventario'} · 💰 ${d.money}</button>` : ''}
         ${(d.mine && invOpen) ? invPanelHTML(d) : ''}`;
+      lastStatsSig = JSON.stringify(d.stats || 0);   // recién pintadas: marca su firma
       charEl.querySelector('[data-act="close"]').addEventListener('click', deselect);
       const db = charEl.querySelector('[data-act="dispatch"]');
       if (db) db.addEventListener('click', () => { const s = charEl.querySelector('.hacp-cp-sel'); dispatch(s ? s.value : null); });
@@ -699,7 +715,7 @@
       buildCharPanel(id);
       startAvatar();
     }
-    function closeCharPanel() { if (charEl) { charId = null; charEl.hidden = true; } stopAvatar(); }
+    function closeCharPanel() { if (charEl) { charId = null; charEl.hidden = true; } hideStatTip(); stopAvatar(); }
     // Refresco ligero: actualiza actividad/energía/cuenta atrás sin rebuild (para
     // no resetear el <select>); solo reconstruye si cambia el "modo" (misión/tuyo).
     function refreshCharPanel() {
@@ -710,7 +726,9 @@
       const act = charEl.querySelector('#hacp-cp-act'); if (act) act.textContent = (d.it.inside ? '⌂ ' : '') + (d.it.activity || 'Paseando por la finca');
       const eb = charEl.querySelector('#hacp-cp-ebar'); if (eb) eb.style.width = d.e + '%';
       const el = charEl.querySelector('#hacp-cp-elabel'); if (el) el.innerHTML = energyLabel(d);
-      const st = charEl.querySelector('#hacp-cp-stats'); if (st) st.outerHTML = statsHTML(d);
+      // Solo reconstruye las stats si CAMBIARON (si no, se reiniciaría el hover/tooltip cada segundo).
+      const st = charEl.querySelector('#hacp-cp-stats'); const sig = JSON.stringify(d.stats || 0);
+      if (st && sig !== lastStatsSig) { lastStatsSig = sig; st.outerHTML = statsHTML(d); }
       const rt = charEl.querySelector('#hacp-cp-rest'); if (rt && d.activa) rt.textContent = fmtClock(d.rest);
     }
 
