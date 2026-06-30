@@ -72,6 +72,14 @@ const HacFolk = (function () {
   // La energía se DERIVA de esa línea de tiempo (v1 de pruebas: no bloquea).
   let orders = {};
   const SALUTE_SEC = 1.6;
+  // ── Escaramuza: concentración coreografiada en la puerta antes de partir ──
+  // escMap[walkerId] = { inicioMs, idx, n } de su banda lanzada (lo fija la página).
+  // Sincronizado por inicioMs (reloj de servidor) → todos los clientes lo ven igual.
+  let escMap = {};
+  function setEscaramuzas(m) { escMap = m || {}; }
+  const ESC_MUSTER_MS = 16000;   // ventana de concentración en la puerta (deja margen para llegar)
+  const ESC_CHEER_MS = 4200;     // 拱手 + grito de guerra (sub-ventana final, simultáneo)
+  const ESC_CRY = '¡A la batalla!';
   // Hora de simulación (ms) del estado actual — base de las misiones.
   // (La energía es un recurso del jugador independiente del sim → HacEnergia.)
   function nowSimMs() { return simNowMs; }
@@ -374,7 +382,7 @@ const HacFolk = (function () {
   // campo `errand` no se serializa, así que un snapshot lo descarta sin problema.
   function goHome(id, buildingId, onArrive) {
     const w = walkers.find(x => x.id === id); if (!w || !wk) return false;
-    if (w.onMission || ['exped-out', 'exped-in', 'fuera', 'saludo'].indexOf(w.state) >= 0) return false;
+    if (w.onMission || ['exped-out', 'exped-in', 'fuera', 'saludo', 'esc-cheer'].indexOf(w.state) >= 0) return false;
     const b = buildingId ? wk.buildings.get(buildingId) : null;
     const callNow = () => { if (onArrive) try { onArrive(); } catch (e) {} };
     if (!b || !b.approachKey) { callNow(); return 'now'; }
@@ -392,7 +400,7 @@ const HacFolk = (function () {
   // 'walking' / 'now' (ya está) / false (ocupado/sin ruta).
   function consultar(id, buildingId) {
     const w = walkers.find(x => x.id === id); if (!w || !wk) return false;
-    if (w.onMission || ['exped-out', 'exped-in', 'fuera', 'saludo'].indexOf(w.state) >= 0) return false;
+    if (w.onMission || ['exped-out', 'exped-in', 'fuera', 'saludo', 'esc-cheer'].indexOf(w.state) >= 0) return false;
     const b = buildingId ? wk.buildings.get(buildingId) : null;
     if (!b || !b.approachKey) return false;
     if (w.state === 'consultando' && w.consultBid === b.id) return 'now';   // ya está allí
@@ -516,11 +524,20 @@ const HacFolk = (function () {
       // (no desde que se mandó): así el countdown empieza al iniciar la tarea.
       if (w.onMission) w.taskTimer = (w.order && w.order.durMs) ? w.order.durMs / 1000 : (task ? task.duracionSeg : 60);
     } else if (w.state === 'exped-out') {
-      // Llegó al portón → "sale del mapa" (oculto) hasta que se cumpla la duración
-      // de la misión contada desde su inicio (el resto lo pasa fuera).
-      w.moving = false; w.path = null; w.state = 'fuera';
-      const o = w.order, t = nowSimMs(), endOut = o ? o.startMs + (o.durMs || 120000) : t;
-      w.outTimer = Math.max(2, (endOut - t) / 1000);
+      // Llegó al portón. Si es una ESCARAMUZA y aún estamos en la ventana de
+      // concentración, FORMA FILA y espera a los demás para el grito de guerra
+      // (sincronizado). Si no, "sale del mapa" (oculto) hasta cumplir la duración.
+      const em = escMap[w.id], t0 = nowSimMs();
+      if (em && t0 < em.inicioMs + ESC_MUSTER_MS) {
+        w.moving = false; w.path = null; w.state = 'esc-cheer'; w.bowing = false; w.speech = null;
+        w._escEnd = em.inicioMs + ESC_MUSTER_MS; w.dir = 'S';
+        const e = wk.exitCell;
+        if (e) { const off = (em.idx - (em.n - 1) / 2) * 0.85; w.fx = e[0] + off; w.fy = e[1]; w.tx = w.fx; w.ty = w.fy; }
+      } else {
+        w.moving = false; w.path = null; w.state = 'fuera';
+        const o = w.order, endOut = o ? o.startMs + (o.durMs || 120000) : t0;
+        w.outTimer = Math.max(2, (endOut - t0) / 1000);
+      }
     } else if (w.state === 'exped-in') {
       endMission(w);   // de vuelta dentro de la finca → misión cumplida
     } else if (w.state === 'saliendo') {
@@ -847,6 +864,19 @@ const HacFolk = (function () {
         case 'saludo': w.phase += dt * 0.5; w.missionTimer -= dt; if (w.missionTimer <= 0) { w.bowing = false; (w.order && w.order.tipo === 'expedicion') ? startExpedition(w) : startMissionVisit(w); } break;
         case 'exped-out':
         case 'exped-in': followPath(w, dt, SPD); break;
+        case 'esc-cheer': {
+          // Espera en la puerta; en la sub-ventana final, 拱手 + grito al unísono.
+          w.phase += dt * 0.5;
+          if (w.speechT > 0) { w.speechT -= dt; if (w.speechT <= 0) w.speech = null; }
+          const t0 = nowSimMs(), end = w._escEnd || t0;
+          if (t0 >= end - ESC_CHEER_MS && !w.bowing) { w.bowing = true; w.speech = ESC_CRY; w.speechT = ESC_CHEER_MS / 1000; w.dir = 'S'; }
+          if (t0 >= end) {
+            w.bowing = false; w.speech = null; w.state = 'fuera';
+            const o = w.order, endOut = o ? o.startMs + (o.durMs || 120000) : t0;
+            w.outTimer = Math.max(2, (endOut - t0) / 1000);
+          }
+          break;
+        }
         case 'fuera': w.outTimer -= dt; if (w.outTimer <= 0) startReturn(w); break;
         case 'tarea': w.taskTimer -= dt; w.phase += dt * 1.2; if (w.taskTimer <= 0) { if (w.onMission) endMission(w); else startLeave(w); } break;
         case 'yendo':
@@ -1644,6 +1674,6 @@ const HacFolk = (function () {
   }
 
   function mainBuildingId() { return wk ? (wk.mainBid || null) : null; }
-  return { start, stop, list, select, selected, position, buildings, buildingTypes, setOrders, drawAvatar, goHome, consultar, consultando, dejarConsulta, mainBuildingId };
+  return { start, stop, list, select, selected, position, buildings, buildingTypes, setOrders, setEscaramuzas, drawAvatar, goHome, consultar, consultando, dejarConsulta, mainBuildingId };
 })();
 if (typeof window !== 'undefined') window.HacFolk = HacFolk;

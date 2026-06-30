@@ -626,6 +626,18 @@
         if (now >= band.finMs && band.hostId === myId) HacEscaramuzas.salir(band.id, myId).catch(() => {});
       }
     }
+    // Pasa al simulador qué walkers están en una banda lanzada (con su inicioMs
+    // compartido) para coreografiar la concentración + grito de guerra en la puerta.
+    function syncEscaramuzaFolk() {
+      if (!window.HacFolk || !HacFolk.setEscaramuzas || !window.HacEscaramuzas) return;
+      const map = {};
+      (HacEscaramuzas.all(h.id) || []).forEach(b => {
+        if (b.estado !== 'en_curso') return;
+        const ms = b.miembros || [];
+        ms.forEach((m, idx) => { map[m.id] = { inicioMs: b.inicioMs, idx, n: ms.length }; });
+      });
+      HacFolk.setEscaramuzas(map);
+    }
     // Botín común: ≥1 objeto por participante (de la tienda del tier, preferiendo
     // equipables/guardables). El reparto/elección será la sub-fase 4d.
     function generarBotin(band) {
@@ -789,7 +801,7 @@
       try {
         await HacEscaramuzas.lanzar(id, myId, clock(), ESC_FAST ? 60000 : 0);
         toast(ESC_FAST ? '⚔ ¡Parten! (modo test · ~1 min)' : '⚔ ¡La banda parte a la expedición!');
-        syncEscaramuzaOrder();
+        syncEscaramuzaOrder(); syncEscaramuzaFolk();
       } catch (e) { toast((e && e.message) || 'No se pudo lanzar'); await HacEscaramuzas.reload(); }
       finally { escBusy = false; renderEscaramuzas(); }
     }
@@ -1495,7 +1507,7 @@
     if (window.HacCompetencias) HacCompetencias.ready().then(refresh);
     if (window.HacPuntos) HacPuntos.ready().then(refresh);
     if (window.HacStats) HacStats.ready().then(refresh);
-    const escPulse = () => { syncEscaramuzaOrder(); resolverEscaramuzaSiToca(); escRefresh(); };
+    const escPulse = () => { syncEscaramuzaOrder(); resolverEscaramuzaSiToca(); syncEscaramuzaFolk(); escRefresh(); };
     if (window.HacEscaramuzas) HacEscaramuzas.ready().then(escPulse);
     if (window.HacOrdenes) {
       HacOrdenes.ready().then(applyOrders);
