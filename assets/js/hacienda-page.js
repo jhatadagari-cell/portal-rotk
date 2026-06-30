@@ -309,6 +309,10 @@
     const myId = _isMember ? _myPj.id : null;
     const myApt = _myPj ? _myPj.aptitud : '';
     const hasMarket = ((h.mapa && h.mapa.construcciones) || []).some(c => c.tipo === 'mercado');
+    // Edificio PRINCIPAL de la finca (sede del tablón de misiones), si existe.
+    const mainCons = (window.HacBuild && HacBuild.edificioPrincipal) ? HacBuild.edificioPrincipal(h.mapa) : null;
+    const hasMain = !!mainCons;
+    const mainBid = mainCons ? (mainCons.pos[0] + ',' + mainCons.pos[1]) : null;
     // Casa de un mecenas = construcción 'casa' cuyo DUEÑO es su miembro (asignado en
     // el admin). El walker.id es el personajeId; el dueño de la casa es el id de miembro.
     function casaDe(personajeId) {
@@ -361,24 +365,16 @@
         const tasks = (window.HacTareas && HacTareas.byTipo) ? HacTareas.byTipo(ty.tipo) : [];
         tasks.forEach(tk => out.push({ taskId: tk.id, nombre: tk.nombre || tk.verbo || 'Tarea', dominio: ty.dominio, duracionSeg: tk.duracionSeg || 60 }));
       });
-      // EXPEDICIONES (misiones FUERA de la finca): el mecenas sale por el portón,
-      // se ausenta y vuelve. Una por dominio. (XP/dinero llegan en el paso 1b.)
-      EXPEDICIONES.forEach(e => out.push({ taskId: 'exped:' + e.dom, nombre: e.nombre, dominio: e.dom, duracionSeg: 120, exped: true }));
+      // Las misiones FUERA de la finca ya NO van aquí: se eligen en el TABLÓN de
+      // misiones (📜) junto al edificio principal. Esta lista es solo de tareas
+      // dentro de la finca (edificios).
       return out;
     }
-    const EXPEDICIONES = [
-      { dom: 'militar',        nombre: '武 Patrulla fronteriza (fuera)' },
-      { dom: 'cultural',       nombre: '文 Embajada · viaje de estudios (fuera)' },
-      { dom: 'administrativo', nombre: '政 Recaudar tributos (fuera)' },
-    ];
     const DOM_GLYPH = { militar: '武', cultural: '文', administrativo: '政' };
-    // Riesgo de una expedición: base 30 %, −3 % por nivel del dominio (mín. 5 %).
-    // Subir de nivel (misiones/tomos del mercado) hace las expediciones más seguras.
-    function failChance(dom) {
-      const nivel = (window.HacStats && HacStats.nivel && dom) ? HacStats.nivel(myId, dom) : 1;
-      return Math.max(0.05, 0.30 - (nivel - 1) * 0.03);
-    }
-    const expeditionFailed = (dom) => Math.random() < failChance(dom);
+    // Nivel EFECTIVO en un dominio (nivel por XP + bonos de equipo).
+    function nivelEf(dom) { return (window.HacStats && HacStats.nivelTotal && dom) ? HacStats.nivelTotal(myId, dom) : 1; }
+    // Riesgo de una MISIÓN del tablón: depende de tu nivel efectivo vs su dificultad.
+    function riesgoMision(m) { return (window.HacMisiones) ? HacMisiones.riesgo(nivelEf(m.dom), m.dif) : 0.3; }
     const fmtDur = (s) => (s < 60) ? Math.round(s) + 's' : Math.round(s / 60) + ' min';
     // Cuenta atrás legible: «1m 45s» / «45s».
     const fmtClock = (s) => { s = Math.max(0, Math.round(s)); const m = Math.floor(s / 60), r = s % 60; return m ? `${m}m ${r}s` : `${r}s`; };
@@ -399,29 +395,26 @@
       const liveDone = _wasOnMission && !onM;                                          // el sim la acaba de completar
       if (hardDone || liveDone) {
         let dom = null;
-        if (o.tipo === 'expedicion') dom = String(o.targetId || '').replace('exped:', '') || null;
-        else { const task = (window.HacTareas && HacTareas.get) ? HacTareas.get(o.targetId) : null; dom = (task && window.HacBuild) ? (HacBuild.tipo(task.tipo) || {}).dominio : null; }
-        // Las EXPEDICIONES (fuera de la finca) pueden FALLAR: a más nivel del dominio,
-        // menos riesgo. Al fallar pierdes parte del MONEDERO (el ahorro de casa está a
-        // salvo) y no traes botín ni prestigio. Las misiones DENTRO no fallan.
-        if (o.tipo === 'expedicion' && expeditionFailed(dom)) {
+        const mis = (o.tipo === 'expedicion') ? (window.HacMisiones && HacMisiones.get(String(o.targetId || '').replace('mis:', ''))) : null;
+        if (mis) dom = mis.dom;
+        else if (o.tipo !== 'expedicion') { const task = (window.HacTareas && HacTareas.get) ? HacTareas.get(o.targetId) : null; dom = (task && window.HacBuild) ? (HacBuild.tipo(task.tipo) || {}).dominio : null; }
+        // Las MISIONES del tablón (fuera) pueden FALLAR: el riesgo depende de tu nivel
+        // efectivo vs la dificultad. Al fallar pierdes la mitad del MONEDERO (el ahorro
+        // de casa está a salvo) y no traes botín ni prestigio. Las tareas DENTRO no fallan.
+        if (mis && Math.random() < riesgoMision(mis)) {
           let lost = 0;
-          if (window.HacStats) {
-            const wallet = HacStats.dinero(myId);
-            lost = Math.round(wallet * 0.5);                         // pierde la mitad de lo que llevaba encima
-            if (lost > 0) HacStats.award(myId, { dinero: -lost });
-          }
+          if (window.HacStats) { const wallet = HacStats.dinero(myId); lost = Math.round(wallet * 0.5); if (lost > 0) HacStats.award(myId, { dinero: -lost }); }
           HacOrdenes.clear(h.id, myId);
-          toast(lost > 0 ? `❌ Expedición fallida · perdiste ${lost} 💰 del monedero` : '❌ Expedición fallida · sin botín');
+          toast(lost > 0 ? `❌ Misión fallida · perdiste ${lost} 💰 del monedero` : '❌ Misión fallida · sin botín');
           _wasOnMission = false; applyOrders();
           return;
         }
         const r = HacPuntos.recompensa(costeMision(dom), o.duracionSeg || 60);
         HacPuntos.award(h.id, myId, r);
-        // Expediciones: además del prestigio a la casa, dan dinero + XP PERSONAL al mecenas.
+        // La misión del tablón da, además del prestigio, dinero + XP PERSONAL (al dominio).
         let extra = '';
-        if (o.tipo === 'expedicion' && window.HacStats) {
-          const rec = HacStats.recompensaExped(dom, o.duracionSeg || 120);
+        if (mis && window.HacStats) {
+          const rec = HacMisiones.recompensa(mis);
           HacStats.award(myId, { dinero: rec.dinero, xp: rec.dom ? { [rec.dom]: rec.xp } : null });
           extra = ` · +${rec.dinero}💰 · +${rec.xp} XP ${DOM_GLYPH[rec.dom] || ''}`.trimEnd();
         }
@@ -450,8 +443,16 @@
     function dispatch(taskId) {
       if (!myId || !taskId || !window.HacOrdenes) return;
       const t = availableTasks().find(x => x.taskId === taskId); if (!t) return;
-      if (window.HacEnergia) HacEnergia.spend(h.id, myId, costeMision(t.dominio));   // la misión cuesta energía
-      HacOrdenes.set({ haciendaId: h.id, miembroId: myId, tipo: t.exped ? 'expedicion' : 'mision', targetId: taskId, duracionSeg: t.duracionSeg })
+      if (window.HacEnergia) HacEnergia.spend(h.id, myId, costeMision(t.dominio));   // la tarea cuesta energía
+      HacOrdenes.set({ haciendaId: h.id, miembroId: myId, tipo: 'mision', targetId: taskId, duracionSeg: t.duracionSeg })
+        .then(applyOrders).catch(e => console.warn('[orden] set', e));
+    }
+    // Enviar a una MISIÓN del tablón (sale de la finca, tipo 'expedicion').
+    function dispatchMision(misId) {
+      if (!myId || !window.HacOrdenes || !window.HacMisiones) return;
+      const m = HacMisiones.get(misId); if (!m) return;
+      if (window.HacEnergia) HacEnergia.spend(h.id, myId, costeMision(m.dom));
+      HacOrdenes.set({ haciendaId: h.id, miembroId: myId, tipo: 'expedicion', targetId: 'mis:' + misId, duracionSeg: HacMisiones.durSeg(m) })
         .then(applyOrders).catch(e => console.warn('[orden] set', e));
     }
     function release() {
@@ -594,14 +595,11 @@
             : `⚒ De camino…`;
           mision = `<div class="hacp-cp-mis hacp-cp-mis-on"><span class="hacp-cp-flag">${flag}</span><button type="button" class="hacp-cp-btn" data-act="release">Liberar</button></div>`;
         } else {
-          const tasks = availableTasks();   // por TAREA (deduplicada por tipo), con su duración propia
-          const opts = tasks.map(t => {
-            const riesgo = t.exped ? ` · ⚠${Math.round(failChance(t.dominio) * 100)}%` : '';
-            return `<option value="${esc(t.taskId)}">${esc(t.nombre)} · ${fmtDur(t.duracionSeg)} · −${costeMision(t.dominio)}⚡${riesgo}</option>`;
-          }).join('');
-          const hayExped = tasks.some(t => t.exped);
-          const nota = hayExped ? `<div class="hacp-inv-note">⚠ Las expediciones pueden fallar y perderías la mitad del <b>monedero</b> (el dinero de casa está a salvo). Sube de nivel para arriesgar menos.</div>` : '';
-          if (tasks.length) mision = `<div class="hacp-cp-mis"><label class="hacp-cp-lbl">Enviar a misión</label><div class="hacp-cp-row"><select class="hacp-cp-sel">${opts}</select><button type="button" class="hacp-cp-btn hacp-cp-go" data-act="dispatch">Enviar</button></div>${nota}</div>`;
+          const tasks = availableTasks();   // tareas DENTRO de la finca (edificios)
+          const opts = tasks.map(t => `<option value="${esc(t.taskId)}">${esc(t.nombre)} · ${fmtDur(t.duracionSeg)} · −${costeMision(t.dominio)}⚡</option>`).join('');
+          const board = hasMain ? `<button type="button" class="hacp-cp-btn hacp-cp-board" data-act="board">📜 Buscar misiones</button>` : '';
+          const sel = tasks.length ? `<div class="hacp-cp-mis"><label class="hacp-cp-lbl">Tarea en la finca</label><div class="hacp-cp-row"><select class="hacp-cp-sel">${opts}</select><button type="button" class="hacp-cp-btn hacp-cp-go" data-act="dispatch">Enviar</button></div></div>` : '';
+          mision = board + sel;
         }
       }
       charEl.innerHTML = `
@@ -630,6 +628,8 @@
       if (db) db.addEventListener('click', () => { const s = charEl.querySelector('.hacp-cp-sel'); dispatch(s ? s.value : null); });
       const rb = charEl.querySelector('[data-act="release"]');
       if (rb) rb.addEventListener('click', release);
+      const bdb = charEl.querySelector('[data-act="board"]');
+      if (bdb) bdb.addEventListener('click', goConsultBoard);
       const ib = charEl.querySelector('[data-act="inv"]');
       if (ib) ib.addEventListener('click', () => { invOpen = !invOpen; buildCharPanel(charId); });
       const shb = charEl.querySelector('[data-act="shop"]');
@@ -859,6 +859,60 @@
     function openEquip() { if (!myId || !window.HacStats) return; buildEquip(); ensureEquipEl().hidden = false; }
     function closeEquip() { if (equipEl) equipEl.hidden = true; }
 
+    // ── Tablón de misiones (overlay): pool con riesgo según tus stats ──────────
+    let boardEl = null;
+    function ensureBoardEl() {
+      if (boardEl) return boardEl;
+      boardEl = document.createElement('div');
+      boardEl.className = 'hacp-shop hacp-board-ov'; boardEl.id = 'hacp-board'; boardEl.hidden = true;
+      vp.appendChild(boardEl);
+      ['pointerdown', 'pointerup', 'wheel', 'click'].forEach(ev => boardEl.addEventListener(ev, (e) => e.stopPropagation(), { passive: false }));
+      return boardEl;
+    }
+    function buildBoard() {
+      const el = ensureBoardEl();
+      const list = window.HacMisiones ? HacMisiones.disponibles(tier) : [];
+      const orden = window.HacOrdenes ? HacOrdenes.mine(h.id, myId) : null;
+      const ocupado = !!orden;
+      const rows = list.slice().sort((a, b) => (a.dom < b.dom ? -1 : a.dom > b.dom ? 1 : a.dif - b.dif)).map(m => {
+        const risk = riesgoMision(m), rc = HacMisiones.nivelColor(risk), rec = HacMisiones.recompensa(m);
+        return `<div class="hacp-mis t-${m.dom}">
+          <span class="hacp-mis-g" style="color:${DOM_COLOR[m.dom]}">${DOM_GLYPH[m.dom]}</span>
+          <div class="hacp-mis-main">
+            <div class="hacp-mis-name">${esc(m.nombre)} <span class="hacp-mis-dif">dif. ${m.dif}</span></div>
+            <div class="hacp-mis-meta">⏱ ${fmtClock(HacMisiones.durSeg(m))} · +${rec.dinero}💰 · +${rec.xp} XP ${DOM_GLYPH[m.dom]}</div>
+          </div>
+          <span class="hacp-mis-risk r-${rc}" title="Riesgo de fracaso (baja con tu nivel ${DOM_GLYPH[m.dom]} y el equipo)">⚠ ${Math.round(risk * 100)}%</span>
+          <button type="button" class="hacp-mis-go" data-mis="${esc(m.id)}"${ocupado ? ' disabled' : ''}>Enviar</button>
+        </div>`;
+      }).join('');
+      el.innerHTML = `
+        <div class="hacp-shop-box">
+          <button type="button" class="hacp-shop-x" data-act="board-close" aria-label="Cerrar">✕</button>
+          <div class="hacp-shop-h"><span class="hacp-shop-zh">📜</span> Tablón de misiones</div>
+          <div class="hacp-shop-sub">El riesgo baja con tu nivel del dominio (XP) y los objetos equipados.${ocupado ? ' <b>Tu mecenas ya está en una misión.</b>' : ''}</div>
+          <div class="hacp-board-list">${rows || '<div class="hacp-inv-note">No hay misiones disponibles.</div>'}</div>
+        </div>`;
+      el.querySelector('[data-act="board-close"]').addEventListener('click', closeBoard);
+      el.querySelectorAll('[data-mis]').forEach(b => b.addEventListener('click', () => {
+        dispatchMision(b.dataset.mis);
+        toast('🧭 Tu mecenas parte a la misión'); closeBoard();
+      }));
+    }
+    function openMissionBoard() { if (!myId) return; buildBoard(); ensureBoardEl().hidden = false; }
+    function closeBoard() { if (boardEl) boardEl.hidden = true; }
+    // "Buscar misiones": el mecenas CAMINA al edificio principal; al llegar se planta
+    // con el cartelito 📜 y, al pulsarlo, se abre el tablón. Si ya está allí, abre ya.
+    function goConsultBoard() {
+      if (!myId || !hasMain || !mainBid) return;
+      const r = HacFolk.consultar ? HacFolk.consultar(myId, mainBid) : false;
+      if (r === 'now') { openMissionBoard(); return; }
+      if (!r) { toast('Tu mecenas está ocupado ahora mismo'); return; }
+      HacFolk.select(myId);
+      if (cam && cam.focusFollow) cam.focusFollow(() => HacFolk.position(myId), 3.0);
+      toast('🚶 Tu mecenas va al tablón de misiones…');
+    }
+
     function itemHTML(m, sel) {
       const mine = m.id === myId;
       const e = Math.round(window.HacEnergia ? HacEnergia.current(h.id, m.id) : 100);
@@ -945,6 +999,8 @@
           const d = Math.abs(ly - p[1]) + Math.abs(lx - p[0]); if (d < bestD) { bestD = d; bestId = w.id; }
         }
       });
+      // Clic en TU mecenas mientras espera en el tablón (📜) → abre las misiones.
+      if (bestId && bestId === myId && HacFolk.consultando && HacFolk.consultando(myId)) { openMissionBoard(); return; }
       if (bestId) { gotoMember(bestId); return; }
       hidePop(); deselect();
     });

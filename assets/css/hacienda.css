@@ -233,6 +233,21 @@
 .hacp-eq-own .hacp-eq-ic{ font-size:18px; }
 .hacp-eq-own .hacp-eq-nm{ flex:1; }
 .hacp-eq-tot{ font:700 12px 'Noto Sans SC',sans-serif; margin-right:8px; }
+/* Tablón de misiones. */
+.hacp-cp-board{ display:block; width:100%; margin-bottom:8px; text-align:center; }
+.hacp-board-list{ display:flex; flex-direction:column; gap:7px; }
+.hacp-mis{ display:flex; align-items:center; gap:9px; padding:8px 10px; background:rgba(255,255,255,.03); border:1px solid rgba(201,168,76,.2); border-radius:7px; }
+.hacp-mis-g{ font:900 18px 'Noto Serif SC',serif; flex:0 0 auto; width:22px; text-align:center; }
+.hacp-mis-main{ flex:1; min-width:0; }
+.hacp-mis-name{ font:700 12.5px/1.2 'Noto Sans SC',sans-serif; color:var(--parch); }
+.hacp-mis-dif{ font-weight:400; color:var(--parch2); font-size:10.5px; }
+.hacp-mis-meta{ font-size:10.5px; color:var(--parch2); margin-top:2px; }
+.hacp-mis-risk{ flex:0 0 auto; font:700 11px 'Noto Sans SC',sans-serif; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.hacp-mis-risk.r-baja{ color:#7fc9a0; } .hacp-mis-risk.r-media{ color:#e0b85a; } .hacp-mis-risk.r-alta{ color:#e0907a; }
+.hacp-mis-go{ flex:0 0 auto; background:rgba(201,168,76,.16); color:var(--gold); border:1px solid var(--hac,var(--gold));
+  border-radius:5px; padding:5px 10px; font:700 12px 'Noto Sans SC',sans-serif; cursor:pointer; }
+.hacp-mis-go:hover{ background:rgba(201,168,76,.32); color:#fff; }
+.hacp-mis-go:disabled{ opacity:.4; cursor:not-allowed; }
 .hacp-cp-mis{ margin-top:9px; border-top:1px solid rgba(201,168,76,.18); padding-top:8px; }
 .hacp-cp-mis-on{ display:flex; align-items:center; gap:8px; }
 .hacp-cp-mis-on .hacp-cp-btn{ margin-left:auto; }

@@ -218,7 +218,15 @@ const HacFolk = (function () {
         fx: ax, fy: ay, tx: ax, ty: ay, dir: 'S', phase: 0, moving: false, state: 'idle', bowing: false,
         stations, timer: 1 + (seed % 100) / 30, speech: null, speechT: 0, _r: seed });
     });
-    return { set, cells, cam, camCells, garden, gardenCells, water, GW, GH, ownByMember, buildings, visitable, gates, merchants, exitCell, exitKey: exitCell ? exitCell[0] + ',' + exitCell[1] : null, outNear, outFar };
+    // FUNCIONARIO (文官) junto al EDIFICIO PRINCIPAL: atiende el tablón de misiones.
+    const clerks = []; let mainBid = null;
+    const princ = (B && B.edificioPrincipal) ? B.edificioPrincipal(mapa) : null;
+    if (princ) {
+      mainBid = princ.pos[0] + ',' + princ.pos[1];
+      const mb = buildings.get(mainBid);
+      if (mb && mb.approach) clerks.push({ id: 'clerk@' + mainBid, name: 'Funcionario', aptitud: 'administrador', aspecto: {}, fx: mb.approach[0] + 0.55, fy: mb.approach[1], dir: 'S', phase: 0, moving: false, state: 'stand', bowing: false });
+    }
+    return { set, cells, cam, camCells, garden, gardenCells, water, GW, GH, ownByMember, buildings, visitable, gates, merchants, clerks, mainBid, exitCell, exitKey: exitCell ? exitCell[0] + ',' + exitCell[1] : null, outNear, outFar };
   }
 
   // Ruta de `start` a la primera celda de `goalKeys` sobre celdas transitables,
@@ -349,6 +357,26 @@ const HacFolk = (function () {
     return 'walking';
   }
 
+  // CONSULTAR el tablón de misiones (local): el mecenas va al edificio principal,
+  // se planta delante del funcionario con un cartelito 📜 sobre la cabeza y espera
+  // a que el jugador lo pulse. No lo bloquea: una misión/orden lo saca. Devuelve
+  // 'walking' / 'now' (ya está) / false (ocupado/sin ruta).
+  function consultar(id, buildingId) {
+    const w = walkers.find(x => x.id === id); if (!w || !wk) return false;
+    if (w.onMission || ['exped-out', 'exped-in', 'fuera', 'saludo'].indexOf(w.state) >= 0) return false;
+    const b = buildingId ? wk.buildings.get(buildingId) : null;
+    if (!b || !b.approachKey) return false;
+    if (w.state === 'consultando' && w.consultBid === b.id) return 'now';   // ya está allí
+    const path = bfs([Math.round(w.fx), Math.round(w.fy)], new Set([b.approachKey]));
+    if (!path) return false;
+    w.insideId = null; w.speech = null; w.chatWith = null; w.meetWith = null;
+    w.path = path; w.state = 'a-consultar'; w.consultBid = b.id; w.consultFace = [b.cx, b.cy]; w.moving = false;
+    return 'walking';
+  }
+  // ¿está mi mecenas plantado esperando en el tablón? (para abrir al pulsarlo)
+  function consultando(id) { const w = walkers.find(x => x.id === id); return !!(w && w.state === 'consultando'); }
+  function dejarConsulta(id) { const w = walkers.find(x => x.id === id); if (w && (w.state === 'consultando' || w.state === 'a-consultar')) { w.state = 'paseando'; w.strollTimer = 1; w.speech = null; w.consultFace = null; } }
+
   // Visita FORZADA por una misión: la orden lleva una TAREA (taskId); vamos al
   // edificio de SU tipo MÁS CERCANO al mecenas (determinista). Si no hay, deambula.
   function startMissionVisit(w) {
@@ -389,6 +417,16 @@ const HacFolk = (function () {
     path.push.apply(path, inside);                                    // y entra a la finca
     w.path = path; w.state = 'exped-in'; w.moving = false;
   }
+  // Trae de vuelta a un mecenas que quedó FUERA de la finca (expedición cortada):
+  // camina del campo al vano del portón y entra. R-free (rutas fijas).
+  function enterFromOutside(w) {
+    const e = wk.exitCell;
+    if (!e) { const c = wk.cells && wk.cells[0]; if (c) { w.fx = c[0]; w.fy = c[1]; w.tx = c[0]; w.ty = c[1]; } w.state = 'paseando'; w.strollTimer = 2; w.wait = 0.4; w.path = null; w.moving = false; return; }
+    const path = [];
+    if (wk.outNear) path.push(wk.outNear);
+    path.push(e);                                       // cruza el vano hacia el interior
+    w.path = path; w.state = 'exped-in'; w.insideId = null; w.moving = false;
+  }
   // Sale del edificio: a la celda de aproximación y luego a un punto de paseo.
   function startLeave(w) {
     const b = wk.buildings.get(w.insideId);
@@ -400,6 +438,12 @@ const HacFolk = (function () {
   }
 
   function onPathDone(w) {
+    if (w.state === 'a-consultar') {
+      // Llegó al edificio principal: se planta, mira al funcionario y muestra 📜.
+      w.state = 'consultando'; w.idleTimer = 60; w.moving = false; w.path = null; w.phase = 0; w.speech = '📜';
+      if (w.consultFace) { const fd = faceFromGrid(w.consultFace[0] - w.fx, w.consultFace[1] - w.fy); if (fd) w.dir = fd; }
+      return;
+    }
     if (w.state === 'a-curiosear') {
       // Llegó al puesto: se queda mirando el género 15-30 s, de cara al mostrador.
       w.state = 'curioseando'; w.idleTimer = w.browseDur || 20; w.moving = false; w.path = null; w.phase = 0;
@@ -692,6 +736,9 @@ const HacFolk = (function () {
   function endMission(w) {
     if (w.order) w.missionDoneFor = w.order.startMs;   // marca ESTA orden como cumplida (no re-activar)
     w.onMission = false; w.bowing = false; w.missionTask = null;
+    // Si terminó FUERA de la finca (expedición cumplida/cortada fuera), que entre.
+    const k = Math.round(w.fx) + ',' + Math.round(w.fy);
+    if (wk && wk.set && !wk.set.has(k) && !w.insideId) { enterFromOutside(w); return; }
     if (w.insideId) startLeave(w);
     else { w.state = 'paseando'; w.strollTimer = rng(2, 6); w.path = null; w.moving = false; }
   }
@@ -727,10 +774,22 @@ const HacFolk = (function () {
       if (w.gardenCd > 0) w.gardenCd -= dt;
       if (w.socialCd > 0) w.socialCd -= dt;
       if (w.browseCd > 0) w.browseCd -= dt;
+      // Auto-recuperación: si quedó VARADO fuera de la finca y no está en tránsito
+      // de expedición, que vuelva a entrar (arregla mecenas atascados fuera).
+      if (w.state !== 'exped-out' && w.state !== 'exped-in' && w.state !== 'fuera' && !w.insideId && wk.set) {
+        const k = Math.round(w.fx) + ',' + Math.round(w.fy);
+        if (!wk.set.has(k)) enterFromOutside(w);
+      }
       missionGate(w);
       switch (w.state) {
         // Curiosear el mercado (flavor LOCAL, sin R): va al puesto, mira el género
         // un rato y vuelve a pasear. Una misión lo saca (lo gestiona missionGate).
+        case 'a-consultar': followPath(w, dt, SPD); break;
+        case 'consultando':
+          w.idleTimer -= dt; w.phase += dt * 0.4; w.speech = '📜';
+          if (w.consultFace) { const fd = faceFromGrid(w.consultFace[0] - w.fx, w.consultFace[1] - w.fy); if (fd) w.dir = fd; }
+          if (w.idleTimer <= 0) { w.state = 'paseando'; w.strollTimer = 1.2; w.speech = null; w.consultFace = null; }
+          break;
         case 'a-curiosear': followPath(w, dt, SPD); break;
         case 'curioseando':
           w.idleTimer -= dt; w.phase += dt * 0.4;
@@ -1127,6 +1186,7 @@ const HacFolk = (function () {
     if (wk && wk.gates) wk.gates.forEach(gate => overlays.push({ draw: (g) => drawGate(g, gate) }));
     // Mercader(es): personajes fijos al frente de cada mercado (mismo render).
     if (wk && wk.merchants) wk.merchants.forEach(mk => actors.push({ fx: mk.fx, fy: mk.fy, draw: (g, lx, ly) => drawWalker(g, lx, ly, mk, { banner: false }) }));
+    if (wk && wk.clerks) wk.clerks.forEach(ck => actors.push({ fx: ck.fx, fy: ck.fy, draw: (g, lx, ly) => drawWalker(g, lx, ly, ck, { banner: false }) }));
     walkers.forEach(w => {
       if (w.id === selectedId) return;                 // el seleccionado va en overlay (encima)
       if (w.insideId) return;                          // DENTRO de un edificio: oculto (su presencia la anuncia el banner 匾額)
@@ -1309,6 +1369,8 @@ const HacFolk = (function () {
     if (w.state === 'fuera') return 'En expedición fuera de la finca';
     if (w.state === 'exped-out') return 'Saliendo de la finca';
     if (w.state === 'exped-in') return 'Regresando de la expedición';
+    if (w.state === 'a-consultar') return 'Va al tablón de misiones';
+    if (w.state === 'consultando') return 'Consultando el tablón de misiones';
     if (w.state === 'a-curiosear') return 'Atraído por el mercado';
     if (w.state === 'curioseando') return 'Curioseando el género del mercado';
     if (w.state === 'a-descansar') return 'Buscando un rincón de hierba';
@@ -1394,6 +1456,7 @@ const HacFolk = (function () {
     if (!running) { paint(); pushState(); }
   }
 
-  return { start, stop, list, select, selected, position, buildings, buildingTypes, setOrders, drawAvatar, goHome };
+  function mainBuildingId() { return wk ? (wk.mainBid || null) : null; }
+  return { start, stop, list, select, selected, position, buildings, buildingTypes, setOrders, drawAvatar, goHome, consultar, consultando, dejarConsulta, mainBuildingId };
 })();
 if (typeof window !== 'undefined') window.HacFolk = HacFolk;

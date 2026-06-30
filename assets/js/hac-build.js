@@ -56,12 +56,12 @@ const HacBuild = (function () {
     { id: 'ala', dominio: 'administrativo',               nombre: 'Ala Señorial',       zh: '偏殿', capa: 'edificio', footprint: [2, 3], tierMin: 2, unico: false, cargoMin: null,    color: '#a85a2e', altura: 28, desc: 'Salón lateral para consejeros y vasallos de peso.' },
     { id: 'templo', dominio: 'cultural',            nombre: 'Templo',             zh: '庙',   capa: 'edificio', footprint: [2, 3], tierMin: 2, unico: false, cargoMin: null,    color: '#8a5520', altura: 32, desc: 'Recinto sagrado para ceremonias y ofrendas.' },
     { id: 'gran-pagoda', dominio: 'cultural',       nombre: 'Gran Pagoda',        zh: '七塔', capa: 'edificio', footprint: [2, 4], tierMin: 2, unico: false, cargoMin: null,    color: '#a03020', altura: 80, desc: 'Pagoda de siete pisos; visible desde leguas a la redonda.' },
-    { id: 'salon', dominio: 'administrativo',             nombre: 'Salón Principal',    zh: '正殿', capa: 'edificio', footprint: [3, 3], tierMin: 2, unico: true,  cargoMin: 'pilar', color: '#c0532a', altura: 34, desc: 'Corazón de la casa; gran salón sede del Pilar.' },
+    { id: 'salon', dominio: 'administrativo',             nombre: 'Salón Principal',    zh: '正殿', capa: 'edificio', footprint: [3, 4], tierMin: 2, unico: true,  cargoMin: 'pilar', color: '#c0532a', altura: 34, principal: true, rango: 1, desc: 'Corazón de la casa; gran salón sede del Pilar. Edificio PRINCIPAL: junto a él se atienden las misiones de la hacienda.' },
     { id: 'templo-ancestral', dominio: 'cultural',  nombre: 'Salón de los Ancestros', zh: '祠堂', capa: 'edificio', footprint: [3, 4], tierMin: 3, unico: true,  cargoMin: null,    color: '#7a2a18', altura: 38, desc: 'El edificio más sagrado: culto a los espíritus de los antepasados.' },
-    { id: 'salon-gran', dominio: 'administrativo',        nombre: 'Gran Salón',         zh: '大殿', capa: 'edificio', footprint: [4, 3], tierMin: 3, unico: true,  cargoMin: null,    color: '#b83818', altura: 44, desc: 'Salón de audiencias propio de una gran casa señorial.' },
+    { id: 'salon-gran', dominio: 'administrativo',        nombre: 'Gran Salón',         zh: '大殿', capa: 'edificio', footprint: [4, 3], tierMin: 3, unico: true,  cargoMin: null,    color: '#b83818', altura: 44, principal: true, rango: 2, desc: 'Salón de audiencias propio de una gran casa señorial. Edificio PRINCIPAL (mejora del 正殿).' },
     { id: 'pabellon-gran', dominio: 'cultural',     nombre: 'Gran Pabellón',      zh: '大亭', capa: 'edificio', footprint: [3, 4], tierMin: 3, unico: false, cargoMin: null,    color: '#a85a2e', altura: 40, desc: 'Amplio pabellón de recreo para banquetes y reuniones.' },
-    { id: 'salon-corte', dominio: 'administrativo',       nombre: 'Salón de la Corte',  zh: '朝堂', capa: 'edificio', footprint: [3, 6], tierMin: 4, unico: true,  cargoMin: null,    color: '#bb3c1e', altura: 46, desc: 'Largo salón de audiencias donde se recibe a la corte.' },
-    { id: 'palacio', dominio: 'administrativo',           nombre: 'Palacio',            zh: '宮殿', capa: 'edificio', footprint: [4, 6], tierMin: 5, unico: true,  cargoMin: null,    color: '#c43c1a', altura: 60, desc: 'El gran salón palaciego: corazón ceremonial de la casa.' },
+    { id: 'salon-corte', dominio: 'administrativo',       nombre: 'Salón de la Corte',  zh: '朝堂', capa: 'edificio', footprint: [3, 6], tierMin: 4, unico: true,  cargoMin: null,    color: '#bb3c1e', altura: 46, principal: true, rango: 3, desc: 'Largo salón de audiencias donde se recibe a la corte. Edificio PRINCIPAL (mejora del 大殿).' },
+    { id: 'palacio', dominio: 'administrativo',           nombre: 'Palacio',            zh: '宮殿', capa: 'edificio', footprint: [4, 6], tierMin: 5, unico: true,  cargoMin: null,    color: '#c43c1a', altura: 60, principal: true, rango: 4, desc: 'El gran salón palaciego: corazón ceremonial de la casa. Edificio PRINCIPAL (mejora del 朝堂).' },
     { id: 'salon-largo', dominio: 'administrativo',       nombre: 'Salón Alargado',     zh: '长殿', capa: 'edificio', footprint: [3, 5], tierMin: 3, unico: false, cargoMin: null,    color: '#bb3c1e', altura: 44, desc: 'Salón de planta alargada para audiencias numerosas.' },
     { id: 'salon-banquete', dominio: 'administrativo',    nombre: 'Salón de Banquetes', zh: '宴殿', capa: 'edificio', footprint: [3, 7], tierMin: 4, unico: false, cargoMin: null,    color: '#b83a1c', altura: 48, desc: 'Largo salón donde la casa celebra sus grandes banquetes.' },
     { id: 'cuartel', dominio: 'militar',           nombre: 'Cuartel',            zh: '营房', capa: 'edificio', footprint: [4, 5], tierMin: 3, unico: false, cargoMin: null,    color: '#6a6a5a', altura: 28, desc: 'Barracones de la guarnición: tropa, oficiales y pertrechos.' },
@@ -80,7 +80,7 @@ const HacBuild = (function () {
     { id: 'patio-o', dominio: 'administrativo',           nombre: 'Patio Cerrado',      zh: '四合院', capa: 'edificio', footprint: [4, 4], mask: [[0,0],[1,0],[2,0],[3,0],[0,1],[3,1],[0,2],[3,2],[0,3],[1,3],[2,3],[3,3]], tierMin: 4, unico: false, cargoMin: null, color: '#b03c1c', altura: 30, desc: 'Recinto de cuatro crujías en torno a un patio central (四合院).' },
     // ── Rectángulos monumentales ──────────────────────────────────────────
     { id: 'salon-doble', dominio: 'administrativo',       nombre: 'Salón Doble',        zh: '重殿', capa: 'edificio', footprint: [4, 8], tierMin: 5, unico: false, cargoMin: null, color: '#bb3c1e', altura: 48, desc: 'Doble salón corrido para las grandes audiencias de la casa.' },
-    { id: 'gran-recinto', dominio: 'administrativo',      nombre: 'Gran Recinto',       zh: '大院', capa: 'edificio', footprint: [5, 8], tierMin: 6, unico: true,  cargoMin: null, color: '#c43c1a', altura: 56, desc: 'Bloque palaciego monumental: la mayor construcción de la finca.' },
+    { id: 'gran-recinto', dominio: 'administrativo',      nombre: 'Gran Recinto',       zh: '大院', capa: 'edificio', footprint: [5, 8], tierMin: 6, unico: true,  cargoMin: null, color: '#c43c1a', altura: 56, principal: true, rango: 5, desc: 'Bloque palaciego monumental: la mayor construcción de la finca. Edificio PRINCIPAL (cima de la escalera).' },
     { id: 'pabellon-te', dominio: 'cultural',       nombre: 'Pabellón de Té',     zh: '茶亭', capa: 'edificio', footprint: [1, 1], tierMin: 1, unico: false, cargoMin: null,    color: '#9a6b3a', altura: 26, desc: 'Quiosco abierto para el té, la lectura y la caligrafía.' },
     { id: 'yingbi',            nombre: 'Muro de los Espíritus', zh: '影壁', capa: 'edificio', footprint: [1, 3], tierMin: 2, unico: false, cargoMin: null, color: '#8a6a4a', altura: 20, desc: 'Pantalla ornamentada tras la puerta; da privacidad y detiene a los malos espíritus.' },
     { id: 'chuihuamen',        nombre: 'Puerta Floral',      zh: '垂花門', capa: 'edificio', footprint: [1, 2], tierMin: 3, unico: false, cargoMin: null, color: '#a85a2e', altura: 30, puerta: true, desc: 'Puerta interior tallada que separa el patio público del privado.' },
@@ -460,8 +460,17 @@ const HacBuild = (function () {
     return out;
   }
 
+  // Edificio PRINCIPAL de una finca: de las construcciones presentes que son
+  // `principal`, la de mayor `rango` (la escalera 正殿→大殿→朝堂→宮殿→大院). null si no hay.
+  function edificioPrincipal(mapa) {
+    const cons = (mapa && mapa.construcciones) || [];
+    let best = null, bestR = -1;
+    cons.forEach(c => { const t = byId[c.tipo]; if (t && t.principal && (t.rango || 0) > bestR) { bestR = t.rango || 0; best = c; } });
+    return best;
+  }
+
   return {
-    CONSTRUCCIONES, tipo, esSuelo, esLinea, CATEGORIAS, categoriaDe, TAREAS, tareaDe, lugarDe, gridDims, slotsDesbloqueados, footprintDe, celdasOcupadas,
+    CONSTRUCCIONES, tipo, esSuelo, esLinea, CATEGORIAS, categoriaDe, TAREAS, tareaDe, lugarDe, gridDims, slotsDesbloqueados, footprintDe, celdasOcupadas, edificioPrincipal,
     dentroDeRejilla, colisiona, construccionEn, puedeColocar, patios, enMuro,
     construccionesValidas, normalizaMapa, MAX_TIER,
     ringDepth, costeExterior, esCeldaExterior, enExterior, COSTE_EXTERIOR,

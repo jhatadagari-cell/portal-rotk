@@ -428,7 +428,7 @@ const EDIFICIOS = [
   { id:'templo',           w:2, h:3, roof:'#5b6068', baseH:6, bodyH:17, roofH:15, stories:true, bodyH2:9,  roofH2:11 },
   { id:'gran-pagoda',      w:2, h:4, roof:'#5b6068', baseH:6, bodyH:18, roofH:12, tier0Ins:0.2, tierIns:0.18,
     tiers:[{bodyH:13,roofH:10},{bodyH:11,roofH:9},{bodyH:9,roofH:8},{bodyH:8,roofH:7}] },
-  { id:'salon',            w:3, h:3, roof:'#5b6068', bodyH:19, roofH:18 },
+  { id:'salon',            w:3, h:4, roof:'#5b6068', bodyH:19, roofH:18 },
   { id:'templo-ancestral', w:3, h:4, roof:'#5b6068', baseH:7, bodyH:18, roofH:15, stories:true, bodyH2:10, roofH2:12 },
   { id:'salon-gran',       w:4, h:3, roof:'#5b6068', baseH:7, bodyH:19, roofH:16, stories:true, bodyH2:9,  roofH2:12 },
   { id:'pabellon-gran',    w:3, h:4, roof:'#5b6068', baseH:6, bodyH:18, roofH:16 },
