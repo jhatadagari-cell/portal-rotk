@@ -94,8 +94,8 @@ const HacIso = (function () {
 
     // Murallas: datos del nivel (necesarios para dimensionar el lienzo).
     const WALLS = {
-      1: { h: 12, wt: 0.26, base: mix('#bcae90', casa, .04), cap: false,   cren: false, towers: false, tex: 'rammed', gate: false },
-      2: { h: 18, wt: 0.32, base: mix('#c2b491', casa, .04), cap: 'stone', cren: false, towers: false, tex: 'block',  gate: false },
+      1: { h: 12, wt: 0.26, base: mix('#bcae90', casa, .04), cap: false,   cren: false, towers: false, tex: 'rammed', gate: true },
+      2: { h: 18, wt: 0.32, base: mix('#c2b491', casa, .04), cap: 'stone', cren: false, towers: false, tex: 'block',  gate: true },
       3: { h: 24, wt: 0.36, base: mix('#c7ba93', casa, .04), cap: 'tile',  cren: true,  towers: false, tex: 'block',  gate: true },
       4: { h: 31, wt: 0.42, base: mix('#cdc098', casa, .04), cap: 'tile',  cren: true,  towers: true,  tex: 'block',  gate: true }
     };
