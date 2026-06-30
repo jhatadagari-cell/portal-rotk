@@ -30,6 +30,7 @@ create table if not exists public.mecenas_stats (
   casa_pos           text,                              -- "gx,gy" de la casa que el mecenas COMPRÓ en la finca (null = sin casa)
   casa_inv           jsonb   not null default '[]'::jsonb, -- objetos GUARDADOS en casa [{id, n}] (almacén del hogar)
   equipado           jsonb   not null default '[]'::jsonb, -- objetos EQUIPADOS en el personaje (máx 3) [id, …]
+  heridas            integer not null default 0,          -- heridas del personaje (0..3); sin efecto aún, se reciben al fracasar escaramuzas
   actualizado        timestamptz not null default now()
 );
 
@@ -40,6 +41,7 @@ alter table public.mecenas_stats add column if not exists ahorro integer not nul
 alter table public.mecenas_stats add column if not exists casa_pos text;
 alter table public.mecenas_stats add column if not exists casa_inv jsonb not null default '[]'::jsonb;
 alter table public.mecenas_stats add column if not exists equipado jsonb not null default '[]'::jsonb;
+alter table public.mecenas_stats add column if not exists heridas integer not null default 0;
 
 alter table public.mecenas_stats enable row level security;
 

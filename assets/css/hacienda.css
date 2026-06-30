@@ -374,7 +374,11 @@ html.hacp-pseudofs, html.hacp-pseudofs body{ overflow:hidden; }
   /* Cromo de web y de la finca fuera: la app ocupa toda la pantalla. */
   body.hacp-mobile #chrome-nav, body.hacp-mobile #chrome-footer,
   .hacp-mobile .hacp-hero, .hacp-mobile .hacp-finca-ttl, .hacp-mobile .hacp-finca-sub,
-  .hacp-mobile .hacp-admin, .hacp-mobile .hacp-iso-hint, .hacp-mobile .hacp-mobar{ display:none !important; }
+  .hacp-mobile .hacp-admin, .hacp-mobile .hacp-iso-hint, .hacp-mobile .hacp-mobar,
+  .hacp-mobile .hacp-detail{ display:none !important; }
+  /* En el home, los controles de misión del panel sobran (los lleva la sección
+     Misiones); solo se conserva el estado de la misión ACTIVA. */
+  .hacp-mobile .hacp-cp-board, .hacp-mobile .hacp-cp-mis:not(.hacp-cp-mis-on){ display:none; }
   .hacp-mobile .hacp-finca{ transform:none; margin:0; width:100%; }
   .hacp-mobile .hacp-iso-area{ margin:0; }
   /* El visor iso es la CAPA DE FONDO a pantalla completa (sección Hacienda). */
@@ -432,7 +436,10 @@ html.hacp-pseudofs, html.hacp-pseudofs body{ overflow:hidden; }
   .hacp-folk-item{ min-height:46px; }
   .hacp-folk-fab{ display:none; }
   .hacp-inv{ box-shadow:none; border-color:rgba(201,168,76,.25); }
-  .hacp-shop:not(.hacp-board-inline){ align-items:flex-end; padding:0; z-index:9500; }
+  /* Overlays modales (tienda/equipo/casa/abandonar) = hoja inferior POR ENCIMA de
+     todo (home y nav). position:fixed para que cubran la pantalla aunque vivan
+     dentro del visor iso. */
+  .hacp-shop:not(.hacp-board-inline){ position:fixed; align-items:flex-end; padding:0; z-index:9500; }
   .hacp-shop:not(.hacp-board-inline) .hacp-shop-box, .hacp-eq-box{ width:100%; max-width:none; max-height:90dvh; border-radius:14px 14px 0 0; padding:14px 12px calc(16px + env(safe-area-inset-bottom)); }
   .hacp-shop-grid, .hacp-eq-slots, .hacp-home-objs{ grid-template-columns:1fr 1fr; }
   .hacp-folk-panel{ width:min(230px,86vw); top:36px; bottom:68px; }
@@ -487,6 +494,16 @@ html.hacp-pseudofs, html.hacp-pseudofs body{ overflow:hidden; }
 .hacp-item-buy s{ opacity:.5; font-weight:400; margin-right:2px; }
 .hacp-bono{ color:#7fc9a0; font-weight:700; font-size:.7em; }
 /* Línea de bonos de pabellón en el panel del mecenas */
+/* Heridas: tres ranuras (sin efecto aún, solo informativas). */
+.hacp-cp-wounds{ display:flex; align-items:center; gap:8px; margin-top:8px; padding:5px 10px;
+  background:rgba(255,255,255,.03); border:1px solid rgba(201,168,76,.18); border-radius:6px; }
+.hacp-cp-wounds.hurt{ border-color:rgba(178,59,46,.4); background:rgba(178,59,46,.08); }
+.hacp-wound-h{ font:700 10px 'Cinzel Decorative',serif; letter-spacing:.06em; text-transform:uppercase; color:var(--hac,var(--gold)); opacity:.85; }
+.hacp-wound-slots{ display:flex; gap:3px; }
+.hacp-wound{ width:17px; height:17px; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700;
+  border-radius:50%; border:1px solid rgba(201,168,76,.3); color:var(--parch2); background:rgba(255,255,255,.03); }
+.hacp-wound.on{ color:#fff; background:#b23b2e; border-color:#e2786a; }
+.hacp-wound-txt{ margin-left:auto; font-size:10.5px; color:var(--parch2); }
 .hacp-cp-bonos{ margin-top:8px; padding:6px 9px; font-size:11px; line-height:1.5; text-align:center;
   background:rgba(201,168,76,.08); border:1px solid rgba(201,168,76,.22); border-radius:6px; color:var(--parch2); }
 /* Popup de info de edificio (al pulsar su cuerpo en el plano) */

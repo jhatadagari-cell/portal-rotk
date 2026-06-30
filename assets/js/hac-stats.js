@@ -42,6 +42,7 @@ const HacStats = (function () {
       administrativo: Number(r.xp_administrativo) || 0,
       cap: Number(r.cap_inventario) || 8, inv: parseInv(r.inventario), ahorro: Number(r.ahorro) || 0,
       casaPos: r.casa_pos || null, casaInv: parseInv(r.casa_inv), equipado: parseInv(r.equipado),
+      heridas: Math.max(0, Math.min(3, Number(r.heridas) || 0)),
     };
   }
   async function load() {
@@ -60,7 +61,12 @@ const HacStats = (function () {
   function reload() { readyPromise = load(); return readyPromise; }
 
   function row(mid) { return cache.find(r => r.miembroId === mid) || null; }
-  function ensure(mid) { let r = row(mid); if (!r) { r = { miembroId: mid, dinero: 0, militar: 0, cultural: 0, administrativo: 0, cap: 8, inv: [], ahorro: 0, casaPos: null, casaInv: [], equipado: [] }; cache.push(r); } return r; }
+  function ensure(mid) { let r = row(mid); if (!r) { r = { miembroId: mid, dinero: 0, militar: 0, cultural: 0, administrativo: 0, cap: 8, inv: [], ahorro: 0, casaPos: null, casaInv: [], equipado: [], heridas: 0 }; cache.push(r); } return r; }
+  // HERIDAS (0..3). Por ahora SIN efecto jugable: solo se muestran en el panel.
+  // Se infligen al fracasar una escaramuza (cooperativo, futuro).
+  function heridas(mid) { const r = row(mid); return r ? (r.heridas || 0) : 0; }
+  function herir(mid, n) { const r = ensure(mid); r.heridas = Math.max(0, Math.min(3, (r.heridas || 0) + (n == null ? 1 : n))); persist(r); return r.heridas; }
+  function curar(mid, n) { return herir(mid, -(n == null ? 1 : n)); }
   function dinero(mid) { const r = row(mid); return r ? r.dinero : 0; }
   function ahorro(mid) { const r = row(mid); return r ? r.ahorro : 0; }
   function casaPos(mid) { const r = row(mid); return r ? r.casaPos : null; }
@@ -107,7 +113,7 @@ const HacStats = (function () {
       const { error } = await client.from(TABLE).upsert({
         miembro_id: r.miembroId, dinero: r.dinero, xp_militar: r.militar, xp_cultural: r.cultural,
         xp_administrativo: r.administrativo, cap_inventario: r.cap, inventario: r.inv, ahorro: r.ahorro,
-        casa_pos: r.casaPos, casa_inv: r.casaInv, equipado: r.equipado, actualizado: new Date().toISOString(),
+        casa_pos: r.casaPos, casa_inv: r.casaInv, equipado: r.equipado, heridas: r.heridas || 0, actualizado: new Date().toISOString(),
       });
       if (error) throw error;
     } catch (e) { console.error('[HacStats] persist', e); }
@@ -240,6 +246,6 @@ const HacStats = (function () {
     } catch (e) { console.error('[HacStats] liberarCasa', e); }
   }
 
-  return { ready, reload, dinero, ahorro, casaPos, casasReclamadas, duenoDeCasa, comprarCasa, liberarCasa, abandonar, xp, nivel, progresoNivel, bonus, nivelTotal, equipados, equipar, desequipar, MAX_EQUIP, award, comprar, guardar, sacar, darItem, meterEnCasa, sacarDeCasa, inventario, casaInventario, capInventario, ocupadas, recompensaExped, DOMS, dbOk: () => ok, TABLE };
+  return { ready, reload, dinero, ahorro, casaPos, casasReclamadas, duenoDeCasa, comprarCasa, liberarCasa, abandonar, heridas, herir, curar, xp, nivel, progresoNivel, bonus, nivelTotal, equipados, equipar, desequipar, MAX_EQUIP, award, comprar, guardar, sacar, darItem, meterEnCasa, sacarDeCasa, inventario, casaInventario, capInventario, ocupadas, recompensaExped, DOMS, dbOk: () => ok, TABLE };
 })();
 if (typeof window !== 'undefined') window.HacStats = HacStats;

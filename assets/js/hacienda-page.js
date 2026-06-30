@@ -651,7 +651,8 @@
         ? HacStats.DOMS.map(dom => { const p = HacStats.progresoNivel(id, dom); const b = HacStats.bonus ? HacStats.bonus(id, dom) : 0; return { dom, nivel: p.nivel, bonus: b, total: p.nivel + b, pct: p.pct, xp: p.xp, falta: p.falta }; })
         : null;
       const equipN = (window.HacStats && HacStats.equipados) ? HacStats.equipados(id).length : 0;
-      return { it, aptId, aptDef, e, eFull, eRegenMin, activa, enTarea, fuera, exped, rest, mine: id === myId, puntos: puntosTotales(id), earned, money, home, ahorro, stats, equipN };
+      const heridas = (window.HacStats && HacStats.heridas) ? HacStats.heridas(id) : 0;
+      return { it, aptId, aptDef, e, eFull, eRegenMin, activa, enTarea, fuera, exped, rest, mine: id === myId, puntos: puntosTotales(id), earned, money, home, ahorro, stats, equipN, heridas };
     }
     // Panel de inventario/monedero que se despliega a la derecha del panel del
     // mecenas. Scaffolding: el dinero y los objetos llegarán al jugar misiones
@@ -721,6 +722,14 @@
       }).join('');
       return `<div class="hacp-cp-stats" id="hacp-cp-stats"><div class="hacp-cp-statslbl">Poder personal <span>· nivel por dominio</span></div><div class="hacp-cp-statsrow">${chips}</div></div>`;
     }
+    // Heridas (0..3): tres ranuras; las llenas son heridas. Sin efecto jugable aún.
+    function woundsHTML(d) {
+      const n = Math.max(0, Math.min(3, d.heridas || 0));
+      const slots = [0, 1, 2].map(i => `<span class="hacp-wound${i < n ? ' on' : ''}">${i < n ? '✚' : '·'}</span>`).join('');
+      const txt = n ? `${n}/3 · se curan con el tiempo (aún sin efecto)` : 'ileso';
+      return `<div class="hacp-cp-wounds${n ? ' hurt' : ''}" title="Heridas ${n}/3. Se reciben al fracasar escaramuzas. De momento no afectan.">
+        <span class="hacp-wound-h">Heridas</span><span class="hacp-wound-slots">${slots}</span><span class="hacp-wound-txt">${txt}</span></div>`;
+    }
     function buildCharPanel(id) {
       const d = charData(id); if (!d) { closeCharPanel(); return; }
       let comp = '';
@@ -760,6 +769,7 @@
         <div class="hacp-cp-energy" title="Energía ${d.e}%"><i id="hacp-cp-ebar" style="width:${d.e}%"></i></div>
         <div class="hacp-cp-elabel" id="hacp-cp-elabel">${energyLabel(d)}</div>
         ${statsHTML(d)}
+        ${woundsHTML(d)}
         ${(d.mine && hayBonos()) ? `<div class="hacp-cp-bonos" title="Bonos pasivos por los pabellones temáticos de la finca y los edificios de su dominio dentro">Bonos de la finca · ${bonosTexto()}</div>` : ''}
         ${d.mine ? `<button type="button" class="hacp-cp-btn hacp-cp-equipbtn" data-act="equip">⚔ Equipo${d.equipN ? ` · ${d.equipN}/3` : ''}</button>` : ''}
         ${mision}
@@ -1402,6 +1412,8 @@
       }
 
       function mgo(id) {
+        // Cierra cualquier modal (tienda/equipo/casa/abandonar) al cambiar de sección.
+        [shopEl, equipEl, homeEl, leaveEl].forEach(e => { if (e) e.hidden = true; });
         SEC.forEach(s => navBtns[s.id].classList.toggle('on', s.id === id));
         sec.querySelectorAll('.hacp-msec-pane').forEach(p => p.classList.toggle('on', p.dataset.pane === id));
         const isHac = (id === 'hacienda');
