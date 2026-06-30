@@ -336,7 +336,13 @@
     const syncFab = () => { if (folkFab) folkFab.hidden = panel.hidden || !panel.classList.contains('collapsed'); };
     function folkCollapse(v) { panel.classList.toggle('collapsed', v); syncFab(); }
     if (folkToggle) folkToggle.addEventListener('click', (e) => { e.stopPropagation(); folkCollapse(true); });
-    if (folkFab) folkFab.addEventListener('click', (e) => { e.stopPropagation(); folkCollapse(false); });
+    if (folkFab) {
+      // El FAB vive en el visor: hay que frenar el pointerdown para que el visor no
+      // capture el puntero (setPointerCapture) y se trague el click → si no, en
+      // escritorio el botón "Ver mecenas" no reabría la dársena.
+      folkFab.addEventListener('pointerdown', (e) => e.stopPropagation());
+      folkFab.addEventListener('click', (e) => { e.stopPropagation(); folkCollapse(false); });
+    }
     // Por defecto colapsada en pantallas estrechas (en escritorio, abierta).
     folkCollapse(window.innerWidth < 720);
     // En pantalla completa se colapsa por defecto (más mapa); al salir, se reabre.
