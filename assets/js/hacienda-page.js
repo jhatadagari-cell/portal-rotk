@@ -93,10 +93,13 @@
             </button>
             <span class="hacp-iso-hint">arrastra para mover · pellizca o ctrl+rueda para zoom</span>
             <div class="hacp-char-panel" id="hacp-char-panel" hidden></div>
+            <button type="button" class="hacp-folk-fab" id="hacp-folk-fab" aria-label="Ver mecenas" title="Ver mecenas" hidden>🧑 <span id="hacp-folk-fab-n"></span></button>
             <aside class="hacp-folk-panel" id="hacp-folk-panel" hidden>
-              <button type="button" class="hacp-folk-toggle" id="hacp-folk-toggle" aria-label="Mostrar u ocultar la lista de mecenas" title="Mecenas"><span class="hacp-folk-chev">›</span></button>
-              <div class="hacp-folk-body">
+              <div class="hacp-folk-head">
                 <h3 class="hacp-folk-ttl">Mecenas en la finca</h3>
+                <button type="button" class="hacp-folk-min" id="hacp-folk-toggle" aria-label="Ocultar la lista" title="Ocultar">✕</button>
+              </div>
+              <div class="hacp-folk-body">
                 <ul class="hacp-folk-list" id="hacp-folk-list"></ul>
               </div>
             </aside>
@@ -315,13 +318,18 @@
     // La lista de mecenas también vive DENTRO del visor → no debe burbujear al pan/tap.
     ['pointerdown', 'pointerup', 'wheel', 'click'].forEach(ev =>
       panel.addEventListener(ev, (e) => e.stopPropagation(), { passive: false }));
-    // Colapsar/expandir la dársena de mecenas (pestaña a la derecha).
+    // Dársena de mecenas: colapsa fuera de pantalla y deja un BOTONCITO flotante
+    // (FAB) para reabrirla; dentro, una ✕ pequeña para ocultarla.
     const folkToggle = document.getElementById('hacp-folk-toggle');
-    if (folkToggle) folkToggle.addEventListener('click', () => panel.classList.toggle('collapsed'));
+    const folkFab = document.getElementById('hacp-folk-fab');
+    const syncFab = () => { if (folkFab) folkFab.hidden = panel.hidden || !panel.classList.contains('collapsed'); };
+    function folkCollapse(v) { panel.classList.toggle('collapsed', v); syncFab(); }
+    if (folkToggle) folkToggle.addEventListener('click', (e) => { e.stopPropagation(); folkCollapse(true); });
+    if (folkFab) folkFab.addEventListener('click', (e) => { e.stopPropagation(); folkCollapse(false); });
     // Por defecto colapsada en pantallas estrechas (en escritorio, abierta).
-    if (window.innerWidth < 720) panel.classList.add('collapsed');
+    folkCollapse(window.innerWidth < 720);
     // En pantalla completa se colapsa por defecto (más mapa); al salir, se reabre.
-    const onFsFolk = () => { const fs = (document.fullscreenElement || document.webkitFullscreenElement) || document.documentElement.classList.contains('hacp-pseudofs'); panel.classList.toggle('collapsed', !!fs); };
+    const onFsFolk = () => { const fs = (document.fullscreenElement || document.webkitFullscreenElement) || document.documentElement.classList.contains('hacp-pseudofs'); folkCollapse(!!fs); };
     document.addEventListener('fullscreenchange', onFsFolk);
     document.addEventListener('webkitfullscreenchange', onFsFolk);
     document.addEventListener('hacp-fs', onFsFolk);   // pseudo-fullscreen (iOS)
@@ -331,8 +339,7 @@
       const mb = document.createElement('button');
       mb.type = 'button'; mb.className = 'hacp-folk-shop'; mb.textContent = '🛒 Mercado';
       mb.addEventListener('click', (e) => { e.stopPropagation(); openShop(); });
-      const ttl = panel.querySelector('.hacp-folk-ttl');
-      if (ttl) ttl.insertAdjacentElement('afterend', mb); else panel.insertBefore(mb, listEl);
+      listEl.parentNode.insertBefore(mb, listEl);   // arriba del listado, dentro del cuerpo
     }
     let pop = null;
     const hidePop = () => { if (pop) { pop.remove(); pop = null; } };
@@ -728,7 +735,7 @@
     function openCharPanel(id) {
       if (!charEl) return;
       charId = id; charEl.hidden = false;
-      if (window.innerWidth <= 600) panel.classList.add('collapsed');   // en móvil, no solapar con la dársena
+      if (window.innerWidth <= 600) folkCollapse(true);   // en móvil, no solapar con la dársena
       const d = charData(id); charSig = d ? sigOf(d) : '';
       buildCharPanel(id);
       startAvatar();
@@ -1001,8 +1008,10 @@
     }
     function renderList() {
       const items = HacFolk.list();
-      if (!items.length) { panel.hidden = true; return; }
+      if (!items.length) { panel.hidden = true; syncFab(); return; }
       panel.hidden = false;
+      const fn = document.getElementById('hacp-folk-fab-n'); if (fn) fn.textContent = items.length;
+      syncFab();
       const sel = HacFolk.selected();
       // Tu mecenas, arriba del todo y separado del resto para encontrarlo fácil.
       const mineItem = myId ? items.find(m => m.id === myId) : null;

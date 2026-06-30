@@ -146,27 +146,35 @@ html.hacp-pseudofs, html.hacp-pseudofs body{ overflow:hidden; }
 .hacp-iso-area{ display:block; margin:18px auto 0; text-align:left; }
 .hacp-iso-area .hacp-iso-wrap{ margin:0; }
 /* Lista de mecenas: dársena COLAPSABLE anclada a la derecha DENTRO del visor (así
-   sigue disponible en pantalla completa). Colapsada deja solo una pestaña. */
+   sigue disponible en pantalla completa). Colapsada se esconde fuera y deja un
+   BOTONCITO flotante (.hacp-folk-fab) para reabrirla. */
 .hacp-folk-panel{
-  position:absolute; top:46px; right:0; bottom:10px; width:212px; z-index:6; display:flex;
-  background:rgba(14,11,7,.82); border:1px solid rgba(201,168,76,.22); border-right:0;
+  position:absolute; top:46px; right:0; bottom:10px; width:212px; z-index:6;
+  display:flex; flex-direction:column;
+  background:rgba(14,11,7,.86); border:1px solid rgba(201,168,76,.22); border-right:0;
   border-radius:8px 0 0 8px; box-shadow:-5px 0 18px rgba(0,0,0,.4);
   -webkit-backdrop-filter:blur(2px); backdrop-filter:blur(2px); transition:transform .25s ease;
 }
 .hacp-folk-panel[hidden]{ display:none; }
-.hacp-folk-panel.collapsed{ transform:translateX(190px); }   /* deja ~22 px de pestaña */
-.hacp-folk-toggle{
-  flex:0 0 22px; width:22px; padding:0; cursor:pointer; color:var(--gold);
-  background:rgba(201,168,76,.14); border:0; border-right:1px solid rgba(201,168,76,.22);
-  border-radius:8px 0 0 8px; font-size:15px; display:flex; align-items:center; justify-content:center;
+.hacp-folk-panel.collapsed{ transform:translateX(108%); }   /* fuera de pantalla (el FAB la reabre) */
+.hacp-folk-head{ display:flex; align-items:center; gap:6px; padding:8px 6px 6px 11px; border-bottom:1px solid rgba(201,168,76,.14); }
+.hacp-folk-min{ flex:0 0 auto; width:24px; height:24px; padding:0; cursor:pointer; line-height:1;
+  background:rgba(201,168,76,.14); border:1px solid rgba(201,168,76,.3); border-radius:6px; color:var(--parch2); font-size:13px; }
+.hacp-folk-min:hover{ background:rgba(201,168,76,.3); color:#fff; }
+.hacp-folk-body{ flex:1 1 auto; min-width:0; overflow-y:auto; padding:9px; }
+/* Botoncito flotante para abrir la lista cuando está colapsada. */
+.hacp-folk-fab{
+  position:absolute; right:0; top:50%; transform:translateY(-50%); z-index:7; cursor:pointer;
+  display:flex; align-items:center; gap:3px; padding:8px 9px 8px 11px;
+  background:rgba(14,11,7,.88); color:var(--gold); border:1px solid rgba(201,168,76,.32); border-right:0;
+  border-radius:16px 0 0 16px; font:700 12px 'Noto Sans SC',sans-serif; box-shadow:-3px 0 12px rgba(0,0,0,.45);
 }
-.hacp-folk-toggle:hover{ background:rgba(201,168,76,.3); color:#fff; }
-.hacp-folk-chev{ display:inline-block; transition:transform .25s ease; }
-.hacp-folk-panel.collapsed .hacp-folk-chev{ transform:rotate(180deg); }
-.hacp-folk-body{ flex:1 1 auto; min-width:0; overflow-y:auto; padding:10px 9px; }
+.hacp-folk-fab[hidden]{ display:none; }
+.hacp-folk-fab:hover{ background:rgba(201,168,76,.24); color:#fff; }
+.hacp-folk-fab span{ font-variant-numeric:tabular-nums; }
 .hacp-folk-ttl{
-  font-family:'Cinzel Decorative',serif; font-size:11px; letter-spacing:.08em;
-  text-transform:uppercase; color:var(--hac,var(--gold)); opacity:.85; margin:0 0 8px; text-align:center;
+  flex:1; font-family:'Cinzel Decorative',serif; font-size:11px; letter-spacing:.08em;
+  text-transform:uppercase; color:var(--hac,var(--gold)); opacity:.85; margin:0; text-align:left;
 }
 .hacp-folk-list{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:4px; }
 .hacp-folk-item{
@@ -202,9 +210,12 @@ html.hacp-pseudofs, html.hacp-pseudofs body{ overflow:hidden; }
   font-family:'Noto Sans SC',sans-serif; color:var(--parch); -webkit-backdrop-filter:blur(2px); backdrop-filter:blur(2px);
 }
 .hacp-char-panel[hidden]{ display:none; }
-.hacp-cp-x{ position:absolute; top:5px; right:6px; width:20px; height:20px; line-height:1; padding:0; background:none; border:0; color:var(--parch2); cursor:pointer; font-size:13px; opacity:.7; }
+.hacp-cp-x{ position:absolute; top:6px; right:6px; z-index:4; width:26px; height:26px; line-height:1; padding:0;
+  display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:14px;
+  background:rgba(201,168,76,.16); border:1px solid rgba(201,168,76,.42); border-radius:50%; color:var(--parch); }
+.hacp-cp-x:hover{ background:rgba(192,82,74,.32); border-color:#e0907a; color:#fff; }
 .hacp-cp-x:hover{ opacity:1; color:#fff; }
-.hacp-cp-top{ display:flex; align-items:center; gap:10px; padding-right:16px; }
+.hacp-cp-top{ display:flex; align-items:center; gap:10px; padding-right:30px; }
 .hacp-cp-id{ flex:1; min-width:0; }
 .hacp-cp-avatar{ flex:none; width:48px; height:69px; image-rendering:pixelated; border-radius:5px;
   background:radial-gradient(ellipse at 50% 78%, rgba(201,168,76,.16), rgba(0,0,0,.18)); border:1px solid rgba(201,168,76,.18); }
