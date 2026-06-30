@@ -56,6 +56,8 @@ const HacEscaramuzas = (function () {
   function miBanda(hacId, pjId) { return all(hacId).find(b => (b.miembros || []).some(m => m.id === pjId)) || null; }
 
   async function crear({ haciendaId, hostId, hostNombre, plazas, dificultad, coste }) {
+    await load();                                          // refresca antes de comprobar
+    if (miBanda(haciendaId, hostId)) throw new Error('Ya estás en una banda');
     const c = await sb();
     const row = {
       hacienda_id: haciendaId, host_id: hostId, host_nombre: hostNombre || '',
@@ -67,10 +69,13 @@ const HacEscaramuzas = (function () {
     const o = rowToObj(data); cache.push(o); return o;
   }
   async function unir(id, miembro) {
+    await load();                                         // refresca para reducir la carrera
     const b = cache.find(x => x.id === id);
     if (!b) throw new Error('La banda ya no existe');
     if (b.estado !== 'abierta') throw new Error('La banda ya ha partido');
     if (b.miembros.some(m => m.id === miembro.id)) return b;
+    const otra = miBanda(b.haciendaId, miembro.id);
+    if (otra && otra.id !== id) throw new Error('Ya estás en otra banda');
     if (b.miembros.length >= b.plazas) throw new Error('La banda está llena');
     const miembros = b.miembros.concat([{ id: miembro.id, nombre: miembro.nombre || '' }]);
     const c = await sb();
@@ -80,6 +85,7 @@ const HacEscaramuzas = (function () {
   }
   // Sale de la banda. Si sale el HOST o queda vacía, se disuelve (delete).
   async function salir(id, pjId) {
+    await load();                                         // refresca para reducir la carrera
     const b = cache.find(x => x.id === id); if (!b) return { disuelta: true };
     const c = await sb();
     const rest = b.miembros.filter(m => m.id !== pjId);
@@ -96,6 +102,7 @@ const HacEscaramuzas = (function () {
   // El host LANZA la banda: pasa a 'en_curso' 30 min (nowMs lo pasa quien llama,
   // idealmente del reloj de servidor).
   async function lanzar(id, nowMs) {
+    if (!nowMs) throw new Error('Reloj no disponible');   // evita inicio/fin en epoch 0
     const b = cache.find(x => x.id === id); if (!b) throw new Error('La banda ya no existe');
     const inicio = nowMs || 0, fin = inicio + DUR_MS;
     const c = await sb();

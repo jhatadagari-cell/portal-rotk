@@ -615,6 +615,7 @@
 
     // ── Panel de control del personaje (overlay sobre el visor) ──────────────
     let charId = null, charSig = '', invOpen = false, lastStatsSig = '';
+    let mShell = null;   // shell móvil (se rellena en setupMobileShell); null = escritorio
     function charData(id) {
       const it = HacFolk.list().find(w => w.id === id);
       if (!it) return null;
@@ -820,6 +821,7 @@
     function stopAvatar() { if (avatarRAF) { cancelAnimationFrame(avatarRAF); avatarRAF = null; } }
     function openCharPanel(id) {
       if (!charEl) return;
+      if (mShell) { mShell.showChar(id); return; }         // móvil: el panel vive en la sección Personaje
       charId = id; charEl.hidden = false;
       if (window.innerWidth <= 600) folkCollapse(true);   // en móvil, no solapar con la dársena
       const d = charData(id); charSig = d ? sigOf(d) : '';
@@ -1417,7 +1419,7 @@
       //  llegan en la siguiente sub-fase; aquí queda el "vestíbulo" de bandas.)
       const COSTE_BANDA = (plazas) => plazas * 40;     // 2→80, 3→120, 4→160
       const myName = ((h.miembros || []).find(m => m.personajeId === myId) || {}).nombre || 'Tú';
-      let escPlazas = 3;
+      let escPlazas = 3, escBusy = false, escSig = '';
       const escBody = () => sec.querySelector('[data-esc-body]');
       function renderEscaramuzas() {
         const body = escBody(); if (!body) return;
@@ -1465,35 +1467,67 @@
             <ul class="hacp-esc-roster">${roster}</ul>${accion}</div>`;
       }
       async function crearBanda() {
+        if (escBusy) return;                                  // anti doble-clic
         const coste = COSTE_BANDA(escPlazas);
         if (!window.HacStats || HacStats.dinero(myId) < coste) { toast('No tienes suficiente dinero'); return; }
+        escBusy = true; let pagado = false;
         try {
-          await HacStats.award(myId, { dinero: -coste });
+          await HacStats.award(myId, { dinero: -coste }); pagado = true;
           await HacEscaramuzas.crear({ haciendaId: h.id, hostId: myId, hostNombre: myName, plazas: escPlazas, dificultad: 4 + (escPlazas - 2), coste });
-          toast('⚔ Banda montada · esperando mecenas'); renderEscaramuzas(); if (charId) buildCharPanel(charId);
-        } catch (e) { toast((e && e.message) || 'No se pudo montar'); await HacEscaramuzas.reload(); renderEscaramuzas(); }
+          toast('⚔ Banda montada · esperando mecenas');
+        } catch (e) {
+          if (pagado && window.HacStats) await HacStats.award(myId, { dinero: coste });   // reembolso si falló crear
+          toast((e && e.message) || 'No se pudo montar'); await HacEscaramuzas.reload();
+        } finally { escBusy = false; renderEscaramuzas(); if (charId) buildCharPanel(charId); }
       }
       async function unirBanda(id) {
-        try { await HacEscaramuzas.unir(id, { id: myId, nombre: myName }); toast('Te has unido a la banda'); renderEscaramuzas(); }
-        catch (e) { toast((e && e.message) || 'No se pudo unir'); await HacEscaramuzas.reload(); renderEscaramuzas(); }
+        if (escBusy) return; escBusy = true;
+        try { await HacEscaramuzas.unir(id, { id: myId, nombre: myName }); toast('Te has unido a la banda'); }
+        catch (e) { toast((e && e.message) || 'No se pudo unir'); await HacEscaramuzas.reload(); }
+        finally { escBusy = false; renderEscaramuzas(); }
       }
       async function salirBanda(id) {
+        if (escBusy) return; escBusy = true;
         const band = HacEscaramuzas.miBanda(h.id, myId);
         const refund = (band && band.hostId === myId && band.estado === 'abierta') ? band.coste : 0;
         try {
           const r = await HacEscaramuzas.salir(id, myId);
           if (refund > 0 && r.disuelta && window.HacStats) { await HacStats.award(myId, { dinero: refund }); toast('Banda disuelta · coste devuelto'); }
           else toast(r.disuelta ? 'Banda disuelta' : 'Has salido de la banda');
-          renderEscaramuzas(); if (charId) buildCharPanel(charId);
-        } catch (e) { toast((e && e.message) || 'No se pudo salir'); await HacEscaramuzas.reload(); renderEscaramuzas(); }
+        } catch (e) { toast((e && e.message) || 'No se pudo salir'); await HacEscaramuzas.reload(); }
+        finally { escBusy = false; renderEscaramuzas(); if (charId) buildCharPanel(charId); }
       }
       if (window.HacEscaramuzas) HacEscaramuzas.ready();
       let mActive = 'personaje';
-      setInterval(() => { if (mActive === 'escaramuzas' && window.HacEscaramuzas) HacEscaramuzas.reload().then(() => { if (mActive === 'escaramuzas') renderEscaramuzas(); }); }, 6000);
+      // Muestra un mecenas (el tuyo o cualquiera al tocarlo en la finca) en el HOME.
+      function showChar(id) {
+        [shopEl, equipEl, homeEl, leaveEl].forEach(e => { if (e) e.hidden = true; }); hidePop();
+        mActive = 'personaje';
+        SEC.forEach(s => navBtns[s.id].classList.toggle('on', s.id === 'personaje'));
+        sec.querySelectorAll('.hacp-msec-pane').forEach(p => p.classList.toggle('on', p.dataset.pane === 'personaje'));
+        sec.hidden = false;
+        if (id) { charId = id; buildCharPanel(id); startAvatar(); }
+      }
+      mShell = { showChar, go: (s) => mgo(s) };
+      // Poll de escaramuzas: solo si la sección está activa, la pestaña es visible, y
+      // re-renderiza únicamente si cambió algo (evita churn que rompe la interacción).
+      setInterval(() => {
+        if ((typeof document !== 'undefined' && document.hidden) || mActive !== 'escaramuzas' || !window.HacEscaramuzas) return;
+        HacEscaramuzas.reload().then(() => {
+          if (mActive !== 'escaramuzas') return;
+          const sig = JSON.stringify((HacEscaramuzas.all(h.id) || []).map(b => [b.id, b.estado, (b.miembros || []).length]));
+          if (sig !== escSig) { escSig = sig; renderEscaramuzas(); }
+        });
+      }, 6000);
 
       function mgo(id) {
-        // Cierra cualquier modal (tienda/equipo/casa/abandonar) al cambiar de sección.
+        // Cierra cualquier modal (tienda/equipo/casa/abandonar) y el popup de edificio.
         [shopEl, equipEl, homeEl, leaveEl].forEach(e => { if (e) e.hidden = true; });
+        hidePop();
+        if (mActive === 'personaje' && id !== 'personaje') stopAvatar();   // no animes el retrato fuera del home
+        // El tablón (boardEl) lo embebe renderExped en Misiones; al salir, devuélvelo
+        // a su sitio (overlay en el visor) para que la ruta de escritorio siga válida.
+        if (id !== 'misiones' && boardEl) { boardEl.classList.remove('hacp-board-inline'); boardEl.hidden = true; if (boardEl.parentNode !== vp) vp.appendChild(boardEl); }
         mActive = id;
         SEC.forEach(s => navBtns[s.id].classList.toggle('on', s.id === id));
         sec.querySelectorAll('.hacp-msec-pane').forEach(p => p.classList.toggle('on', p.dataset.pane === id));
