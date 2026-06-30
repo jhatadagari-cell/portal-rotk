@@ -132,7 +132,7 @@
 <script src="assets/js/hac-util.js?v=1"></script>
 <script src="assets/js/haciendas-data.js?v=11"></script>
 <script src="assets/js/hac-calc.js?v=6"></script>
-<script src="assets/js/hac-build.js?v=34"></script>
+<script src="assets/js/hac-build.js?v=35"></script>
 <script src="assets/js/hac-store.js?v=5"></script>
 <script src="assets/js/hac-tareas.js?v=2"></script>
 <script src="assets/js/personajes-data.js?v=2"></script>
@@ -421,7 +421,7 @@
       // Sinergia de ESTE pabellón: edificios de su dominio dentro → bono pasivo.
       let efecto = '';
       if (!lost && B.bonosPabellon) {
-        const bp = B.bonosPabellon(h.mapa, tier, [p]), sin = (bp.sinergia && bp.sinergia[p.rol]) || 0;
+        const bp = B.bonosPabellon(h.mapa, tier, [p]), sin = Math.round(((bp.sinergia && bp.sinergia[p.rol]) || 0) * 10) / 10;
         const pc = (f) => Math.round((f || 0) * 100);
         const ef = p.rol === 'cultural' ? (bp.xp > 0 ? `+${pc(bp.xp)}% XP en misiones` : '')
           : p.rol === 'administrativo' ? (bp.dinero > 0 ? `+${pc(bp.dinero)}% 💰 misiones · −${pc(bp.mercado)}% precios` : '')

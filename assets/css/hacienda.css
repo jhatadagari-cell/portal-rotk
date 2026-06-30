@@ -454,6 +454,17 @@ html.hacp-pseudofs, html.hacp-pseudofs body{ overflow:hidden; }
 /* Línea de bonos de pabellón en el panel del mecenas */
 .hacp-cp-bonos{ margin-top:8px; padding:6px 9px; font-size:11px; line-height:1.5; text-align:center;
   background:rgba(201,168,76,.08); border:1px solid rgba(201,168,76,.22); border-radius:6px; color:var(--parch2); }
+/* Popup de info de edificio (al pulsar su cuerpo en el plano) */
+.hacp-bld-pop{ position:fixed; z-index:9999; width:min(248px,80vw); padding:10px 12px; box-sizing:border-box;
+  background:rgba(13,11,7,.97); border:1px solid rgba(201,168,76,.45); border-radius:8px;
+  box-shadow:0 8px 28px rgba(0,0,0,.6); color:var(--parch); font-family:'Noto Sans SC',sans-serif; }
+.hacp-bld-ttl{ font:900 14px 'Noto Serif SC',serif; color:var(--gold); }
+.hacp-bld-ttl .zh{ font-size:16px; margin-right:3px; }
+.hacp-bld-desc{ font-size:11px; color:var(--parch2); opacity:.85; margin:4px 0 7px; line-height:1.4; }
+.hacp-bld-bono{ font-size:11.5px; line-height:1.45; padding-top:6px; border-top:1px solid rgba(201,168,76,.18); }
+.hacp-bld-bono.none{ color:var(--parch2); opacity:.8; }
+.hacp-bld-dr{ font-size:10.5px; line-height:1.4; margin-top:5px; color:#e2a06a; }
+.hacp-bld-dr.ok{ color:#7fc9a0; }
 
 /* Abandonar la hacienda: botón discreto de peligro al pie del panel + overlay de aviso */
 .hacp-cp-leave{ display:block; width:100%; margin-top:10px; background:none; border:1px solid rgba(178,59,46,.5);

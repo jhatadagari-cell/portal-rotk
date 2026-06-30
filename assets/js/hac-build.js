@@ -356,21 +356,35 @@ const HacBuild = (function () {
   //   政 administrativo  → +dinero de misiones y −precios en el mercado
   // `pabellones` = [{ seed:[sx,sy], rol }] de la hacienda. Devuelve fracciones
   // (0.10 = +10%) y el desglose de sinergia por dominio (para mostrarlo).
-  const pctSinergia = (s) => Math.min(0.15, 0.03 * (s || 0));   // 1→3% … 5+→15% (tope)
+  const pctSinergia = (s) => Math.min(0.15, 0.03 * Math.max(0, s || 0));   // 1→3% … 5+→15% (tope)
+  const DR_COPIA = 0.4;   // cada copia EXTRA del mismo edificio aporta ×0.4 de la anterior (rendimientos decrecientes NOTABLES)
   function bonosPabellon(mapa, tier, pabellones) {
     const sin = { militar: 0, cultural: 0, administrativo: 0 };
     const cons = (mapa && Array.isArray(mapa.construcciones)) ? mapa.construcciones : [];
+    // 1) Reúne los edificios que PUNTÚAN: dominio == rol del pabellón y dentro de su región.
+    const aportan = [];
     (pabellones || []).forEach(p => {
       const rol = p && p.rol; if (!rol || !(rol in sin)) return;
       const seed = (p && p.seed) || [0, 0];
       const cells = new Set(regionPabellon(mapa, tier, seed[0], seed[1]).map(c => c[0] + ',' + c[1]));
       if (!cells.size) return;
       cons.forEach(c => {
-        const t = tipo(c && c.tipo); if (!t || t.dominio !== rol) return;
-        if (celdasOcupadas(c).some(cc => cells.has(cc[0] + ',' + cc[1]))) sin[rol] += t.restringido ? 2 : 1;
+        const t = tipo(c && c.tipo); if (!t || t.dominio !== rol || !Array.isArray(c.pos)) return;
+        if (celdasOcupadas(c).some(cc => cells.has(cc[0] + ',' + cc[1]))) aportan.push({ c, t, rol });
       });
     });
-    return { sinergia: sin, xp: pctSinergia(sin.cultural), dinero: pctSinergia(sin.administrativo), mercado: pctSinergia(sin.administrativo) };
+    // 2) Orden estable por posición → el "nº de copia" es determinista.
+    aportan.sort((a, b) => (a.c.pos[1] - b.c.pos[1]) || (a.c.pos[0] - b.c.pos[0]));
+    // 3) Suma con RENDIMIENTOS DECRECIENTES por TIPO: la k-ésima copia aporta base·0.4^(k-1).
+    const detalle = {}, nTipo = {};
+    aportan.forEach(({ c, t, rol }) => {
+      const k = (nTipo[t.id] = (nTipo[t.id] || 0) + 1);
+      const base = t.restringido ? 2 : 1;
+      const efectiva = base * Math.pow(DR_COPIA, k - 1);
+      sin[rol] += efectiva;
+      detalle[c.pos[0] + ',' + c.pos[1]] = { rol, tipo: t.id, copia: k, base, efectiva };
+    });
+    return { sinergia: sin, detalle, xp: pctSinergia(sin.cultural), dinero: pctSinergia(sin.administrativo), mercado: pctSinergia(sin.administrativo) };
   }
 
   // Patios al estilo 府第: una REJILLA de patios ~cuadrados. A lo largo del eje
@@ -499,7 +513,7 @@ const HacBuild = (function () {
     dentroDeRejilla, colisiona, construccionEn, puedeColocar, patios, enMuro,
     construccionesValidas, normalizaMapa, MAX_TIER,
     ringDepth, costeExterior, esCeldaExterior, enExterior, COSTE_EXTERIOR,
-    ROLES_PABELLON, rolPabellon, maxPabellones, MIN_PABELLON, regionPabellon, regionValidaPabellon, bonosPabellon
+    ROLES_PABELLON, rolPabellon, maxPabellones, MIN_PABELLON, regionPabellon, regionValidaPabellon, bonosPabellon, pctSinergia, DR_COPIA
   };
 })();
 

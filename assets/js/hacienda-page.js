@@ -1219,8 +1219,52 @@
       pop.querySelectorAll('.hacp-folk-pop-name').forEach(b => b.addEventListener('click', () => gotoMember(b.dataset.id)));
     }
 
+    // Edificio (capa 'edificio') que ocupa una celda (gx,gy), o null. Recorre de
+    // atrás hacia delante para coger el de encima si hubiera solape.
+    function edificioEnCelda(gx, gy) {
+      const cons = (h.mapa && h.mapa.construcciones) || [];
+      for (let i = cons.length - 1; i >= 0; i--) {
+        const c = cons[i], t = window.HacBuild && HacBuild.tipo(c.tipo);
+        if (!t || t.capa !== 'edificio' || !Array.isArray(c.pos)) continue;
+        if (HacBuild.celdasOcupadas(c).some(cc => cc[0] === gx && cc[1] === gy)) return c;
+      }
+      return null;
+    }
+    // Popup de INFO de un edificio: nombre, dominio, descripción y el BONO que
+    // aporta a la finca (con aviso de rendimientos decrecientes si es copia).
+    function showBldPop(x, y, c) {
+      hidePop();
+      const t = window.HacBuild && HacBuild.tipo(c.tipo); if (!t) return;
+      const dom = t.dominio, glyph = dom ? DOM_GLYPH[dom] : '', domNm = dom ? DOM_NOMBRE[dom] : '', col = dom ? DOM_COLOR[dom] : '#b9a77a';
+      const det = (bonos.detalle || {})[c.pos[0] + ',' + c.pos[1]];
+      const efectoDom = { cultural: '+XP en misiones', administrativo: '+dinero de misiones y −precios de mercado', militar: 'refuerzo del patio militar (efecto en expediciones próximamente)' };
+      let bono;
+      if (!dom) {
+        bono = `<div class="hacp-bld-bono none">No aporta sinergia de pabellón.</div>`;
+      } else if (!det) {
+        bono = `<div class="hacp-bld-bono none">Colócalo dentro de un pabellón <b style="color:${col}">${glyph} ${esc(domNm)}</b> para que sume al bono de la finca.</div>`;
+      } else {
+        const pctSin = HacBuild.pctSinergia, tot = bonos.sinergia[dom] || 0;
+        const marginal = Math.round((pctSin(tot) - pctSin(tot - det.efectiva)) * 100);
+        const drPct = Math.round(Math.pow(HacBuild.DR_COPIA, det.copia - 1) * 100);
+        const aporta = (dom === 'militar') ? `Suma sinergia 军 (sin efecto jugable aún)` : `Aporta ~<b>${marginal}%</b> a la finca (${esc(efectoDom[dom])})`;
+        const dr = det.copia > 1
+          ? `<div class="hacp-bld-dr">⚠ Es la ${det.copia}ª de su tipo: rinde solo el <b>${drPct}%</b> de la primera (rendimientos decrecientes). Mejor variar de edificio.</div>`
+          : `<div class="hacp-bld-dr ok">✓ Primera de su tipo: aporte completo.</div>`;
+        bono = `<div class="hacp-bld-bono"><b style="color:${col}">${glyph} ${esc(domNm)}</b> · ${aporta}</div>${dr}`;
+      }
+      pop = document.createElement('div');
+      pop.className = 'hacp-bld-pop';
+      pop.innerHTML = `<div class="hacp-bld-ttl"><span class="zh">${esc(t.zh || '')}</span> ${esc(t.nombre)}</div>
+        ${t.desc ? `<div class="hacp-bld-desc">${esc(t.desc)}</div>` : ''}${bono}`;
+      document.body.appendChild(pop);
+      pop.style.left = Math.min(x + 12, window.innerWidth - pop.offsetWidth - 8) + 'px';
+      pop.style.top = Math.min(y + 12, window.innerHeight - pop.offsetHeight - 8) + 'px';
+    }
+
     // TAP en el plano: ¿banner de edificio? → popup; ¿un mecenas? → seleccionar;
-    // si no, deseleccionar. Distinguimos tap de arrastre por el desplazamiento.
+    // ¿el cuerpo de un edificio? → info/bono; si no, deseleccionar. Distinguimos
+    // tap de arrastre por el desplazamiento.
     const S = (window.HacIso && HacIso.SCALE) || 2;
     let downAt = null, moved = false;
     vp.addEventListener('pointerdown', (e) => { downAt = [e.clientX, e.clientY]; moved = false; });
@@ -1245,6 +1289,10 @@
       // Clic en TU mecenas mientras espera en el tablón (📜) → abre las misiones.
       if (bestId && bestId === myId && HacFolk.consultando && HacFolk.consultando(myId)) { openMissionBoard(); return; }
       if (bestId) { gotoMember(bestId); return; }
+      // ¿el cuerpo de un edificio? → popup con su info y el bono que aporta.
+      const cell = (window.HacIso && HacIso.cellAt) ? HacIso.cellAt(iso, e.clientX, e.clientY) : null;
+      const bld = cell ? edificioEnCelda(cell[0], cell[1]) : null;
+      if (bld) { showBldPop(e.clientX, e.clientY, bld); return; }
       hidePop(); deselect();
     });
     document.addEventListener('pointerdown', (e) => { if (pop && !pop.contains(e.target) && !vp.contains(e.target)) hidePop(); });
