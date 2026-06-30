@@ -55,60 +55,44 @@ const HacEscaramuzas = (function () {
   // Banda en la que participa el jugador (en cualquier estado), o null.
   function miBanda(hacId, pjId) { return all(hacId).find(b => (b.miembros || []).some(m => m.id === pjId)) || null; }
 
+  // Refleja en caché la fila devuelta por una RPC (insert/update).
+  function upsertCache(rowData) {
+    if (!rowData) return null;
+    const o = rowToObj(rowData);
+    const i = cache.findIndex(x => x.id === o.id);
+    if (i >= 0) cache[i] = o; else cache.push(o);
+    return o;
+  }
+  // Todas las mutaciones van por funciones SECURITY DEFINER (atómicas en BD).
   async function crear({ haciendaId, hostId, hostNombre, plazas, dificultad, coste }) {
-    await load();                                          // refresca antes de comprobar
-    if (miBanda(haciendaId, hostId)) throw new Error('Ya estás en una banda');
     const c = await sb();
-    const row = {
-      hacienda_id: haciendaId, host_id: hostId, host_nombre: hostNombre || '',
-      plazas: Math.max(2, Math.min(4, plazas || 3)), dificultad: dificultad || 4, estado: 'abierta',
-      miembros: [{ id: hostId, nombre: hostNombre || '' }], coste: coste || 0,
-    };
-    const { data, error } = await c.from(TABLE).insert(row).select().single();
-    if (error) throw error;
-    const o = rowToObj(data); cache.push(o); return o;
+    const { data, error } = await c.rpc('escaramuza_crear', {
+      p_hac: haciendaId, p_host: hostId, p_nombre: hostNombre || '', p_plazas: plazas || 3, p_dif: dificultad || 4, p_coste: coste || 0,
+    });
+    if (error) throw new Error(error.message || 'No se pudo montar la banda');
+    return upsertCache(data);
   }
   async function unir(id, miembro) {
-    await load();                                         // refresca para reducir la carrera
-    const b = cache.find(x => x.id === id);
-    if (!b) throw new Error('La banda ya no existe');
-    if (b.estado !== 'abierta') throw new Error('La banda ya ha partido');
-    if (b.miembros.some(m => m.id === miembro.id)) return b;
-    const otra = miBanda(b.haciendaId, miembro.id);
-    if (otra && otra.id !== id) throw new Error('Ya estás en otra banda');
-    if (b.miembros.length >= b.plazas) throw new Error('La banda está llena');
-    const miembros = b.miembros.concat([{ id: miembro.id, nombre: miembro.nombre || '' }]);
     const c = await sb();
-    const { error } = await c.from(TABLE).update({ miembros }).eq('id', id);
-    if (error) throw error;
-    b.miembros = miembros; return b;
+    const { data, error } = await c.rpc('escaramuza_unir', { p_id: id, p_pj: miembro.id, p_nombre: miembro.nombre || '' });
+    if (error) throw new Error(error.message || 'No se pudo unir');
+    return upsertCache(data);
   }
-  // Sale de la banda. Si sale el HOST o queda vacía, se disuelve (delete).
+  // Devuelve { disuelta } — la RPC borra la fila si sale el host o queda vacía (data=null).
   async function salir(id, pjId) {
-    await load();                                         // refresca para reducir la carrera
-    const b = cache.find(x => x.id === id); if (!b) return { disuelta: true };
     const c = await sb();
-    const rest = b.miembros.filter(m => m.id !== pjId);
-    if (pjId === b.hostId || rest.length === 0) {
-      const { error } = await c.from(TABLE).delete().eq('id', id);
-      if (error) throw error;
-      cache = cache.filter(x => x.id !== id);
-      return { disuelta: true };
-    }
-    const { error } = await c.from(TABLE).update({ miembros: rest }).eq('id', id);
-    if (error) throw error;
-    b.miembros = rest; return { disuelta: false };
+    const { data, error } = await c.rpc('escaramuza_salir', { p_id: id, p_pj: pjId });
+    if (error) throw new Error(error.message || 'No se pudo salir');
+    if (!data) { cache = cache.filter(x => x.id !== id); return { disuelta: true }; }
+    upsertCache(data); return { disuelta: false };
   }
-  // El host LANZA la banda: pasa a 'en_curso' 30 min (nowMs lo pasa quien llama,
-  // idealmente del reloj de servidor).
-  async function lanzar(id, nowMs) {
-    if (!nowMs) throw new Error('Reloj no disponible');   // evita inicio/fin en epoch 0
-    const b = cache.find(x => x.id === id); if (!b) throw new Error('La banda ya no existe');
-    const inicio = nowMs || 0, fin = inicio + DUR_MS;
+  // El host LANZA: la RPC valida (host, ≥2, abierta) y fija inicio/fin (30 min).
+  async function lanzar(id, hostId, nowMs) {
+    if (!nowMs) throw new Error('Reloj no disponible');
     const c = await sb();
-    const { error } = await c.from(TABLE).update({ estado: 'en_curso', inicio_ms: inicio, fin_ms: fin }).eq('id', id);
-    if (error) throw error;
-    b.estado = 'en_curso'; b.inicioMs = inicio; b.finMs = fin; return b;
+    const { data, error } = await c.rpc('escaramuza_lanzar', { p_id: id, p_host: hostId, p_now: nowMs });
+    if (error) throw new Error(error.message || 'No se pudo lanzar');
+    return upsertCache(data);
   }
 
   return { ready, reload, all, abiertas, miBanda, crear, unir, salir, lanzar, DUR_MS, CD_MS, dbOk: () => ok, TABLE };

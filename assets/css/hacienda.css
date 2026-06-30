@@ -525,6 +525,9 @@ html.hacp-pseudofs, html.hacp-pseudofs body{ overflow:hidden; }
 .hacp-esc-m:first-child{ border-top:0; }
 .hacp-esc-m.host{ color:var(--gold); }
 .hacp-esc-roster + button, .hacp-esc-card button.hacp-cp-btn{ width:100%; margin-top:7px; }
+.hacp-esc-lanzar{ background:rgba(178,59,46,.22)!important; border-color:#b23b2e!important; color:#f0b8ad!important; font-weight:700; }
+.hacp-esc-lanzar:not(:disabled):hover{ background:rgba(178,59,46,.4)!important; color:#fff!important; }
+.hacp-esc-timer{ font:900 19px 'Noto Serif SC',serif; color:var(--gold); text-align:center; padding:10px 0 4px; font-variant-numeric:tabular-nums; }
 /* Popup de info de edificio (al pulsar su cuerpo en el plano) */
 .hacp-bld-pop{ position:fixed; z-index:9999; width:min(248px,80vw); padding:10px 12px; box-sizing:border-box;
   background:rgba(13,11,7,.97); border:1px solid rgba(201,168,76,.45); border-radius:8px;

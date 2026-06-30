@@ -522,6 +522,11 @@
       const hardDone = clock() > o.inicioMs + (o.duracionSeg || 60) * 1000 + 90000;   // saludo+viaje+tarea, con margen
       const liveDone = _wasOnMission && !onM;                                          // el sim la acaba de completar
       if (hardDone || liveDone) {
+        // Las ESCARAMUZAS (cooperativas) NO se premian aquí: al volver, solo se limpia
+        // la orden; el reparto de dinero/botín/heridas lo hará la resolución de la banda (4c).
+        if (String(o.targetId || '').indexOf('escaramuza:') === 0) {
+          HacOrdenes.clear(h.id, myId); _wasOnMission = false; applyOrders(); return;
+        }
         let dom = null;
         const mis = (o.tipo === 'expedicion') ? (window.HacMisiones && HacMisiones.get(String(o.targetId || '').replace('mis:', ''))) : null;
         if (mis) dom = mis.dom;
@@ -591,6 +596,19 @@
       if (window.HacEnergia) HacEnergia.spend(h.id, myId, costeExped(m));
       HacOrdenes.set({ haciendaId: h.id, miembroId: myId, tipo: 'expedicion', targetId: 'mis:' + misId, duracionSeg: HacMisiones.durSeg(m) })
         .then(applyOrders).catch(e => console.warn('[orden] set', e));
+    }
+    // ESCARAMUZA: cuando MI banda está 'en_curso', mi mecenas sale por la puerta
+    // (reusa la maquinaria de expedición: camina al portón, 拱手/saludo y se va) hasta
+    // el regreso. Cada cliente dispara la salida de SU mecenas; así el grupo coincide
+    // en la puerta. La resolución/recompensa es aparte (4c).
+    function syncEscaramuzaOrder() {
+      if (!myId || !window.HacEscaramuzas || !window.HacOrdenes) return;
+      const band = HacEscaramuzas.miBanda(h.id, myId);
+      if (!band || band.estado !== 'en_curso') return;
+      const now = clock(); if (now >= band.finMs) return;
+      if (HacOrdenes.mine(h.id, myId)) return;                 // ya ocupado: no pisar otra orden
+      HacOrdenes.set({ haciendaId: h.id, miembroId: myId, tipo: 'expedicion', targetId: 'escaramuza:' + band.id, duracionSeg: Math.max(30, Math.round((band.finMs - now) / 1000)) })
+        .then(applyOrders).catch(e => console.warn('[escaramuza] orden', e));
     }
     function release() {
       if (!myId || !window.HacOrdenes) return;
@@ -1219,13 +1237,16 @@
     if (window.HacCompetencias) HacCompetencias.ready().then(refresh);
     if (window.HacPuntos) HacPuntos.ready().then(refresh);
     if (window.HacStats) HacStats.ready().then(refresh);
+    if (window.HacEscaramuzas) HacEscaramuzas.ready().then(syncEscaramuzaOrder);
     if (window.HacOrdenes) {
       HacOrdenes.ready().then(applyOrders);
       setInterval(() => {
+        if (typeof document !== 'undefined' && document.hidden) return;   // no machaques en segundo plano
         if (window.HacEnergia) HacEnergia.reload();
         if (window.HacCompetencias) HacCompetencias.reload();
         if (window.HacPuntos) HacPuntos.reload();
         if (window.HacStats) HacStats.reload();
+        if (window.HacEscaramuzas) HacEscaramuzas.reload().then(syncEscaramuzaOrder);   // que mi mecenas salga si mi banda partió
         HacOrdenes.reload().then(applyOrders);
       }, 5000);
     }
@@ -1428,7 +1449,13 @@
           body.innerHTML = '<div class="hacp-msec-soon">兵<br><b>Escaramuzas</b><br>Aún no disponibles en el servidor.</div>'; return;
         }
         const mine = HacEscaramuzas.miBanda(h.id, myId);
-        if (mine) { body.innerHTML = bandaPropiaHTML(mine); const sl = body.querySelector('[data-salir]'); if (sl) sl.addEventListener('click', () => salirBanda(mine.id)); return; }
+        if (mine) {
+          body.innerHTML = bandaPropiaHTML(mine);
+          const sl = body.querySelector('[data-salir]'); if (sl) sl.addEventListener('click', () => salirBanda(mine.id));
+          const ln = body.querySelector('[data-lanzar]'); if (ln && !ln.disabled) ln.addEventListener('click', () => lanzarBanda(mine.id));
+          escTick();
+          return;
+        }
         const dinero = window.HacStats ? HacStats.dinero(myId) : 0;
         const coste = COSTE_BANDA(escPlazas), sinDinero = dinero < coste;
         const abiertas = HacEscaramuzas.abiertas(h.id).filter(b => b.miembros.length < b.plazas);
@@ -1456,11 +1483,18 @@
         let accion = '';
         if (b.estado === 'abierta') {
           const puede = b.miembros.length >= 2;
-          accion = `<button class="hacp-cp-btn" data-lanzar disabled title="Próximamente">${esHost ? '⚔ Lanzar (próximamente)' : 'Esperando al capitán…'}</button>
-            <div class="hacp-esc-note">${puede ? 'Listos para partir cuando el capitán lance.' : 'Hacen falta al menos 2 mecenas para partir.'} El lanzamiento, la salida y el reparto llegan en la próxima actualización.</div>
-            <button class="hacp-cp-btn hacp-esc-salir" data-salir>${esHost ? 'Disolver la banda' : 'Salir de la banda'}</button>`;
+          if (esHost) {
+            accion = `<button class="hacp-cp-btn hacp-esc-lanzar" data-lanzar${puede ? '' : ' disabled'}>⚔ Lanzar expedición</button>
+              <div class="hacp-esc-note">${puede ? 'Al lanzar, la banda parte 30 min. El reparto de recompensas y botín se hará al volver.' : 'Hacen falta al menos 2 mecenas para partir.'}</div>`;
+          } else {
+            accion = `<div class="hacp-esc-note">Esperando a que el capitán lance la expedición${puede ? '' : ' (faltan mecenas)'}.</div>`;
+          }
+          accion += `<button class="hacp-cp-btn hacp-esc-salir" data-salir>${esHost ? 'Disolver la banda' : 'Salir de la banda'}</button>`;
         } else if (b.estado === 'en_curso') {
-          accion = `<div class="hacp-esc-note">La banda está en la expedición.</div>`;
+          accion = `<div class="hacp-esc-timer" data-esc-timer="${b.finMs}">En la expedición…</div>
+            <div class="hacp-esc-note">La banda ha partido. Regresan pronto; el reparto de botín y recompensas llega en la próxima actualización.</div>`;
+        } else {
+          accion = `<div class="hacp-esc-note">Expedición terminada · reparto pendiente.</div>`;
         }
         return `<div class="hacp-esc-h">兵 Tu banda <span class="hacp-esc-sub">${b.miembros.length}/${b.plazas}</span></div>
           <div class="hacp-esc-card"><div class="hacp-esc-ttl">Expedición militar · dif. ${b.dificultad}</div>
@@ -1497,6 +1531,22 @@
         } catch (e) { toast((e && e.message) || 'No se pudo salir'); await HacEscaramuzas.reload(); }
         finally { escBusy = false; renderEscaramuzas(); if (charId) buildCharPanel(charId); }
       }
+      async function lanzarBanda(id) {
+        if (escBusy) return; escBusy = true;
+        try {
+          await HacEscaramuzas.lanzar(id, myId, clock());
+          toast('⚔ ¡La banda parte a la expedición!');
+          syncEscaramuzaOrder();                                 // mi mecenas sale ya por la puerta
+        } catch (e) { toast((e && e.message) || 'No se pudo lanzar'); await HacEscaramuzas.reload(); }
+        finally { escBusy = false; renderEscaramuzas(); }
+      }
+      // Actualiza el texto del temporizador de la banda en curso (sin re-render).
+      function escTick() {
+        const el = sec.querySelector('[data-esc-timer]'); if (!el) return;
+        const fin = +el.dataset.escTimer || 0, rem = Math.max(0, fin - clock());
+        el.textContent = rem > 0 ? ('🧭 Regreso en ' + fmtClock(rem / 1000)) : '✔ Han regresado · reparto pendiente';
+      }
+      setInterval(() => { if (mActive === 'escaramuzas') escTick(); }, 1000);
       if (window.HacEscaramuzas) HacEscaramuzas.ready();
       let mActive = 'personaje';
       // Muestra un mecenas (el tuyo o cualquiera al tocarlo en la finca) en el HOME.
