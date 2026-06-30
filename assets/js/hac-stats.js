@@ -41,7 +41,7 @@ const HacStats = (function () {
       militar: Number(r.xp_militar) || 0, cultural: Number(r.xp_cultural) || 0,
       administrativo: Number(r.xp_administrativo) || 0,
       cap: Number(r.cap_inventario) || 8, inv: parseInv(r.inventario), ahorro: Number(r.ahorro) || 0,
-      casaPos: r.casa_pos || null, casaInv: parseInv(r.casa_inv),
+      casaPos: r.casa_pos || null, casaInv: parseInv(r.casa_inv), equipado: parseInv(r.equipado),
     };
   }
   async function load() {
@@ -60,7 +60,7 @@ const HacStats = (function () {
   function reload() { readyPromise = load(); return readyPromise; }
 
   function row(mid) { return cache.find(r => r.miembroId === mid) || null; }
-  function ensure(mid) { let r = row(mid); if (!r) { r = { miembroId: mid, dinero: 0, militar: 0, cultural: 0, administrativo: 0, cap: 8, inv: [], ahorro: 0, casaPos: null, casaInv: [] }; cache.push(r); } return r; }
+  function ensure(mid) { let r = row(mid); if (!r) { r = { miembroId: mid, dinero: 0, militar: 0, cultural: 0, administrativo: 0, cap: 8, inv: [], ahorro: 0, casaPos: null, casaInv: [], equipado: [] }; cache.push(r); } return r; }
   function dinero(mid) { const r = row(mid); return r ? r.dinero : 0; }
   function ahorro(mid) { const r = row(mid); return r ? r.ahorro : 0; }
   function casaPos(mid) { const r = row(mid); return r ? r.casaPos : null; }
@@ -72,7 +72,31 @@ const HacStats = (function () {
   function capInventario(mid) { const r = row(mid); return r ? r.cap : 8; }
   function inventario(mid) { const r = row(mid); return r ? r.inv.slice() : []; }
   function casaInventario(mid) { const r = row(mid); return r ? r.casaInv.slice() : []; }
+  function equipados(mid) { const r = row(mid); return r ? r.equipado.slice() : []; }
   function ocupadas(mid) { const r = row(mid); return r ? r.inv.reduce((s, it) => s + (it.n || 1), 0) : 0; }
+  const MAX_EQUIP = 3;
+  // Bono total de un dominio por los objetos EQUIPADOS (武/文/政).
+  function bonus(mid, dom) {
+    const r = row(mid); if (!r || !window.HacTienda) return 0;
+    let s = 0; r.equipado.forEach(id => { const b = HacTienda.equipBonus(id); if (b && b[dom]) s += b[dom]; });
+    return s;
+  }
+  function nivelTotal(mid, dom) { return nivel(mid, dom) + bonus(mid, dom); }
+  // Equipa un objeto de la MOCHILA (máx 3). Devuelve {ok, motivo}.
+  function equipar(mid, id) {
+    const r = ensure(mid);
+    if (!window.HacTienda || !HacTienda.equipBonus(id)) return { ok: false, motivo: 'No es equipable' };
+    if (r.equipado.length >= MAX_EQUIP) return { ok: false, motivo: 'Ya llevas 3 objetos equipados' };
+    if (!quita(r.inv, id)) return { ok: false, motivo: 'No lo tienes en la mochila' };
+    r.equipado.push(id); persist(r); return { ok: true };
+  }
+  // Desequipa (vuelve a la mochila si hay sitio). Devuelve {ok, motivo}.
+  function desequipar(mid, id) {
+    const r = ensure(mid);
+    const i = r.equipado.indexOf(id); if (i < 0) return { ok: false, motivo: 'No está equipado' };
+    if (cuenta(r.inv) >= r.cap) return { ok: false, motivo: 'Mochila llena' };
+    r.equipado.splice(i, 1); mete(r.inv, id); persist(r); return { ok: true };
+  }
   const cuenta = (arr) => arr.reduce((s, it) => s + (it.n || 1), 0);
   function quita(arr, id) { const e = arr.find(x => x.id === id); if (!e) return false; e.n = (e.n || 1) - 1; if (e.n <= 0) arr.splice(arr.indexOf(e), 1); return true; }
   function mete(arr, id) { const e = arr.find(x => x.id === id); if (e) e.n = (e.n || 1) + 1; else arr.push({ id, n: 1 }); }
@@ -83,7 +107,7 @@ const HacStats = (function () {
       const { error } = await client.from(TABLE).upsert({
         miembro_id: r.miembroId, dinero: r.dinero, xp_militar: r.militar, xp_cultural: r.cultural,
         xp_administrativo: r.administrativo, cap_inventario: r.cap, inventario: r.inv, ahorro: r.ahorro,
-        casa_pos: r.casaPos, casa_inv: r.casaInv, actualizado: new Date().toISOString(),
+        casa_pos: r.casaPos, casa_inv: r.casaInv, equipado: r.equipado, actualizado: new Date().toISOString(),
       });
       if (error) throw error;
     } catch (e) { console.error('[HacStats] persist', e); }
@@ -152,12 +176,13 @@ const HacStats = (function () {
   function comprar(mid, item) {
     if (!mid || !item) return { ok: false, motivo: 'Artículo inválido' };
     const r = ensure(mid), ef = item.efecto || {};
+    const aInv = ef.guardable || ef.equip;   // objetos y equipables van a la MOCHILA
     if (r.dinero < item.precio) return { ok: false, motivo: 'No tienes suficiente dinero' };
-    if (ef.guardable && ocupadas(mid) >= r.cap) return { ok: false, motivo: 'Inventario lleno' };
+    if (aInv && ocupadas(mid) >= r.cap) return { ok: false, motivo: 'Inventario lleno' };
     r.dinero -= item.precio;
     if (ef.xp) for (const d of DOMS) if (ef.xp[d]) r[d] += ef.xp[d];
     if (ef.capInv) r.cap += ef.capInv;
-    if (ef.guardable) { const e = r.inv.find(x => x.id === item.id); if (e) e.n = (e.n || 1) + 1; else r.inv.push({ id: item.id, n: 1 }); }
+    if (aInv) mete(r.inv, item.id);
     persist(r);
     return { ok: true };
   }
@@ -187,6 +212,6 @@ const HacStats = (function () {
     } catch (e) { console.error('[HacStats] liberarCasa', e); }
   }
 
-  return { ready, reload, dinero, ahorro, casaPos, casasReclamadas, duenoDeCasa, comprarCasa, liberarCasa, xp, nivel, progresoNivel, award, comprar, guardar, sacar, meterEnCasa, sacarDeCasa, inventario, casaInventario, capInventario, ocupadas, recompensaExped, DOMS, dbOk: () => ok, TABLE };
+  return { ready, reload, dinero, ahorro, casaPos, casasReclamadas, duenoDeCasa, comprarCasa, liberarCasa, xp, nivel, progresoNivel, bonus, nivelTotal, equipados, equipar, desequipar, MAX_EQUIP, award, comprar, guardar, sacar, meterEnCasa, sacarDeCasa, inventario, casaInventario, capInventario, ocupadas, recompensaExped, DOMS, dbOk: () => ok, TABLE };
 })();
 if (typeof window !== 'undefined') window.HacStats = HacStats;

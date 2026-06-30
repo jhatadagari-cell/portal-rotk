@@ -209,6 +209,30 @@
 .hacp-cp-stat-n{ font:700 13px 'Noto Sans SC',sans-serif; color:var(--parch); font-variant-numeric:tabular-nums; flex:0 0 auto; }
 .hacp-cp-stat-bar{ flex:1 1 auto; height:3px; border-radius:2px; background:rgba(255,255,255,.12); overflow:hidden; }
 .hacp-cp-stat-bar b{ display:block; height:100%; transition:width .4s ease; }
+.hacp-cp-stat-eq{ font-style:normal; font-size:9.5px; color:#7fc9a0; margin-left:1px; vertical-align:super; }
+.hacp-cp-equipbtn{ display:block; width:100%; margin-top:8px; text-align:center; }
+/* Menú de Equipo (reusa overlay .hacp-shop). */
+.hacp-eq-box{ width:min(440px,94%); }
+.hacp-eq-slots{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:4px 0 14px; }
+.hacp-eq-slot{ display:flex; flex-direction:column; align-items:center; gap:2px; min-height:78px; justify-content:center;
+  border-radius:8px; padding:8px 6px; box-sizing:border-box; text-align:center; }
+.hacp-eq-slot.empty{ border:1px dashed rgba(201,168,76,.3); color:var(--parch2); font-size:10.5px; opacity:.7; }
+.hacp-eq-slot.full{ position:relative; cursor:pointer; background:rgba(201,168,76,.14); border:1px solid var(--hac,var(--gold)); color:var(--parch); }
+.hacp-eq-slot.full:hover{ background:rgba(192,82,74,.22); border-color:#e0907a; }
+.hacp-eq-ic{ font-size:22px; line-height:1; }
+.hacp-eq-nm{ font:700 11px 'Noto Sans SC',sans-serif; }
+.hacp-eq-bo{ font-size:10px; color:#7fc9a0; }
+.hacp-eq-x{ position:absolute; top:3px; right:5px; font-size:10px; color:var(--parch2); opacity:0; }
+.hacp-eq-slot.full:hover .hacp-eq-x{ opacity:1; color:#e0907a; }
+.hacp-eq-h{ font:700 10px 'Cinzel Decorative',serif; letter-spacing:.08em; text-transform:uppercase; color:var(--hac,var(--gold)); opacity:.8; margin-bottom:6px; }
+.hacp-eq-list{ display:flex; flex-direction:column; gap:5px; }
+.hacp-eq-own{ display:flex; align-items:center; gap:8px; text-align:left; cursor:pointer;
+  background:rgba(255,255,255,.03); border:1px solid rgba(201,168,76,.22); border-radius:6px; padding:6px 8px; color:var(--parch); }
+.hacp-eq-own:hover{ background:rgba(201,168,76,.2); }
+.hacp-eq-own:disabled{ opacity:.4; cursor:not-allowed; }
+.hacp-eq-own .hacp-eq-ic{ font-size:18px; }
+.hacp-eq-own .hacp-eq-nm{ flex:1; }
+.hacp-eq-tot{ font:700 12px 'Noto Sans SC',sans-serif; margin-right:8px; }
 .hacp-cp-mis{ margin-top:9px; border-top:1px solid rgba(201,168,76,.18); padding-top:8px; }
 .hacp-cp-mis-on{ display:flex; align-items:center; gap:8px; }
 .hacp-cp-mis-on .hacp-cp-btn{ margin-left:auto; }
@@ -313,7 +337,7 @@
 .hacp-item.locked{ opacity:.5; }
 .hacp-item-ic{ font-size:22px; flex:0 0 auto; width:26px; text-align:center; }
 .hacp-item-main{ flex:1; min-width:0; }
-.hacp-item-name{ font:700 12.5px 'Noto Sans SC',sans-serif; color:var(--parch); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.hacp-item-name{ font:700 12.5px/1.2 'Noto Sans SC',sans-serif; color:var(--parch); }
 .hacp-item-name .zh{ font-family:'Noto Serif SC',serif; color:var(--parch2); opacity:.7; font-weight:400; font-size:11px; }
 .hacp-item-ef{ font-size:10.5px; color:#7fc9a0; margin-top:2px; }
 .hacp-item.t-inventario .hacp-item-ef{ color:#e0b85a; }

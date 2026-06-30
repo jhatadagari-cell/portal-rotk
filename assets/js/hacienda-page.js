@@ -510,9 +510,10 @@
       const ahorro = (window.HacStats && HacStats.ahorro) ? HacStats.ahorro(id) : 0;   // dinero a salvo en casa
       // "Poder personal": nivel 武/文/政 derivado del XP de cada dominio.
       const stats = (window.HacStats && HacStats.progresoNivel)
-        ? HacStats.DOMS.map(dom => { const p = HacStats.progresoNivel(id, dom); return { dom, nivel: p.nivel, pct: p.pct, xp: p.xp, falta: p.falta }; })
+        ? HacStats.DOMS.map(dom => { const p = HacStats.progresoNivel(id, dom); const b = HacStats.bonus ? HacStats.bonus(id, dom) : 0; return { dom, nivel: p.nivel, bonus: b, total: p.nivel + b, pct: p.pct, xp: p.xp, falta: p.falta }; })
         : null;
-      return { it, aptId, aptDef, e, eFull, eRegenMin, activa, enTarea, fuera, exped, rest, mine: id === myId, puntos: puntosTotales(id), earned, money, home, ahorro, stats };
+      const equipN = (window.HacStats && HacStats.equipados) ? HacStats.equipados(id).length : 0;
+      return { it, aptId, aptDef, e, eFull, eRegenMin, activa, enTarea, fuera, exped, rest, mine: id === myId, puntos: puntosTotales(id), earned, money, home, ahorro, stats, equipN };
     }
     // Panel de inventario/monedero que se despliega a la derecha del panel del
     // mecenas. Scaffolding: el dinero y los objetos llegarán al jugar misiones
@@ -571,9 +572,9 @@
     const DOM_COLOR = { militar: '#b23b2e', cultural: '#3a8a5a', administrativo: '#3a6ea5' };
     function statsHTML(d) {
       if (!d.stats) return '';
-      const chips = d.stats.map(s => `<div class="hacp-cp-stat" title="${DOM_GLYPH[s.dom]} ${DOM_NOMBRE[s.dom]} · nivel ${s.nivel} · ${s.xp} XP${s.falta ? ` · faltan ${s.falta} para subir` : ''}">
+      const chips = d.stats.map(s => `<div class="hacp-cp-stat" title="${DOM_GLYPH[s.dom]} ${DOM_NOMBRE[s.dom]} · nivel ${s.nivel}${s.bonus ? ` (+${s.bonus} de equipo)` : ''} · ${s.xp} XP${s.falta ? ` · faltan ${s.falta} para subir` : ''}">
         <span class="hacp-cp-stat-g" style="color:${DOM_COLOR[s.dom]}">${DOM_GLYPH[s.dom]}</span>
-        <span class="hacp-cp-stat-n">${s.nivel}</span>
+        <span class="hacp-cp-stat-n">${s.total}${s.bonus ? `<i class="hacp-cp-stat-eq">+${s.bonus}</i>` : ''}</span>
         <i class="hacp-cp-stat-bar"><b style="width:${Math.round(s.pct * 100)}%;background:${DOM_COLOR[s.dom]}"></b></i>
       </div>`).join('');
       return `<div class="hacp-cp-stats" id="hacp-cp-stats">${chips}</div>`;
@@ -620,6 +621,7 @@
         <div class="hacp-cp-energy" title="Energía ${d.e}%"><i id="hacp-cp-ebar" style="width:${d.e}%"></i></div>
         <div class="hacp-cp-elabel" id="hacp-cp-elabel">${energyLabel(d)}</div>
         ${statsHTML(d)}
+        ${d.mine ? `<button type="button" class="hacp-cp-btn hacp-cp-equipbtn" data-act="equip">⚔ Equipo${d.equipN ? ` · ${d.equipN}/3` : ''}</button>` : ''}
         ${mision}
         ${d.mine ? `<button type="button" class="hacp-cp-btn hacp-cp-invbtn${invOpen ? ' on' : ''}" data-act="inv">🎒 ${invOpen ? 'Ocultar' : 'Inventario'} · 💰 ${d.money}</button>` : ''}
         ${(d.mine && invOpen) ? invPanelHTML(d) : ''}`;
@@ -634,6 +636,8 @@
       if (shb) shb.addEventListener('click', openShop);
       const gh = charEl.querySelector('[data-act="gohome"]');
       if (gh) gh.addEventListener('click', openHome);
+      const eqb = charEl.querySelector('[data-act="equip"]');
+      if (eqb) eqb.addEventListener('click', openEquip);
       const bh = charEl.querySelector('[data-act="buyhome"]');
       if (bh && !bh.disabled) bh.addEventListener('click', () => {
         if (!myId || !window.HacStats) return;
@@ -806,6 +810,54 @@
       homeTimer = setTimeout(doOpen, 8000);
     }
     function closeHome() { if (homeEl) homeEl.hidden = true; }
+
+    // ── Equipo del mecenas (overlay): hasta 3 objetos equipados que dan +stats ──
+    let equipEl = null;
+    function ensureEquipEl() {
+      if (equipEl) return equipEl;
+      equipEl = document.createElement('div');
+      equipEl.className = 'hacp-shop hacp-equip-ov'; equipEl.id = 'hacp-equip'; equipEl.hidden = true;
+      vp.appendChild(equipEl);
+      ['pointerdown', 'pointerup', 'wheel', 'click'].forEach(ev => equipEl.addEventListener(ev, (e) => e.stopPropagation(), { passive: false }));
+      return equipEl;
+    }
+    function buildEquip() {
+      const el = ensureEquipEl();
+      const eq = HacStats.equipados(myId);
+      const max = HacStats.MAX_EQUIP || 3;
+      const me = HacFolk.list().find(w => w.id === myId), nm = me ? me.name : 'tu mecenas';
+      // Bonos totales por dominio (de lo equipado).
+      const tot = HacStats.DOMS.map(dom => ({ dom, b: HacStats.bonus(myId, dom) }));
+      const totHTML = tot.map(t => `<span class="hacp-eq-tot" style="color:${DOM_COLOR[t.dom]}">${DOM_GLYPH[t.dom]} <b>${t.b > 0 ? '+' + t.b : '0'}</b></span>`).join('');
+      // Ranuras equipadas.
+      const slots = [];
+      for (let i = 0; i < max; i++) {
+        const id = eq[i], def = id && HacTienda.get(id);
+        slots.push(def
+          ? `<button type="button" class="hacp-eq-slot full" data-uneq="${esc(id)}" title="${esc(def.nombre)} · clic para quitar"><span class="hacp-eq-ic">${def.icon}</span><span class="hacp-eq-nm">${esc(def.nombre)}</span><span class="hacp-eq-bo">${esc(HacTienda.efectoTexto(def).replace(' · equipable', ''))}</span><span class="hacp-eq-x">✕</span></button>`
+          : `<div class="hacp-eq-slot empty">Ranura libre</div>`);
+      }
+      // Objetos equipables en la mochila (no equipados).
+      const ownable = HacStats.inventario(myId).filter(it => HacTienda.equipBonus(it.id));
+      const list = ownable.length
+        ? ownable.map(it => { const def = HacTienda.get(it.id); const full = eq.length >= max; return `<button type="button" class="hacp-eq-own" data-eq="${esc(it.id)}"${full ? ' disabled' : ''}><span class="hacp-eq-ic">${def.icon}</span><span class="hacp-eq-nm">${esc(def.nombre)}${(it.n || 1) > 1 ? ' ×' + it.n : ''}</span><span class="hacp-eq-bo">${esc(HacTienda.efectoTexto(def).replace(' · equipable', ''))}</span></button>`; }).join('')
+        : '<span class="hacp-inv-note">No tienes objetos equipables. Cómpralos en el mercado (tratados 兵書/經卷/律令…).</span>';
+      el.innerHTML = `
+        <div class="hacp-shop-box hacp-eq-box">
+          <button type="button" class="hacp-shop-x" data-act="equip-close" aria-label="Cerrar">✕</button>
+          <div class="hacp-shop-h"><span class="hacp-shop-zh">⚔</span> Equipo de ${esc(nm)}</div>
+          <div class="hacp-shop-sub">Equipa hasta ${max} objetos. Suman a tus dominios mientras los llevas. Bonos: ${totHTML}</div>
+          <div class="hacp-eq-slots">${slots.join('')}</div>
+          <div class="hacp-eq-h">En la mochila</div>
+          <div class="hacp-eq-list">${list}</div>
+        </div>`;
+      el.querySelector('[data-act="equip-close"]').addEventListener('click', closeEquip);
+      const refrescar = () => { buildEquip(); if (charId) buildCharPanel(charId); };
+      el.querySelectorAll('[data-eq]').forEach(b => b.addEventListener('click', () => { const r = HacStats.equipar(myId, b.dataset.eq); if (!r.ok) toast(r.motivo); refrescar(); }));
+      el.querySelectorAll('[data-uneq]').forEach(b => b.addEventListener('click', () => { const r = HacStats.desequipar(myId, b.dataset.uneq); if (!r.ok) toast(r.motivo); refrescar(); }));
+    }
+    function openEquip() { if (!myId || !window.HacStats) return; buildEquip(); ensureEquipEl().hidden = false; }
+    function closeEquip() { if (equipEl) equipEl.hidden = true; }
 
     function itemHTML(m, sel) {
       const mine = m.id === myId;
