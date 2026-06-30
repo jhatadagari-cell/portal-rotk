@@ -528,6 +528,9 @@ html.hacp-pseudofs, html.hacp-pseudofs body{ overflow:hidden; }
 .hacp-esc-lanzar{ background:rgba(178,59,46,.22)!important; border-color:#b23b2e!important; color:#f0b8ad!important; font-weight:700; }
 .hacp-esc-lanzar:not(:disabled):hover{ background:rgba(178,59,46,.4)!important; color:#fff!important; }
 .hacp-esc-timer{ font:900 19px 'Noto Serif SC',serif; color:var(--gold); text-align:center; padding:10px 0 4px; font-variant-numeric:tabular-nums; }
+.hacp-esc-result{ font:900 16px 'Noto Serif SC',serif; text-align:center; padding:8px 0 2px; }
+.hacp-esc-result.ok{ color:#7fc9a0; }
+.hacp-esc-result.bad{ color:#e2786a; }
 /* Popup de info de edificio (al pulsar su cuerpo en el plano) */
 .hacp-bld-pop{ position:fixed; z-index:9999; width:min(248px,80vw); padding:10px 12px; box-sizing:border-box;
   background:rgba(13,11,7,.97); border:1px solid rgba(201,168,76,.45); border-radius:8px;

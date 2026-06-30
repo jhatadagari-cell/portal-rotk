@@ -610,6 +610,33 @@
       HacOrdenes.set({ haciendaId: h.id, miembroId: myId, tipo: 'expedicion', targetId: 'escaramuza:' + band.id, duracionSeg: Math.max(30, Math.round((band.finMs - now) / 1000)) })
         .then(applyOrders).catch(e => console.warn('[escaramuza] orden', e));
     }
+    // Botín común: ≥1 objeto por participante (de la tienda del tier, preferiendo
+    // equipables/guardables). El reparto/elección será la sub-fase 4d.
+    function generarBotin(band) {
+      const n = (band.miembros || []).length || 1;
+      let src = [];
+      if (window.HacTienda && HacTienda.disponibles) {
+        const all = HacTienda.disponibles(tier) || [];
+        src = all.filter(i => i.efecto && (i.efecto.equip || i.efecto.guardable));
+        if (!src.length) src = all;
+      }
+      const out = [];
+      for (let i = 0; i < n && src.length; i++) out.push(src[Math.floor(Math.random() * src.length)].id);
+      return out;
+    }
+    // RESOLUCIÓN al volver (≥ fin): cualquier miembro la dispara; la RPC es idempotente
+    // (solo la primera surte efecto). Dado de éxito en cliente, como en las expediciones.
+    function resolverEscaramuzaSiToca() {
+      if (!myId || !window.HacEscaramuzas) return;
+      const band = HacEscaramuzas.miBanda(h.id, myId);
+      if (!band || band.estado !== 'en_curso' || clock() < band.finMs) return;
+      const dif = band.dificultad || 4;
+      const exito = Math.random() < Math.max(0.35, 0.72 - (dif - 4) * 0.08);
+      const share = 20 + dif * 10, hostBonus = Math.round((band.coste || 0) * 0.25);
+      HacEscaramuzas.resolver(band.id, clock(), exito, exito ? generarBotin(band) : [], share, hostBonus)
+        .then(() => { if (window.HacStats) HacStats.reload().then(() => { if (charId) buildCharPanel(charId); }); })
+        .catch(e => console.warn('[escaramuza] resolver', e));
+    }
     function release() {
       if (!myId || !window.HacOrdenes) return;
       HacOrdenes.clear(h.id, myId).then(applyOrders).catch(e => console.warn('[orden] clear', e));
@@ -1237,7 +1264,8 @@
     if (window.HacCompetencias) HacCompetencias.ready().then(refresh);
     if (window.HacPuntos) HacPuntos.ready().then(refresh);
     if (window.HacStats) HacStats.ready().then(refresh);
-    if (window.HacEscaramuzas) HacEscaramuzas.ready().then(syncEscaramuzaOrder);
+    const escPulse = () => { syncEscaramuzaOrder(); resolverEscaramuzaSiToca(); };
+    if (window.HacEscaramuzas) HacEscaramuzas.ready().then(escPulse);
     if (window.HacOrdenes) {
       HacOrdenes.ready().then(applyOrders);
       setInterval(() => {
@@ -1246,7 +1274,7 @@
         if (window.HacCompetencias) HacCompetencias.reload();
         if (window.HacPuntos) HacPuntos.reload();
         if (window.HacStats) HacStats.reload();
-        if (window.HacEscaramuzas) HacEscaramuzas.reload().then(syncEscaramuzaOrder);   // que mi mecenas salga si mi banda partió
+        if (window.HacEscaramuzas) HacEscaramuzas.reload().then(escPulse);   // saca al mecenas y resuelve si toca
         HacOrdenes.reload().then(applyOrders);
       }, 5000);
     }
@@ -1458,24 +1486,28 @@
         }
         const dinero = window.HacStats ? HacStats.dinero(myId) : 0;
         const coste = COSTE_BANDA(escPlazas), sinDinero = dinero < coste;
+        const cd = (window.HacStats && HacStats.escaramuzaCd) ? HacStats.escaramuzaCd(myId) : 0;
+        const enCd = cd > clock();
+        const cdAviso = enCd ? `<div class="hacp-esc-note" style="color:#e2a06a">⏳ En cooldown · podrás unirte o montar banda en ${fmtClock((cd - clock()) / 1000)}.</div>` : '';
         const abiertas = HacEscaramuzas.abiertas(h.id).filter(b => b.miembros.length < b.plazas);
         const lista = abiertas.map(b => `
           <div class="hacp-mrow"><div class="hacp-mrow-main"><b>Banda de ${esc(b.hostNombre || 'un mecenas')}</b>
             <span>${b.miembros.length}/${b.plazas} · dif. ${b.dificultad}</span></div>
-            <button class="hacp-cp-btn" data-unir="${esc(b.id)}">Unirse</button></div>`).join('')
+            <button class="hacp-cp-btn" data-unir="${esc(b.id)}"${enCd ? ' disabled' : ''}>Unirse</button></div>`).join('')
           || '<div class="hacp-inv-note">No hay bandas abiertas. ¡Monta la tuya!</div>';
         body.innerHTML = `
           <div class="hacp-esc-h">兵 Escaramuzas <span class="hacp-esc-sub">expediciones cooperativas</span></div>
+          ${cdAviso}
           <div class="hacp-esc-card">
             <div class="hacp-esc-ttl">Montar una banda</div>
-            <div class="hacp-esc-note">Salís varios mecenas a una expedición militar más dura. Pagas por montarla; si volvéis con éxito recuperas el coste +25% y tu parte del botín.</div>
+            <div class="hacp-esc-note">Salís varios mecenas a una expedición militar más dura. Pagas por montarla; si volvéis con éxito recuperas el coste +25% y tu parte. Si fracasáis, vuestros mecenas reciben una herida.</div>
             <div class="hacp-esc-plazas">${[2, 3, 4].map(p => `<button class="hacp-esc-p${p === escPlazas ? ' on' : ''}" data-plazas="${p}">${p} plazas</button>`).join('')}</div>
-            <button class="hacp-cp-btn hacp-esc-crear" data-crear${sinDinero ? ' disabled' : ''}>Montar banda · 💰 ${coste}${sinDinero ? ' (te falta)' : ''}</button>
+            <button class="hacp-cp-btn hacp-esc-crear" data-crear${(sinDinero || enCd) ? ' disabled' : ''}>Montar banda · 💰 ${coste}${sinDinero ? ' (te falta)' : ''}</button>
           </div>
           <div class="hacp-esc-ttl2">Bandas abiertas</div>${lista}`;
         body.querySelectorAll('[data-plazas]').forEach(b => b.addEventListener('click', () => { escPlazas = +b.dataset.plazas; renderEscaramuzas(); }));
         const cr = body.querySelector('[data-crear]'); if (cr && !cr.disabled) cr.addEventListener('click', crearBanda);
-        body.querySelectorAll('[data-unir]').forEach(b => b.addEventListener('click', () => unirBanda(b.dataset.unir)));
+        body.querySelectorAll('[data-unir]').forEach(b => { if (!b.disabled) b.addEventListener('click', () => unirBanda(b.dataset.unir)); });
       }
       function bandaPropiaHTML(b) {
         const esHost = b.hostId === myId;
@@ -1492,9 +1524,15 @@
           accion += `<button class="hacp-cp-btn hacp-esc-salir" data-salir>${esHost ? 'Disolver la banda' : 'Salir de la banda'}</button>`;
         } else if (b.estado === 'en_curso') {
           accion = `<div class="hacp-esc-timer" data-esc-timer="${b.finMs}">En la expedición…</div>
-            <div class="hacp-esc-note">La banda ha partido. Regresan pronto; el reparto de botín y recompensas llega en la próxima actualización.</div>`;
-        } else {
-          accion = `<div class="hacp-esc-note">Expedición terminada · reparto pendiente.</div>`;
+            <div class="hacp-esc-note">La banda ha partido. Cuando regrese se repartirán recompensas y botín.</div>`;
+        } else if (b.estado === 'botin') {
+          accion = `<div class="hacp-esc-result ok">✔ ¡Volvisteis con éxito!</div>
+            <div class="hacp-esc-note">Tu parte del dinero ya está en tu monedero${esHost ? ' (recuperaste el coste +25%)' : ''}. El <b>reparto del botín</b> (elegir tu objeto) llega en la próxima actualización.</div>
+            <button class="hacp-cp-btn hacp-esc-salir" data-salir>Cerrar</button>`;
+        } else {   // resuelta (fracaso)
+          accion = `<div class="hacp-esc-result bad">✘ La expedición fracasó</div>
+            <div class="hacp-esc-note">Tu mecenas vuelve con una herida. Podrás volver a intentarlo tras el cooldown.</div>
+            <button class="hacp-cp-btn hacp-esc-salir" data-salir>Cerrar</button>`;
         }
         return `<div class="hacp-esc-h">兵 Tu banda <span class="hacp-esc-sub">${b.miembros.length}/${b.plazas}</span></div>
           <div class="hacp-esc-card"><div class="hacp-esc-ttl">Expedición militar · dif. ${b.dificultad}</div>
@@ -1502,6 +1540,7 @@
       }
       async function crearBanda() {
         if (escBusy) return;                                  // anti doble-clic
+        if (window.HacStats && HacStats.escaramuzaCd && HacStats.escaramuzaCd(myId) > clock()) { toast('Escaramuza en cooldown'); return; }
         const coste = COSTE_BANDA(escPlazas);
         if (!window.HacStats || HacStats.dinero(myId) < coste) { toast('No tienes suficiente dinero'); return; }
         escBusy = true; let pagado = false;
@@ -1515,7 +1554,9 @@
         } finally { escBusy = false; renderEscaramuzas(); if (charId) buildCharPanel(charId); }
       }
       async function unirBanda(id) {
-        if (escBusy) return; escBusy = true;
+        if (escBusy) return;
+        if (window.HacStats && HacStats.escaramuzaCd && HacStats.escaramuzaCd(myId) > clock()) { toast('Escaramuza en cooldown'); return; }
+        escBusy = true;
         try { await HacEscaramuzas.unir(id, { id: myId, nombre: myName }); toast('Te has unido a la banda'); }
         catch (e) { toast((e && e.message) || 'No se pudo unir'); await HacEscaramuzas.reload(); }
         finally { escBusy = false; renderEscaramuzas(); }

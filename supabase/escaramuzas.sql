@@ -106,6 +106,40 @@ begin
   return b;
 end; $$;
 
+-- RESOLUCIÓN (al volver, tras los 30 min): aplica dinero/heridas/cooldown a TODOS
+-- los miembros y transiciona la banda. IDEMPOTENTE: solo el primer cliente que la
+-- llame con la banda aún 'en_curso' y ya cumplido el tiempo surte efecto; el resto
+-- recibe la banda ya resuelta sin reaplicar nada. exito/botín/share los propone el
+-- cliente (como en las expediciones de 1 jugador, que ya tiran el dado en cliente).
+create or replace function public.escaramuza_resolver(
+  p_id uuid, p_now bigint, p_exito boolean, p_botin jsonb, p_share int, p_host_bonus int)
+returns public.escaramuzas language plpgsql security definer set search_path = public as $$
+declare b public.escaramuzas; m jsonb; mid text; delta int; cd bigint;
+begin
+  select * into b from public.escaramuzas where id = p_id for update;
+  if not found then return null; end if;
+  if b.estado <> 'en_curso' or p_now < b.fin_ms then return b; end if;   -- ya resuelta o aún no toca
+  cd := p_now + 3600000;                                                 -- cooldown 1 h
+  for m in select jsonb_array_elements(b.miembros) loop
+    mid := m->>'id';
+    if p_exito then
+      delta := coalesce(p_share,0) + case when mid = b.host_id then b.coste + coalesce(p_host_bonus,0) else 0 end;
+      update public.mecenas_stats set dinero = dinero + delta, escaramuza_cd = cd where miembro_id = mid;
+      if not found then insert into public.mecenas_stats (miembro_id, dinero, escaramuza_cd) values (mid, delta, cd); end if;
+    else
+      update public.mecenas_stats set heridas = least(3, heridas + 1), escaramuza_cd = cd where miembro_id = mid;
+      if not found then insert into public.mecenas_stats (miembro_id, heridas, escaramuza_cd) values (mid, 1, cd); end if;
+    end if;
+  end loop;
+  update public.escaramuzas set
+    estado = case when p_exito then 'botin' else 'resuelta' end,
+    exito = p_exito,
+    botin = case when p_exito then coalesce(p_botin, '[]'::jsonb) else '[]'::jsonb end,
+    loot_hasta = case when p_exito then p_now + 3600000 else 0 end
+    where id = p_id returning * into b;
+  return b;
+end; $$;
+
 -- RLS: lectura pública; NINGUNA escritura directa (las funciones de arriba, como
 -- SECURITY DEFINER, son las únicas que mutan; el cliente las llama vía rpc()).
 alter table public.escaramuzas enable row level security;
@@ -116,3 +150,4 @@ grant execute on function public.escaramuza_crear(text,text,text,int,int,int) to
 grant execute on function public.escaramuza_unir(uuid,text,text)              to authenticated, anon;
 grant execute on function public.escaramuza_salir(uuid,text)                  to authenticated, anon;
 grant execute on function public.escaramuza_lanzar(uuid,text,bigint)          to authenticated, anon;
+grant execute on function public.escaramuza_resolver(uuid,bigint,boolean,jsonb,int,int) to authenticated, anon;

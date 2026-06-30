@@ -43,6 +43,7 @@ const HacStats = (function () {
       cap: Number(r.cap_inventario) || 8, inv: parseInv(r.inventario), ahorro: Number(r.ahorro) || 0,
       casaPos: r.casa_pos || null, casaInv: parseInv(r.casa_inv), equipado: parseInv(r.equipado),
       heridas: Math.max(0, Math.min(3, Number(r.heridas) || 0)),
+      escaramuzaCd: Number(r.escaramuza_cd) || 0,
     };
   }
   async function load() {
@@ -65,6 +66,7 @@ const HacStats = (function () {
   // HERIDAS (0..3). Por ahora SIN efecto jugable: solo se muestran en el panel.
   // Se infligen al fracasar una escaramuza (cooperativo, futuro).
   function heridas(mid) { const r = row(mid); return r ? (r.heridas || 0) : 0; }
+  function escaramuzaCd(mid) { const r = row(mid); return r ? (r.escaramuzaCd || 0) : 0; }
   function herir(mid, n) { const r = ensure(mid); r.heridas = Math.max(0, Math.min(3, (r.heridas || 0) + (n == null ? 1 : n))); persist(r); return r.heridas; }
   function curar(mid, n) { return herir(mid, -(n == null ? 1 : n)); }
   function dinero(mid) { const r = row(mid); return r ? r.dinero : 0; }
@@ -246,6 +248,6 @@ const HacStats = (function () {
     } catch (e) { console.error('[HacStats] liberarCasa', e); }
   }
 
-  return { ready, reload, dinero, ahorro, casaPos, casasReclamadas, duenoDeCasa, comprarCasa, liberarCasa, abandonar, heridas, herir, curar, xp, nivel, progresoNivel, bonus, nivelTotal, equipados, equipar, desequipar, MAX_EQUIP, award, comprar, guardar, sacar, darItem, meterEnCasa, sacarDeCasa, inventario, casaInventario, capInventario, ocupadas, recompensaExped, DOMS, dbOk: () => ok, TABLE };
+  return { ready, reload, dinero, ahorro, casaPos, casasReclamadas, duenoDeCasa, comprarCasa, liberarCasa, abandonar, heridas, herir, curar, escaramuzaCd, xp, nivel, progresoNivel, bonus, nivelTotal, equipados, equipar, desequipar, MAX_EQUIP, award, comprar, guardar, sacar, darItem, meterEnCasa, sacarDeCasa, inventario, casaInventario, capInventario, ocupadas, recompensaExped, DOMS, dbOk: () => ok, TABLE };
 })();
 if (typeof window !== 'undefined') window.HacStats = HacStats;

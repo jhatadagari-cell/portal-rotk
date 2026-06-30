@@ -94,7 +94,17 @@ const HacEscaramuzas = (function () {
     if (error) throw new Error(error.message || 'No se pudo lanzar');
     return upsertCache(data);
   }
+  // RESUELVE al volver (≥ fin). Idempotente en BD: solo el primer cliente surte
+  // efecto. Aplica dinero/heridas/cooldown a todos y deja la banda en 'botin'/'resuelta'.
+  async function resolver(id, nowMs, exito, botin, share, hostBonus) {
+    const c = await sb();
+    const { data, error } = await c.rpc('escaramuza_resolver', {
+      p_id: id, p_now: nowMs, p_exito: !!exito, p_botin: botin || [], p_share: share || 0, p_host_bonus: hostBonus || 0,
+    });
+    if (error) throw new Error(error.message || 'No se pudo resolver');
+    return upsertCache(data);
+  }
 
-  return { ready, reload, all, abiertas, miBanda, crear, unir, salir, lanzar, DUR_MS, CD_MS, dbOk: () => ok, TABLE };
+  return { ready, reload, all, abiertas, miBanda, crear, unir, salir, lanzar, resolver, DUR_MS, CD_MS, dbOk: () => ok, TABLE };
 })();
 if (typeof window !== 'undefined') window.HacEscaramuzas = HacEscaramuzas;
