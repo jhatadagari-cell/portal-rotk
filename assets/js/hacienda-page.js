@@ -341,24 +341,6 @@
       mb.addEventListener('click', (e) => { e.stopPropagation(); openShop(); });
       listEl.parentNode.insertBefore(mb, listEl);   // arriba del listado, dentro del cuerpo
     }
-    // ── Barra de acciones MÓVIL (estilo app): secciones grandes en la zona del
-    // pulgar. Solo visible en pantallas estrechas (CSS). Vive dentro del visor →
-    // también en pantalla completa. Abre los paneles/hojas ya existentes.
-    const mobar = document.createElement('div');
-    mobar.className = 'hacp-mobar';
-    const moBtn = (icon, label, fn) => {
-      const b = document.createElement('button');
-      b.type = 'button'; b.className = 'hacp-mobar-btn';
-      b.innerHTML = `<span class="ic">${icon}</span><span class="lb">${esc(label)}</span>`;
-      b.addEventListener('click', (e) => { e.stopPropagation(); fn(); });
-      return b;
-    };
-    if (myId) mobar.appendChild(moBtn('🧑', 'Tu mecenas', () => gotoMember(myId)));
-    if (myId && hasMain) mobar.appendChild(moBtn('📜', 'Misiones', openMissionBoard));
-    if (myId && hasMarket) mobar.appendChild(moBtn('🛒', 'Mercado', openShop));
-    mobar.appendChild(moBtn('👥', 'Mecenas', () => folkCollapse(false)));
-    ['pointerdown', 'pointerup', 'wheel', 'click'].forEach(ev => mobar.addEventListener(ev, (e) => e.stopPropagation(), { passive: false }));
-    vp.appendChild(mobar);
     let pop = null;
     const hidePop = () => { if (pop) { pop.remove(); pop = null; } };
     const clock = () => (window.HacClock && HacClock.now) ? HacClock.now() : Date.now();
@@ -381,6 +363,25 @@
     const mainCons = (window.HacBuild && HacBuild.edificioPrincipal) ? HacBuild.edificioPrincipal(h.mapa) : null;
     const hasMain = !!mainCons;
     const mainBid = mainCons ? (mainCons.pos[0] + ',' + mainCons.pos[1]) : null;
+    // ── Barra de acciones MÓVIL (estilo app): secciones grandes en la zona del
+    // pulgar (CSS la muestra solo en pantallas estrechas). Vive dentro del visor →
+    // también en pantalla completa. Abre los paneles/hojas ya existentes.
+    // (Va DESPUÉS de myId/hasMain/hasMarket para no leerlos en zona muerta.)
+    const mobar = document.createElement('div');
+    mobar.className = 'hacp-mobar';
+    const moBtn = (icon, label, fn) => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'hacp-mobar-btn';
+      b.innerHTML = `<span class="ic">${icon}</span><span class="lb">${esc(label)}</span>`;
+      b.addEventListener('click', (e) => { e.stopPropagation(); fn(); });
+      return b;
+    };
+    if (myId) mobar.appendChild(moBtn('🧑', 'Tu mecenas', () => gotoMember(myId)));
+    if (myId && hasMain) mobar.appendChild(moBtn('📜', 'Misiones', openMissionBoard));
+    if (myId && hasMarket) mobar.appendChild(moBtn('🛒', 'Mercado', openShop));
+    mobar.appendChild(moBtn('👥', 'Mecenas', () => folkCollapse(false)));
+    ['pointerdown', 'pointerup', 'wheel', 'click'].forEach(ev => mobar.addEventListener(ev, (e) => e.stopPropagation(), { passive: false }));
+    vp.appendChild(mobar);
     // Casa de un mecenas = construcción 'casa' cuyo DUEÑO es su miembro (asignado en
     // el admin). El walker.id es el personajeId; el dueño de la casa es el id de miembro.
     function casaDe(personajeId) {
