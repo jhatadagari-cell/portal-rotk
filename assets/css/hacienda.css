@@ -137,8 +137,11 @@
 .hacp-fs-btn.on .hacp-fs-expand{ display:none; }
 .hacp-fs-btn.on .hacp-fs-shrink{ display:inline; }
 /* En pantalla completa el visor ocupa toda la pantalla, sin marco. */
-.hacp-iso-wrap:fullscreen{ width:100vw; height:100vh; border:none; border-radius:0; }
-.hacp-iso-wrap:-webkit-full-screen{ width:100vw; height:100vh; border:none; border-radius:0; }
+.hacp-iso-wrap:fullscreen{ width:100vw; height:100vh; height:100dvh; border:none; border-radius:0; max-height:none; }
+.hacp-iso-wrap:-webkit-full-screen{ width:100vw; height:100vh; height:100dvh; border:none; border-radius:0; max-height:none; }
+/* Pseudo-pantalla-completa por CSS (iOS Safari, sin Fullscreen API para no-<video>). */
+.hacp-iso-wrap.hacp-pseudofs-el{ position:fixed; inset:0; z-index:9998; width:100vw; height:100vh; height:100dvh; margin:0; border:none; border-radius:0; max-height:none; }
+html.hacp-pseudofs, html.hacp-pseudofs body{ overflow:hidden; }
 /* ── Plano + panel lateral de mecenas paseando ────────────────────────── */
 .hacp-iso-area{ display:block; margin:18px auto 0; text-align:left; }
 .hacp-iso-area .hacp-iso-wrap{ margin:0; }
@@ -303,7 +306,7 @@
   background:rgba(11,10,7,.94); border:1px solid rgba(201,168,76,.42); border-radius:8px;
   padding:10px 11px 11px; box-shadow:0 6px 22px rgba(0,0,0,.55); color:var(--parch);
 }
-@media(max-width:560px){ .hacp-inv{ position:static; left:auto; width:auto; margin-top:8px; } }
+@media(max-width:600px){ .hacp-inv{ position:static; left:auto; width:auto; margin-top:8px; } }
 .hacp-inv-h{ font:700 11px/1 'Cinzel Decorative',serif; letter-spacing:.06em; color:var(--gold); margin-bottom:8px; }
 .hacp-wallet{ font-size:13px; color:var(--parch); margin-bottom:8px; }
 .hacp-wallet b{ color:#e0b85a; font-variant-numeric:tabular-nums; }
@@ -344,7 +347,7 @@
 .hacp-folk-work{ color:#e0b85a; font-size:11px; }
 /* Aviso flotante (recompensa de misión, etc.). */
 .hacp-toast{
-  position:fixed; left:50%; bottom:26px; transform:translateX(-50%) translateY(8px); z-index:90;
+  position:fixed; left:50%; bottom:26px; transform:translateX(-50%) translateY(8px); z-index:9999;
   background:rgba(11,10,7,.95); border:1px solid var(--gold); color:var(--gold);
   font:600 13px 'Noto Sans SC',sans-serif; padding:8px 16px; border-radius:20px;
   box-shadow:0 4px 16px rgba(0,0,0,.5); opacity:0; transition:opacity .35s, transform .35s; pointer-events:none;
@@ -352,7 +355,25 @@
 .hacp-toast.on{ opacity:1; transform:translateX(-50%) translateY(0); }
 @media (max-width:720px){
   .hacp-folk-panel{ width:min(212px,82vw); top:42px; }
-  .hacp-char-panel{ width:calc(100% - 16px); }
+}
+/* ── Rework MÓVIL: hojas inferiores a ancho completo, nada se sale ni se pisa ── */
+@media (max-width:600px){
+  .hacp-iso-wrap{ height:clamp(320px,64dvh,680px); }
+  /* Panel del personaje = HOJA inferior: ancho completo, alto acotado, con scroll. */
+  .hacp-char-panel{ left:5px; right:5px; bottom:5px; width:auto; max-width:none; max-height:76dvh; overflow-y:auto; }
+  /* El inventario que se abría a la derecha se apila dentro de la hoja (ya estático). */
+  .hacp-inv{ box-shadow:none; border-color:rgba(201,168,76,.25); }
+  /* Overlays (tienda, tablón, casa, equipo) = hoja inferior a ancho completo. */
+  .hacp-shop{ align-items:flex-end; padding:0; }
+  .hacp-shop-box, .hacp-home-ov .hacp-shop-box, .hacp-eq-box{ width:100%; max-width:none; max-height:90dvh; border-radius:14px 14px 0 0; padding:14px 12px calc(16px + env(safe-area-inset-bottom)); }
+  .hacp-shop-grid, .hacp-eq-slots{ grid-template-columns:1fr 1fr; }
+  .hacp-home-objs{ grid-template-columns:1fr 1fr; }
+  /* Dársena de mecenas: hoja desde la derecha (algo más estrecha) y colapsable. */
+  .hacp-folk-panel{ width:min(230px,86vw); top:36px; bottom:6px; }
+  /* Objetivos táctiles algo mayores. */
+  .hacp-fs-btn{ width:38px; height:38px; }
+  .hacp-cta{ font-size:13px; padding:7px 15px; }
+  .hacp-cp-x, .hacp-shop-x{ width:30px; height:30px; font-size:16px; }
 }
 /* ── Mercado: acceso + ranuras llenas + overlay de tienda ──────────────── */
 .hacp-folk-shop{ display:block; width:100%; margin:0 0 9px; padding:6px 8px;

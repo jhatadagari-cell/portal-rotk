@@ -230,24 +230,40 @@
     return { centerOn, focusFollow, stopFollow, reset };
   }
 
-  // Botón de pantalla completa: alterna fullscreen sobre el visor (vp). Si el
-  // navegador no lo soporta, oculta el botón.
+  // Botón de pantalla completa sobre el visor (vp). Usa la API nativa donde existe;
+  // en iOS Safari (sin Fullscreen API para no-<video>) cae a un pseudo-fullscreen
+  // por CSS (visor fijo a 100dvh). Avisa con 'resize' + evento propio para reencuadrar.
   function enableFullscreen(vp, btn) {
     if (!vp || !btn) return;
     const req = vp.requestFullscreen || vp.webkitRequestFullscreen;
     const exit = document.exitFullscreen || document.webkitExitFullscreen;
-    if (!req) { btn.hidden = true; return; }
-    const isFs = () => (document.fullscreenElement || document.webkitFullscreenElement) === vp;
+    const nativeOn = () => (document.fullscreenElement || document.webkitFullscreenElement) === vp;
+    let pseudo = false;
+    const on = () => nativeOn() || pseudo;
     const update = () => {
-      const on = isFs();
-      btn.classList.toggle('on', on);
-      const label = on ? 'Salir de pantalla completa' : 'Ver en pantalla completa';
+      const o = on();
+      btn.classList.toggle('on', o);
+      const label = o ? 'Salir de pantalla completa' : 'Ver en pantalla completa';
       btn.setAttribute('aria-label', label); btn.title = label;
+      window.dispatchEvent(new Event('resize'));                       // reencuadra el visor
+      document.dispatchEvent(new CustomEvent('hacp-fs', { detail: o }));
     };
+    function setPseudo(v) {
+      pseudo = v;
+      document.documentElement.classList.toggle('hacp-pseudofs', v);
+      vp.classList.toggle('hacp-pseudofs-el', v);
+      update();
+    }
     btn.addEventListener('pointerdown', (e) => e.stopPropagation());   // no iniciar un arrastre del visor
-    btn.addEventListener('click', () => { if (isFs()) exit.call(document); else req.call(vp); });
+    btn.addEventListener('click', () => {
+      if (nativeOn()) { if (exit) exit.call(document); return; }
+      if (pseudo) { setPseudo(false); return; }
+      if (req) { try { const p = req.call(vp); if (p && p.catch) p.catch(() => setPseudo(true)); } catch (e) { setPseudo(true); } }
+      else setPseudo(true);                                            // iOS: sin API → CSS
+    });
     document.addEventListener('fullscreenchange', update);
     document.addEventListener('webkitfullscreenchange', update);
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && pseudo) setPseudo(false); });
     update();
   }
 
@@ -305,9 +321,10 @@
     // Por defecto colapsada en pantallas estrechas (en escritorio, abierta).
     if (window.innerWidth < 720) panel.classList.add('collapsed');
     // En pantalla completa se colapsa por defecto (más mapa); al salir, se reabre.
-    const onFsFolk = () => { const fs = document.fullscreenElement || document.webkitFullscreenElement; panel.classList.toggle('collapsed', !!fs); };
+    const onFsFolk = () => { const fs = (document.fullscreenElement || document.webkitFullscreenElement) || document.documentElement.classList.contains('hacp-pseudofs'); panel.classList.toggle('collapsed', !!fs); };
     document.addEventListener('fullscreenchange', onFsFolk);
     document.addEventListener('webkitfullscreenchange', onFsFolk);
+    document.addEventListener('hacp-fs', onFsFolk);   // pseudo-fullscreen (iOS)
     // Acceso directo a la tienda del mercado (si la finca tiene uno).
     const hasMarketEarly = ((h.mapa && h.mapa.construcciones) || []).some(c => c.tipo === 'mercado');
     if (hasMarketEarly && panel) {
@@ -711,6 +728,7 @@
     function openCharPanel(id) {
       if (!charEl) return;
       charId = id; charEl.hidden = false;
+      if (window.innerWidth <= 600) panel.classList.add('collapsed');   // en móvil, no solapar con la dársena
       const d = charData(id); charSig = d ? sigOf(d) : '';
       buildCharPanel(id);
       startAvatar();
@@ -743,6 +761,7 @@
       shopEl.className = 'hacp-shop'; shopEl.id = 'hacp-shop'; shopEl.hidden = true;
       vp.appendChild(shopEl);
       ['pointerdown', 'pointerup', 'wheel', 'click'].forEach(ev => shopEl.addEventListener(ev, (e) => e.stopPropagation(), { passive: false }));
+      shopEl.addEventListener('click', (e) => { if (e.target === shopEl) closeShop(); });   // tocar fuera cierra
       return shopEl;
     }
     function itemCardHTML(item, locked) {
@@ -799,6 +818,7 @@
       homeEl.className = 'hacp-shop hacp-home-ov'; homeEl.id = 'hacp-home'; homeEl.hidden = true;
       vp.appendChild(homeEl);
       ['pointerdown', 'pointerup', 'wheel', 'click'].forEach(ev => homeEl.addEventListener(ev, (e) => e.stopPropagation(), { passive: false }));
+      homeEl.addEventListener('click', (e) => { if (e.target === homeEl) closeHome(); });
       return homeEl;
     }
     function objChip(it, dir) {
@@ -867,6 +887,7 @@
       equipEl.className = 'hacp-shop hacp-equip-ov'; equipEl.id = 'hacp-equip'; equipEl.hidden = true;
       vp.appendChild(equipEl);
       ['pointerdown', 'pointerup', 'wheel', 'click'].forEach(ev => equipEl.addEventListener(ev, (e) => e.stopPropagation(), { passive: false }));
+      equipEl.addEventListener('click', (e) => { if (e.target === equipEl) closeEquip(); });
       return equipEl;
     }
     function buildEquip() {
@@ -915,6 +936,7 @@
       boardEl.className = 'hacp-shop hacp-board-ov'; boardEl.id = 'hacp-board'; boardEl.hidden = true;
       vp.appendChild(boardEl);
       ['pointerdown', 'pointerup', 'wheel', 'click'].forEach(ev => boardEl.addEventListener(ev, (e) => e.stopPropagation(), { passive: false }));
+      boardEl.addEventListener('click', (e) => { if (e.target === boardEl) closeBoard(); });
       return boardEl;
     }
     function buildBoard() {
