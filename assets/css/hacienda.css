@@ -536,6 +536,8 @@ html.hacp-pseudofs, html.hacp-pseudofs body{ overflow:hidden; }
 .hacp-esc-lanzar{ background:rgba(178,59,46,.22)!important; border-color:#b23b2e!important; color:#f0b8ad!important; font-weight:700; }
 .hacp-esc-lanzar:not(:disabled):hover{ background:rgba(178,59,46,.4)!important; color:#fff!important; }
 .hacp-esc-timer{ font:900 19px 'Noto Serif SC',serif; color:var(--gold); text-align:center; padding:10px 0 4px; font-variant-numeric:tabular-nums; }
+.hacp-esc-abort, .hacp-cp-abort{ background:rgba(178,59,46,.18)!important; border-color:rgba(178,59,46,.5)!important; color:#e2a06a!important; }
+.hacp-esc-abort:hover, .hacp-cp-abort:hover{ background:rgba(178,59,46,.34)!important; color:#fff!important; }
 .hacp-esc-result{ font:900 16px 'Noto Serif SC',serif; text-align:center; padding:8px 0 2px; }
 .hacp-esc-result.ok{ color:#7fc9a0; }
 .hacp-esc-result.bad{ color:#e2786a; }

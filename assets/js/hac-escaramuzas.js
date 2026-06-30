@@ -96,6 +96,16 @@ const HacEscaramuzas = (function () {
     if (error) throw new Error(error.message || 'No se pudo lanzar');
     return upsertCache(data);
   }
+  // El host ABORTA la escaramuza en curso: pasa a 'abortando' (vuelta en `durMs`).
+  async function abortar(id, hostId, nowMs, durMs) {
+    if (!nowMs) throw new Error('Reloj no disponible');
+    const c = await sb();
+    const args = { p_id: id, p_host: hostId, p_now: nowMs };
+    if (durMs) args.p_dur_ms = durMs;
+    const { data, error } = await c.rpc('escaramuza_abortar', args);
+    if (error) throw new Error(error.message || 'No se pudo abortar');
+    return upsertCache(data);
+  }
   // 4d: reclama un objeto del botín (slot). FCFS atómico; un objeto por jugador.
   async function reclamar(id, pjId, slot) {
     const c = await sb();
@@ -114,6 +124,6 @@ const HacEscaramuzas = (function () {
     return upsertCache(data);
   }
 
-  return { ready, reload, all, abiertas, miBanda, crear, unir, salir, lanzar, resolver, reclamar, DUR_MS, CD_MS, dbOk: () => ok, TABLE };
+  return { ready, reload, all, abiertas, miBanda, crear, unir, salir, lanzar, resolver, reclamar, abortar, DUR_MS, CD_MS, dbOk: () => ok, TABLE };
 })();
 if (typeof window !== 'undefined') window.HacEscaramuzas = HacEscaramuzas;

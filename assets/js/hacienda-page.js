@@ -604,11 +604,27 @@
     function syncEscaramuzaOrder() {
       if (!myId || !window.HacEscaramuzas || !window.HacOrdenes) return;
       const band = HacEscaramuzas.miBanda(h.id, myId);
-      if (!band || band.estado !== 'en_curso') return;
-      const now = clock(); if (now >= band.finMs) return;
-      if (HacOrdenes.mine(h.id, myId)) return;                 // ya ocupado: no pisar otra orden
-      HacOrdenes.set({ haciendaId: h.id, miembroId: myId, tipo: 'expedicion', targetId: 'escaramuza:' + band.id, duracionSeg: Math.max(30, Math.round((band.finMs - now) / 1000)) })
-        .then(applyOrders).catch(e => console.warn('[escaramuza] orden', e));
+      if (!band) return;
+      const now = clock();
+      if (band.estado === 'en_curso') {
+        if (now >= band.finMs) return;
+        if (HacOrdenes.mine(h.id, myId)) return;                 // ya ocupado: no pisar otra orden
+        HacOrdenes.set({ haciendaId: h.id, miembroId: myId, tipo: 'expedicion', targetId: 'escaramuza:' + band.id, duracionSeg: Math.max(30, Math.round((band.finMs - now) / 1000)) })
+          .then(applyOrders).catch(e => console.warn('[escaramuza] orden', e));
+      } else if (band.estado === 'abortando') {
+        // El capitán abortó → todos vuelven en 5 min: re-temporiza MI orden para
+        // terminar en band.finMs si ahora mismo acaba más tarde.
+        const o = HacOrdenes.mine(h.id, myId);
+        if (o && String(o.targetId || '').indexOf('escaramuza:') === 0 && now < band.finMs) {
+          const fin = o.inicioMs + (o.duracionSeg || 0) * 1000;
+          if (fin > band.finMs + 4000) {
+            HacOrdenes.set({ haciendaId: h.id, miembroId: myId, tipo: 'expedicion', targetId: 'escaramuza:' + band.id, duracionSeg: Math.max(5, Math.round((band.finMs - now) / 1000)) })
+              .then(applyOrders).catch(e => console.warn('[escaramuza] re-temporizar', e));
+          }
+        }
+        // Pasado el tiempo, el capitán disuelve la banda abortada.
+        if (now >= band.finMs && band.hostId === myId) HacEscaramuzas.salir(band.id, myId).catch(() => {});
+      }
     }
     // Botín común: ≥1 objeto por participante (de la tienda del tier, preferiendo
     // equipables/guardables). El reparto/elección será la sub-fase 4d.
@@ -656,6 +672,7 @@
         body.innerHTML = bandaPropiaHTML(mine);
         const sl = body.querySelector('[data-salir]'); if (sl) sl.addEventListener('click', () => salirBanda(mine.id));
         const ln = body.querySelector('[data-lanzar]'); if (ln && !ln.disabled) ln.addEventListener('click', () => lanzarBanda(mine.id));
+        const ab = body.querySelector('[data-abort]'); if (ab) ab.addEventListener('click', abortarEscaramuza);
         body.querySelectorAll('[data-loot]').forEach(b => b.addEventListener('click', () => reclamarBotin(mine.id, +b.dataset.loot)));
         escTick();
         return;
@@ -700,7 +717,11 @@
         accion += `<button class="hacp-cp-btn hacp-esc-salir" data-salir>${esHost ? 'Disolver la banda' : 'Salir de la banda'}</button>`;
       } else if (b.estado === 'en_curso') {
         accion = `<div class="hacp-esc-timer" data-esc-timer="${b.finMs}">En la expedición…</div>
-          <div class="hacp-esc-note">La banda ha partido. Cuando regrese se repartirán recompensas y botín.</div>`;
+          <div class="hacp-esc-note">La banda ha partido. Cuando regrese se repartirán recompensas y botín.</div>
+          ${esHost ? `<button type="button" class="hacp-cp-btn hacp-esc-abort" data-abort>Abortar expedición</button>` : ''}`;
+      } else if (b.estado === 'abortando') {
+        accion = `<div class="hacp-esc-timer" data-esc-timer="${b.finMs}">Abortada · regresando…</div>
+          <div class="hacp-esc-note">El capitán abortó la escaramuza. Todos volvéis a casa; sin recompensas ni botín.</div>`;
       } else if (b.estado === 'botin') {
         const elec = b.elecciones || {};
         const yaCogi = Object.prototype.hasOwnProperty.call(elec, myId);
@@ -771,6 +792,20 @@
         syncEscaramuzaOrder();
       } catch (e) { toast((e && e.message) || 'No se pudo lanzar'); await HacEscaramuzas.reload(); }
       finally { escBusy = false; renderEscaramuzas(); }
+    }
+    // El capitán aborta la escaramuza en curso: todos vuelven a casa en 5 min, sin premio.
+    async function abortarEscaramuza() {
+      if (!myId || !window.HacEscaramuzas || escBusy) return;
+      const band = HacEscaramuzas.miBanda(h.id, myId);
+      if (!band || band.hostId !== myId || band.estado !== 'en_curso') return;
+      if (!confirm('¿Abortar la escaramuza? La banda entera volverá a casa en 5 minutos y no habrá recompensas ni botín.')) return;
+      escBusy = true;
+      try {
+        await HacEscaramuzas.abortar(band.id, myId, clock(), ESC_FAST ? 20000 : 0);
+        toast('↩ Escaramuza abortada · regreso en 5 min');
+        syncEscaramuzaOrder();
+      } catch (e) { toast((e && e.message) || 'No se pudo abortar'); await HacEscaramuzas.reload(); }
+      finally { escBusy = false; if (charId) buildCharPanel(charId); renderEscaramuzas(); }
     }
     async function reclamarBotin(id, slot) {
       if (escBusy) return; escBusy = true;
@@ -861,11 +896,12 @@
       // Expedición: el tiempo restante REAL sale de la ORDEN (hora de servidor), así
       // se ve la cuenta atrás durante TODO el viaje (saliendo / fuera / regresando),
       // no solo cuando está oculto. Fuente de verdad = inicio + duración − ahora.
-      let exped = false;
+      let exped = false, escaramuza = false;
       if (id === myId && window.HacOrdenes) {
         const o = HacOrdenes.mine(h.id, id);
         if (o && o.tipo === 'expedicion') {
           exped = true;
+          escaramuza = String(o.targetId || '').indexOf('escaramuza:') === 0;   // expedición cooperativa
           rest = Math.max(0, Math.ceil((o.inicioMs + (o.duracionSeg || 120) * 1000 - clock()) / 1000));
         }
       }
@@ -879,7 +915,7 @@
         : null;
       const equipN = (window.HacStats && HacStats.equipados) ? HacStats.equipados(id).length : 0;
       const heridas = (window.HacStats && HacStats.heridas) ? HacStats.heridas(id) : 0;
-      return { it, aptId, aptDef, e, eFull, eRegenMin, activa, enTarea, fuera, exped, rest, mine: id === myId, puntos: puntosTotales(id), earned, money, home, ahorro, stats, equipN, heridas };
+      return { it, aptId, aptDef, e, eFull, eRegenMin, activa, enTarea, fuera, exped, escaramuza, rest, mine: id === myId, puntos: puntosTotales(id), earned, money, home, ahorro, stats, equipN, heridas };
     }
     // Panel de inventario/monedero que se despliega a la derecha del panel del
     // mecenas. Scaffolding: el dinero y los objetos llegarán al jugar misiones
@@ -966,7 +1002,16 @@
       }
       let mision = '';
       if (d.mine) {
-        if (d.activa) {
+        if (d.activa && d.escaramuza) {
+          // Escaramuza: NO se puede liberar en solitario. Solo el capitán aborta (vuelta 5 min).
+          const band = window.HacEscaramuzas ? HacEscaramuzas.miBanda(h.id, myId) : null;
+          const soyHost = !!(band && band.hostId === myId), abortando = !!(band && band.estado === 'abortando');
+          const flag = abortando ? `↩ Escaramuza abortada · vuelta en <b id="hacp-cp-rest">${fmtClock(d.rest)}</b>`
+            : `⚔ En escaramuza · vuelve en <b id="hacp-cp-rest">${fmtClock(d.rest)}</b>`;
+          const ctrl = (soyHost && !abortando) ? `<button type="button" class="hacp-cp-btn hacp-cp-abort" data-act="abort">Abortar</button>`
+            : `<span class="hacp-cp-lbl" style="opacity:.7;align-self:center">${abortando ? 'regresando…' : 'solo el capitán aborta'}</span>`;
+          mision = `<div class="hacp-cp-mis hacp-cp-mis-on"><span class="hacp-cp-flag">${flag}</span>${ctrl}</div>`;
+        } else if (d.activa) {
           const flag = d.exped ? `🧭 Expedición · vuelve en <b id="hacp-cp-rest">${fmtClock(d.rest)}</b>`
             : d.enTarea ? `⚒ En la tarea · <b id="hacp-cp-rest">${fmtClock(d.rest)}</b>`
             : `⚒ De camino…`;
@@ -1010,6 +1055,8 @@
       if (db) db.addEventListener('click', () => { const s = charEl.querySelector('.hacp-cp-sel'); dispatch(s ? s.value : null); });
       const rb = charEl.querySelector('[data-act="release"]');
       if (rb) rb.addEventListener('click', release);
+      const ab = charEl.querySelector('[data-act="abort"]');
+      if (ab) ab.addEventListener('click', abortarEscaramuza);
       const bdb = charEl.querySelector('[data-act="board"]');
       if (bdb) bdb.addEventListener('click', goConsultBoard);
       const ib = charEl.querySelector('[data-act="inv"]');

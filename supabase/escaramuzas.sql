@@ -109,6 +109,22 @@ begin
   return b;
 end; $$;
 
+-- ABORTAR (solo el capitán): cancela la escaramuza en curso. No hay recompensas;
+-- todos vuelven a su hacienda al cabo de `p_dur_ms` (5 min por defecto). Pasa a
+-- 'abortando' para que cada cliente re-temporice la vuelta de su mecenas.
+create or replace function public.escaramuza_abortar(p_id uuid, p_host text, p_now bigint, p_dur_ms bigint default 300000)
+returns public.escaramuzas language plpgsql security definer set search_path = public as $$
+declare b public.escaramuzas;
+begin
+  select * into b from public.escaramuzas where id = p_id for update;
+  if not found then raise exception 'La banda ya no existe'; end if;
+  if p_host <> b.host_id then raise exception 'Solo el capitán puede abortar'; end if;
+  if b.estado <> 'en_curso' then raise exception 'La escaramuza no está en curso'; end if;
+  update public.escaramuzas set estado = 'abortando', fin_ms = p_now + greatest(10000, coalesce(p_dur_ms, 300000))
+    where id = p_id returning * into b;
+  return b;
+end; $$;
+
 -- 4d: RECLAMAR un objeto del botín (FCFS atómico). Un objeto por jugador; un objeto
 -- por ranura (slot). Cuando todos los miembros han recogido, la banda se cierra.
 create or replace function public.escaramuza_reclamar(p_id uuid, p_pj text, p_slot int)
@@ -179,3 +195,4 @@ grant execute on function public.escaramuza_salir(uuid,text)                  to
 grant execute on function public.escaramuza_lanzar(uuid,text,bigint,bigint)    to authenticated, anon;
 grant execute on function public.escaramuza_resolver(uuid,bigint,boolean,jsonb,int,int) to authenticated, anon;
 grant execute on function public.escaramuza_reclamar(uuid,text,int)           to authenticated, anon;
+grant execute on function public.escaramuza_abortar(uuid,text,bigint,bigint)  to authenticated, anon;
