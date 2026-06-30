@@ -1338,6 +1338,87 @@
       } else if (!cta.hidden) cta.hidden = true;
       requestAnimationFrame(tickCTA);
     })();
+
+    // ── SHELL MÓVIL (estilo app): home = tu personaje + navegación inferior ────
+    // Solo en pantallas estrechas; el escritorio se queda como está. Reutiliza el
+    // panel del personaje (home), el tablón (expediciones) y las tareas internas.
+    if (window.matchMedia && window.matchMedia('(max-width:600px)').matches) setupMobileShell();
+    function setupMobileShell() {
+      document.body.classList.add('hacp-mobile');
+      const SEC = [
+        { id: 'personaje',   ic: '士', lb: 'Personaje' },
+        { id: 'misiones',    ic: '檄', lb: 'Misiones' },
+        { id: 'hacienda',    ic: '邑', lb: 'Hacienda' },
+        { id: 'mapa',        ic: '圖', lb: 'Mapa' },
+        { id: 'escaramuzas', ic: '兵', lb: 'Escaramuzas' },
+      ];
+      const nav = document.createElement('nav'); nav.id = 'hacp-mnav';
+      const navBtns = {};
+      SEC.forEach(s => {
+        const b = document.createElement('button'); b.type = 'button'; b.className = 'hacp-nav-btn'; b.dataset.sec = s.id;
+        b.innerHTML = `<span class="ic">${s.ic}</span><span class="lb">${esc(s.lb)}</span>`;
+        b.addEventListener('click', () => mgo(s.id));
+        nav.appendChild(b); navBtns[s.id] = b;
+      });
+      document.body.appendChild(nav);
+
+      const sec = document.createElement('div'); sec.id = 'hacp-msec';
+      sec.innerHTML = `
+        <div class="hacp-msec-pane" data-pane="personaje"></div>
+        <div class="hacp-msec-pane" data-pane="misiones">
+          <div class="hacp-mtabs"><button type="button" class="hacp-mtab on" data-mt="internas">Tareas internas</button><button type="button" class="hacp-mtab" data-mt="exped">Expediciones</button></div>
+          <div class="hacp-mtab-body" data-mtb="internas"></div>
+          <div class="hacp-mtab-body" data-mtb="exped" hidden></div>
+        </div>
+        <div class="hacp-msec-pane" data-pane="mapa"><div class="hacp-msec-soon">🗺<br><b>Mapa</b><br>Pronto: las haciendas de otros jugadores y de NPCs.</div></div>
+        <div class="hacp-msec-pane" data-pane="escaramuzas"><div class="hacp-msec-soon">⚔<br><b>Escaramuzas</b><br>Expediciones cooperativas para varios jugadores. Muy pronto.</div></div>`;
+      document.body.appendChild(sec);
+
+      // Personaje (home): reubica el panel del personaje como contenido de la sección.
+      const persPane = sec.querySelector('[data-pane="personaje"]');
+      if (charEl) { persPane.appendChild(charEl); charEl.hidden = false; }
+
+      // Misiones: pestañas internas / expediciones.
+      sec.querySelectorAll('.hacp-mtab').forEach(t => t.addEventListener('click', () => {
+        sec.querySelectorAll('.hacp-mtab').forEach(x => x.classList.toggle('on', x === t));
+        sec.querySelectorAll('.hacp-mtab-body').forEach(b => { b.hidden = (b.dataset.mtb !== t.dataset.mt); });
+        if (t.dataset.mt === 'exped') renderExped(); else renderInternas();
+      }));
+      function renderInternas() {
+        const body = sec.querySelector('[data-mtb="internas"]');
+        if (!myId) { body.innerHTML = '<div class="hacp-inv-note">Entra con tu mecenas para enviar tareas.</div>'; return; }
+        const tasks = availableTasks();
+        body.innerHTML = tasks.length
+          ? tasks.map(t => `<div class="hacp-mrow"><div class="hacp-mrow-main"><b>${esc(t.nombre)}</b><span>${fmtDur(t.duracionSeg)} · −${costeMision(t.dominio)}⚡</span></div><button class="hacp-cp-btn" data-task="${esc(t.taskId)}">Enviar</button></div>`).join('')
+          : '<div class="hacp-inv-note">No hay tareas internas disponibles ahora mismo.</div>';
+        body.querySelectorAll('[data-task]').forEach(b => b.addEventListener('click', () => { dispatch(b.dataset.task); mgo('personaje'); }));
+      }
+      function renderExped() {
+        const body = sec.querySelector('[data-mtb="exped"]');
+        if (!hasMain) { body.innerHTML = '<div class="hacp-inv-note">Esta finca aún no tiene edificio principal para expediciones.</div>'; return; }
+        buildBoard();
+        const el = ensureBoardEl();
+        body.appendChild(el); el.hidden = false; el.classList.add('hacp-board-inline');
+      }
+
+      function mgo(id) {
+        SEC.forEach(s => navBtns[s.id].classList.toggle('on', s.id === id));
+        sec.querySelectorAll('.hacp-msec-pane').forEach(p => p.classList.toggle('on', p.dataset.pane === id));
+        const isHac = (id === 'hacienda');
+        sec.hidden = isHac;
+        if (id === 'personaje') {
+          if (myId) { charId = myId; buildCharPanel(myId); startAvatar(); }
+          else if (!persPane.querySelector('.hacp-msec-soon')) {
+            const n = document.createElement('div'); n.className = 'hacp-msec-soon';
+            n.innerHTML = '士<br><b>Sin mecenas aquí</b><br>Únete a esta hacienda para ver a tu personaje.';
+            persPane.appendChild(n);
+          }
+        }
+        if (id === 'misiones') { renderInternas(); }
+        if (isHac && myId && cam && cam.focusFollow) cam.focusFollow(() => HacFolk.position(myId), 3.0);
+      }
+      mgo('personaje');   // landing por defecto
+    }
   }
 
   // Espera a la carga de Supabase (HacStore.ready) y al DOM antes de pintar.

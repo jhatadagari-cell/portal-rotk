@@ -369,39 +369,74 @@ html.hacp-pseudofs, html.hacp-pseudofs body{ overflow:hidden; }
 }
 /* Barra de acciones móvil (oculta en escritorio). */
 .hacp-mobar{ display:none; }
-/* ── Rework MÓVIL: app con barra inferior + hojas a ancho completo, todo al pulgar ── */
+/* ── Rework MÓVIL: APP estilo Shakes & Fidget (home = personaje + nav inferior) ── */
 @media (max-width:600px){
-  .hacp-iso-wrap{ height:clamp(340px,72dvh,760px); }
-  /* Barra de acciones inferior (zona del pulgar): secciones grandes y legibles. */
-  .hacp-mobar{ display:flex; position:absolute; left:0; right:0; bottom:0; z-index:5; gap:5px;
-    padding:5px 5px calc(5px + env(safe-area-inset-bottom));
-    background:rgba(11,10,7,.94); border-top:1px solid rgba(201,168,76,.32);
-    -webkit-backdrop-filter:blur(3px); backdrop-filter:blur(3px); }
-  .hacp-mobar-btn{ flex:1; min-width:0; display:flex; flex-direction:column; align-items:center; gap:3px;
-    min-height:56px; justify-content:center; padding:7px 2px; cursor:pointer;
-    background:rgba(201,168,76,.12); border:1px solid rgba(201,168,76,.26); border-radius:11px; color:var(--parch); }
-  .hacp-mobar-btn:active{ background:rgba(201,168,76,.34); transform:scale(.97); }
-  .hacp-mobar-btn .ic{ font-family:'Noto Serif SC','Noto Sans SC',serif; font-weight:700; font-size:22px; line-height:1; color:var(--gold); }
-  .hacp-mobar-btn .lb{ font:800 10.5px 'Noto Sans SC',sans-serif; color:var(--gold); white-space:nowrap; }
-  /* Panel del personaje = HOJA inferior por ENCIMA de la barra; alto acotado, scroll. */
-  .hacp-char-panel{ left:5px; right:5px; bottom:70px; width:auto; max-width:none; max-height:62dvh; overflow-y:auto; }
-  .hacp-folk-panel{ bottom:70px; }
-  /* Botones de acción del panel MÁS GRANDES y legibles al pulgar. */
+  /* Cromo de web y de la finca fuera: la app ocupa toda la pantalla. */
+  body.hacp-mobile #chrome-nav, body.hacp-mobile #chrome-footer,
+  .hacp-mobile .hacp-hero, .hacp-mobile .hacp-finca-ttl, .hacp-mobile .hacp-finca-sub,
+  .hacp-mobile .hacp-admin, .hacp-mobile .hacp-iso-hint, .hacp-mobile .hacp-mobar{ display:none !important; }
+  .hacp-mobile .hacp-finca{ transform:none; margin:0; width:100%; }
+  .hacp-mobile .hacp-iso-area{ margin:0; }
+  /* El visor iso es la CAPA DE FONDO a pantalla completa (sección Hacienda). */
+  .hacp-mobile .hacp-iso-wrap{ position:fixed; inset:0; height:100dvh; margin:0; border:0; border-radius:0; }
+
+  /* Navegación inferior: 5 secciones grandes al pulgar. */
+  #hacp-mnav{ position:fixed; left:0; right:0; bottom:0; z-index:9000; display:flex; gap:3px;
+    padding:5px 4px calc(5px + env(safe-area-inset-bottom));
+    background:rgba(11,10,7,.97); border-top:1px solid rgba(201,168,76,.3);
+    -webkit-backdrop-filter:blur(5px); backdrop-filter:blur(5px); }
+  .hacp-nav-btn{ flex:1; min-width:0; display:flex; flex-direction:column; align-items:center; gap:2px;
+    min-height:54px; justify-content:center; padding:5px 1px; cursor:pointer;
+    background:none; border:0; border-radius:10px; color:var(--parch2); }
+  .hacp-nav-btn .ic{ font-family:'Noto Serif SC','Noto Sans SC',serif; font-weight:700; font-size:19px; line-height:1; }
+  .hacp-nav-btn .lb{ font:700 9px 'Noto Sans SC',sans-serif; letter-spacing:.01em; white-space:nowrap; }
+  .hacp-nav-btn.on{ color:var(--gold); background:rgba(201,168,76,.16); }
+  .hacp-nav-btn:active{ transform:scale(.95); }
+
+  /* Host de secciones (todo menos Hacienda): panel opaco sobre el visor. */
+  #hacp-msec{ position:fixed; left:0; right:0; top:0; bottom:62px; z-index:8000; overflow-y:auto;
+    -webkit-overflow-scrolling:touch; box-sizing:border-box; padding:12px 11px 16px;
+    background:radial-gradient(120% 80% at 50% 0%, #1a160e 0%, #0d0b07 70%); }
+  #hacp-msec[hidden]{ display:none; }
+  .hacp-msec-pane{ display:none; }
+  .hacp-msec-pane.on{ display:block; }
+  .hacp-msec-soon{ margin-top:30dvh; text-align:center; color:var(--parch2); font-size:14px; line-height:2;
+    font-family:'Noto Serif SC',serif; }
+  .hacp-msec-soon b{ color:var(--gold); font-size:18px; }
+
+  /* Personaje = panel del personaje como CONTENIDO de sección (no overlay). */
+  .hacp-mobile .hacp-char-panel{ position:static; inset:auto; left:auto; right:auto; bottom:auto; top:auto;
+    width:auto; max-width:none; max-height:none; overflow:visible; background:transparent; border:0;
+    box-shadow:none; padding:0; }
+  .hacp-mobile .hacp-cp-x{ display:none; }   /* es el home: no se cierra */
+
+  /* Misiones: pestañas internas / expediciones. */
+  .hacp-mtabs{ display:flex; gap:6px; margin-bottom:12px; }
+  .hacp-mtab{ flex:1; min-height:40px; background:rgba(201,168,76,.1); border:1px solid rgba(201,168,76,.28);
+    border-radius:9px; color:var(--parch2); font:700 12px 'Noto Sans SC',sans-serif; cursor:pointer; }
+  .hacp-mtab.on{ background:rgba(201,168,76,.26); color:var(--gold); }
+  .hacp-mrow{ display:flex; align-items:center; gap:10px; padding:9px 11px; margin-bottom:7px;
+    background:rgba(255,255,255,.03); border:1px solid rgba(201,168,76,.2); border-radius:9px; }
+  .hacp-mrow-main{ flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; }
+  .hacp-mrow-main b{ font:700 13px 'Noto Sans SC',sans-serif; color:var(--parch); }
+  .hacp-mrow-main span{ font-size:11px; color:var(--parch2); }
+  /* El tablón, embebido en la pestaña (sin overlay oscuro ni botón de cerrar). */
+  .hacp-board-inline{ position:static !important; inset:auto; background:none !important;
+    -webkit-backdrop-filter:none; backdrop-filter:none; padding:0 !important; display:block !important; }
+  .hacp-board-inline .hacp-shop-box{ width:100% !important; max-width:none; max-height:none; box-shadow:none;
+    background:transparent; border:0; padding:0; }
+  .hacp-board-inline .hacp-shop-x{ display:none; }
+
+  /* Botones más grandes al pulgar + overlays como hoja inferior (tienda/casa/equipo). */
   .hacp-cp-btn, .hacp-mis-go, .hacp-item-buy, .hacp-obj, .hacp-eq-own{ min-height:42px; font-size:13px; }
   .hacp-folk-item{ min-height:46px; }
-  .hacp-folk-fab{ display:none; }        /* en móvil se abre desde la barra inferior */
-  .hacp-iso-hint{ display:none; }        /* pista de ratón innecesaria en táctil */
-  /* El inventario que se abría a la derecha se apila dentro de la hoja (ya estático). */
+  .hacp-folk-fab{ display:none; }
   .hacp-inv{ box-shadow:none; border-color:rgba(201,168,76,.25); }
-  /* Overlays (tienda, tablón, casa, equipo) = hoja inferior a ancho completo. */
-  .hacp-shop{ align-items:flex-end; padding:0; }
-  .hacp-shop-box, .hacp-home-ov .hacp-shop-box, .hacp-eq-box{ width:100%; max-width:none; max-height:90dvh; border-radius:14px 14px 0 0; padding:14px 12px calc(16px + env(safe-area-inset-bottom)); }
-  .hacp-shop-grid, .hacp-eq-slots{ grid-template-columns:1fr 1fr; }
-  .hacp-home-objs{ grid-template-columns:1fr 1fr; }
-  /* Dársena de mecenas: hoja desde la derecha (algo más estrecha) y colapsable. */
-  .hacp-folk-panel{ width:min(230px,86vw); top:36px; bottom:6px; }
-  /* Objetivos táctiles algo mayores. */
-  .hacp-fs-btn{ width:38px; height:38px; }
+  .hacp-shop:not(.hacp-board-inline){ align-items:flex-end; padding:0; z-index:9500; }
+  .hacp-shop:not(.hacp-board-inline) .hacp-shop-box, .hacp-eq-box{ width:100%; max-width:none; max-height:90dvh; border-radius:14px 14px 0 0; padding:14px 12px calc(16px + env(safe-area-inset-bottom)); }
+  .hacp-shop-grid, .hacp-eq-slots, .hacp-home-objs{ grid-template-columns:1fr 1fr; }
+  .hacp-folk-panel{ width:min(230px,86vw); top:36px; bottom:68px; }
+  .hacp-fs-btn{ display:none; }
   .hacp-cta{ font-size:13px; padding:7px 15px; }
   .hacp-cp-x, .hacp-shop-x{ width:30px; height:30px; font-size:16px; }
 }
