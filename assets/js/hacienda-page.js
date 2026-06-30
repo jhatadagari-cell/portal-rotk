@@ -358,6 +358,13 @@
       const base = (window.HacEnergia && HacEnergia.COSTE_MISION) || 34;
       return competente ? Math.round(base * 0.5) : base;
     }
+    // Energía de una MISIÓN del tablón: escala con la dificultad (las difíciles
+    // cansan más); −40 % si tu mecenas domina el dominio.
+    function costeExped(m) {
+      const base = (window.HacMisiones && HacMisiones.coste) ? HacMisiones.coste(m) : 30;
+      const competente = window.HacCompetencias && m.dom && HacCompetencias.has(h.id, myId, myApt, m.dom);
+      return competente ? Math.round(base * 0.6) : base;
+    }
     // ¿Mi mecenas DOMINA un dominio? (aptitud inicial ∪ competencias otorgadas)
     function dominaDominio(dominio) {
       return !!(window.HacCompetencias && dominio && HacCompetencias.has(h.id, myId, myApt, dominio));
@@ -432,6 +439,14 @@
           const rec = HacMisiones.recompensa(mis);
           HacStats.award(myId, { dinero: rec.dinero, xp: rec.dom ? { [rec.dom]: rec.xp } : null });
           extra = ` · +${rec.dinero}💰 · +${rec.xp} XP ${DOM_GLYPH[rec.dom] || ''}`.trimEnd();
+          // BOTÍN: prob. baja (sube con la dificultad) de traer 1 objeto. Si es de
+          // energía, se aplica al momento; si es equipable, va a la mochila.
+          const lootId = HacMisiones.botin ? HacMisiones.botin(mis) : null;
+          const loot = lootId && window.HacTienda ? HacTienda.get(lootId) : null;
+          if (loot) {
+            if (loot.efecto && loot.efecto.energia) { if (window.HacEnergia) HacEnergia.add(h.id, myId, loot.efecto.energia); extra += ` · 🎁 ${loot.icon} ${loot.nombre}`; }
+            else { const r2 = HacStats.darItem(myId, lootId); extra += r2.ok ? ` · 🎁 ${loot.icon} ${loot.nombre}` : ' · 🎁 (mochila llena)'; }
+          }
         }
         HacOrdenes.clear(h.id, myId);   // optimista: la quita del caché ya
         toast('+' + r + ' puntos · misión cumplida' + extra);
@@ -466,7 +481,7 @@
     function dispatchMision(misId) {
       if (!myId || !window.HacOrdenes || !window.HacMisiones) return;
       const m = HacMisiones.get(misId); if (!m) return;
-      if (window.HacEnergia) HacEnergia.spend(h.id, myId, costeMision(m.dom));
+      if (window.HacEnergia) HacEnergia.spend(h.id, myId, costeExped(m));
       HacOrdenes.set({ haciendaId: h.id, miembroId: myId, tipo: 'expedicion', targetId: 'mis:' + misId, duracionSeg: HacMisiones.durSeg(m) })
         .then(applyOrders).catch(e => console.warn('[orden] set', e));
     }
@@ -889,23 +904,25 @@
       const list = window.HacMisiones ? HacMisiones.disponibles(tier) : [];
       const orden = window.HacOrdenes ? HacOrdenes.mine(h.id, myId) : null;
       const ocupado = !!orden;
+      const energia = window.HacEnergia ? HacEnergia.current(h.id, myId) : 100;
       const rows = list.slice().sort((a, b) => (a.dom < b.dom ? -1 : a.dom > b.dom ? 1 : a.dif - b.dif)).map(m => {
         const risk = riesgoMision(m), rc = HacMisiones.nivelColor(risk), rec = HacMisiones.recompensa(m);
+        const en = costeExped(m), sinEn = energia < en, loot = Math.round(HacMisiones.lootChance(m.dif) * 100);
         return `<div class="hacp-mis t-${m.dom}">
           <span class="hacp-mis-g" style="color:${DOM_COLOR[m.dom]}">${DOM_GLYPH[m.dom]}</span>
           <div class="hacp-mis-main">
             <div class="hacp-mis-name">${esc(m.nombre)} <span class="hacp-mis-dif">dif. ${m.dif}</span></div>
-            <div class="hacp-mis-meta">⏱ ${fmtClock(HacMisiones.durSeg(m))} · +${rec.dinero}💰 · +${rec.xp} XP ${DOM_GLYPH[m.dom]}</div>
+            <div class="hacp-mis-meta">⏱ ${fmtClock(HacMisiones.durSeg(m))} · <span class="${sinEn ? 'hacp-mis-noen' : ''}">−${en}⚡</span> · +${rec.dinero}💰 · +${rec.xp} XP ${DOM_GLYPH[m.dom]} · 🎁 ${loot}%</div>
           </div>
           <span class="hacp-mis-risk r-${rc}" title="Riesgo de fracaso (baja con tu nivel ${DOM_GLYPH[m.dom]} y el equipo)">⚠ ${Math.round(risk * 100)}%</span>
-          <button type="button" class="hacp-mis-go" data-mis="${esc(m.id)}"${ocupado ? ' disabled' : ''}>Enviar</button>
+          <button type="button" class="hacp-mis-go" data-mis="${esc(m.id)}"${ocupado || sinEn ? ' disabled' : ''} title="${sinEn ? 'Energía insuficiente' : ''}">Enviar</button>
         </div>`;
       }).join('');
       el.innerHTML = `
         <div class="hacp-shop-box">
           <button type="button" class="hacp-shop-x" data-act="board-close" aria-label="Cerrar">✕</button>
-          <div class="hacp-shop-h"><span class="hacp-shop-zh">📜</span> Tablón de misiones</div>
-          <div class="hacp-shop-sub">El riesgo baja con tu nivel del dominio (XP) y los objetos equipados.${ocupado ? ' <b>Tu mecenas ya está en una misión.</b>' : ''}</div>
+          <div class="hacp-shop-h"><span class="hacp-shop-zh">📜</span> Tablón de misiones <span class="hacp-shop-money">⚡ <b>${Math.round(energia)}</b></span></div>
+          <div class="hacp-shop-sub">El riesgo baja con tu nivel del dominio (XP) y el equipo. Las difíciles cuestan más energía y tienen más probabilidad de 🎁 botín al volver.${ocupado ? ' <b>Tu mecenas ya está en una misión.</b>' : ''}</div>
           <div class="hacp-board-list">${rows || '<div class="hacp-inv-note">No hay misiones disponibles.</div>'}</div>
         </div>`;
       el.querySelector('[data-act="board-close"]').addEventListener('click', closeBoard);

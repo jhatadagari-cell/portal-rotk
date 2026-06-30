@@ -187,6 +187,13 @@ const HacStats = (function () {
     return { ok: true };
   }
 
+  // Da un objeto (botín de misión) a la MOCHILA si hay sitio. {ok, motivo}.
+  function darItem(mid, id) {
+    if (!window.HacTienda || !HacTienda.get(id)) return { ok: false, motivo: 'Objeto inválido' };
+    const r = ensure(mid);
+    if (ocupadas(mid) >= r.cap) return { ok: false, motivo: 'Mochila llena' };
+    mete(r.inv, id); persist(r); return { ok: true };
+  }
   // Mete un objeto de la MOCHILA al almacén de CASA (requiere casa).
   function meterEnCasa(mid, id) {
     const r = ensure(mid);
@@ -212,6 +219,6 @@ const HacStats = (function () {
     } catch (e) { console.error('[HacStats] liberarCasa', e); }
   }
 
-  return { ready, reload, dinero, ahorro, casaPos, casasReclamadas, duenoDeCasa, comprarCasa, liberarCasa, xp, nivel, progresoNivel, bonus, nivelTotal, equipados, equipar, desequipar, MAX_EQUIP, award, comprar, guardar, sacar, meterEnCasa, sacarDeCasa, inventario, casaInventario, capInventario, ocupadas, recompensaExped, DOMS, dbOk: () => ok, TABLE };
+  return { ready, reload, dinero, ahorro, casaPos, casasReclamadas, duenoDeCasa, comprarCasa, liberarCasa, xp, nivel, progresoNivel, bonus, nivelTotal, equipados, equipar, desequipar, MAX_EQUIP, award, comprar, guardar, sacar, darItem, meterEnCasa, sacarDeCasa, inventario, casaInventario, capInventario, ocupadas, recompensaExped, DOMS, dbOk: () => ok, TABLE };
 })();
 if (typeof window !== 'undefined') window.HacStats = HacStats;

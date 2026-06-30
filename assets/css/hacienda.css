@@ -262,6 +262,7 @@
   border-radius:5px; padding:5px 10px; font:700 12px 'Noto Sans SC',sans-serif; cursor:pointer; }
 .hacp-mis-go:hover{ background:rgba(201,168,76,.32); color:#fff; }
 .hacp-mis-go:disabled{ opacity:.4; cursor:not-allowed; }
+.hacp-mis-noen{ color:#e0907a; }
 /* Aviso clicable sobre tu mecenas cuando espera en el tablón (solo local). */
 .hacp-cta{ position:absolute; z-index:30; transform:translate(-50%,-100%);
   white-space:nowrap; cursor:pointer; border:1px solid #fff2c0; border-radius:14px; padding:5px 13px;

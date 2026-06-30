@@ -60,6 +60,28 @@ const HacMisiones = (function () {
   }
   const nivelColor = (pct) => pct < 0.20 ? 'baja' : (pct < 0.45 ? 'media' : 'alta');
 
-  return { POOL, get, disponibles, durSeg, riesgo, recompensa, nivelColor };
+  // Coste de ENERGÍA: las misiones difíciles cansan más (más lejos / más duras).
+  const coste = (m) => 14 + m.dif * 8;                       // dif1=22 … dif6=62
+
+  // Botín al volver: prob. BAJA que sube con la dificultad. A más dificultad,
+  // mejores objetos posibles (equipables mayores). Devuelve un id o null.
+  const LOOT_ENERGIA = ['raciones', 'te', 'vianda'];
+  const LOOT_EQUIPO_BAJO = ['tratado-mil', 'clasicos', 'codigo', 'combo-wenwu', 'combo-wenzheng', 'combo-zhengwu'];
+  const LOOT_EQUIPO_ALTO = ['tratado-mayor', 'clasicos-mayor', 'codigo-mayor'];
+  const lootChance = (dif) => Math.min(0.45, 0.06 + dif * 0.05);   // ~11 % (dif1) … 36 % (dif6)
+  function lootPool(dif) {
+    const pool = LOOT_ENERGIA.slice();
+    if (dif >= 2) pool.push.apply(pool, LOOT_EQUIPO_BAJO);
+    if (dif >= 4) pool.push.apply(pool, LOOT_EQUIPO_ALTO);
+    return pool;
+  }
+  // Tira el botín de una misión (usa Math.random; lado jugador, no el sim). id|null.
+  function botin(m) {
+    if (Math.random() >= lootChance(m.dif)) return null;
+    const pool = lootPool(m.dif);
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
+
+  return { POOL, get, disponibles, durSeg, riesgo, recompensa, nivelColor, coste, lootChance, botin };
 })();
 if (typeof window !== 'undefined') window.HacMisiones = HacMisiones;
