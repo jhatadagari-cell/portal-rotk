@@ -421,15 +421,19 @@
     const _pabs = (window.HacStore && HacStore.pabellones) ? HacStore.pabellones(h.id) : [];
     const bonos = (window.HacBuild && HacBuild.bonosPabellon)
       ? HacBuild.bonosPabellon(h.mapa, tier, _pabs)
-      : { xp: 0, dinero: 0, mercado: 0, sinergia: { militar: 0, cultural: 0, administrativo: 0 } };
+      : { xp: 0, dinero: 0, mercado: 0, xpMil: 0, sinergia: { militar: 0, cultural: 0, administrativo: 0 } };
+    // Fracción de XP extra para UNA misión: el bono cultural (政→文… 文) aplica a
+    // todas; el militar (军) SOLO se suma en expediciones de dominio militar.
+    const xpFracMision = (dom) => (bonos.xp || 0) + (dom === 'militar' ? (bonos.xpMil || 0) : 0);
     const conBono = (base, frac) => Math.round((base || 0) * (1 + (frac || 0)));        // recompensa con bono
     const precioMercado = (item) => Math.max(1, Math.round((item.precio || 0) * (1 - bonos.mercado)));   // precio con descuento 政
     const pct = (f) => Math.round((f || 0) * 100);
-    const hayBonos = () => bonos.xp > 0 || bonos.dinero > 0 || bonos.mercado > 0;
+    const hayBonos = () => bonos.xp > 0 || bonos.dinero > 0 || bonos.mercado > 0 || bonos.xpMil > 0;
     // Resumen legible de los bonos activos de la finca (solo los no nulos).
     function bonosTexto() {
       const p = [];
       if (bonos.xp > 0) p.push(`<span style="color:#3a8a5a">文 +${pct(bonos.xp)}% XP</span>`);
+      if (bonos.xpMil > 0) p.push(`<span style="color:#b23b2e">武 +${pct(bonos.xpMil)}% XP en exp. militares</span>`);
       if (bonos.dinero > 0) p.push(`<span style="color:#3a6ea5">政 +${pct(bonos.dinero)}% 💰</span>`);
       if (bonos.mercado > 0) p.push(`<span style="color:#3a6ea5">−${pct(bonos.mercado)}% 市</span>`);
       return p.join(' · ');
@@ -534,7 +538,7 @@
         let extra = '';
         if (mis && window.HacStats) {
           const rec = HacMisiones.recompensa(mis);
-          const dinB = conBono(rec.dinero, bonos.dinero), xpB = conBono(rec.xp, bonos.xp);   // bonos de pabellón (政 dinero, 文 XP)
+          const dinB = conBono(rec.dinero, bonos.dinero), xpB = conBono(rec.xp, xpFracMision(rec.dom));   // bonos de pabellón (政 dinero, 文/武 XP)
           HacStats.award(myId, { dinero: dinB, xp: rec.dom ? { [rec.dom]: xpB } : null });
           extra = ` · +${dinB}💰 · +${xpB} XP ${DOM_GLYPH[rec.dom] || ''}`.trimEnd();
           // BOTÍN: prob. baja (sube con la dificultad) de traer 1 objeto. Si es de
@@ -971,6 +975,12 @@
       h.miembros = (h.miembros || []).filter(m => m.personajeId !== myId);   // sale de la lista
       if (window.HacStats && HacStats.abandonar) HacStats.abandonar(myId, BOLSILLO_MAX);   // mochila/equipo/xp + bolsillos; libera casa COMPRADA
       try { await HacStore.upsert(h); } catch (e) { console.error('[abandonar]', e); }     // persiste los miembros
+      // Limpia la SOLICITUD aprobada: si no, el onboard seguiría creyéndote miembro
+      // (la pertenencia fantasma). El onboard también reconcilia por si esto falla.
+      if (window.HacSolicitudes) {
+        try { const s = await HacSolicitudes.mine(); if (s && s.haciendaId === h.id) await HacSolicitudes.cancelar(s.id); }
+        catch (e) { console.warn('[abandonar] limpiar solicitud', e); }
+      }
       toast('🚪 Has abandonado la hacienda…');
       setTimeout(() => { location.href = 'haciendas.html'; }, 800);
     }
@@ -1115,12 +1125,12 @@
       const rows = list.slice().sort((a, b) => (a.dom < b.dom ? -1 : a.dom > b.dom ? 1 : a.dif - b.dif)).map(m => {
         const risk = riesgoMision(m), rc = HacMisiones.nivelColor(risk), rec = HacMisiones.recompensa(m);
         const en = costeExped(m), sinEn = energia < en, loot = Math.round(HacMisiones.lootChance(m.dif) * 100);
-        const dinB = conBono(rec.dinero, bonos.dinero), xpB = conBono(rec.xp, bonos.xp);   // ya con bonos de pabellón
+        const dinB = conBono(rec.dinero, bonos.dinero), xpB = conBono(rec.xp, xpFracMision(m.dom));   // ya con bonos de pabellón
         return `<div class="hacp-mis t-${m.dom}">
           <span class="hacp-mis-g" style="color:${DOM_COLOR[m.dom]}">${DOM_GLYPH[m.dom]}</span>
           <div class="hacp-mis-main">
             <div class="hacp-mis-name">${esc(m.nombre)} <span class="hacp-mis-dif">dif. ${m.dif}</span></div>
-            <div class="hacp-mis-meta">⏱ ${fmtClock(HacMisiones.durSeg(m))} · <span class="${sinEn ? 'hacp-mis-noen' : ''}">−${en}⚡</span> · +${dinB}💰${bonos.dinero ? '<sup class="hacp-bono">↑</sup>' : ''} · +${xpB} XP${bonos.xp ? '<sup class="hacp-bono">↑</sup>' : ''} ${DOM_GLYPH[m.dom]} · 🎁 ${loot}%</div>
+            <div class="hacp-mis-meta">⏱ ${fmtClock(HacMisiones.durSeg(m))} · <span class="${sinEn ? 'hacp-mis-noen' : ''}">−${en}⚡</span> · +${dinB}💰${bonos.dinero ? '<sup class="hacp-bono">↑</sup>' : ''} · +${xpB} XP${xpFracMision(m.dom) > 0 ? '<sup class="hacp-bono">↑</sup>' : ''} ${DOM_GLYPH[m.dom]} · 🎁 ${loot}%</div>
           </div>
           <span class="hacp-mis-risk r-${rc}" title="Riesgo de fracaso (baja con tu nivel ${DOM_GLYPH[m.dom]} y el equipo)">⚠ ${Math.round(risk * 100)}%</span>
           <button type="button" class="hacp-mis-go" data-mis="${esc(m.id)}"${ocupado || sinEn ? ' disabled' : ''} title="${sinEn ? 'Energía insuficiente' : ''}">Enviar</button>
@@ -1237,17 +1247,18 @@
       const t = window.HacBuild && HacBuild.tipo(c.tipo); if (!t) return;
       const dom = t.dominio, glyph = dom ? DOM_GLYPH[dom] : '', domNm = dom ? DOM_NOMBRE[dom] : '', col = dom ? DOM_COLOR[dom] : '#b9a77a';
       const det = (bonos.detalle || {})[c.pos[0] + ',' + c.pos[1]];
-      const efectoDom = { cultural: '+XP en misiones', administrativo: '+dinero de misiones y −precios de mercado', militar: 'refuerzo del patio militar (efecto en expediciones próximamente)' };
+      const efectoDom = { cultural: '+XP en misiones', administrativo: '+dinero de misiones y −precios de mercado', militar: '+XP en expediciones militares' };
       let bono;
       if (!dom) {
         bono = `<div class="hacp-bld-bono none">No aporta sinergia de pabellón.</div>`;
       } else if (!det) {
         bono = `<div class="hacp-bld-bono none">Colócalo dentro de un pabellón <b style="color:${col}">${glyph} ${esc(domNm)}</b> para que sume al bono de la finca.</div>`;
       } else {
-        const pctSin = HacBuild.pctSinergia, tot = bonos.sinergia[dom] || 0;
+        const pctSin = (dom === 'militar') ? HacBuild.pctSinergiaMil : HacBuild.pctSinergia;   // 军 usa su propia curva (más ligera)
+        const tot = bonos.sinergia[dom] || 0;
         const marginal = Math.round((pctSin(tot) - pctSin(tot - det.efectiva)) * 100);
         const drPct = Math.round(Math.pow(HacBuild.DR_COPIA, det.copia - 1) * 100);
-        const aporta = (dom === 'militar') ? `Suma sinergia 军 (sin efecto jugable aún)` : `Aporta ~<b>${marginal}%</b> a la finca (${esc(efectoDom[dom])})`;
+        const aporta = `Aporta ~<b>${marginal}%</b> a la finca (${esc(efectoDom[dom])})`;
         const dr = det.copia > 1
           ? `<div class="hacp-bld-dr">⚠ Es la ${det.copia}ª de su tipo: rinde solo el <b>${drPct}%</b> de la primera (rendimientos decrecientes). Mejor variar de edificio.</div>`
           : `<div class="hacp-bld-dr ok">✓ Primera de su tipo: aporte completo.</div>`;

@@ -356,7 +356,8 @@ const HacBuild = (function () {
   //   政 administrativo  → +dinero de misiones y −precios en el mercado
   // `pabellones` = [{ seed:[sx,sy], rol }] de la hacienda. Devuelve fracciones
   // (0.10 = +10%) y el desglose de sinergia por dominio (para mostrarlo).
-  const pctSinergia = (s) => Math.min(0.15, 0.03 * Math.max(0, s || 0));   // 1→3% … 5+→15% (tope)
+  const pctSinergia = (s) => Math.min(0.15, 0.03 * Math.max(0, s || 0));      // 1→3% … 5+→15% (tope)
+  const pctSinergiaMil = (s) => Math.min(0.10, 0.025 * Math.max(0, s || 0));   // 军 más LIGERO: tope 10%
   const DR_COPIA = 0.4;   // cada copia EXTRA del mismo edificio aporta ×0.4 de la anterior (rendimientos decrecientes NOTABLES)
   function bonosPabellon(mapa, tier, pabellones) {
     const sin = { militar: 0, cultural: 0, administrativo: 0 };
@@ -384,7 +385,7 @@ const HacBuild = (function () {
       sin[rol] += efectiva;
       detalle[c.pos[0] + ',' + c.pos[1]] = { rol, tipo: t.id, copia: k, base, efectiva };
     });
-    return { sinergia: sin, detalle, xp: pctSinergia(sin.cultural), dinero: pctSinergia(sin.administrativo), mercado: pctSinergia(sin.administrativo) };
+    return { sinergia: sin, detalle, xp: pctSinergia(sin.cultural), dinero: pctSinergia(sin.administrativo), mercado: pctSinergia(sin.administrativo), xpMil: pctSinergiaMil(sin.militar) };
   }
 
   // Patios al estilo 府第: una REJILLA de patios ~cuadrados. A lo largo del eje
@@ -513,7 +514,7 @@ const HacBuild = (function () {
     dentroDeRejilla, colisiona, construccionEn, puedeColocar, patios, enMuro,
     construccionesValidas, normalizaMapa, MAX_TIER,
     ringDepth, costeExterior, esCeldaExterior, enExterior, COSTE_EXTERIOR,
-    ROLES_PABELLON, rolPabellon, maxPabellones, MIN_PABELLON, regionPabellon, regionValidaPabellon, bonosPabellon, pctSinergia, DR_COPIA
+    ROLES_PABELLON, rolPabellon, maxPabellones, MIN_PABELLON, regionPabellon, regionValidaPabellon, bonosPabellon, pctSinergia, pctSinergiaMil, DR_COPIA
   };
 })();
 

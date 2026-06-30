@@ -333,8 +333,18 @@ const HacOnboard = (function () {
     try {
       if (window.HacStore && HacStore.ready) await withTimeout(HacStore.ready(), 5000, null);
       const sol = window.HacSolicitudes ? await withTimeout(HacSolicitudes.mine(), 5000, null) : null;
-      if (sol && sol.estado === 'aprobada') return renderMember(user, pj, sol);
-      if (sol && sol.estado === 'pendiente') return renderPending(user, pj, sol);
+      if (sol && sol.estado === 'aprobada') {
+        // La pertenencia REAL vive en h.miembros; la solicitud solo registra el ingreso.
+        // Si el jugador abandonó la finca (o lo expulsaron), la solicitud quedó
+        // OBSOLETA → límpiala y trátalo como no-miembro (evita la pertenencia fantasma).
+        const stored = window.HacStore ? HacStore.all() : [];
+        const hm = window.HacStore ? HacStore.get(sol.haciendaId) : null;
+        const sigueMiembro = !!(hm && (hm.miembros || []).some(m => m.personajeId === pj.id));
+        if (sigueMiembro) return renderMember(user, pj, sol);
+        if (!stored.length) return renderMember(user, pj, sol);   // store no cargó: no arriesgues a borrar
+        try { await HacSolicitudes.cancelar(sol.id); } catch (e) { console.warn('[onboard] limpiar solicitud obsoleta', e); }
+        // cae a renderPicker (ya no es miembro)
+      } else if (sol && sol.estado === 'pendiente') return renderPending(user, pj, sol);
       renderPicker(user, pj);
     } catch (e) {
       console.error('[onboard] renderPlayer falló:', e);

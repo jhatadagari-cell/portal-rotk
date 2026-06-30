@@ -132,7 +132,7 @@
 <script src="assets/js/hac-util.js?v=1"></script>
 <script src="assets/js/haciendas-data.js?v=11"></script>
 <script src="assets/js/hac-calc.js?v=6"></script>
-<script src="assets/js/hac-build.js?v=35"></script>
+<script src="assets/js/hac-build.js?v=36"></script>
 <script src="assets/js/hac-store.js?v=5"></script>
 <script src="assets/js/hac-tareas.js?v=2"></script>
 <script src="assets/js/personajes-data.js?v=2"></script>
@@ -425,7 +425,7 @@
         const pc = (f) => Math.round((f || 0) * 100);
         const ef = p.rol === 'cultural' ? (bp.xp > 0 ? `+${pc(bp.xp)}% XP en misiones` : '')
           : p.rol === 'administrativo' ? (bp.dinero > 0 ? `+${pc(bp.dinero)}% 💰 misiones · −${pc(bp.mercado)}% precios` : '')
-          : (sin > 0 ? `${sin} de sinergia (sin efecto aún)` : '');
+          : (bp.xpMil > 0 ? `+${pc(bp.xpMil)}% XP en expediciones militares` : '');
         efecto = `<span class="adm-pab-bono">${sin ? `⚙ ${sin} · ` : ''}${ef || 'sin edificios de su dominio dentro'}</span>`;
       }
       return `<li class="adm-pab-item${lost ? ' adm-pab-lost' : ''}">
