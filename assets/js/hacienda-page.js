@@ -1468,6 +1468,7 @@
       //  llegan en la siguiente sub-fase; aquí queda el "vestíbulo" de bandas.)
       const COSTE_BANDA = (plazas) => plazas * 40;     // 2→80, 3→120, 4→160
       const myName = ((h.miembros || []).find(m => m.personajeId === myId) || {}).nombre || 'Tú';
+      const ESC_FAST = /[?&]escfast=1/.test(location.search || '');   // modo test: expedición ~1 min, sin cooldown
       let escPlazas = 3, escBusy = false, escSig = '';
       const escBody = () => sec.querySelector('[data-esc-body]');
       function renderEscaramuzas() {
@@ -1481,13 +1482,14 @@
           body.innerHTML = bandaPropiaHTML(mine);
           const sl = body.querySelector('[data-salir]'); if (sl) sl.addEventListener('click', () => salirBanda(mine.id));
           const ln = body.querySelector('[data-lanzar]'); if (ln && !ln.disabled) ln.addEventListener('click', () => lanzarBanda(mine.id));
+          body.querySelectorAll('[data-loot]').forEach(b => b.addEventListener('click', () => reclamarBotin(mine.id, +b.dataset.loot)));
           escTick();
           return;
         }
         const dinero = window.HacStats ? HacStats.dinero(myId) : 0;
         const coste = COSTE_BANDA(escPlazas), sinDinero = dinero < coste;
         const cd = (window.HacStats && HacStats.escaramuzaCd) ? HacStats.escaramuzaCd(myId) : 0;
-        const enCd = cd > clock();
+        const enCd = !ESC_FAST && cd > clock();
         const cdAviso = enCd ? `<div class="hacp-esc-note" style="color:#e2a06a">⏳ En cooldown · podrás unirte o montar banda en ${fmtClock((cd - clock()) / 1000)}.</div>` : '';
         const abiertas = HacEscaramuzas.abiertas(h.id).filter(b => b.miembros.length < b.plazas);
         const lista = abiertas.map(b => `
@@ -1526,8 +1528,23 @@
           accion = `<div class="hacp-esc-timer" data-esc-timer="${b.finMs}">En la expedición…</div>
             <div class="hacp-esc-note">La banda ha partido. Cuando regrese se repartirán recompensas y botín.</div>`;
         } else if (b.estado === 'botin') {
+          const elec = b.elecciones || {};
+          const yaCogi = Object.prototype.hasOwnProperty.call(elec, myId);
+          const grid = (b.botin || []).map((itemId, i) => {
+            const it = window.HacTienda && HacTienda.get(itemId);
+            const tomadoPor = Object.keys(elec).find(pj => Number(elec[pj]) === i);
+            const mio = tomadoPor === myId, taken = tomadoPor != null;
+            const dueno = taken ? ((b.miembros.find(m => m.id === tomadoPor) || {}).nombre || 'otro') : '';
+            const accionItem = mio ? '<span class="hacp-esc-loot-tag mio">tuyo</span>'
+              : taken ? `<span class="hacp-esc-loot-tag">${esc(dueno)}</span>`
+              : (yaCogi ? '' : `<button class="hacp-cp-btn" data-loot="${i}">Coger</button>`);
+            return `<div class="hacp-esc-loot${taken ? ' taken' : ''}${mio ? ' mine' : ''}">
+              <div class="hacp-esc-loot-ic">${it ? (it.icon || '∎') : '∎'}</div>
+              <div class="hacp-esc-loot-nm">${it ? esc(it.nombre) : 'objeto'}</div>${accionItem}</div>`;
+          }).join('');
           accion = `<div class="hacp-esc-result ok">✔ ¡Volvisteis con éxito!</div>
-            <div class="hacp-esc-note">Tu parte del dinero ya está en tu monedero${esHost ? ' (recuperaste el coste +25%)' : ''}. El <b>reparto del botín</b> (elegir tu objeto) llega en la próxima actualización.</div>
+            <div class="hacp-esc-note">Tu parte del dinero ya está en tu monedero${esHost ? ' (recuperaste el coste +25%)' : ''}. Botín común: <b>elige 1 objeto</b>${yaCogi ? ' — ya recogiste el tuyo.' : ' (hay al menos uno para cada quien).'}</div>
+            <div class="hacp-esc-loot-grid">${grid}</div>
             <button class="hacp-cp-btn hacp-esc-salir" data-salir>Cerrar</button>`;
         } else {   // resuelta (fracaso)
           accion = `<div class="hacp-esc-result bad">✘ La expedición fracasó</div>
@@ -1540,7 +1557,7 @@
       }
       async function crearBanda() {
         if (escBusy) return;                                  // anti doble-clic
-        if (window.HacStats && HacStats.escaramuzaCd && HacStats.escaramuzaCd(myId) > clock()) { toast('Escaramuza en cooldown'); return; }
+        if (!ESC_FAST && window.HacStats && HacStats.escaramuzaCd && HacStats.escaramuzaCd(myId) > clock()) { toast('Escaramuza en cooldown'); return; }
         const coste = COSTE_BANDA(escPlazas);
         if (!window.HacStats || HacStats.dinero(myId) < coste) { toast('No tienes suficiente dinero'); return; }
         escBusy = true; let pagado = false;
@@ -1555,7 +1572,7 @@
       }
       async function unirBanda(id) {
         if (escBusy) return;
-        if (window.HacStats && HacStats.escaramuzaCd && HacStats.escaramuzaCd(myId) > clock()) { toast('Escaramuza en cooldown'); return; }
+        if (!ESC_FAST && window.HacStats && HacStats.escaramuzaCd && HacStats.escaramuzaCd(myId) > clock()) { toast('Escaramuza en cooldown'); return; }
         escBusy = true;
         try { await HacEscaramuzas.unir(id, { id: myId, nombre: myName }); toast('Te has unido a la banda'); }
         catch (e) { toast((e && e.message) || 'No se pudo unir'); await HacEscaramuzas.reload(); }
@@ -1575,11 +1592,28 @@
       async function lanzarBanda(id) {
         if (escBusy) return; escBusy = true;
         try {
-          await HacEscaramuzas.lanzar(id, myId, clock());
-          toast('⚔ ¡La banda parte a la expedición!');
+          await HacEscaramuzas.lanzar(id, myId, clock(), ESC_FAST ? 60000 : 0);
+          toast(ESC_FAST ? '⚔ ¡Parten! (modo test · ~1 min)' : '⚔ ¡La banda parte a la expedición!');
           syncEscaramuzaOrder();                                 // mi mecenas sale ya por la puerta
         } catch (e) { toast((e && e.message) || 'No se pudo lanzar'); await HacEscaramuzas.reload(); }
         finally { escBusy = false; renderEscaramuzas(); }
+      }
+      // 4d: recoger un objeto del botín. Comprueba hueco en la mochila, reclama el
+      // slot (atómico en BD) y añade el objeto a TU inventario.
+      async function reclamarBotin(id, slot) {
+        if (escBusy) return; escBusy = true;
+        try {
+          const band = HacEscaramuzas.miBanda(h.id, myId);
+          const itemId = band && band.botin ? band.botin[slot] : null;
+          if (window.HacStats && HacStats.ocupadas && HacStats.capInventario && HacStats.ocupadas(myId) >= HacStats.capInventario(myId)) {
+            toast('Mochila llena · vacía un hueco antes de recoger'); return;
+          }
+          await HacEscaramuzas.reclamar(id, myId, slot);
+          if (itemId && window.HacStats && HacStats.darItem) HacStats.darItem(myId, itemId);
+          const it = window.HacTienda && HacTienda.get(itemId);
+          toast('🎁 Recogiste ' + (it ? it.nombre : 'tu botín'));
+        } catch (e) { toast((e && e.message) || 'No se pudo recoger'); await HacEscaramuzas.reload(); }
+        finally { escBusy = false; renderEscaramuzas(); if (charId) buildCharPanel(charId); }
       }
       // Actualiza el texto del temporizador de la banda en curso (sin re-render).
       function escTick() {
@@ -1606,7 +1640,7 @@
         if ((typeof document !== 'undefined' && document.hidden) || mActive !== 'escaramuzas' || !window.HacEscaramuzas) return;
         HacEscaramuzas.reload().then(() => {
           if (mActive !== 'escaramuzas') return;
-          const sig = JSON.stringify((HacEscaramuzas.all(h.id) || []).map(b => [b.id, b.estado, (b.miembros || []).length]));
+          const sig = JSON.stringify((HacEscaramuzas.all(h.id) || []).map(b => [b.id, b.estado, (b.miembros || []).length, Object.keys(b.elecciones || {}).length]));
           if (sig !== escSig) { escSig = sig; renderEscaramuzas(); }
         });
       }, 6000);

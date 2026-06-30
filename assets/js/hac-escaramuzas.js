@@ -87,11 +87,20 @@ const HacEscaramuzas = (function () {
     upsertCache(data); return { disuelta: false };
   }
   // El host LANZA: la RPC valida (host, ≥2, abierta) y fija inicio/fin (30 min).
-  async function lanzar(id, hostId, nowMs) {
+  async function lanzar(id, hostId, nowMs, durMs) {
     if (!nowMs) throw new Error('Reloj no disponible');
     const c = await sb();
-    const { data, error } = await c.rpc('escaramuza_lanzar', { p_id: id, p_host: hostId, p_now: nowMs });
+    const args = { p_id: id, p_host: hostId, p_now: nowMs };
+    if (durMs) args.p_dur_ms = durMs;                         // modo test: expedición corta
+    const { data, error } = await c.rpc('escaramuza_lanzar', args);
     if (error) throw new Error(error.message || 'No se pudo lanzar');
+    return upsertCache(data);
+  }
+  // 4d: reclama un objeto del botín (slot). FCFS atómico; un objeto por jugador.
+  async function reclamar(id, pjId, slot) {
+    const c = await sb();
+    const { data, error } = await c.rpc('escaramuza_reclamar', { p_id: id, p_pj: pjId, p_slot: slot });
+    if (error) throw new Error(error.message || 'No se pudo recoger');
     return upsertCache(data);
   }
   // RESUELVE al volver (≥ fin). Idempotente en BD: solo el primer cliente surte
@@ -105,6 +114,6 @@ const HacEscaramuzas = (function () {
     return upsertCache(data);
   }
 
-  return { ready, reload, all, abiertas, miBanda, crear, unir, salir, lanzar, resolver, DUR_MS, CD_MS, dbOk: () => ok, TABLE };
+  return { ready, reload, all, abiertas, miBanda, crear, unir, salir, lanzar, resolver, reclamar, DUR_MS, CD_MS, dbOk: () => ok, TABLE };
 })();
 if (typeof window !== 'undefined') window.HacEscaramuzas = HacEscaramuzas;

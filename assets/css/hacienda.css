@@ -531,6 +531,16 @@ html.hacp-pseudofs, html.hacp-pseudofs body{ overflow:hidden; }
 .hacp-esc-result{ font:900 16px 'Noto Serif SC',serif; text-align:center; padding:8px 0 2px; }
 .hacp-esc-result.ok{ color:#7fc9a0; }
 .hacp-esc-result.bad{ color:#e2786a; }
+.hacp-esc-loot-grid{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:10px 0 12px; }
+.hacp-esc-loot{ display:flex; flex-direction:column; align-items:center; gap:4px; padding:10px 8px;
+  background:rgba(255,255,255,.03); border:1px solid rgba(201,168,76,.22); border-radius:9px; text-align:center; }
+.hacp-esc-loot.taken{ opacity:.6; }
+.hacp-esc-loot.mine{ border-color:#7fc9a0; background:rgba(127,201,160,.12); opacity:1; }
+.hacp-esc-loot-ic{ font-size:24px; }
+.hacp-esc-loot-nm{ font:600 11px 'Noto Sans SC',sans-serif; color:var(--parch); line-height:1.2; }
+.hacp-esc-loot .hacp-cp-btn{ width:100%; margin-top:2px; min-height:34px; }
+.hacp-esc-loot-tag{ font:700 10px 'Noto Sans SC',sans-serif; color:var(--parch2); }
+.hacp-esc-loot-tag.mio{ color:#7fc9a0; }
 /* Popup de info de edificio (al pulsar su cuerpo en el plano) */
 .hacp-bld-pop{ position:fixed; z-index:9999; width:min(248px,80vw); padding:10px 12px; box-sizing:border-box;
   background:rgba(13,11,7,.97); border:1px solid rgba(201,168,76,.45); border-radius:8px;

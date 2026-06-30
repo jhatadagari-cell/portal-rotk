@@ -92,7 +92,9 @@ begin
   return b;
 end; $$;
 
-create or replace function public.escaramuza_lanzar(p_id uuid, p_host text, p_now bigint)
+-- p_dur_ms permite acortar la expedición en modo test (?escfast=1). Por defecto 30 min.
+drop function if exists public.escaramuza_lanzar(uuid, text, bigint);
+create or replace function public.escaramuza_lanzar(p_id uuid, p_host text, p_now bigint, p_dur_ms bigint default 1800000)
 returns public.escaramuzas language plpgsql security definer set search_path = public as $$
 declare b public.escaramuzas;
 begin
@@ -101,8 +103,33 @@ begin
   if p_host <> b.host_id then raise exception 'Solo el capitán puede lanzar'; end if;
   if b.estado <> 'abierta' then raise exception 'La banda ya ha partido'; end if;
   if jsonb_array_length(b.miembros) < 2 then raise exception 'Hacen falta al menos 2 mecenas'; end if;
-  update public.escaramuzas set estado = 'en_curso', inicio_ms = p_now, fin_ms = p_now + 30*60*1000
+  update public.escaramuzas set estado = 'en_curso', inicio_ms = p_now,
+    fin_ms = p_now + greatest(30000, coalesce(p_dur_ms, 1800000))
     where id = p_id returning * into b;
+  return b;
+end; $$;
+
+-- 4d: RECLAMAR un objeto del botín (FCFS atómico). Un objeto por jugador; un objeto
+-- por ranura (slot). Cuando todos los miembros han recogido, la banda se cierra.
+create or replace function public.escaramuza_reclamar(p_id uuid, p_pj text, p_slot int)
+returns public.escaramuzas language plpgsql security definer set search_path = public as $$
+declare b public.escaramuzas; e jsonb; v text;
+begin
+  select * into b from public.escaramuzas where id = p_id for update;
+  if not found then raise exception 'La banda ya no existe'; end if;
+  if b.estado <> 'botin' then raise exception 'No hay botín que repartir'; end if;
+  if not (b.miembros @> jsonb_build_array(jsonb_build_object('id', p_pj))) then raise exception 'No eres de la banda'; end if;
+  if p_slot < 0 or p_slot >= jsonb_array_length(b.botin) then raise exception 'Objeto inválido'; end if;
+  if b.elecciones ? p_pj then raise exception 'Ya recogiste tu botín'; end if;
+  -- ¿ese slot ya lo cogió otro?
+  for v in select value::text from jsonb_each_text(b.elecciones) loop
+    if v = p_slot::text then raise exception 'Ese objeto ya lo eligió otro'; end if;
+  end loop;
+  update public.escaramuzas set elecciones = b.elecciones || jsonb_build_object(p_pj, p_slot)
+    where id = p_id returning * into b;
+  if (select count(*) from jsonb_object_keys(b.elecciones)) >= jsonb_array_length(b.miembros) then
+    update public.escaramuzas set estado = 'resuelta' where id = p_id returning * into b;
+  end if;
   return b;
 end; $$;
 
@@ -149,5 +176,6 @@ drop policy if exists escaramuzas_write on public.escaramuzas;   -- elimina la p
 grant execute on function public.escaramuza_crear(text,text,text,int,int,int) to authenticated, anon;
 grant execute on function public.escaramuza_unir(uuid,text,text)              to authenticated, anon;
 grant execute on function public.escaramuza_salir(uuid,text)                  to authenticated, anon;
-grant execute on function public.escaramuza_lanzar(uuid,text,bigint)          to authenticated, anon;
+grant execute on function public.escaramuza_lanzar(uuid,text,bigint,bigint)    to authenticated, anon;
 grant execute on function public.escaramuza_resolver(uuid,bigint,boolean,jsonb,int,int) to authenticated, anon;
+grant execute on function public.escaramuza_reclamar(uuid,text,int)           to authenticated, anon;
