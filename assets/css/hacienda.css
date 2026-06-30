@@ -367,11 +367,30 @@ html.hacp-pseudofs, html.hacp-pseudofs body{ overflow:hidden; }
 @media (max-width:720px){
   .hacp-folk-panel{ width:min(212px,82vw); top:42px; }
 }
-/* ── Rework MÓVIL: hojas inferiores a ancho completo, nada se sale ni se pisa ── */
+/* Barra de acciones móvil (oculta en escritorio). */
+.hacp-mobar{ display:none; }
+/* ── Rework MÓVIL: app con barra inferior + hojas a ancho completo, todo al pulgar ── */
 @media (max-width:600px){
-  .hacp-iso-wrap{ height:clamp(320px,64dvh,680px); }
-  /* Panel del personaje = HOJA inferior: ancho completo, alto acotado, con scroll. */
-  .hacp-char-panel{ left:5px; right:5px; bottom:5px; width:auto; max-width:none; max-height:76dvh; overflow-y:auto; }
+  .hacp-iso-wrap{ height:clamp(340px,72dvh,760px); }
+  /* Barra de acciones inferior (zona del pulgar): secciones grandes y legibles. */
+  .hacp-mobar{ display:flex; position:absolute; left:0; right:0; bottom:0; z-index:5; gap:5px;
+    padding:5px 5px calc(5px + env(safe-area-inset-bottom));
+    background:rgba(11,10,7,.94); border-top:1px solid rgba(201,168,76,.32);
+    -webkit-backdrop-filter:blur(3px); backdrop-filter:blur(3px); }
+  .hacp-mobar-btn{ flex:1; min-width:0; display:flex; flex-direction:column; align-items:center; gap:3px;
+    min-height:56px; justify-content:center; padding:7px 2px; cursor:pointer;
+    background:rgba(201,168,76,.12); border:1px solid rgba(201,168,76,.26); border-radius:11px; color:var(--parch); }
+  .hacp-mobar-btn:active{ background:rgba(201,168,76,.34); transform:scale(.97); }
+  .hacp-mobar-btn .ic{ font-size:21px; line-height:1; }
+  .hacp-mobar-btn .lb{ font:800 10.5px 'Noto Sans SC',sans-serif; color:var(--gold); white-space:nowrap; }
+  /* Panel del personaje = HOJA inferior por ENCIMA de la barra; alto acotado, scroll. */
+  .hacp-char-panel{ left:5px; right:5px; bottom:70px; width:auto; max-width:none; max-height:62dvh; overflow-y:auto; }
+  .hacp-folk-panel{ bottom:70px; }
+  /* Botones de acción del panel MÁS GRANDES y legibles al pulgar. */
+  .hacp-cp-btn, .hacp-mis-go, .hacp-item-buy, .hacp-obj, .hacp-eq-own{ min-height:42px; font-size:13px; }
+  .hacp-folk-item{ min-height:46px; }
+  .hacp-folk-fab{ display:none; }        /* en móvil se abre desde la barra inferior */
+  .hacp-iso-hint{ display:none; }        /* pista de ratón innecesaria en táctil */
   /* El inventario que se abría a la derecha se apila dentro de la hoja (ya estático). */
   .hacp-inv{ box-shadow:none; border-color:rgba(201,168,76,.25); }
   /* Overlays (tienda, tablón, casa, equipo) = hoja inferior a ancho completo. */
