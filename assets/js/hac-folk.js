@@ -84,6 +84,8 @@ const HacFolk = (function () {
   const MERCHANT_LOOK = { robe: '#3f6e9c', accent: '#d4a83a', piel: 1, pelo: 1 };   // aspecto del mercader
   const MKT_CRIES = ['¡Buen té!', '¡Pasad y ved!', '¡Té recién llegado!', '¡Té de las montañas!', '¡El mejor de la comarca!', '¡Probad, señor!', '¡Hojas de primavera!'];
   const BOARD_CRIES = ['¿Visteis la nueva recompensa?', 'Esa de la frontera es peligrosa…', 'Yo no me atrevería con esa', 'Buen botín para quien ose', '¿Recaudar tributos otra vez?', 'Necesitaría mejor equipo', 'Demasiado riesgo para mí', '¡Gloria al que la cumpla!', 'Mucho oro promete esa', 'Habrá que entrenar más', 'Ésta es para un veterano'];
+  const CLERK_PREGON = ['¡Nuevas misiones en el tablón!', '¡Se buscan valientes!', '¡Honor y oro para quien sirva!', '¡Acercaos, hay encargos!', '¡La casa necesita brazos!', '¡Atended, atended!', '¡Por orden del señor de la casa!'];
+  const CLERK_GAWKER = ['¿Alguna de su agrado?', 'Buena elección sería ésa', 'Animaos, mi señor', 'Apuntaos cuando gustéis', 'Hay encargos para todo talento', 'Decidíos, no temáis'];
   const MKT_SALUDOS = ['¡Bienvenido, señor!', '¡Adelante, adelante!', '¡Honráis mi puesto!', '¿Un buen té?'];
   const MKT_DIRS = ['S', 'SE', 'SW', 'E', 'S', 'SE'];   // mira sobre todo al cliente (sur)
   // RNG propio del mercader (NO toca el stream compartido R → no desincroniza el sim).
@@ -926,8 +928,18 @@ const HacFolk = (function () {
   function stepBoard(dt) {
     if (!wk || !wk.clerks || !wk.clerks.length || !wk.boardSlots || !wk.boardSlots.length) return;
     const ck = wk.clerks[0], fx = ck.fx, fy = ck.fy;
+    if (ck.speechT > 0) { ck.speechT -= dt; if (ck.speechT <= 0) ck.speech = null; }
     // Libera huecos de quien ya no está ojeando (misión, se fue, etc.).
     wk.boardSlots.forEach(s => { if (s.by) { const w = walkers.find(x => x.id === s.by); if (!w || (w.state !== 'a-ojear' && w.state !== 'ojeando')) s.by = null; } });
+    const lectores = walkers.filter(w => w.state === 'ojeando' || w.state === 'a-ojear');
+    // VIDA del funcionario: si hay curiosos, los MIRA (gira hacia uno); si no, otea
+    // y de vez en cuando cambia de cara. Reverencia leve si alguien acaba de llegar.
+    ck._t = (ck._t || 0) - dt;
+    if (lectores.length) {
+      const tg = lectores[Math.floor(mrand(ck) * lectores.length)];
+      const fd = faceFromGrid(tg.fx - fx, tg.fy - fy); if (fd) ck.dir = fd;
+      ck.bowing = lectores.some(w => w.state === 'a-ojear');   // saluda a los que llegan
+    } else { ck.bowing = false; if (ck._t <= 0) { ck.dir = ['S', 'SE', 'SW', 'E'][Math.floor(mrand(ck) * 4)]; ck._t = 3 + mrand(ck) * 3; } }
     boardGawkCd -= dt; boardTalkCd -= dt;
     // Reclutar un curioso de vez en cuando (a un hueco libre del semicírculo).
     if (boardGawkCd <= 0) {
@@ -947,13 +959,19 @@ const HacFolk = (function () {
         }
       }
     }
-    // Comentarios ESCALONADOS: como mucho uno nuevo cada ~3 s → 1-2 bocadillos a la vez.
+    // Comentarios ESCALONADOS (cola compartida funcionario+curiosos): como mucho uno
+    // nuevo cada ~3 s → 1-2 bocadillos a la vez, sin solaparse.
     if (boardTalkCd <= 0) {
       const readers = walkers.filter(w => w.state === 'ojeando' && !w.speech);
-      if (readers.length) {
+      const r = mrand(ck);
+      if (readers.length && r < 0.5) {                              // habla un curioso
         const w = readers[Math.floor(mrand(ck) * readers.length)];
         w.speech = BOARD_CRIES[Math.floor(mrand(ck) * BOARD_CRIES.length)]; w.speechT = 2.8;
-        boardTalkCd = 2.6 + mrand(ck) * 2.6;
+        boardTalkCd = 2.6 + mrand(ck) * 2.4;
+      } else if (!ck.speech) {                                      // habla el FUNCIONARIO
+        const tabla = readers.length ? CLERK_GAWKER : CLERK_PREGON; // a los curiosos, o pregón al aire
+        ck.speech = tabla[Math.floor(mrand(ck) * tabla.length)]; ck.speechT = 2.8;
+        boardTalkCd = 2.8 + mrand(ck) * 2.6;
       } else boardTalkCd = 1;
     }
   }
@@ -1168,6 +1186,22 @@ const HacFolk = (function () {
     g.fillText(label, cx, by + bh / 2 + 0.4);
   }
 
+  // Cartel de NPC (mercader, funcionario…): placa de MADERA con marco de bronce,
+  // a propósito DISTINTA del pendón dorado de un mecenas, para no confundirlos.
+  // (cx, topY) = cabeza del NPC. `icon` = glifo de rol opcional.
+  function npcBanner(g, cx, topY, label, icon) {
+    const txt = (icon ? icon + ' ' : '') + String(label || '').slice(0, 16);
+    g.font = '700 7.5px "Noto Sans SC",sans-serif';
+    const tw = g.measureText(txt).width, bw = Math.max(20, tw + 11), bh = 12;
+    const by = topY - bh - 6, bx = cx - bw / 2;
+    g.strokeStyle = '#4a3a26'; g.lineWidth = 1.2; g.beginPath(); g.moveTo(cx, topY); g.lineTo(cx, by + bh); g.stroke();   // asta corta
+    rr(g, bx, by, bw, bh, 2.5); g.fillStyle = '#33424a'; g.fill();                         // placa teja-pizarra (NO dorada)
+    g.strokeStyle = '#9c7b3a'; g.lineWidth = 1; rr(g, bx + 0.8, by + 0.8, bw - 1.6, bh - 1.6, 2); g.stroke();   // marco bronce
+    g.fillStyle = '#8a6a3a'; [[bx + 2.4, by + 2.2], [bx + bw - 2.4, by + 2.2]].forEach(p => { g.beginPath(); g.arc(p[0], p[1], 0.8, 0, 6.2832); g.fill(); });   // tachones
+    g.fillStyle = '#e8dcc0'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText(txt, cx, by + bh / 2 + 0.5);
+  }
+
   // Banner 匾額 (placa horizontal) sobre un edificio ocupado. Devuelve el rect
   // LÓGICO para el hit-test. n = personas dentro.
   function buildingSign(g, lx, ly, label, n) {
@@ -1251,8 +1285,15 @@ const HacFolk = (function () {
     // quedar bajo los banners y bocadillos. Coste mínimo: 2 polígonos por portón.
     if (wk && wk.gates) wk.gates.forEach(gate => overlays.push({ draw: (g) => drawGate(g, gate) }));
     // Mercader(es): personajes fijos al frente de cada mercado (mismo render).
-    if (wk && wk.merchants) wk.merchants.forEach(mk => actors.push({ fx: mk.fx, fy: mk.fy, draw: (g, lx, ly) => drawWalker(g, lx, ly, mk, { banner: false }) }));
-    if (wk && wk.clerks) wk.clerks.forEach(ck => actors.push({ fx: ck.fx, fy: ck.fy, draw: (g, lx, ly) => drawWalker(g, lx, ly, ck, { banner: false }) }));
+    const npcDy = bannerDy;
+    if (wk && wk.merchants) wk.merchants.forEach(mk => {
+      actors.push({ fx: mk.fx, fy: mk.fy, draw: (g, lx, ly) => drawWalker(g, lx, ly, mk, { banner: false }) });
+      overlays.push({ draw: (g) => { const p = logic(mk.fx, mk.fy); npcBanner(g, p[0], p[1] - npcDy, mk.name, '🛒'); } });
+    });
+    if (wk && wk.clerks) wk.clerks.forEach(ck => {
+      actors.push({ fx: ck.fx, fy: ck.fy, draw: (g, lx, ly) => drawWalker(g, lx, ly, ck, { banner: false }) });
+      overlays.push({ draw: (g) => { const p = logic(ck.fx, ck.fy); npcBanner(g, p[0], p[1] - npcDy, ck.name, '📜'); } });
+    });
     walkers.forEach(w => {
       if (w.id === selectedId) return;                 // el seleccionado va en overlay (encima)
       if (w.insideId) return;                          // DENTRO de un edificio: oculto (su presencia la anuncia el banner 匾額)
@@ -1285,6 +1326,7 @@ const HacFolk = (function () {
     });
     // Pregones del mercader.
     if (wk && wk.merchants) wk.merchants.forEach(mk => { if (mk.speech) overlays.push({ draw: (g) => { const p = logic(mk.fx, mk.fy); speechBubble(g, p[0], p[1], mk.speech); } }); });
+    if (wk && wk.clerks) wk.clerks.forEach(ck => { if (ck.speech) overlays.push({ draw: (g) => { const p = logic(ck.fx, ck.fy); speechBubble(g, p[0], p[1], ck.speech); } }); });
 
     iso._hacSigns = signs;
     HacIso.frame(iso, actors, overlays);
