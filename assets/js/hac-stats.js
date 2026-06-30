@@ -173,13 +173,14 @@ const HacStats = (function () {
   // Compra de un artículo del mercado: descuenta dinero y aplica el efecto en una
   // sola escritura (XP / ampliación de inventario / objeto guardado). La energía
   // (comida) la añade quien llama vía HacEnergia. Devuelve {ok, motivo}.
-  function comprar(mid, item) {
+  function comprar(mid, item, precioOverride) {
     if (!mid || !item) return { ok: false, motivo: 'Artículo inválido' };
     const r = ensure(mid), ef = item.efecto || {};
+    const precio = (precioOverride != null) ? Math.max(0, precioOverride | 0) : item.precio;   // descuento del mercado (政)
     const aInv = ef.guardable || ef.equip;   // objetos y equipables van a la MOCHILA
-    if (r.dinero < item.precio) return { ok: false, motivo: 'No tienes suficiente dinero' };
+    if (r.dinero < precio) return { ok: false, motivo: 'No tienes suficiente dinero' };
     if (aInv && ocupadas(mid) >= r.cap) return { ok: false, motivo: 'Inventario lleno' };
-    r.dinero -= item.precio;
+    r.dinero -= precio;
     if (ef.xp) for (const d of DOMS) if (ef.xp[d]) r[d] += ef.xp[d];
     if (ef.capInv) r.cap += ef.capInv;
     if (aInv) mete(r.inv, item.id);

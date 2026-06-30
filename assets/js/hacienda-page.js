@@ -415,6 +415,25 @@
     // finca). El resto del dinero vive a salvo en la casa (宅). Sin casa, solo
     // conservas hasta este tope si te marchas.
     const BOLSILLO_MAX = 200;
+    // SINERGIA DE PABELLÓN: bonos pasivos de la finca derivados del mapa (pabellones
+    // temáticos + edificios de su dominio dentro). 文 → +XP misiones; 政 → +dinero
+    // de misiones y −precios de mercado. Se calcula una vez (el mapa es estático aquí).
+    const _pabs = (window.HacStore && HacStore.pabellones) ? HacStore.pabellones(h.id) : [];
+    const bonos = (window.HacBuild && HacBuild.bonosPabellon)
+      ? HacBuild.bonosPabellon(h.mapa, tier, _pabs)
+      : { xp: 0, dinero: 0, mercado: 0, sinergia: { militar: 0, cultural: 0, administrativo: 0 } };
+    const conBono = (base, frac) => Math.round((base || 0) * (1 + (frac || 0)));        // recompensa con bono
+    const precioMercado = (item) => Math.max(1, Math.round((item.precio || 0) * (1 - bonos.mercado)));   // precio con descuento 政
+    const pct = (f) => Math.round((f || 0) * 100);
+    const hayBonos = () => bonos.xp > 0 || bonos.dinero > 0 || bonos.mercado > 0;
+    // Resumen legible de los bonos activos de la finca (solo los no nulos).
+    function bonosTexto() {
+      const p = [];
+      if (bonos.xp > 0) p.push(`<span style="color:#3a8a5a">文 +${pct(bonos.xp)}% XP</span>`);
+      if (bonos.dinero > 0) p.push(`<span style="color:#3a6ea5">政 +${pct(bonos.dinero)}% 💰</span>`);
+      if (bonos.mercado > 0) p.push(`<span style="color:#3a6ea5">−${pct(bonos.mercado)}% 市</span>`);
+      return p.join(' · ');
+    }
     // Clave de casa con id de finca (evita colisiones "gx,gy" entre haciendas).
     const casaKey = (c) => h.id + '@' + c.pos[0] + ',' + c.pos[1];
     const casasFinca = () => ((h.mapa && h.mapa.construcciones) || []).filter(c => c.tipo === 'casa');
@@ -515,8 +534,9 @@
         let extra = '';
         if (mis && window.HacStats) {
           const rec = HacMisiones.recompensa(mis);
-          HacStats.award(myId, { dinero: rec.dinero, xp: rec.dom ? { [rec.dom]: rec.xp } : null });
-          extra = ` · +${rec.dinero}💰 · +${rec.xp} XP ${DOM_GLYPH[rec.dom] || ''}`.trimEnd();
+          const dinB = conBono(rec.dinero, bonos.dinero), xpB = conBono(rec.xp, bonos.xp);   // bonos de pabellón (政 dinero, 文 XP)
+          HacStats.award(myId, { dinero: dinB, xp: rec.dom ? { [rec.dom]: xpB } : null });
+          extra = ` · +${dinB}💰 · +${xpB} XP ${DOM_GLYPH[rec.dom] || ''}`.trimEnd();
           // BOTÍN: prob. baja (sube con la dificultad) de traer 1 objeto. Si es de
           // energía, se aplica al momento; si es equipable, va a la mochila.
           const lootId = HacMisiones.botin ? HacMisiones.botin(mis) : null;
@@ -731,6 +751,7 @@
         <div class="hacp-cp-energy" title="Energía ${d.e}%"><i id="hacp-cp-ebar" style="width:${d.e}%"></i></div>
         <div class="hacp-cp-elabel" id="hacp-cp-elabel">${energyLabel(d)}</div>
         ${statsHTML(d)}
+        ${(d.mine && hayBonos()) ? `<div class="hacp-cp-bonos" title="Bonos pasivos por los pabellones temáticos de la finca y los edificios de su dominio dentro">Bonos de la finca · ${bonosTexto()}</div>` : ''}
         ${d.mine ? `<button type="button" class="hacp-cp-btn hacp-cp-equipbtn" data-act="equip">⚔ Equipo${d.equipN ? ` · ${d.equipN}/3` : ''}</button>` : ''}
         ${mision}
         ${d.mine ? `<button type="button" class="hacp-cp-btn hacp-cp-invbtn${invOpen ? ' on' : ''}" data-act="inv">🎒 ${invOpen ? 'Ocultar' : 'Inventario'} · 💰 ${d.money}</button>` : ''}
@@ -819,11 +840,13 @@
     }
     function itemCardHTML(item, locked) {
       const money = window.HacStats ? HacStats.dinero(myId) : 0;
-      const noMoney = money < item.precio;
+      const precio = precioMercado(item), rebaja = bonos.mercado > 0 && precio < item.precio;
+      const noMoney = money < precio;
       const disabled = locked || !myId || noMoney;
+      const precioHTML = rebaja ? `<s>${item.precio}</s> ${precio}` : `${item.precio}`;
       const btn = locked
         ? `<span class="hacp-item-lock">🔒 Nivel ${item.tier}</span>`
-        : `<button type="button" class="hacp-item-buy" data-buy="${esc(item.id)}"${disabled ? ' disabled' : ''}>💰 ${item.precio}</button>`;
+        : `<button type="button" class="hacp-item-buy" data-buy="${esc(item.id)}"${disabled ? ' disabled' : ''}>💰 ${precioHTML}</button>`;
       return `<div class="hacp-item${locked ? ' locked' : ''}${item.tipo ? ' t-' + item.tipo : ''}">
         <div class="hacp-item-ic">${item.icon || '∎'}</div>
         <div class="hacp-item-main">
@@ -841,6 +864,7 @@
           <button type="button" class="hacp-shop-x" data-act="shop-close" aria-label="Cerrar">✕</button>
           <div class="hacp-shop-h"><span class="hacp-shop-zh">市</span> Mercado <span class="hacp-shop-money">💰 <b id="hacp-shop-money">${money}</b></span></div>
           <div class="hacp-shop-sub">Surtido según el nivel de la finca (nivel ${tier}). Sube de nivel para desbloquear más.</div>
+          ${bonos.mercado > 0 ? `<div class="hacp-shop-note">市 Pabellón administrativo (政): −${pct(bonos.mercado)}% en todos los precios.</div>` : ''}
           ${note}
           <div class="hacp-shop-grid">${disp.map(i => itemCardHTML(i, false)).join('')}</div>
           ${block.length ? `<div class="hacp-shop-lockttl">Se desbloquean al subir de nivel</div><div class="hacp-shop-grid">${block.map(i => itemCardHTML(i, true)).join('')}</div>` : ''}
@@ -853,7 +877,7 @@
     function buyItem(item) {
       if (!item || !myId || !window.HacStats) return;
       if (item.tier > tier) { toast('🔒 Necesita una finca de nivel ' + item.tier); return; }
-      const res = HacStats.comprar(myId, item);
+      const res = HacStats.comprar(myId, item, precioMercado(item));   // precio con descuento del pabellón 政
       if (!res.ok) { toast(res.motivo || 'No se pudo comprar'); return; }
       if (item.efecto && item.efecto.energia && window.HacEnergia) HacEnergia.add(h.id, myId, item.efecto.energia);
       toast(`${item.icon || ''} ${item.nombre} · ${HacTienda.efectoTexto(item)}`.trim());
@@ -1091,11 +1115,12 @@
       const rows = list.slice().sort((a, b) => (a.dom < b.dom ? -1 : a.dom > b.dom ? 1 : a.dif - b.dif)).map(m => {
         const risk = riesgoMision(m), rc = HacMisiones.nivelColor(risk), rec = HacMisiones.recompensa(m);
         const en = costeExped(m), sinEn = energia < en, loot = Math.round(HacMisiones.lootChance(m.dif) * 100);
+        const dinB = conBono(rec.dinero, bonos.dinero), xpB = conBono(rec.xp, bonos.xp);   // ya con bonos de pabellón
         return `<div class="hacp-mis t-${m.dom}">
           <span class="hacp-mis-g" style="color:${DOM_COLOR[m.dom]}">${DOM_GLYPH[m.dom]}</span>
           <div class="hacp-mis-main">
             <div class="hacp-mis-name">${esc(m.nombre)} <span class="hacp-mis-dif">dif. ${m.dif}</span></div>
-            <div class="hacp-mis-meta">⏱ ${fmtClock(HacMisiones.durSeg(m))} · <span class="${sinEn ? 'hacp-mis-noen' : ''}">−${en}⚡</span> · +${rec.dinero}💰 · +${rec.xp} XP ${DOM_GLYPH[m.dom]} · 🎁 ${loot}%</div>
+            <div class="hacp-mis-meta">⏱ ${fmtClock(HacMisiones.durSeg(m))} · <span class="${sinEn ? 'hacp-mis-noen' : ''}">−${en}⚡</span> · +${dinB}💰${bonos.dinero ? '<sup class="hacp-bono">↑</sup>' : ''} · +${xpB} XP${bonos.xp ? '<sup class="hacp-bono">↑</sup>' : ''} ${DOM_GLYPH[m.dom]} · 🎁 ${loot}%</div>
           </div>
           <span class="hacp-mis-risk r-${rc}" title="Riesgo de fracaso (baja con tu nivel ${DOM_GLYPH[m.dom]} y el equipo)">⚠ ${Math.round(risk * 100)}%</span>
           <button type="button" class="hacp-mis-go" data-mis="${esc(m.id)}"${ocupado || sinEn ? ' disabled' : ''} title="${sinEn ? 'Energía insuficiente' : ''}">Enviar</button>
@@ -1106,6 +1131,7 @@
           <button type="button" class="hacp-shop-x" data-act="board-close" aria-label="Cerrar">✕</button>
           <div class="hacp-shop-h"><span class="hacp-shop-zh">📜</span> Tablón de misiones <span class="hacp-shop-money">⚡ <b>${Math.round(energia)}</b></span></div>
           <div class="hacp-shop-sub">El riesgo baja con tu nivel del dominio (XP) y el equipo. Las difíciles cuestan más energía y tienen más probabilidad de 🎁 botín al volver.${ocupado ? ' <b>Tu mecenas ya está en una misión.</b>' : ''}</div>
+          ${hayBonos() ? `<div class="hacp-shop-note">Bonos de los pabellones de la finca: ${bonosTexto()}</div>` : ''}
           <div class="hacp-board-list">${rows || '<div class="hacp-inv-note">No hay misiones disponibles.</div>'}</div>
         </div>`;
       el.querySelector('[data-act="board-close"]').addEventListener('click', closeBoard);

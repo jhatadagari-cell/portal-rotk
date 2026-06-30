@@ -449,6 +449,11 @@ html.hacp-pseudofs, html.hacp-pseudofs body{ overflow:hidden; }
 .hacp-item-buy:hover{ background:rgba(201,168,76,.32); color:#fff; }
 .hacp-item-buy:disabled{ opacity:.4; cursor:not-allowed; }
 .hacp-item-lock{ flex:0 0 auto; font-size:10px; color:var(--parch2); white-space:nowrap; }
+.hacp-item-buy s{ opacity:.5; font-weight:400; margin-right:2px; }
+.hacp-bono{ color:#7fc9a0; font-weight:700; font-size:.7em; }
+/* Línea de bonos de pabellón en el panel del mecenas */
+.hacp-cp-bonos{ margin-top:8px; padding:6px 9px; font-size:11px; line-height:1.5; text-align:center;
+  background:rgba(201,168,76,.08); border:1px solid rgba(201,168,76,.22); border-radius:6px; color:var(--parch2); }
 
 /* Abandonar la hacienda: botón discreto de peligro al pie del panel + overlay de aviso */
 .hacp-cp-leave{ display:block; width:100%; margin-top:10px; background:none; border:1px solid rgba(178,59,46,.5);

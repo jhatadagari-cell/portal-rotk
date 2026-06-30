@@ -348,6 +348,31 @@ const HacBuild = (function () {
     return tocaMuro;
   }
 
+  // ── SINERGIA DE PABELLÓN ───────────────────────────────────────────────────
+  // Un pabellón de rol X bonifica a TODA la hacienda según cuántos edificios de
+  // dominio X contiene (el de CLASE —校場/太學/官署, `restringido`— cuenta doble).
+  // De la sinergia por dominio salen bonos pasivos:
+  //   文 cultural        → +XP en misiones
+  //   政 administrativo  → +dinero de misiones y −precios en el mercado
+  // `pabellones` = [{ seed:[sx,sy], rol }] de la hacienda. Devuelve fracciones
+  // (0.10 = +10%) y el desglose de sinergia por dominio (para mostrarlo).
+  const pctSinergia = (s) => Math.min(0.15, 0.03 * (s || 0));   // 1→3% … 5+→15% (tope)
+  function bonosPabellon(mapa, tier, pabellones) {
+    const sin = { militar: 0, cultural: 0, administrativo: 0 };
+    const cons = (mapa && Array.isArray(mapa.construcciones)) ? mapa.construcciones : [];
+    (pabellones || []).forEach(p => {
+      const rol = p && p.rol; if (!rol || !(rol in sin)) return;
+      const seed = (p && p.seed) || [0, 0];
+      const cells = new Set(regionPabellon(mapa, tier, seed[0], seed[1]).map(c => c[0] + ',' + c[1]));
+      if (!cells.size) return;
+      cons.forEach(c => {
+        const t = tipo(c && c.tipo); if (!t || t.dominio !== rol) return;
+        if (celdasOcupadas(c).some(cc => cells.has(cc[0] + ',' + cc[1]))) sin[rol] += t.restringido ? 2 : 1;
+      });
+    });
+    return { sinergia: sin, xp: pctSinergia(sin.cultural), dinero: pctSinergia(sin.administrativo), mercado: pctSinergia(sin.administrativo) };
+  }
+
   // Patios al estilo 府第: una REJILLA de patios ~cuadrados. A lo largo del eje
   // (进, filas) y, en complejos grandes, ejes laterales (跨院, columnas). Los
   // muros separan los patios: `hdiv` = filas-muro (transversales), `vdiv` =
@@ -474,7 +499,7 @@ const HacBuild = (function () {
     dentroDeRejilla, colisiona, construccionEn, puedeColocar, patios, enMuro,
     construccionesValidas, normalizaMapa, MAX_TIER,
     ringDepth, costeExterior, esCeldaExterior, enExterior, COSTE_EXTERIOR,
-    ROLES_PABELLON, rolPabellon, maxPabellones, MIN_PABELLON, regionPabellon, regionValidaPabellon
+    ROLES_PABELLON, rolPabellon, maxPabellones, MIN_PABELLON, regionPabellon, regionValidaPabellon, bonosPabellon
   };
 })();
 
