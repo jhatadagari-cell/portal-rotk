@@ -340,7 +340,10 @@
     // Por defecto colapsada en pantallas estrechas (en escritorio, abierta).
     folkCollapse(window.innerWidth < 720);
     // En pantalla completa se colapsa por defecto (más mapa); al salir, se reabre.
-    const onFsFolk = () => { const fs = (document.fullscreenElement || document.webkitFullscreenElement) || document.documentElement.classList.contains('hacp-pseudofs'); folkCollapse(!!fs); };
+    // Al ENTRAR en pantalla completa, recoge el cajón para no tapar el visor. Al
+    // SALIR no lo forzamos abierto (eso era el bug del iPhone): restauramos el
+    // estado por defecto según el ancho (recogido en móvil, desplegado en escritorio).
+    const onFsFolk = () => { const fs = (document.fullscreenElement || document.webkitFullscreenElement) || document.documentElement.classList.contains('hacp-pseudofs'); folkCollapse(fs ? true : window.innerWidth < 720); };
     document.addEventListener('fullscreenchange', onFsFolk);
     document.addEventListener('webkitfullscreenchange', onFsFolk);
     document.addEventListener('hacp-fs', onFsFolk);   // pseudo-fullscreen (iOS)
@@ -388,7 +391,7 @@
       return b;
     };
     if (myId) mobar.appendChild(moBtn('士', 'Tu mecenas', () => gotoMember(myId)));
-    if (myId && hasMain) mobar.appendChild(moBtn('檄', 'Misiones', openMissionBoard));
+    if (myId && hasMain) mobar.appendChild(moBtn('檄', 'Misiones', goConsultBoard));
     if (myId && hasMarket) mobar.appendChild(moBtn('市', 'Mercado', openShop));
     mobar.appendChild(moBtn('众', 'Mecenas', () => folkCollapse(false)));
     ['pointerdown', 'pointerup', 'wheel', 'click'].forEach(ev => mobar.addEventListener(ev, (e) => e.stopPropagation(), { passive: false }));
