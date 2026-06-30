@@ -257,6 +257,7 @@ html{scrollbar-gutter:stable}
 .adm-pab-chip{font-family:'Noto Serif SC',serif;font-size:18px;font-weight:900;color:var(--c,#888);line-height:1;flex-shrink:0;width:24px;text-align:center}
 .adm-pab-name{flex:1;min-width:0;font-family:'Noto Sans SC',sans-serif;font-size:13px;font-weight:700;color:var(--parch)}
 .adm-pab-name i{font-style:normal;font-weight:400;font-size:11px;color:var(--parch2);opacity:.7;margin-left:4px}
+.adm-pab-bono{display:block;font-weight:400;font-size:10.5px;color:#7fc9a0;margin-top:2px}
 .adm-pab-del{cursor:pointer;background:rgba(160,70,60,.18);border:1px solid rgba(190,90,80,.4);color:#e0a090;font-size:11px;width:24px;height:24px;border-radius:3px;flex-shrink:0}
 .adm-pab-lost{opacity:.6;border-left-color:#a0584c}
 .adm-pab-lost .adm-pab-name i{color:#e0907a;opacity:.9}

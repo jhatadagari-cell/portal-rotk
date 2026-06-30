@@ -9,7 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700;900&family=Cinzel+Decorative:wght@400;700&family=IM+Fell+English:ital@0;1&family=Noto+Sans+SC:wght@300;400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/chrome.css?v=4">
 <link rel="stylesheet" href="assets/css/main.css">
-<link rel="stylesheet" href="assets/css/admin.css?v=40">
+<link rel="stylesheet" href="assets/css/admin.css?v=41">
 </head>
 <body>
 
@@ -132,7 +132,7 @@
 <script src="assets/js/hac-util.js?v=1"></script>
 <script src="assets/js/haciendas-data.js?v=11"></script>
 <script src="assets/js/hac-calc.js?v=6"></script>
-<script src="assets/js/hac-build.js?v=33"></script>
+<script src="assets/js/hac-build.js?v=34"></script>
 <script src="assets/js/hac-store.js?v=5"></script>
 <script src="assets/js/hac-tareas.js?v=2"></script>
 <script src="assets/js/personajes-data.js?v=2"></script>
@@ -418,9 +418,19 @@
       const cells = p.seed ? B.regionPabellon(h.mapa, tier, p.seed[0], p.seed[1]) : [];
       const lost = cells.length === 0;
       const meta = lost ? 'área perdida — mueve el muro o bórralo' : (cells.length + ' celdas · ' + (r ? r.nombre : p.rol));
+      // Sinergia de ESTE pabellón: edificios de su dominio dentro → bono pasivo.
+      let efecto = '';
+      if (!lost && B.bonosPabellon) {
+        const bp = B.bonosPabellon(h.mapa, tier, [p]), sin = (bp.sinergia && bp.sinergia[p.rol]) || 0;
+        const pc = (f) => Math.round((f || 0) * 100);
+        const ef = p.rol === 'cultural' ? (bp.xp > 0 ? `+${pc(bp.xp)}% XP en misiones` : '')
+          : p.rol === 'administrativo' ? (bp.dinero > 0 ? `+${pc(bp.dinero)}% 💰 misiones · −${pc(bp.mercado)}% precios` : '')
+          : (sin > 0 ? `${sin} de sinergia (sin efecto aún)` : '');
+        efecto = `<span class="adm-pab-bono">${sin ? `⚙ ${sin} · ` : ''}${ef || 'sin edificios de su dominio dentro'}</span>`;
+      }
       return `<li class="adm-pab-item${lost ? ' adm-pab-lost' : ''}">
         <span class="adm-pab-chip" style="--c:${esc(r ? r.color : '#888')}">${esc(r ? r.zh : '?')}</span>
-        <span class="adm-pab-name">${esc(p.nombre)} <i>${esc(meta)}</i></span>
+        <span class="adm-pab-name">${esc(p.nombre)} <i>${esc(meta)}</i>${efecto}</span>
         <button class="adm-pab-del" data-pabid="${esc(p.id)}" title="Borrar pabellón">✕</button>
       </li>`;
     }).join('');
