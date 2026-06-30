@@ -140,13 +140,27 @@
 .hacp-iso-wrap:fullscreen{ width:100vw; height:100vh; border:none; border-radius:0; }
 .hacp-iso-wrap:-webkit-full-screen{ width:100vw; height:100vh; border:none; border-radius:0; }
 /* ── Plano + panel lateral de mecenas paseando ────────────────────────── */
-.hacp-iso-area{ display:flex; gap:12px; align-items:stretch; margin:18px auto 0; text-align:left; }
-.hacp-iso-area .hacp-iso-wrap{ flex:1 1 auto; margin:0; }
+.hacp-iso-area{ display:block; margin:18px auto 0; text-align:left; }
+.hacp-iso-area .hacp-iso-wrap{ margin:0; }
+/* Lista de mecenas: dársena COLAPSABLE anclada a la derecha DENTRO del visor (así
+   sigue disponible en pantalla completa). Colapsada deja solo una pestaña. */
 .hacp-folk-panel{
-  flex:0 0 196px; width:196px; align-self:stretch;
-  max-height:clamp(360px,70vh,820px); overflow-y:auto;
-  background:rgba(14,11,7,.6); border:1px solid rgba(201,168,76,.18); border-radius:6px; padding:10px 9px;
+  position:absolute; top:46px; right:0; bottom:10px; width:212px; z-index:6; display:flex;
+  background:rgba(14,11,7,.82); border:1px solid rgba(201,168,76,.22); border-right:0;
+  border-radius:8px 0 0 8px; box-shadow:-5px 0 18px rgba(0,0,0,.4);
+  -webkit-backdrop-filter:blur(2px); backdrop-filter:blur(2px); transition:transform .25s ease;
 }
+.hacp-folk-panel[hidden]{ display:none; }
+.hacp-folk-panel.collapsed{ transform:translateX(190px); }   /* deja ~22 px de pestaña */
+.hacp-folk-toggle{
+  flex:0 0 22px; width:22px; padding:0; cursor:pointer; color:var(--gold);
+  background:rgba(201,168,76,.14); border:0; border-right:1px solid rgba(201,168,76,.22);
+  border-radius:8px 0 0 8px; font-size:15px; display:flex; align-items:center; justify-content:center;
+}
+.hacp-folk-toggle:hover{ background:rgba(201,168,76,.3); color:#fff; }
+.hacp-folk-chev{ display:inline-block; transition:transform .25s ease; }
+.hacp-folk-panel.collapsed .hacp-folk-chev{ transform:rotate(180deg); }
+.hacp-folk-body{ flex:1 1 auto; min-width:0; overflow-y:auto; padding:10px 9px; }
 .hacp-folk-ttl{
   font-family:'Cinzel Decorative',serif; font-size:11px; letter-spacing:.08em;
   text-transform:uppercase; color:var(--hac,var(--gold)); opacity:.85; margin:0 0 8px; text-align:center;
@@ -328,8 +342,7 @@
 }
 .hacp-toast.on{ opacity:1; transform:translateX(-50%) translateY(0); }
 @media (max-width:720px){
-  .hacp-iso-area{ flex-direction:column; }
-  .hacp-folk-panel{ flex:none; width:auto; max-height:200px; }
+  .hacp-folk-panel{ width:min(212px,82vw); top:42px; }
   .hacp-char-panel{ width:calc(100% - 16px); }
 }
 /* ── Mercado: acceso + ranuras llenas + overlay de tienda ──────────────── */

@@ -93,11 +93,14 @@
             </button>
             <span class="hacp-iso-hint">arrastra para mover · pellizca o ctrl+rueda para zoom</span>
             <div class="hacp-char-panel" id="hacp-char-panel" hidden></div>
+            <aside class="hacp-folk-panel" id="hacp-folk-panel" hidden>
+              <button type="button" class="hacp-folk-toggle" id="hacp-folk-toggle" aria-label="Mostrar u ocultar la lista de mecenas" title="Mecenas"><span class="hacp-folk-chev">›</span></button>
+              <div class="hacp-folk-body">
+                <h3 class="hacp-folk-ttl">Mecenas en la finca</h3>
+                <ul class="hacp-folk-list" id="hacp-folk-list"></ul>
+              </div>
+            </aside>
           </div>
-          <aside class="hacp-folk-panel" id="hacp-folk-panel" hidden>
-            <h3 class="hacp-folk-ttl">Mecenas en la finca</h3>
-            <ul class="hacp-folk-list" id="hacp-folk-list"></ul>
-          </aside>
         </div>
       </section>
       <div class="hacp-detail">${HacRender.panelHTML(h)}</div>`;
@@ -282,6 +285,18 @@
     // deseleccionaría). Así puedes usar el selector y los botones sin perder el zoom.
     if (charEl) ['pointerdown', 'pointerup', 'wheel', 'click'].forEach(ev =>
       charEl.addEventListener(ev, (e) => e.stopPropagation(), { passive: false }));
+    // La lista de mecenas también vive DENTRO del visor → no debe burbujear al pan/tap.
+    ['pointerdown', 'pointerup', 'wheel', 'click'].forEach(ev =>
+      panel.addEventListener(ev, (e) => e.stopPropagation(), { passive: false }));
+    // Colapsar/expandir la dársena de mecenas (pestaña a la derecha).
+    const folkToggle = document.getElementById('hacp-folk-toggle');
+    if (folkToggle) folkToggle.addEventListener('click', () => panel.classList.toggle('collapsed'));
+    // Por defecto colapsada en pantallas estrechas (en escritorio, abierta).
+    if (window.innerWidth < 720) panel.classList.add('collapsed');
+    // En pantalla completa se colapsa por defecto (más mapa); al salir, se reabre.
+    const onFsFolk = () => { const fs = document.fullscreenElement || document.webkitFullscreenElement; panel.classList.toggle('collapsed', !!fs); };
+    document.addEventListener('fullscreenchange', onFsFolk);
+    document.addEventListener('webkitfullscreenchange', onFsFolk);
     // Acceso directo a la tienda del mercado (si la finca tiene uno).
     const hasMarketEarly = ((h.mapa && h.mapa.construcciones) || []).some(c => c.tipo === 'mercado');
     if (hasMarketEarly && panel) {
