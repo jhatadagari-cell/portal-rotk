@@ -288,7 +288,12 @@
     let tip = document.getElementById('hacp-pab-tip');
     if (!tip) { tip = document.createElement('div'); tip.id = 'hacp-pab-tip'; tip.className = 'hacp-pab-tip'; document.body.appendChild(tip); }
     const hide = () => { tip.style.display = 'none'; };
+    // No mostrar el nombre del pabellón si el ratón está sobre un panel/overlay que
+    // tapa el plano (panel del personaje, dársena, tienda, botones…): el patio está
+    // DETRÁS y no se está señalando.
+    const SOBRE_UI = '.hacp-char-panel, .hacp-folk-panel, .hacp-folk-fab, .hacp-shop, .hacp-cta, .hacp-mobar, .hacp-fs-btn, .hacp-iso-prestige';
     vp.addEventListener('mousemove', (e) => {
+      if (e.target && e.target.closest && e.target.closest(SOBRE_UI)) { hide(); return; }
       const cell = HacIso.cellAt(cv, e.clientX, e.clientY);
       const p = cell ? pabPorCelda[cell[0] + ',' + cell[1]] : null;
       if (!p) { hide(); return; }
