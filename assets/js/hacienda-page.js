@@ -1354,7 +1354,8 @@
     // panel del personaje (home), el tablón (expediciones) y las tareas internas.
     if (window.matchMedia && window.matchMedia('(max-width:600px)').matches) setupMobileShell();
     function setupMobileShell() {
-      document.body.classList.add('hacp-mobile');
+      document.body.classList.add('hacp-mobile');                 // se reasserta siempre
+      if (document.getElementById('hacp-mnav')) return;           // ya montado: no dupliques nav/secciones
       const SEC = [
         { id: 'personaje',   ic: '士', lb: 'Personaje' },
         { id: 'misiones',    ic: '檄', lb: 'Misiones' },
