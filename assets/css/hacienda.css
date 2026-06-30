@@ -371,8 +371,10 @@ html.hacp-pseudofs, html.hacp-pseudofs body{ overflow:hidden; }
 .hacp-mobar{ display:none; }
 /* ── Rework MÓVIL: APP estilo Shakes & Fidget (home = personaje + nav inferior) ── */
 @media (max-width:600px){
-  /* Cromo de web y de la finca fuera: la app ocupa toda la pantalla. */
-  body.hacp-mobile #chrome-nav, body.hacp-mobile #chrome-footer,
+  /* Cromo de web y de la finca fuera: la app ocupa toda la pantalla. OJO: chrome.js
+     REEMPLAZA #chrome-nav/#chrome-footer por <nav id="nav"> y <footer>, así que hay
+     que apuntar a esos (y al back-to-top / viñeta que añade al body). */
+  body.hacp-mobile #nav, body.hacp-mobile footer, body.hacp-mobile #back-top, body.hacp-mobile #corner-vignette,
   .hacp-mobile .hacp-hero, .hacp-mobile .hacp-finca-ttl, .hacp-mobile .hacp-finca-sub,
   .hacp-mobile .hacp-admin, .hacp-mobile .hacp-iso-hint, .hacp-mobile .hacp-mobar,
   .hacp-mobile .hacp-detail{ display:none !important; }
