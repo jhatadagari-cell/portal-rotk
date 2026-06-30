@@ -1428,9 +1428,18 @@
           }
         }
         if (id === 'misiones') { renderInternas(); }
-        if (isHac && myId && cam && cam.focusFollow) cam.focusFollow(() => HacFolk.position(myId), 3.0);
+        if (isHac) {
+          // El visor pasó a pantalla completa al añadir .hacp-mobile, DESPUÉS de fitView →
+          // recalcula el encuadre al tamaño real y, ya en el frame siguiente, hace zoom
+          // al mecenas (focusFollow usa el `fit` recién calculado).
+          window.dispatchEvent(new Event('resize'));
+          if (myId && cam && cam.focusFollow) requestAnimationFrame(() => cam.focusFollow(() => HacFolk.position(myId), 3.0));
+        }
       }
       mgo('personaje');   // landing por defecto
+      // El visor ya es pantalla completa (clase .hacp-mobile): reencuadra para que su
+      // `fit` corresponda al tamaño real desde el principio.
+      requestAnimationFrame(() => window.dispatchEvent(new Event('resize')));
     }
   }
 
