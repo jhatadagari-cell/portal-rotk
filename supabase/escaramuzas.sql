@@ -2,10 +2,11 @@
 -- escaramuzas.sql — Expediciones COOPERATIVAS (banda de 2-4 jugadores).
 -- ─────────────────────────────────────────────────────────────────────────
 -- Un jugador MONTA una banda (paga un coste), otros se UNEN, y el host la LANZA
--- (sale 30 min). Al volver: reparto de dinero (host recupera coste +25% + su
--- parte) y de BOTÍN (≥1 objeto por jugador, elección con resolución de colisiones
--- en 1 h); heridas si fracasa; cooldown 1 h. La lógica de "quién puede qué" vive
--- en el cliente; aquí RLS permisivo para autenticados (endurecer más adelante).
+-- (sale 30 min; en modo test ?escfast=1 ~1 min). Al volver: reparto de dinero (host
+-- recupera coste +50% + su parte, con el +% del equipo aplicado) y de BOTÍN (≥1 objeto
+-- por jugador, FCFS; al vencer loot_hasta el cliente auto-coge una ranura libre);
+-- heridas si fracasa; cooldown 1 h. El host puede ABORTAR (vuelta en 5 min). Mutaciones
+-- por funciones SECURITY DEFINER (atómicas); RLS: lectura pública, escritura solo vía RPC.
 --
 -- Ejecutar una vez en el SQL editor de Supabase.
 -- ═══════════════════════════════════════════════════════════════════════
