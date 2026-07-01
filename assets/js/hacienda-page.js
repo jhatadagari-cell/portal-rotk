@@ -832,11 +832,68 @@
     }
     // Botín común: ≥1 objeto por participante (de la tienda del tier, preferiendo
     // equipables/guardables). El reparto/elección será la sub-fase 4d.
-    function generarBotin(band) {
-      const n = (band.miembros || []).length || 1;
+    function generarBotin(band, extra) {
+      const n = ((band.miembros || []).length || 1) + (extra || 0);
       const out = [];
-      for (let i = 0; i < n; i++) { const id = (window.HacTienda && HacTienda.botinAleatorio) ? HacTienda.botinAleatorio(tier) : null; if (id) out.push(id); }
+      for (let i = 0; i < Math.max(0, n); i++) { const id = (window.HacTienda && HacTienda.botinAleatorio) ? HacTienda.botinAleatorio(tier) : null; if (id) out.push(id); }
       return out;
+    }
+
+    // ── A2b: DOCTRINA de banda + SUCESOS cooperativos (deterministas por id de banda) ──
+    const DOCTRINAS = [
+      { id: 'agresiva',    dom: 'militar',        gly: '武', nom: 'Agresiva',    desc: 'Buscáis el choque: más botín, pero más riesgo.' },
+      { id: 'cauta',       dom: 'cultural',       gly: '文', nom: 'Cauta',       desc: 'Marcha prudente: más seguro, recompensa discreta.' },
+      { id: 'diplomatica', dom: 'administrativo', gly: '政', nom: 'Diplomática', desc: 'Negociáis: más dinero, algo menos de botín.' },
+    ];
+    const DOCTRINA_BIAS = { agresiva: { pMod: -0.04, loot: 1 }, cauta: { pMod: 0.08 }, diplomatica: { share: 15, loot: -1 } };
+    const SUCESOS_COOP = [
+      { id: 'emboscada', txt: 'Emboscada en el desfiladero', ok: { pMod: 0.06, loot: 1 }, fail: { pMod: -0.12 } },
+      { id: 'rio',       txt: 'Un río crecido',              ok: { pMod: 0.05 },           fail: { pMod: -0.10, share: -8 } },
+      { id: 'aldea',     txt: 'Una aldea aliada',            ok: { share: 12, loot: 1 },   fail: {} },
+      { id: 'fortin',    txt: 'Un fortín abandonado',        ok: { loot: 1, pMod: 0.04 },  fail: { pMod: -0.08 } },
+      { id: 'desertor',  txt: 'Un desertor enemigo',         ok: { pMod: 0.08, share: 8 }, fail: { pMod: -0.10 } },
+    ];
+    const doctrinaDef = (id) => DOCTRINAS.find(d => d.id === id) || null;
+    // Nivel de la banda en un dominio = el del mejor miembro (un especialista lidera).
+    function bandStat(band, dom) { let best = 0; (band.miembros || []).forEach(m => { const n = (window.HacStats && HacStats.nivelTotal) ? HacStats.nivelTotal(m.id, dom) : 1; if (n > best) best = n; }); return best || 1; }
+    // Plan determinista de sucesos de una escaramuza (mismo para todos los clientes).
+    function escPlan(band) {
+      if (!window.HacRand) return [];
+      const R = HacRand.make('escsuc#' + band.id);
+      const n = (band.dificultad || 4) >= 5 ? 2 : 1;
+      const pool = SUCESOS_COOP.slice(), plan = [];
+      for (let i = 0; i < n && pool.length; i++) plan.push({ i: i, sucesoId: pool.splice(R.int(pool.length), 1)[0].id });
+      return plan;
+    }
+    // Resuelve los sucesos (determinista) según la doctrina (+ overrides del capitán, A2b-2).
+    // Devuelve la narración (por suceso) y los mods que se pliegan en la resolución.
+    function escSucesos(band) {
+      const docDef = doctrinaDef(band.doctrina); const plan = escPlan(band);
+      const items = []; let pMod = 0, loot = 0, share = 0;
+      plan.forEach(ev => {
+        const s = SUCESOS_COOP.find(x => x.id === ev.sucesoId); if (!s) return;
+        const ov = (band.sucesos || {})[ev.i];                        // override del capitán (A2b-2)
+        const dom = (ov != null && DOCTRINAS[ov]) ? DOCTRINAS[ov].dom : (docDef ? docDef.dom : 'militar');
+        const R = window.HacRand ? HacRand.make('escr#' + band.id + '#' + ev.i) : null;
+        const ok = R ? (R.next() < pSuceso(bandStat(band, dom), band.dificultad || 4)) : true;
+        const m = ok ? (s.ok || {}) : (s.fail || {});
+        pMod += m.pMod || 0; loot += m.loot || 0; share += m.share || 0;
+        items.push({ txt: s.txt, ok: ok });
+      });
+      if (docDef) { const b = DOCTRINA_BIAS[band.doctrina] || {}; pMod += b.pMod || 0; loot += b.loot || 0; share += b.share || 0; }
+      return { docDef: docDef, items: items, pMod: pMod, loot: loot, share: share };
+    }
+    // Narración para el panel (doctrina + ✔/✘ por suceso).
+    function escNarrHTML(band) {
+      const sc = escSucesos(band); if (!sc.docDef && !sc.items.length) return '';
+      const doc = sc.docDef ? `<div class="hacp-esc-doc">Doctrina: 〔${sc.docDef.gly}〕 ${esc(sc.docDef.nom)}</div>` : '';
+      const li = sc.items.map(it => `<li class="hacp-esc-suc ${it.ok ? 'ok' : 'bad'}">${it.ok ? '✔' : '✘'} ${esc(it.txt)}</li>`).join('');
+      return doc + (li ? `<ul class="hacp-esc-sucs">${li}</ul>` : '');
+    }
+    function escNarrTexto(band) {
+      const sc = escSucesos(band); const d = sc.docDef ? `〔${sc.docDef.gly}〕${sc.docDef.nom}` : '';
+      const ev = sc.items.map(it => `${it.txt} ${it.ok ? '✔' : '✘'}`).join(' · ');
+      return [d, ev].filter(Boolean).join(' · ');
     }
     // RESOLUCIÓN al volver (≥ fin): cualquier miembro la dispara; la RPC es idempotente
     // (solo la primera surte efecto). Dado de éxito en cliente, como en las expediciones.
@@ -845,12 +902,15 @@
       const band = HacEscaramuzas.miBanda(h.id, myId);
       if (!band || band.estado !== 'en_curso' || clock() < band.finMs) return;
       const dif = band.dificultad || 4;
-      const exito = Math.random() < Math.max(0.35, 0.72 - (dif - 4) * 0.08);
-      const share = 20 + dif * 10, hostBonus = Math.round((band.coste || 0) * 0.5);   // el host recupera coste +50%
+      // SUCESOS: doctrina + desenlaces deterministas pliegan prob. de éxito, botín y dinero.
+      const sc = escSucesos(band);
+      const baseP = Math.max(0.35, 0.72 - (dif - 4) * 0.08);
+      const exito = Math.random() < Math.max(0.1, Math.min(0.95, baseP + sc.pMod));
+      const share = Math.max(0, 20 + dif * 10 + sc.share), hostBonus = Math.round((band.coste || 0) * 0.5);   // el host recupera coste +50%
       // +% dinero del EQUIPO de cada miembro (sellos de comercio) → mapa {id: fracción}.
       const bonosPct = {};
       (band.miembros || []).forEach(mm => { const p = (window.HacStats && HacStats.bonusDinero) ? HacStats.bonusDinero(mm.id) : 0; if (p) bonosPct[mm.id] = p; });
-      HacEscaramuzas.resolver(band.id, clock(), exito, exito ? generarBotin(band) : [], share, hostBonus, ESC_FAST ? 30000 : 0, bonosPct)
+      HacEscaramuzas.resolver(band.id, clock(), exito, exito ? generarBotin(band, sc.loot) : [], share, hostBonus, ESC_FAST ? 30000 : 0, bonosPct)
         .then(() => { if (window.HacStats) HacStats.reload().then(() => { if (charId) buildCharPanel(charId); }); })
         .catch(e => console.warn('[escaramuza] resolver', e));
     }
@@ -863,7 +923,7 @@
     const SUC_WINDOW = (/[?&]escfast=1/.test(location.search || '')) ? 12000 : 22000;   // ventana para decidir un suceso
     const myName = ((h.miembros || []).find(m => m.personajeId === myId) || {}).nombre || 'Tú';
     const ESC_FAST = /[?&]escfast=1/.test(location.search || '');   // modo test: ~1 min, sin cooldown
-    let escHost = null, escVisible = false, escPlazas = 3, escBusy = false, escSig = '';
+    let escHost = null, escVisible = false, escPlazas = 3, escBusy = false, escSig = '', escDoctrina = 'cauta';
     function renderEscaramuzas() {
       const body = escHost; if (!body) return;
       if (!myId) { body.innerHTML = '<div class="hacp-msec-soon">兵<br><b>Escaramuzas</b><br>Únete a esta hacienda con tu mecenas para participar.</div>'; return; }
@@ -877,6 +937,7 @@
         const sl = body.querySelector('[data-salir]'); if (sl) sl.addEventListener('click', () => salirBanda(mine.id));
         const ln = body.querySelector('[data-lanzar]'); if (ln && !ln.disabled) ln.addEventListener('click', () => lanzarBanda(mine.id));
         const ab = body.querySelector('[data-abort]'); if (ab) ab.addEventListener('click', abortarEscaramuza);
+        body.querySelectorAll('[data-doc]').forEach(b => b.addEventListener('click', () => { escDoctrina = b.dataset.doc; renderEscaramuzas(); }));
         body.querySelectorAll('[data-loot]').forEach(b => b.addEventListener('click', () => reclamarBotin(mine.id, +b.dataset.loot)));
         const march = body.querySelector('[data-esc-march]'); if (march) startMarch(march, mine);
         escTick();
@@ -917,14 +978,19 @@
       if (b.estado === 'abierta') {
         const puede = b.miembros.length >= 2;
         if (esHost) {
-          accion = `<button class="hacp-cp-btn hacp-esc-lanzar" data-lanzar${puede ? '' : ' disabled'}>⚔ Lanzar expedición</button>
-            <div class="hacp-esc-note">${puede ? 'Al lanzar, la banda parte 30 min. El reparto de recompensas y botín se hará al volver.' : 'Hacen falta al menos 2 mecenas para partir.'}</div>`;
+          const docPick = `<div class="hacp-esc-doc-pick"><div class="hacp-esc-doc-lbl">Doctrina de la banda</div>
+            <div class="hacp-esc-doc-row">${DOCTRINAS.map(d => `<button type="button" class="hacp-esc-doc-b${escDoctrina === d.id ? ' on' : ''}" data-doc="${d.id}"><b>〔${d.gly}〕</b> ${esc(d.nom)}</button>`).join('')}</div>
+            <div class="hacp-esc-doc-desc">${esc((doctrinaDef(escDoctrina) || {}).desc || '')}</div></div>`;
+          accion = docPick + `<button class="hacp-cp-btn hacp-esc-lanzar" data-lanzar${puede ? '' : ' disabled'}>⚔ Lanzar expedición</button>
+            <div class="hacp-esc-note">${puede ? 'Al lanzar, la banda parte 30 min con la doctrina elegida. El desenlace y el botín se resuelven al volver.' : 'Hacen falta al menos 2 mecenas para partir.'}</div>`;
         } else {
           accion = `<div class="hacp-esc-note">Esperando a que el capitán lance la expedición${puede ? '' : ' (faltan mecenas)'}.</div>`;
         }
         accion += `<button class="hacp-cp-btn hacp-esc-salir" data-salir>${esHost ? 'Disolver la banda' : 'Salir de la banda'}</button>`;
       } else if (b.estado === 'en_curso') {
+        const dd = doctrinaDef(b.doctrina);
         accion = `<canvas class="hacp-esc-march" data-esc-march></canvas>
+          ${dd ? `<div class="hacp-esc-doc">Doctrina: 〔${dd.gly}〕 ${esc(dd.nom)}</div>` : ''}
           <div class="hacp-esc-timer" data-esc-timer="${b.finMs}">En la expedición…</div>
           <div class="hacp-esc-note">La banda avanza unida por el camino. Cuando regrese se repartirán recompensas y botín.</div>
           ${esHost ? `<button type="button" class="hacp-cp-btn hacp-esc-abort" data-abort>Abortar expedición</button>` : ''}`;
@@ -948,11 +1014,13 @@
             <div class="hacp-esc-loot-nm">${it ? esc(it.nombre) : 'objeto'}</div>${accionItem}</div>`;
         }).join('');
         accion = `<div class="hacp-esc-result ok">✔ ¡Volvisteis con éxito!</div>
+          ${escNarrHTML(b)}
           <div class="hacp-esc-note">Tu parte del dinero ya está en tu monedero${esHost ? ' (recuperaste el coste +50%)' : ''}. Botín común: <b>elige 1 objeto</b>${yaCogi ? ' — ya recogiste el tuyo.' : ' (hay al menos uno para cada quien).'}</div>
           <div class="hacp-esc-loot-grid">${grid}</div>
           <button class="hacp-cp-btn hacp-esc-salir" data-salir>Cerrar</button>`;
       } else {   // resuelta (fracaso)
         accion = `<div class="hacp-esc-result bad">✘ La expedición fracasó</div>
+          ${escNarrHTML(b)}
           <div class="hacp-esc-note">Tu mecenas vuelve con una herida. Podrás volver a intentarlo tras el cooldown.</div>
           <button class="hacp-cp-btn hacp-esc-salir" data-salir>Cerrar</button>`;
       }
@@ -1000,9 +1068,10 @@
     async function lanzarBanda(id) {
       if (escBusy) return; escBusy = true;
       try {
-        await HacEscaramuzas.lanzar(id, myId, clock(), ESC_FAST ? 60000 : 0);
+        await HacEscaramuzas.lanzar(id, myId, clock(), ESC_FAST ? 60000 : 0, escDoctrina);
+        const dd = doctrinaDef(escDoctrina);
         toast(ESC_FAST ? '⚔ ¡Parten! (modo test · ~1 min)' : '⚔ ¡La banda parte a la expedición!');
-        if (window.HacBitacora) HacBitacora.log(myId, 'escaramuza', '⚔ Tu banda partió a la expedición');
+        if (window.HacBitacora) HacBitacora.log(myId, 'escaramuza', `⚔ Tu banda partió a la expedición${dd ? ` · doctrina 〔${dd.gly}〕 ${dd.nom}` : ''}`);
         syncEscaramuzaOrder(); syncEscaramuzaFolk();
       } catch (e) { toast((e && e.message) || 'No se pudo lanzar'); await HacEscaramuzas.reload(); }
       finally { escBusy = false; renderEscaramuzas(); }
@@ -1066,10 +1135,11 @@
       if (!band) return;
       // Éxito: se registra tanto en 'botin' (botín pendiente) como en 'resuelta' (ya
       // repartido) — antes solo en 'botin', y se perdía si volvías tras cerrarse el reparto.
+      const narr = escNarrTexto(band); const suf = narr ? ' · ' + narr : '';
       if (band.exito === true && (band.estado === 'botin' || band.estado === 'resuelta'))
-        HacBitacora.log(myId, 'escaramuza', '⚔ Escaramuza: ✔ éxito · volvisteis con botín', { clave: 'esc-res:' + band.id });
+        HacBitacora.log(myId, 'escaramuza', '⚔ Escaramuza: ✔ éxito · volvisteis con botín' + suf, { clave: 'esc-res:' + band.id });
       else if (band.exito === false && band.estado === 'resuelta')
-        HacBitacora.log(myId, 'escaramuza', '⚔ Escaramuza: ✘ fracaso · tu mecenas vuelve herido', { clave: 'esc-res:' + band.id });
+        HacBitacora.log(myId, 'escaramuza', '⚔ Escaramuza: ✘ fracaso · tu mecenas vuelve herido' + suf, { clave: 'esc-res:' + band.id });
       else if (band.estado === 'abortando')
         HacBitacora.log(myId, 'escaramuza', '↩ Escaramuza abortada · la banda regresa', { clave: 'esc-abort:' + band.id });
     }

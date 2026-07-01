@@ -571,6 +571,19 @@ button.hacp-slot.manual:hover{ background:rgba(127,201,160,.34); }
 .hacp-suc-bar i{ display:block; height:100%; width:100%; background:linear-gradient(90deg,#b23b2e,#e2a06a); transition:width .2s linear; }
 .hacp-suc-hint{ font-size:10.5px; color:var(--parch2,#c9bda6); text-align:center; margin-top:6px; opacity:.85; }
 .hacp-esc-timer{ font:900 19px 'Noto Serif SC',serif; color:var(--gold); text-align:center; padding:10px 0 4px; font-variant-numeric:tabular-nums; }
+/* ── Doctrina de banda + narración de sucesos (A2b) ── */
+.hacp-esc-doc{ font:700 12px 'Noto Serif SC',serif; color:var(--gold); text-align:center; margin:4px 0 8px; }
+.hacp-esc-doc-pick{ margin:4px 0 10px; }
+.hacp-esc-doc-lbl{ font:700 10px 'Cinzel Decorative',serif; letter-spacing:.06em; text-transform:uppercase; color:var(--parch2); margin-bottom:6px; }
+.hacp-esc-doc-row{ display:flex; gap:6px; }
+.hacp-esc-doc-b{ flex:1; cursor:pointer; background:rgba(255,255,255,.04); border:1px solid rgba(201,168,76,.28); border-radius:8px; padding:8px 4px; color:var(--parch); font-size:11px; text-align:center; transition:background .12s, border-color .12s; }
+.hacp-esc-doc-b b{ display:block; font-size:15px; color:var(--gold); margin-bottom:2px; }
+.hacp-esc-doc-b.on{ background:rgba(201,168,76,.2); border-color:var(--gold); }
+.hacp-esc-doc-desc{ font-size:11px; color:var(--parch2); margin-top:7px; text-align:center; line-height:1.45; min-height:1.45em; }
+.hacp-esc-sucs{ list-style:none; margin:2px 0 10px; padding:0; display:flex; flex-direction:column; gap:4px; }
+.hacp-esc-suc{ font-size:12px; padding:5px 9px; border-radius:6px; background:rgba(255,255,255,.03); border:1px solid rgba(201,168,76,.16); }
+.hacp-esc-suc.ok{ color:#bfe0b2; border-color:rgba(122,162,110,.35); }
+.hacp-esc-suc.bad{ color:#e2a06a; border-color:rgba(178,59,46,.35); }
 .hacp-esc-abort, .hacp-cp-abort{ background:rgba(178,59,46,.18)!important; border-color:rgba(178,59,46,.5)!important; color:#e2a06a!important; }
 .hacp-esc-abort:hover, .hacp-cp-abort:hover{ background:rgba(178,59,46,.34)!important; color:#fff!important; }
 .hacp-esc-result{ font:900 16px 'Noto Serif SC',serif; text-align:center; padding:8px 0 2px; }

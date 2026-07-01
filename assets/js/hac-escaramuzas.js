@@ -33,6 +33,7 @@ const HacEscaramuzas = (function () {
       miembros: arr(r.miembros), coste: Number(r.coste) || 0,
       inicioMs: Number(r.inicio_ms) || 0, finMs: Number(r.fin_ms) || 0, exito: r.exito,
       botin: arr(r.botin), elecciones: obj(r.elecciones), lootHasta: Number(r.loot_hasta) || 0,
+      doctrina: r.doctrina || '', sucesos: obj(r.sucesos),
     };
   }
   async function load() {
@@ -87,13 +88,21 @@ const HacEscaramuzas = (function () {
     upsertCache(data); return { disuelta: false };
   }
   // El host LANZA: la RPC valida (host, ≥2, abierta) y fija inicio/fin (30 min).
-  async function lanzar(id, hostId, nowMs, durMs) {
+  async function lanzar(id, hostId, nowMs, durMs, doctrina) {
     if (!nowMs) throw new Error('Reloj no disponible');
     const c = await sb();
     const args = { p_id: id, p_host: hostId, p_now: nowMs };
     if (durMs) args.p_dur_ms = durMs;                         // modo test: expedición corta
+    if (doctrina) args.p_doctrina = doctrina;                 // A2b: postura del capitán
     const { data, error } = await c.rpc('escaramuza_lanzar', args);
     if (error) throw new Error(error.message || 'No se pudo lanzar');
+    return upsertCache(data);
+  }
+  // A2b-2: el capitán fija en vivo la decisión de un suceso (índice → opción elegida).
+  async function suceso(id, hostId, idx, choice) {
+    const c = await sb();
+    const { data, error } = await c.rpc('escaramuza_suceso', { p_id: id, p_host: hostId, p_idx: idx, p_choice: choice });
+    if (error) throw new Error(error.message || 'No se pudo fijar la decisión');
     return upsertCache(data);
   }
   // El host ABORTA la escaramuza en curso: pasa a 'abortando' (vuelta en `durMs`).
@@ -125,6 +134,6 @@ const HacEscaramuzas = (function () {
     return upsertCache(data);
   }
 
-  return { ready, reload, all, abiertas, miBanda, crear, unir, salir, lanzar, resolver, reclamar, abortar, DUR_MS, CD_MS, dbOk: () => ok, TABLE };
+  return { ready, reload, all, abiertas, miBanda, crear, unir, salir, lanzar, suceso, resolver, reclamar, abortar, DUR_MS, CD_MS, dbOk: () => ok, TABLE };
 })();
 if (typeof window !== 'undefined') window.HacEscaramuzas = HacEscaramuzas;
