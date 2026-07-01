@@ -694,12 +694,14 @@
         body.innerHTML = '<div class="hacp-msec-soon">兵<br><b>Escaramuzas</b><br>Aún no disponibles en el servidor.</div>'; return;
       }
       const mine = HacEscaramuzas.miBanda(h.id, myId);
+      stopMarch();
       if (mine) {
         body.innerHTML = bandaPropiaHTML(mine);
         const sl = body.querySelector('[data-salir]'); if (sl) sl.addEventListener('click', () => salirBanda(mine.id));
         const ln = body.querySelector('[data-lanzar]'); if (ln && !ln.disabled) ln.addEventListener('click', () => lanzarBanda(mine.id));
         const ab = body.querySelector('[data-abort]'); if (ab) ab.addEventListener('click', abortarEscaramuza);
         body.querySelectorAll('[data-loot]').forEach(b => b.addEventListener('click', () => reclamarBotin(mine.id, +b.dataset.loot)));
+        const march = body.querySelector('[data-esc-march]'); if (march) startMarch(march, mine);
         escTick();
         return;
       }
@@ -742,12 +744,14 @@
         }
         accion += `<button class="hacp-cp-btn hacp-esc-salir" data-salir>${esHost ? 'Disolver la banda' : 'Salir de la banda'}</button>`;
       } else if (b.estado === 'en_curso') {
-        accion = `<div class="hacp-esc-timer" data-esc-timer="${b.finMs}">En la expedición…</div>
-          <div class="hacp-esc-note">La banda ha partido. Cuando regrese se repartirán recompensas y botín.</div>
+        accion = `<canvas class="hacp-esc-march" data-esc-march></canvas>
+          <div class="hacp-esc-timer" data-esc-timer="${b.finMs}">En la expedición…</div>
+          <div class="hacp-esc-note">La banda avanza unida por el camino. Cuando regrese se repartirán recompensas y botín.</div>
           ${esHost ? `<button type="button" class="hacp-cp-btn hacp-esc-abort" data-abort>Abortar expedición</button>` : ''}`;
       } else if (b.estado === 'abortando') {
-        accion = `<div class="hacp-esc-timer" data-esc-timer="${b.finMs}">Abortada · regresando…</div>
-          <div class="hacp-esc-note">El capitán abortó la escaramuza. Todos volvéis a casa; sin recompensas ni botín.</div>`;
+        accion = `<canvas class="hacp-esc-march" data-esc-march data-back></canvas>
+          <div class="hacp-esc-timer" data-esc-timer="${b.finMs}">Abortada · regresando…</div>
+          <div class="hacp-esc-note">El capitán abortó la escaramuza. La banda desanda el camino a casa; sin recompensas ni botín.</div>`;
       } else if (b.estado === 'botin') {
         const elec = b.elecciones || {};
         const yaCogi = Object.prototype.hasOwnProperty.call(elec, myId);
@@ -886,6 +890,92 @@
       const fin = +el.dataset.escTimer || 0, rem = Math.max(0, fin - clock());
       el.textContent = rem > 0 ? ('🧭 Regreso en ' + fmtClock(rem / 1000)) : '✔ Han regresado · reparto pendiente';
     }
+    // ── Escena animada: la banda MARCHA junta por un camino empedrado ──────────
+    // Se muestra en el panel mientras la escaramuza está 'en_curso' o 'abortando'.
+    // Suelo isométrico (loseta anim-ground.png) que se desplaza + N mecenas
+    // andando con su ciclo de HacChar. RAF vivo solo mientras el lienzo existe.
+    let marchGround = null, marchCanvas = null, marchRAF = 0;
+    function stopMarch() { marchCanvas = null; if (marchRAF) { cancelAnimationFrame(marchRAF); marchRAF = 0; } }
+    function startMarch(cv, band) {
+      stopMarch();
+      const ctx = cv && cv.getContext && cv.getContext('2d'); if (!ctx) return;
+      if (!marchGround) { marchGround = new Image(); marchGround.src = 'assets/img/iso/anim-ground.png'; }
+      const back = cv.hasAttribute('data-back');          // 'abortando' → desanda el camino
+      const FR = (window.HacChar && HacChar.FRAMES) || 4;
+      const dir = back ? 'NW' : 'SE';                     // ida de cara (SE), vuelta de espaldas (NW)
+      const members = (band.miembros || []).map(m => {
+        const pj = (window.HacPersonajes && HacPersonajes.get) ? HacPersonajes.get(m.id) : null;
+        return { id: m.id, aptitud: pj ? pj.aptitud : '', aspecto: pj ? (pj.aspecto || {}) : { robe: color }, mio: m.id === myId };
+      });
+      const sprCache = new Map();
+      function spr(mem, frame) {
+        const key = mem.id + '|' + frame;
+        let c = sprCache.get(key);
+        if (!c && window.HacChar) { c = document.createElement('canvas'); HacChar.draw(c, { aptitud: mem.aptitud, aspecto: mem.aspecto || {}, dir: dir, frame: frame, scale: 2 }); sprCache.set(key, c); }
+        return c;
+      }
+      const dpr = Math.min(2, window.devicePixelRatio || 1);
+      const CH = 132;
+      function fit() { const w = cv.clientWidth || 300; cv.width = Math.round(w * dpr); cv.height = Math.round(CH * dpr); }
+      fit();
+      let t0 = 0;
+      marchCanvas = cv;
+      const wrap = (v, m) => v - Math.floor(v / m) * m;
+      function frameLoop(ts) {
+        if (marchCanvas !== cv) return;                   // lienzo reemplazado → corta
+        if (!t0) t0 = ts; const t = ts - t0;
+        const w = cv.clientWidth || 300, hh = CH;
+        if (Math.round(w * dpr) !== cv.width) fit();
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        // Fondo: cielo crepuscular hacia tierra.
+        const sky = ctx.createLinearGradient(0, 0, 0, hh);
+        sky.addColorStop(0, back ? '#20242c' : '#33342a'); sky.addColorStop(0.55, '#26251d'); sky.addColorStop(1, '#171410');
+        ctx.fillStyle = sky; ctx.fillRect(0, 0, w, hh);
+        // Suelo isométrico desplazándose (ida: NO ; vuelta: SE).
+        const g = marchGround;
+        if (g && g.complete && g.width) {
+          const gs = 0.44, tw = g.width * gs, th = g.height * gs, faceH = tw / 2;
+          const stepX = tw / 2, stepY = faceH / 2, px = 2 * stepX, py = 2 * stepY;
+          const sp = back ? 1 : -1;                       // dirección del desplazamiento del suelo
+          const driftX = sp * 34 * (t / 1000), driftY = sp * 17 * (t / 1000);
+          const X0 = wrap(driftX, px) - px, Y0 = wrap(driftY, py) - py;
+          const ox = w / 2, oy = hh * 0.60;
+          ctx.imageSmoothingEnabled = true;
+          const nHalf = Math.ceil((w / 2 + tw) / stepX) + 2, pTop = Math.ceil((oy + th) / stepY) + 2, pBot = Math.ceil((hh - oy + th) / stepY) + 2;
+          for (let p = -pTop; p <= pBot; p++) {
+            for (let n = -nHalf; n <= nHalf; n++) {
+              if ((n + p) & 1) continue;                  // misma paridad → rejilla iso
+              const cx = ox + X0 + n * stepX, cy = oy + Y0 + p * stepY;
+              if (cx < -tw || cx > w + tw || cy < -th || cy > hh + th) continue;
+              ctx.drawImage(g, 0, 0, g.width, g.height, cx - tw / 2, cy - faceH / 2, tw, th);
+            }
+          }
+          // Bruma en los bordes para fundir el suelo con el fondo.
+          const fade = ctx.createLinearGradient(0, hh * 0.42, 0, hh * 0.70);
+          fade.addColorStop(0, 'rgba(38,37,29,0.85)'); fade.addColorStop(1, 'rgba(38,37,29,0)');
+          ctx.fillStyle = fade; ctx.fillRect(0, 0, w, hh);
+        }
+        // Mecenas caminando juntos: fila suelta, con desfase de zancada y balanceo.
+        ctx.imageSmoothingEnabled = false;
+        const n = members.length, spread = Math.min(40, (w - 40) / Math.max(1, n));
+        const baseX = w / 2 - (n - 1) * spread / 2, baseY = hh * 0.58, drawH = 60;
+        const items = members.map((mem, i) => {
+          const ph = t / 1000 + i * 0.53;
+          return { mem, i, x: baseX + i * spread + Math.sin(t / 900 + i) * 1.5, y: baseY + (i % 2 ? 6 : 0) + Math.sin(t / 380 + i * 1.7) * 1.2, fr: Math.floor((t / 145 + i * 1.9)) % FR, ph };
+        }).sort((a, b) => a.y - b.y);
+        items.forEach(({ mem, x, y, fr }) => {
+          const s = spr(mem, fr); if (!s) return;
+          const sh = drawH, sw = s.width * (sh / s.height);
+          ctx.save(); ctx.globalAlpha = 0.26; ctx.fillStyle = '#000';
+          ctx.beginPath(); ctx.ellipse(x, y + 1, sw * 0.30, 4.5, 0, 0, 6.283); ctx.fill(); ctx.restore();
+          if (mem.mio) { ctx.save(); ctx.globalAlpha = 0.5; ctx.strokeStyle = '#e7c66a'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.ellipse(x, y + 1, sw * 0.32, 5.2, 0, 0, 6.283); ctx.stroke(); ctx.restore(); }
+          ctx.drawImage(s, x - sw / 2, y - sh, sw, sh);
+        });
+        marchRAF = requestAnimationFrame(frameLoop);
+      }
+      marchRAF = requestAnimationFrame(frameLoop);
+    }
+
     // Refresco por poll: re-renderiza solo si cambió algo (la recarga la hace el poll
     // principal justo antes). Evita el churn que rompe la interacción.
     function escRefresh() {
@@ -911,7 +1001,7 @@
       escHost = el.querySelector('[data-esc-body]'); escVisible = true; escSig = ''; el.hidden = false;
       if (window.HacEscaramuzas) HacEscaramuzas.reload().then(renderEscaramuzas); else renderEscaramuzas();
     }
-    function closeEsc() { escVisible = false; if (escEl) escEl.hidden = true; }
+    function closeEsc() { escVisible = false; stopMarch(); if (escEl) escEl.hidden = true; }
 
     // ── BITÁCORA (diario del mecenas): overlay con el feed de actividad ────────
     function fmtHora(ts) { try { return new Date(ts).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }); } catch (e) { return ''; } }
@@ -1844,6 +1934,7 @@
         if (id === 'misiones') { renderInternas(); }
         // Escaramuzas: la UI vive en setupFolk; aquí solo fijamos su contenedor (pane).
         escVisible = (id === 'escaramuzas');
+        if (!escVisible) stopMarch();
         if (id === 'escaramuzas') {
           escHost = sec.querySelector('[data-esc-body]'); escSig = '';
           if (window.HacEscaramuzas) HacEscaramuzas.reload().then(renderEscaramuzas); else renderEscaramuzas();
