@@ -895,6 +895,83 @@
       const ev = sc.items.map(it => `${it.txt} ${it.ok ? '✔' : '✘'}`).join(' · ');
       return [d, ev].filter(Boolean).join(' · ');
     }
+
+    // ── A2b-2: OVERRIDE EN VIVO del capitán durante la marcha ───────────────────
+    // Mientras el capitán mira la escaramuza en curso, al llegar el momento de un
+    // suceso puede CAMBIAR la maniobra (dominio) de ese trance. Se guarda en la BD
+    // (escaramuza_suceso). Si no decide (o no mira), se mantiene la doctrina.
+    const ESC_SUC_WINDOW = ESC_FAST ? 12000 : 25000;
+    const escSucFrac = (n) => (n === 2 ? [0.38, 0.72] : [0.5]);
+    let escSucEl = null, escSucTimer = 0, escSucOpen = null, escSucDl = 0, escSucSel = null;
+    const escSucSkipped = new Set();
+    function ensureEscSucEl() {
+      if (escSucEl) return escSucEl;
+      escSucEl = document.createElement('div'); escSucEl.className = 'hacp-suc-ov'; escSucEl.hidden = true; document.body.appendChild(escSucEl);
+      ['pointerdown', 'pointerup', 'wheel', 'click'].forEach(ev => escSucEl.addEventListener(ev, e => e.stopPropagation(), { passive: false }));
+      return escSucEl;
+    }
+    function closeEscSuc() { if (escSucTimer) { clearInterval(escSucTimer); escSucTimer = 0; } escSucOpen = null; escSucSel = null; if (escSucEl) escSucEl.hidden = true; }
+    function escSucBoxHTML(band, ev) {
+      const s = SUCESOS_COOP.find(x => x.id === ev.sucesoId); if (!s) return '';
+      const opts = DOCTRINAS.map((d, ix) => {
+        const on = (escSucSel === ix) ? ' on' : '';
+        const p = Math.round(pSuceso(bandStat(band, d.dom), band.dificultad || 4) * 100);
+        return `<button type="button" class="hacp-suc-op${on}" data-eop="${ix}"><span class="hacp-suc-chk">〔${d.gly}〕</span><span class="hacp-suc-opt">${esc(d.nom)}</span><span class="hacp-suc-pct">${p}%</span></button>`;
+      }).join('');
+      const footer = `<div class="hacp-suc-confirm">
+        <button type="button" class="hacp-cp-btn hacp-suc-cancel" data-esuc-skip>Mantener doctrina</button>
+        <button type="button" class="hacp-cp-btn hacp-suc-ok" data-esuc-ok${escSucSel == null ? ' disabled' : ''}>Aceptar</button></div>`;
+      return `<div class="hacp-suc-box">
+        <div class="hacp-suc-eyebrow">⚔ Escaramuza · el capitán decide</div>
+        <div class="hacp-suc-ttl">${esc(s.txt)}</div>
+        <div class="hacp-suc-desc">Elige la maniobra de la banda para este trance. Sin decisión se mantiene la doctrina.</div>
+        <div class="hacp-suc-ops">${opts}</div>${footer}
+        <div class="hacp-suc-bar"><i data-esuc-bar></i></div>
+        <div class="hacp-suc-hint" data-esuc-hint></div></div>`;
+    }
+    function renderEscSucBody(band, ev) {
+      const el = ensureEscSucEl(); el.innerHTML = escSucBoxHTML(band, ev);
+      el.querySelectorAll('[data-eop]').forEach(b => b.addEventListener('click', () => { escSucSel = +b.dataset.eop; renderEscSucBody(band, ev); }));
+      const ok = el.querySelector('[data-esuc-ok]'); if (ok && !ok.disabled) ok.addEventListener('click', () => { if (escSucSel != null) applyEscOverride(band, ev, escSucSel); });
+      const sk = el.querySelector('[data-esuc-skip]'); if (sk) sk.addEventListener('click', () => { escSucSkipped.add(band.id + ':' + ev.i); closeEscSuc(); });
+    }
+    function openEscSucCard(band, ev, dl) {
+      escSucOpen = ev.i; escSucDl = dl; escSucSel = null;
+      ensureEscSucEl(); renderEscSucBody(band, ev); escSucEl.hidden = false;
+      if (escSucTimer) clearInterval(escSucTimer);
+      escSucTimer = setInterval(() => tickEscSucCard(band, ev), 200); tickEscSucCard(band, ev);
+    }
+    function tickEscSucCard(band, ev) {
+      if (!escSucEl || escSucEl.hidden) return;
+      const now = clock(), atMs = escSucDl - ESC_SUC_WINDOW, total = Math.max(1, escSucDl - atMs), rem = Math.max(0, escSucDl - now);
+      const bar = escSucEl.querySelector('[data-esuc-bar]'); if (bar) bar.style.width = Math.max(0, Math.min(100, rem / total * 100)) + '%';
+      const hint = escSucEl.querySelector('[data-esuc-hint]'); if (hint) hint.textContent = (escSucSel != null) ? `Confirma en ${Math.ceil(rem / 1000)}s` : `Decides en ${Math.ceil(rem / 1000)}s · si no, se mantiene la doctrina`;
+      if (now >= escSucDl) { if (escSucSel != null) applyEscOverride(band, ev, escSucSel); else { escSucSkipped.add(band.id + ':' + ev.i); closeEscSuc(); } }
+    }
+    async function applyEscOverride(band, ev, choiceIdx) {
+      closeEscSuc(); escSucSkipped.add(band.id + ':' + ev.i);
+      try { await HacEscaramuzas.suceso(band.id, myId, ev.i, choiceIdx); const d = DOCTRINAS[choiceIdx]; if (d) toast(`⚔ Maniobra: 〔${d.gly}〕 ${d.nom}`); }
+      catch (e) { escSucSkipped.delete(band.id + ':' + ev.i); toast((e && e.message) || 'No se pudo fijar la maniobra'); }
+    }
+    // Tic (1 s): solo el CAPITÁN y solo mientras mira la escaramuza en curso.
+    function escSucesoTick() {
+      if (!escVisible || !myId || !window.HacEscaramuzas || !window.HacRand) return;
+      const band = HacEscaramuzas.miBanda(h.id, myId);
+      if (!band || band.hostId !== myId || band.estado !== 'en_curso') { if (escSucOpen != null) closeEscSuc(); return; }
+      const plan = escPlan(band); if (!plan.length) { if (escSucOpen != null) closeEscSuc(); return; }
+      const now = clock(), startMs = band.inicioMs, durMs = Math.max(1, band.finMs - band.inicioMs);
+      const fr = escSucFrac(plan.length), ov = band.sucesos || {};
+      let ev = null, dl = 0;
+      for (let k = 0; k < plan.length; k++) {
+        const t = startMs + durMs * fr[k];
+        if (now >= t && ov[plan[k].i] == null && !escSucSkipped.has(band.id + ':' + plan[k].i)) {
+          const deadline = Math.min(t + ESC_SUC_WINDOW, band.finMs - 2000);
+          if (now < deadline) { ev = plan[k]; dl = deadline; break; }
+        }
+      }
+      if (!ev) { if (escSucOpen != null) closeEscSuc(); return; }
+      if (escSucOpen !== ev.i) openEscSucCard(band, ev, dl);
+    }
     // RESOLUCIÓN al volver (≥ fin): cualquier miembro la dispara; la RPC es idempotente
     // (solo la primera surte efecto). Dado de éxito en cliente, como en las expediciones.
     function resolverEscaramuzaSiToca() {
@@ -1988,7 +2065,7 @@
     }
     // Tic de 1 s: refresca SOLO el panel del personaje (cuenta atrás de expedición y
     // energía/regeneración se derivan del reloj de servidor → tienen que verse vivos).
-    setInterval(() => { if (charId) refreshCharPanel(); if (escVisible) escTick(); sucesoTick(); }, 1000);
+    setInterval(() => { if (charId) refreshCharPanel(); if (escVisible) escTick(); sucesoTick(); escSucesoTick(); }, 1000);
 
     // Popup con la gente que hay dentro de un edificio (al pulsar su banner).
     function showPop(x, y, sign) {
