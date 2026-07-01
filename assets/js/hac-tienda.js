@@ -50,6 +50,22 @@ const HacTienda = (function () {
     // ── Tier 6 ── piezas de prestigio
     { id: 'caballo', nombre: 'Caballo de raza', zh: '寶馬', icon: '🐎', tier: 6, precio: 260, tipo: 'mascota', efecto: { guardable: true }, desc: 'Un corcel digno de un general.' },
     { id: 'jade',    nombre: 'Colgante de jade', zh: '玉佩', icon: '💠', tier: 6, precio: 300, tipo: 'mascota', efecto: { guardable: true }, desc: 'Pieza de jade tallado, símbolo de rango.' },
+
+    // ── SELLOS DE COMERCIO (equipables): +% al dinero de misiones/expediciones ──
+    { id: 'sello-com',   nombre: 'Sello de comercio', zh: '商印', icon: '🪙', tier: 2, precio: 45,  tipo: 'equipo', efecto: { equip: { dineroPct: 0.03 } }, desc: 'Un sello mercantil. Equípalo para +3% de dinero.' },
+    { id: 'sello-plata', nombre: 'Sello de plata',    zh: '銀印', icon: '🪙', tier: 4, precio: 110, tipo: 'equipo', efecto: { equip: { dineroPct: 0.05 } }, desc: 'Sello de plata de una casa próspera. +5% de dinero.' },
+    { id: 'sello-oro',   nombre: 'Sello imperial',    zh: '金印', icon: '🪙', tier: 6, precio: 300, tipo: 'equipo', efecto: { equip: { dineroPct: 0.08 } }, desc: 'Sello dorado de gran mérito. +8% de dinero.' },
+    // ── ENSERES DE MARCHA (equipables): −% al tiempo de las expediciones ──
+    { id: 'botas',       nombre: 'Botas de marcha',   zh: '行靴', icon: '🥾', tier: 2, precio: 45,  tipo: 'equipo', efecto: { equip: { expedPct: 0.08 } }, desc: 'Buen calzado de camino. Equípalo: −8% de tiempo de expedición.' },
+    { id: 'montura-lig', nombre: 'Montura ligera',    zh: '輕騎', icon: '🐴', tier: 4, precio: 120, tipo: 'equipo', efecto: { equip: { expedPct: 0.12 } }, desc: 'Cabalgadura veloz. −12% de tiempo de expedición.' },
+    { id: 'vanguardia',  nombre: 'Enseña de vanguardia', zh: '先鋒旗', icon: '🚩', tier: 6, precio: 300, tipo: 'equipo', efecto: { equip: { expedPct: 0.18 } }, desc: 'Guía la marcha al frente. −18% de tiempo de expedición.' },
+    // ── MANUALES DE EXPERIENCIA (consumibles): +XP FIJA a un stat, se gastan al usar ──
+    { id: 'man-mil',  nombre: 'Manual de instrucción', zh: '操典', icon: '📕', tier: 1, precio: 20, tipo: 'manual', efecto: { manual: { dom: 'militar', xp: 30 } },        desc: 'Ejercicios de armas. Úsalo para +30 XP Militar.' },
+    { id: 'man-cul',  nombre: 'Manual de estudio',     zh: '學典', icon: '📗', tier: 1, precio: 20, tipo: 'manual', efecto: { manual: { dom: 'cultural', xp: 30 } },       desc: 'Lecciones de los clásicos. Úsalo para +30 XP Cultural.' },
+    { id: 'man-adm',  nombre: 'Manual de gobierno',    zh: '政典', icon: '📘', tier: 1, precio: 20, tipo: 'manual', efecto: { manual: { dom: 'administrativo', xp: 30 } }, desc: 'Práctica de registros. Úsalo para +30 XP Administrativo.' },
+    { id: 'comp-mil', nombre: 'Compendio militar',       zh: '武經', icon: '📕', tier: 4, precio: 75, tipo: 'manual', efecto: { manual: { dom: 'militar', xp: 100 } },        desc: 'Gran obra de estrategia. Úsalo para +100 XP Militar.' },
+    { id: 'comp-cul', nombre: 'Compendio cultural',      zh: '文淵', icon: '📗', tier: 4, precio: 75, tipo: 'manual', efecto: { manual: { dom: 'cultural', xp: 100 } },       desc: 'Suma del saber letrado. Úsalo para +100 XP Cultural.' },
+    { id: 'comp-adm', nombre: 'Compendio administrativo', zh: '政要', icon: '📘', tier: 4, precio: 75, tipo: 'manual', efecto: { manual: { dom: 'administrativo', xp: 100 } }, desc: 'Tratado de gobierno. Úsalo para +100 XP Administrativo.' },
   ]);
 
   const byId = {}; CATALOGO.forEach(i => { byId[i.id] = i; });
@@ -62,15 +78,46 @@ const HacTienda = (function () {
   function efectoTexto(item) {
     const e = item.efecto || {};
     if (e.energia) return `+${e.energia} de energía ⚡`;
-    if (e.equip) return 'Equipable · ' + Object.keys(e.equip).map(d => `+${e.equip[d]} ${NOM[d] || d}`).join(' · ');
+    if (e.equip) {
+      const parts = Object.keys(e.equip).map(d => {
+        const v = e.equip[d];
+        if (d === 'dineroPct') return `+${Math.round(v * 100)}% dinero`;
+        if (d === 'expedPct') return `−${Math.round(v * 100)}% tiempo de expedición`;
+        return `+${v} ${NOM[d] || d}`;
+      });
+      return 'Equipable · ' + parts.join(' · ');
+    }
+    if (e.manual) return `Consumible · +${e.manual.xp} XP ${NOM[e.manual.dom] || e.manual.dom}`;
     if (e.xp) return Object.keys(e.xp).map(d => `+${e.xp[d]} XP ${NOM[d] || d}`).join(' · ');
     if (e.capInv) return `+${e.capInv} ranuras de mochila 🎒`;
     if (e.guardable) return 'Objeto decorativo · ocupa 1 ranura';
     return '';
   }
-  // Bonos de equipo de un item (o {} si no es equipable).
+  // Bonos de equipo de un item (o null si no es equipable).
   function equipBonus(id) { const it = byId[id]; return (it && it.efecto && it.efecto.equip) || null; }
+  const manualDe = (id) => { const it = byId[id]; return (it && it.efecto && it.efecto.manual) || null; };
 
-  return { CATALOGO, get, disponibles, bloqueados, efectoTexto, equipBonus, GLIFOS: G };
+  // ── Mercader con ROTACIÓN DIARIA ───────────────────────────────────────────
+  // Muestra COUNT_BY_TIER[tier] objetos de entre los disponibles (≤ tier), elegidos
+  // de forma determinista por DÍA + hacienda (igual para todos). Hasta 12 en el máx.
+  const COUNT_BY_TIER = [4, 6, 7, 9, 10, 12];
+  function diaStr() { const t = (typeof window !== 'undefined' && window.HacClock && HacClock.now) ? HacClock.now() : Date.now(); const d = new Date(t); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); }
+  function stockDelDia(tier, seedKey) {
+    const pool = disponibles(tier).slice();
+    const n = Math.min(pool.length, COUNT_BY_TIER[Math.max(1, Math.min(6, tier || 1)) - 1] || 4);
+    const rng = (typeof window !== 'undefined' && window.HacRand && HacRand.make) ? HacRand.make('mkt-' + (seedKey || '') + '-' + diaStr()) : null;
+    for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor((rng ? rng.next() : Math.random()) * (i + 1)); const t = pool[i]; pool[i] = pool[j]; pool[j] = t; }
+    return pool.slice(0, n).sort((a, b) => a.tier - b.tier);
+  }
+  // Botín aleatorio PONDERADO por tier (los de mayor tier salen menos), de ≤ tier.
+  function botinAleatorio(tier) {
+    const pool = disponibles(tier); if (!pool.length) return null;
+    const w = pool.map(i => 1 / Math.pow(2, (i.tier || 1) - 1));
+    let tot = 0; w.forEach(x => tot += x); let r = Math.random() * tot;
+    for (let i = 0; i < pool.length; i++) { r -= w[i]; if (r <= 0) return pool[i].id; }
+    return pool[pool.length - 1].id;
+  }
+
+  return { CATALOGO, get, disponibles, bloqueados, efectoTexto, equipBonus, manualDe, stockDelDia, botinAleatorio, COUNT_BY_TIER, GLIFOS: G };
 })();
 if (typeof window !== 'undefined') window.HacTienda = HacTienda;

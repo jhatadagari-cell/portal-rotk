@@ -543,20 +543,28 @@
           _wasOnMission = false; applyOrders();
           return;
         }
-        const r = HacPuntos.recompensa(costeMision(dom), o.duracionSeg || 60);
+        let r = HacPuntos.recompensa(costeMision(dom), o.duracionSeg || 60);
+        // Las ACTIVIDADES INTERNAS (en edificios) rinden MÁS prestigio según tu nivel
+        // del stat de ese dominio: nivel 1 = ×1, nivel 2 = ×1.2, nivel 3 = ×1.3, …
+        if (!mis && dom && HacStats && HacStats.nivelTotal) {
+          const n = HacStats.nivelTotal(myId, dom);
+          r = Math.round(r * (n <= 1 ? 1 : 1 + n * 0.1));
+        }
         HacPuntos.award(h.id, myId, r);
         // La misión del tablón da, además del prestigio, dinero + XP PERSONAL (al dominio).
         let extra = '';
         if (mis && window.HacStats) {
           const rec = HacMisiones.recompensa(mis);
-          const dinB = conBono(rec.dinero, bonos.dinero), xpB = conBono(rec.xp, xpFracMision(rec.dom));   // bonos de pabellón (政 dinero, 文/武 XP)
+          const dinPct = bonos.dinero + (HacStats.bonusDinero ? HacStats.bonusDinero(myId) : 0);   // pabellón 政 + sellos de comercio equipados
+          const dinB = conBono(rec.dinero, dinPct), xpB = conBono(rec.xp, xpFracMision(rec.dom));
           const nivAntes = (rec.dom && HacStats.nivel) ? HacStats.nivel(myId, rec.dom) : 0;
           HacStats.award(myId, { dinero: dinB, xp: rec.dom ? { [rec.dom]: xpB } : null });
           if (rec.dom && HacStats.nivel && window.HacBitacora) { const nivD = HacStats.nivel(myId, rec.dom); if (nivD > nivAntes) HacBitacora.log(myId, 'progreso', `⬆ ${DOM_NOMBRE[rec.dom]} sube a nivel ${nivD}`); }
           extra = ` · +${dinB}💰 · +${xpB} XP ${DOM_GLYPH[rec.dom] || ''}`.trimEnd();
-          // BOTÍN: prob. baja (sube con la dificultad) de traer 1 objeto. Si es de
-          // energía, se aplica al momento; si es equipable, va a la mochila.
-          const lootId = HacMisiones.botin ? HacMisiones.botin(mis) : null;
+          // BOTÍN: prob. baja (sube con la dificultad) de traer 1 objeto del pool
+          // completo, ponderado por tier. Si es comida, se aplica; si no, a la mochila.
+          const gotLoot = HacMisiones.lootChance ? (Math.random() < HacMisiones.lootChance(mis.dif)) : false;
+          const lootId = gotLoot && HacTienda.botinAleatorio ? HacTienda.botinAleatorio(tier) : null;
           const loot = lootId && window.HacTienda ? HacTienda.get(lootId) : null;
           if (loot) {
             if (loot.efecto && loot.efecto.energia) { if (window.HacEnergia) HacEnergia.add(h.id, myId, loot.efecto.energia); extra += ` · 🎁 ${loot.icon} ${loot.nombre}`; }
@@ -597,11 +605,13 @@
         .then(applyOrders).catch(e => console.warn('[orden] set', e));
     }
     // Enviar a una MISIÓN del tablón (sale de la finca, tipo 'expedicion').
+    // Duración de una expedición con el ahorro de tiempo del EQUIPO (enseres de marcha).
+    const durExped = (m) => Math.max(30, Math.round(HacMisiones.durSeg(m) * (1 - (HacStats.bonusExped ? HacStats.bonusExped(myId) : 0))));
     function dispatchMision(misId) {
       if (!myId || !window.HacOrdenes || !window.HacMisiones) return;
       const m = HacMisiones.get(misId); if (!m) return;
       if (window.HacEnergia) HacEnergia.spend(h.id, myId, costeExped(m));
-      HacOrdenes.set({ haciendaId: h.id, miembroId: myId, tipo: 'expedicion', targetId: 'mis:' + misId, duracionSeg: HacMisiones.durSeg(m) })
+      HacOrdenes.set({ haciendaId: h.id, miembroId: myId, tipo: 'expedicion', targetId: 'mis:' + misId, duracionSeg: durExped(m) })
         .then(applyOrders).catch(e => console.warn('[orden] set', e));
     }
     // ESCARAMUZA: cuando MI banda está 'en_curso', mi mecenas sale por la puerta
@@ -649,14 +659,8 @@
     // equipables/guardables). El reparto/elección será la sub-fase 4d.
     function generarBotin(band) {
       const n = (band.miembros || []).length || 1;
-      let src = [];
-      if (window.HacTienda && HacTienda.disponibles) {
-        const all = HacTienda.disponibles(tier) || [];
-        src = all.filter(i => i.efecto && (i.efecto.equip || i.efecto.guardable));
-        if (!src.length) src = all;
-      }
       const out = [];
-      for (let i = 0; i < n && src.length; i++) out.push(src[Math.floor(Math.random() * src.length)].id);
+      for (let i = 0; i < n; i++) { const id = (window.HacTienda && HacTienda.botinAleatorio) ? HacTienda.botinAleatorio(tier) : null; if (id) out.push(id); }
       return out;
     }
     // RESOLUCIÓN al volver (≥ fin): cualquier miembro la dispara; la RPC es idempotente
@@ -1017,7 +1021,10 @@
       items.forEach(it => { const def = window.HacTienda && HacTienda.get(it.id); for (let k = 0; k < (it.n || 1); k++) flat.push(def); });
       const slots = Array.from({ length: cap }, (_, i) => {
         const def = flat[i];
-        return def ? `<div class="hacp-slot full" title="${esc(def.nombre)} ${esc(def.zh || '')}">${def.icon || '∎'}</div>` : '<div class="hacp-slot"></div>';
+        if (!def) return '<div class="hacp-slot"></div>';
+        const man = def.efecto && def.efecto.manual;
+        if (man && d.mine) return `<button type="button" class="hacp-slot full manual" data-usar="${esc(def.id)}" title="${esc(def.nombre)} · toca para usar (${HacTienda.efectoTexto(def)})">${def.icon || '∎'}</button>`;
+        return `<div class="hacp-slot full" title="${esc(def.nombre)} ${esc(def.zh || '')}">${def.icon || '∎'}</div>`;
       }).join('');
       const canStore = hasHome && d.mine && d.money > 0;
       const canTake = hasHome && d.mine && d.ahorro > 0;
@@ -1047,6 +1054,17 @@
     // Botón para abrir la tienda, solo si la finca tiene un mercado construido.
     function marketBtnHTML() {
       return hasMarket ? `<button type="button" class="hacp-cp-btn hacp-cp-shop" data-act="shop">市 Comprar en el mercado</button>` : '';
+    }
+    // Usa un MANUAL de la mochila (+XP fija a su dominio, se consume).
+    function usarManualUI(id) {
+      if (!myId || !window.HacStats || !HacStats.usarManual) return;
+      const def = window.HacTienda ? HacTienda.get(id) : null;
+      const r = HacStats.usarManual(myId, id);
+      if (r && r.ok) {
+        toast(`📖 +${r.xp} XP ${DOM_NOMBRE[r.dom] || ''}`.trim());
+        if (window.HacBitacora) HacBitacora.log(myId, 'progreso', `📖 Usaste ${def ? def.nombre : 'un manual'} · +${r.xp} XP ${DOM_NOMBRE[r.dom] || ''}`.trim());
+        buildCharPanel(charId);
+      } else toast((r && r.motivo) || 'No se pudo usar');
     }
     // Texto transparente de energía: % + ritmo de regeneración + cuánto falta para
     // llenar (para TU mecenas; para los demás, solo el %).
@@ -1152,6 +1170,7 @@
       if (ib) ib.addEventListener('click', () => { invOpen = !invOpen; buildCharPanel(charId); });
       const shb = charEl.querySelector('[data-act="shop"]');
       if (shb) shb.addEventListener('click', openShop);
+      charEl.querySelectorAll('[data-usar]').forEach(b => b.addEventListener('click', () => usarManualUI(b.dataset.usar)));
       const gh = charEl.querySelector('[data-act="gohome"]');
       if (gh) gh.addEventListener('click', openHome);
       const escb = charEl.querySelector('[data-act="esc"]');
@@ -1245,17 +1264,16 @@
     function buildShop() {
       const el = ensureShopEl();
       const money = window.HacStats ? HacStats.dinero(myId) : 0;
-      const disp = HacTienda.disponibles(tier), block = HacTienda.bloqueados(tier);
+      const disp = HacTienda.stockDelDia ? HacTienda.stockDelDia(tier, h.id) : HacTienda.disponibles(tier);
       const note = !myId ? `<div class="hacp-shop-note">Entra con tu mecenas en esta finca para comprar.</div>` : '';
       el.innerHTML = `
         <div class="hacp-shop-box">
           <button type="button" class="hacp-shop-x" data-act="shop-close" aria-label="Cerrar">✕</button>
           <div class="hacp-shop-h"><span class="hacp-shop-zh">市</span> Mercado <span class="hacp-shop-money">💰 <b id="hacp-shop-money">${money}</b></span></div>
-          <div class="hacp-shop-sub">Surtido según el nivel de la finca (nivel ${tier}). Sube de nivel para desbloquear más.</div>
+          <div class="hacp-shop-sub">El mercader renueva su género cada día · ${disp.length} artículos hoy (nivel ${tier}).</div>
           ${bonos.mercado > 0 ? `<div class="hacp-shop-note">Pabellón administrativo: −${pct(bonos.mercado)}% en todos los precios.</div>` : ''}
           ${note}
           <div class="hacp-shop-grid">${disp.map(i => itemCardHTML(i, false)).join('')}</div>
-          ${block.length ? `<div class="hacp-shop-lockttl">Se desbloquean al subir de nivel</div><div class="hacp-shop-grid">${block.map(i => itemCardHTML(i, true)).join('')}</div>` : ''}
         </div>`;
       el.querySelector('[data-act="shop-close"]').addEventListener('click', closeShop);
       el.querySelectorAll('[data-buy]').forEach(b => b.addEventListener('click', () => buyItem(HacTienda.get(b.dataset.buy))));
@@ -1514,7 +1532,7 @@
           <span class="hacp-mis-g" style="color:${DOM_COLOR[m.dom]}">${DOM_GLYPH[m.dom]}</span>
           <div class="hacp-mis-main">
             <div class="hacp-mis-name">${esc(m.nombre)} <span class="hacp-mis-dif">dif. ${m.dif}</span></div>
-            <div class="hacp-mis-meta">⏱ ${fmtClock(HacMisiones.durSeg(m))} · <span class="${sinEn ? 'hacp-mis-noen' : ''}">−${en}⚡</span> · +${dinB}💰${bonos.dinero ? '<sup class="hacp-bono">↑</sup>' : ''} · +${xpB} XP${xpFracMision(m.dom) > 0 ? '<sup class="hacp-bono">↑</sup>' : ''} ${DOM_GLYPH[m.dom]} · 🎁 ${loot}%</div>
+            <div class="hacp-mis-meta">⏱ ${fmtClock(durExped(m))}${durExped(m) < HacMisiones.durSeg(m) ? '<sup class="hacp-bono">↓</sup>' : ''} · <span class="${sinEn ? 'hacp-mis-noen' : ''}">−${en}⚡</span> · +${dinB}💰${bonos.dinero ? '<sup class="hacp-bono">↑</sup>' : ''} · +${xpB} XP${xpFracMision(m.dom) > 0 ? '<sup class="hacp-bono">↑</sup>' : ''} ${DOM_GLYPH[m.dom]} · 🎁 ${loot}%</div>
           </div>
           <span class="hacp-mis-risk r-${rc}" title="Riesgo de fracaso (baja con tu nivel ${DOM_GLYPH[m.dom]} y el equipo)">⚠ ${Math.round(risk * 100)}%</span>
           <button type="button" class="hacp-mis-go" data-mis="${esc(m.id)}"${ocupado || sinEn ? ' disabled' : ''} title="${sinEn ? 'Energía insuficiente' : ''}">Enviar</button>

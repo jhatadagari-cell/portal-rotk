@@ -89,6 +89,20 @@ const HacStats = (function () {
     let s = 0; r.equipado.forEach(id => { const b = HacTienda.equipBonus(id); if (b && b[dom]) s += b[dom]; });
     return s;
   }
+  // Bono % del equipo: dinero (suma de dineroPct) y ahorro de tiempo de expedición
+  // (suma de expedPct, tope 0.6 para no llegar a 0). Fracciones (0.05 = 5%).
+  function bonusDinero(mid) { const r = row(mid); if (!r || !window.HacTienda) return 0; let s = 0; r.equipado.forEach(id => { const b = HacTienda.equipBonus(id); if (b && b.dineroPct) s += b.dineroPct; }); return s; }
+  function bonusExped(mid) { const r = row(mid); if (!r || !window.HacTienda) return 0; let s = 0; r.equipado.forEach(id => { const b = HacTienda.equipBonus(id); if (b && b.expedPct) s += b.expedPct; }); return Math.min(0.6, s); }
+  // Usa un MANUAL de la mochila: +XP fija a su dominio y se consume. {ok, dom, xp}.
+  function usarManual(mid, id) {
+    const m = window.HacTienda && HacTienda.manualDe ? HacTienda.manualDe(id) : null;
+    if (!m) return { ok: false, motivo: 'No es un manual' };
+    const r = ensure(mid);
+    if (!quita(r.inv, id)) return { ok: false, motivo: 'No lo llevas en la mochila' };
+    if (DOMS.indexOf(m.dom) >= 0) r[m.dom] += (m.xp || 0);
+    persist(r);
+    return { ok: true, dom: m.dom, xp: m.xp || 0 };
+  }
   function nivelTotal(mid, dom) { return nivel(mid, dom) + bonus(mid, dom); }
   // Equipa un objeto de la MOCHILA (máx 3). Devuelve {ok, motivo}.
   function equipar(mid, id) {
@@ -185,7 +199,7 @@ const HacStats = (function () {
     if (!mid || !item) return { ok: false, motivo: 'Artículo inválido' };
     const r = ensure(mid), ef = item.efecto || {};
     const precio = (precioOverride != null) ? Math.max(0, precioOverride | 0) : item.precio;   // descuento del mercado (政)
-    const aInv = ef.guardable || ef.equip;   // objetos y equipables van a la MOCHILA
+    const aInv = ef.guardable || ef.equip || ef.manual;   // objetos, equipables y manuales van a la MOCHILA
     if (r.dinero < precio) return { ok: false, motivo: 'No tienes suficiente dinero' };
     if (aInv && ocupadas(mid) >= r.cap) return { ok: false, motivo: 'Inventario lleno' };
     r.dinero -= precio;
@@ -248,6 +262,6 @@ const HacStats = (function () {
     } catch (e) { console.error('[HacStats] liberarCasa', e); }
   }
 
-  return { ready, reload, dinero, ahorro, casaPos, casasReclamadas, duenoDeCasa, comprarCasa, liberarCasa, abandonar, heridas, herir, curar, escaramuzaCd, xp, nivel, progresoNivel, bonus, nivelTotal, equipados, equipar, desequipar, MAX_EQUIP, award, comprar, guardar, sacar, darItem, meterEnCasa, sacarDeCasa, inventario, casaInventario, capInventario, ocupadas, recompensaExped, DOMS, dbOk: () => ok, TABLE };
+  return { ready, reload, dinero, ahorro, casaPos, casasReclamadas, duenoDeCasa, comprarCasa, liberarCasa, abandonar, heridas, herir, curar, escaramuzaCd, bonusDinero, bonusExped, usarManual, xp, nivel, progresoNivel, bonus, nivelTotal, equipados, equipar, desequipar, MAX_EQUIP, award, comprar, guardar, sacar, darItem, meterEnCasa, sacarDeCasa, inventario, casaInventario, capInventario, ocupadas, recompensaExped, DOMS, dbOk: () => ok, TABLE };
 })();
 if (typeof window !== 'undefined') window.HacStats = HacStats;
