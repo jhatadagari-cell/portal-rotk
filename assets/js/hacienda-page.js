@@ -1273,6 +1273,89 @@
       else if (band.estado === 'abortando')
         HacBitacora.log(myId, 'escaramuza', '↩ Escaramuza abortada · la banda regresa', { clave: 'esc-abort:' + band.id });
     }
+
+    // ── RELACIONES entre mecenas (afinidad + vínculos que brotan al azar) ──────
+    const nombreDe = (id) => { const m = (h.miembros || []).find(x => x.personajeId === id); return (m && m.nombre) || 'un mecenas'; };
+    const relKey = (r) => r.a + '|' + r.b;
+    let _relBusy = false;
+    // Al resolver MI escaramuza: sube la afinidad de cada par y tira (prob. baja,
+    // AL AZAR) por si brota un vínculo nombrado. Determinista (HacRand por band.id+par)
+    // → todos los clientes computan igual; la RPC es idempotente (flag en la banda).
+    function procesarRelacionesSiToca() {
+      if (_relBusy || !myId || !window.HacEscaramuzas || !window.HacRelaciones || !window.HacRand) return;
+      const band = HacEscaramuzas.miBanda(h.id, myId);
+      if (!band || band.relacionesHechas) return;
+      if (band.estado !== 'botin' && band.estado !== 'resuelta') return;
+      const ids = (band.miembros || []).map(m => m.id).filter(Boolean);
+      if (ids.length < 2) return;
+      const exito = band.exito === true;
+      const TIPOS = ['hermandad', 'rivalidad', 'odio', 'amor'];
+      const SUBS = { hermandad: ['jurada', 'prometida'], rivalidad: ['competitiva', 'envidiosa'], odio: ['unilateral', 'reciproco'], amor: ['unilateral', 'reciproco'] };
+      const prob = ESC_FAST ? 0.85 : 0.02;   // "muy muy baja" en real; alta en modo test
+      const afin = [], forjas = [];
+      for (let i = 0; i < ids.length; i++) for (let j = i + 1; j < ids.length; j++) {
+        const p = HacRelaciones.par(ids[i], ids[j]), a = p[0], b = p[1];
+        afin.push({ a: a, b: b, d: exito ? 2 : 1 });
+        const rel = HacRelaciones.get(h.id, a, b);
+        if (rel && rel.tipo) continue;                       // ya tienen vínculo
+        const R = HacRand.make('rel#' + band.id + '#' + a + '#' + b);
+        if (R.next() >= prob) continue;
+        const tipo = TIPOS[R.int(4)], subtipo = SUBS[tipo][R.int(2)];
+        const origen = ((tipo === 'odio' || tipo === 'amor') && subtipo === 'unilateral') ? [a, b][R.int(2)] : '';
+        forjas.push({ a: a, b: b, tipo: tipo, subtipo: subtipo, origen: origen });
+      }
+      _relBusy = true;
+      HacRelaciones.procesar(band.id, h.id, clock(), afin, forjas)
+        .then(() => HacRelaciones.reload()).then(() => notifyRelacionesNuevas())
+        .catch(e => console.warn('[relaciones] procesar', e && e.message || e))
+        .finally(() => { _relBusy = false; });
+    }
+    // Detecta vínculos NUEVOS que me implican y los anuncia (carta + bitácora). En la
+    // primera pasada solo marca los existentes (no re-anuncia lo de sesiones previas).
+    const _relSeen = new Set(); let _relSeenInit = false;
+    function notifyRelacionesNuevas() {
+      if (!myId || !window.HacRelaciones) return;
+      const mine = HacRelaciones.deMiembro(h.id, myId);
+      if (!_relSeenInit) { mine.forEach(x => _relSeen.add(relKey(x.rel))); _relSeenInit = true; return; }
+      mine.forEach(x => {
+        const k = relKey(x.rel); if (_relSeen.has(k)) return; _relSeen.add(k);
+        mostrarRelacionForjada(x.rel, x.otro);
+        if (window.HacBitacora) HacBitacora.log(myId, 'progreso', `縁 ${HacRelaciones.etiqueta(x.rel)} con ${nombreDe(x.otro)}`, { clave: 'rel:' + k });
+      });
+    }
+    let relEl = null;
+    function ensureRelEl() {
+      if (relEl) return relEl;
+      relEl = document.createElement('div'); relEl.className = 'hacp-suc-ov hacp-rel-ov'; relEl.hidden = true; document.body.appendChild(relEl);
+      ['pointerdown', 'pointerup', 'wheel', 'click'].forEach(ev => relEl.addEventListener(ev, e => e.stopPropagation(), { passive: false }));
+      return relEl;
+    }
+    function mostrarRelacionForjada(rel, otro) {
+      const d = HacRelaciones.defTipo(rel.tipo); if (!d) return;
+      const sub = d.subs[rel.subtipo] || {};
+      const dirTxt = (d.dir && rel.subtipo === 'unilateral')
+        ? (rel.origen === myId ? ' · lo sientes tú' : ` · lo siente ${esc(nombreDe(otro))}`) : '';
+      const el = ensureRelEl(); el.hidden = false;
+      el.innerHTML = `<div class="hacp-suc-box hacp-rel-box rel-${d.cls}">
+        <div class="hacp-suc-eyebrow">縁 Se ha forjado un vínculo</div>
+        <div class="hacp-rel-glyph">${d.zh}</div>
+        <div class="hacp-suc-ttl">${esc(d.nombre)}${sub.nombre ? ' ' + esc(sub.nombre) : ''}</div>
+        <div class="hacp-suc-eff">Entre <b>${esc(nombreDe(myId))}</b> y <b>${esc(nombreDe(otro))}</b>${dirTxt}</div>
+        <button type="button" class="hacp-cp-btn hacp-suc-done" data-rel-done>Continuar</button></div>`;
+      el.querySelector('[data-rel-done]').addEventListener('click', () => { el.hidden = true; });
+    }
+    // Sección "Relaciones" del panel del personaje (vínculos nombrados de mi mecenas).
+    function relacionesHTML() {
+      if (!window.HacRelaciones || !myId) return '';
+      const mine = HacRelaciones.deMiembro(h.id, myId);
+      if (!mine.length) return '';
+      const rows = mine.map(x => {
+        const d = HacRelaciones.defTipo(x.rel.tipo) || {}; const sub = (d.subs && d.subs[x.rel.subtipo]) || {};
+        const dir = (d.dir && x.rel.subtipo === 'unilateral') ? (x.rel.origen === myId ? '→' : '←') : '';
+        return `<div class="hacp-rel-row rel-${d.cls || ''}"><span class="hacp-rel-zh">${esc(d.zh || '')}</span><span class="hacp-rel-nm">${esc(nombreDe(x.otro))}</span><span class="hacp-rel-sub">${esc(d.nombre || '')} ${esc(sub.nombre || '')} ${dir}</span></div>`;
+      }).join('');
+      return `<div class="hacp-cargos hacp-rels"><div class="hacp-cargos-h">縁 Relaciones</div>${rows}</div>`;
+    }
     function escTick() {
       const el = escHost && escHost.querySelector('[data-esc-timer]'); if (!el) return;
       const fin = +el.dataset.escTimer || 0, rem = Math.max(0, fin - clock());
@@ -1652,6 +1735,7 @@
         ${woundsHTML(d)}
         ${(d.mine && hayBonos()) ? `<div class="hacp-cp-bonos" title="Bonos pasivos por los pabellones temáticos de la finca y los edificios de su dominio dentro">Bonos de la finca · ${bonosTexto()}</div>` : ''}
         ${d.mine ? cargosHTML() : ''}
+        ${d.mine ? relacionesHTML() : ''}
         ${d.mine ? `<button type="button" class="hacp-cp-btn hacp-cp-equipbtn" data-act="equip">⚔ Equipo${d.equipN ? ` · ${d.equipN}/3` : ''}</button>` : ''}
         ${d.mine ? `<button type="button" class="hacp-cp-btn hacp-cp-esc" data-act="esc">兵 Escaramuzas</button>` : ''}
         ${d.mine ? `<button type="button" class="hacp-cp-btn hacp-cp-log" data-act="log">錄 Bitácora</button>` : ''}
@@ -2117,8 +2201,9 @@
     if (window.HacCompetencias) HacCompetencias.ready().then(refresh);
     if (window.HacPuntos) HacPuntos.ready().then(refresh);
     if (window.HacStats) HacStats.ready().then(refresh);
-    const escPulse = () => { syncEscaramuzaOrder(); resolverEscaramuzaSiToca(); autoClaimBotinSiToca(); logEscaramuzaResultado(); syncEscaramuzaFolk(); escRefresh(); };
+    const escPulse = () => { syncEscaramuzaOrder(); resolverEscaramuzaSiToca(); autoClaimBotinSiToca(); logEscaramuzaResultado(); procesarRelacionesSiToca(); notifyRelacionesNuevas(); syncEscaramuzaFolk(); escRefresh(); };
     if (window.HacBitacora) HacBitacora.ready();
+    if (window.HacRelaciones) HacRelaciones.ready();
     if (window.HacEscaramuzas) HacEscaramuzas.ready().then(escPulse);
     if (window.HacOrdenes) {
       HacOrdenes.ready().then(applyOrders);
@@ -2128,6 +2213,7 @@
         if (window.HacCompetencias) HacCompetencias.reload();
         if (window.HacPuntos) HacPuntos.reload();
         if (window.HacStats) HacStats.reload();
+        if (window.HacRelaciones) HacRelaciones.reload();
         if (window.HacEscaramuzas) HacEscaramuzas.reload().then(escPulse);   // saca al mecenas y resuelve si toca
         HacOrdenes.reload().then(applyOrders);
       }, 5000);

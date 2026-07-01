@@ -33,7 +33,7 @@ const HacEscaramuzas = (function () {
       miembros: arr(r.miembros), coste: Number(r.coste) || 0,
       inicioMs: Number(r.inicio_ms) || 0, finMs: Number(r.fin_ms) || 0, exito: r.exito,
       botin: arr(r.botin), elecciones: obj(r.elecciones), lootHasta: Number(r.loot_hasta) || 0,
-      doctrina: r.doctrina || '', sucesos: obj(r.sucesos),
+      doctrina: r.doctrina || '', sucesos: obj(r.sucesos), relacionesHechas: !!r.relaciones_hechas,
     };
   }
   async function load() {

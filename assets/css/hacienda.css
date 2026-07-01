@@ -532,6 +532,20 @@ button.hacp-slot.manual:hover{ background:rgba(127,201,160,.34); }
 .hacp-cargo-row.vac .hacp-cargo-quien{ color:var(--parch2); }
 .hacp-cargo-vac{ opacity:.6; font-style:italic; }
 .hacp-cargo-bono{ flex-basis:100%; color:var(--parch2); font-size:10.5px; opacity:.9; }
+/* Relaciones entre mecenas (panel + carta de formación) */
+.hacp-rels .hacp-rel-row{ display:flex; align-items:baseline; gap:8px; font-size:12px; padding:5px 0; border-top:1px solid rgba(201,168,76,.1); }
+.hacp-rels .hacp-rel-row:first-of-type{ border-top:0; }
+.hacp-rel-zh{ font:700 15px 'Noto Serif SC',serif; color:var(--gold); }
+.hacp-rel-nm{ color:var(--parch); font-weight:700; }
+.hacp-rel-sub{ margin-left:auto; color:var(--parch2); font-size:11px; }
+.hacp-rel-row.rel-herm .hacp-rel-zh{ color:#e7c66a; }
+.hacp-rel-row.rel-riva .hacp-rel-zh{ color:#e2a06a; }
+.hacp-rel-row.rel-odio .hacp-rel-zh{ color:#d9756a; }
+.hacp-rel-row.rel-amor .hacp-rel-zh{ color:#e08aa8; }
+.hacp-rel-box{ text-align:center; }
+.hacp-rel-glyph{ font:900 58px 'Noto Serif SC',serif; line-height:1.1; margin:8px 0 2px; color:var(--gold); }
+.hacp-rel-box.rel-herm .hacp-rel-glyph{ color:#e7c66a; } .hacp-rel-box.rel-riva .hacp-rel-glyph{ color:#e2a06a; }
+.hacp-rel-box.rel-odio .hacp-rel-glyph{ color:#d9756a; } .hacp-rel-box.rel-amor .hacp-rel-glyph{ color:#e08aa8; }
 /* ── Escaramuzas (sección móvil Y overlay de escritorio) ──────────────── */
 /* fila genérica (también la usa el listado de bandas en el overlay de escritorio) */
 .hacp-mrow{ display:flex; align-items:center; gap:10px; padding:9px 11px; margin-bottom:7px;
