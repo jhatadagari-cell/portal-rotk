@@ -115,11 +115,11 @@ const HacEscaramuzas = (function () {
   }
   // RESUELVE al volver (≥ fin). Idempotente en BD: solo el primer cliente surte
   // efecto. Aplica dinero/heridas/cooldown a todos y deja la banda en 'botin'/'resuelta'.
-  async function resolver(id, nowMs, exito, botin, share, hostBonus) {
+  async function resolver(id, nowMs, exito, botin, share, hostBonus, lootMs) {
     const c = await sb();
-    const { data, error } = await c.rpc('escaramuza_resolver', {
-      p_id: id, p_now: nowMs, p_exito: !!exito, p_botin: botin || [], p_share: share || 0, p_host_bonus: hostBonus || 0,
-    });
+    const args = { p_id: id, p_now: nowMs, p_exito: !!exito, p_botin: botin || [], p_share: share || 0, p_host_bonus: hostBonus || 0 };
+    if (lootMs) args.p_loot_ms = lootMs;
+    const { data, error } = await c.rpc('escaramuza_resolver', args);
     if (error) throw new Error(error.message || 'No se pudo resolver');
     return upsertCache(data);
   }

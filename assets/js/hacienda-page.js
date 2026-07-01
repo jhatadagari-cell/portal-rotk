@@ -661,7 +661,7 @@
       const dif = band.dificultad || 4;
       const exito = Math.random() < Math.max(0.35, 0.72 - (dif - 4) * 0.08);
       const share = 20 + dif * 10, hostBonus = Math.round((band.coste || 0) * 0.25);
-      HacEscaramuzas.resolver(band.id, clock(), exito, exito ? generarBotin(band) : [], share, hostBonus)
+      HacEscaramuzas.resolver(band.id, clock(), exito, exito ? generarBotin(band) : [], share, hostBonus, ESC_FAST ? 30000 : 0)
         .then(() => { if (window.HacStats) HacStats.reload().then(() => { if (charId) buildCharPanel(charId); }); })
         .catch(e => console.warn('[escaramuza] resolver', e));
     }
@@ -833,6 +833,27 @@
         toast('🎁 Recogiste ' + (it ? it.nombre : 'tu botín'));
       } catch (e) { toast((e && e.message) || 'No se pudo recoger'); await HacEscaramuzas.reload(); }
       finally { escBusy = false; renderEscaramuzas(); if (charId) buildCharPanel(charId); }
+    }
+    // Deadline del botín (loot_hasta): si no elegiste a tiempo, tu cliente coge por ti
+    // una ranura libre al azar (garantiza ≥1 y evita que la banda quede colgada).
+    async function autoClaimBotinSiToca() {
+      if (escBusy || !myId || !window.HacEscaramuzas) return;
+      const band = HacEscaramuzas.miBanda(h.id, myId);
+      if (!band || band.estado !== 'botin' || !band.lootHasta || clock() < band.lootHasta) return;
+      const elec = band.elecciones || {};
+      if (Object.prototype.hasOwnProperty.call(elec, myId)) return;      // ya recogí
+      const taken = new Set(Object.values(elec).map(Number));
+      const libres = (band.botin || []).map((_, i) => i).filter(i => !taken.has(i));
+      if (!libres.length) return;
+      const slot = libres[Math.floor(Math.random() * libres.length)], itemId = band.botin[slot];
+      escBusy = true;
+      try {
+        await HacEscaramuzas.reclamar(band.id, myId, slot);              // reclama sí o sí (venció el plazo)
+        if (itemId && window.HacStats && HacStats.darItem) HacStats.darItem(myId, itemId);
+        const it = window.HacTienda && HacTienda.get(itemId);
+        toast('🎁 Reparto automático: ' + (it ? it.nombre : 'un objeto'));
+      } catch (e) { await HacEscaramuzas.reload(); }
+      finally { escBusy = false; if (charId) buildCharPanel(charId); if (escVisible) renderEscaramuzas(); }
     }
     function escTick() {
       const el = escHost && escHost.querySelector('[data-esc-timer]'); if (!el) return;
@@ -1507,7 +1528,7 @@
     if (window.HacCompetencias) HacCompetencias.ready().then(refresh);
     if (window.HacPuntos) HacPuntos.ready().then(refresh);
     if (window.HacStats) HacStats.ready().then(refresh);
-    const escPulse = () => { syncEscaramuzaOrder(); resolverEscaramuzaSiToca(); syncEscaramuzaFolk(); escRefresh(); };
+    const escPulse = () => { syncEscaramuzaOrder(); resolverEscaramuzaSiToca(); autoClaimBotinSiToca(); syncEscaramuzaFolk(); escRefresh(); };
     if (window.HacEscaramuzas) HacEscaramuzas.ready().then(escPulse);
     if (window.HacOrdenes) {
       HacOrdenes.ready().then(applyOrders);
