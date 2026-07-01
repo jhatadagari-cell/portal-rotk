@@ -332,18 +332,15 @@ const HacOnboard = (function () {
     host.innerHTML = `<div class="onb-card"><div class="onb-loading">Cargando tu hacienda…</div></div>`;
     try {
       if (window.HacStore && HacStore.ready) await withTimeout(HacStore.ready(), 5000, null);
+      const casas = window.HacStore ? HacStore.all() : [];
+      // FUENTE DE VERDAD de la pertenencia = estar en h.miembros de alguna casa (igual
+      // que la página de la finca). Cubre TANTO el ingreso por solicitud aprobada COMO
+      // el alta directa del admin (que no crea solicitud). La solicitud es secundaria.
+      const miCasa = casas.find(c => (c.miembros || []).some(m => m.personajeId === pj.id));
       const sol = window.HacSolicitudes ? await withTimeout(HacSolicitudes.mine(), 5000, null) : null;
-      if (sol && sol.estado === 'aprobada') {
-        // La solicitud 'aprobada' (BD) es la fuente de verdad de tu pertenencia. NO se
-        // borra por un desajuste con h.miembros (eso destruía solicitudes válidas y te
-        // dejaba sin casa en todos los navegadores). Solo es OBSOLETA si la hacienda ya
-        // no existe; el abandono/expulsión limpian la solicitud en su propio flujo.
-        const stored = window.HacStore ? HacStore.all() : [];
-        const hm = window.HacStore ? HacStore.get(sol.haciendaId) : null;
-        if (hm || !stored.length) return renderMember(user, pj, sol);   // la casa existe (o el store no cargó) → confía en la BD
-        try { await HacSolicitudes.cancelar(sol.id); } catch (e) { console.warn('[onboard] limpiar solicitud de hacienda inexistente', e); }
-        // la hacienda fue borrada → cae a renderPicker
-      } else if (sol && sol.estado === 'pendiente') return renderPending(user, pj, sol);
+      if (miCasa) return renderMember(user, pj, (sol && sol.haciendaId === miCasa.id) ? sol : { haciendaId: miCasa.id });
+      if (!casas.length && sol && sol.estado === 'aprobada') return renderMember(user, pj, sol);   // store no cargó: no arriesgues
+      if (sol && sol.estado === 'pendiente') return renderPending(user, pj, sol);
       renderPicker(user, pj);
     } catch (e) {
       console.error('[onboard] renderPlayer falló:', e);
