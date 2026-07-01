@@ -1401,13 +1401,30 @@ const HacFolk = (function () {
       actors.push({ fx: ck.fx, fy: ck.fy, draw: (g, lx, ly) => drawWalker(g, lx, ly, ck, { banner: false }) });
       overlays.push({ draw: (g) => { const p = logic(ck.fx, ck.fy); npcBanner(g, p[0], p[1] - npcDy, ck.name, '📜'); } });
     });
+    // Mecenas visibles: el sprite va como actor (con oclusión); el NOMBRE va aparte.
+    const nameCands = [];
     walkers.forEach(w => {
       if (w.id === selectedId) return;                 // el seleccionado va en overlay (encima)
       if (w.insideId) return;                          // DENTRO de un edificio: oculto (su presencia la anuncia el banner 匾額)
       if (w.state === 'fuera') return;                 // EN EXPEDICIÓN fuera de la finca: oculto hasta volver
       actors.push({ fx: w.fx, fy: w.fy, draw: (g, lx, ly) => drawWalker(g, lx, ly, w, { banner: false }) });
-      // El nombre va en overlay (siempre encima, sin recorte de región).
-      overlays.push({ draw: (g) => { const p = logic(w.fx, w.fy); banner(g, p[0], p[1] - bannerDy, w, false); } });
+      nameCands.push(w);
+    });
+    // Banners de nombre (overlay): de DELANTE hacia atrás, se CLAMPEAN en horizontal
+    // (no se recortan en los bordes) y se OMITE el que solaparía a otro ya dibujado
+    // (declutter cuando los mecenas se agolpan). El seleccionado va aparte, siempre.
+    nameCands.sort((a, b) => (b.fx + b.fy) - (a.fx + a.fy));
+    const bannerBoxes = [], logicW = iso.width / SCALE;
+    nameCands.forEach(w => {
+      overlays.push({ draw: (g) => {
+        const p = logic(w.fx, w.fy), s = bannerSprite(w, false);
+        const Wd = s.cv.width / SCALE, Hd = s.cv.height / SCALE, topY = p[1] - bannerDy;
+        const cx = Math.max(s.ax, Math.min(logicW - (Wd - s.ax), p[0]));
+        const box = { x: cx - s.ax, y: topY - s.ay, w: Wd, h: Hd };
+        if (bannerBoxes.some(b => !(box.x + box.w < b.x || box.x > b.x + b.w || box.y + box.h < b.y || box.y > b.y + b.h))) return;
+        bannerBoxes.push(box);
+        banner(g, cx, topY, w, false);
+      } });
     });
 
     // Banners 匾額 de los edificios ocupados (capa overlay) + rects para hit-test.

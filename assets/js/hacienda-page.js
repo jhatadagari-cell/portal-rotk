@@ -502,7 +502,10 @@
       // Las misiones FUERA de la finca ya NO van aquí: se eligen en el TABLÓN de
       // misiones (📜) junto al edificio principal. Esta lista es solo de tareas
       // dentro de la finca (edificios).
-      return out;
+      // Deduplica tareas idénticas (mismo nombre/dominio/duración) que aparecerían
+      // repetidas si hay varios edificios del mismo tipo (p. ej. dos "Descansar").
+      const vistos = new Set();
+      return out.filter(t => { const k = t.nombre + '|' + t.dominio + '|' + t.duracionSeg; if (vistos.has(k)) return false; vistos.add(k); return true; });
     }
     const DOM_GLYPH = { militar: '武', cultural: '文', administrativo: '政' };
     // Nivel EFECTIVO en un dominio (nivel por XP + bonos de equipo).
