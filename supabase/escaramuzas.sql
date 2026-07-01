@@ -155,10 +155,13 @@ end; $$;
 -- recibe la banda ya resuelta sin reaplicar nada. exito/botín/share los propone el
 -- cliente (como en las expediciones de 1 jugador, que ya tiran el dado en cliente).
 drop function if exists public.escaramuza_resolver(uuid,bigint,boolean,jsonb,int,int);
+drop function if exists public.escaramuza_resolver(uuid,bigint,boolean,jsonb,int,int,bigint);
+-- p_bonos: mapa { miembroId: fracción } con el +% dinero del EQUIPO de cada miembro
+-- (sellos de comercio). El cliente que resuelve lo arma leyendo el equipado de todos.
 create or replace function public.escaramuza_resolver(
-  p_id uuid, p_now bigint, p_exito boolean, p_botin jsonb, p_share int, p_host_bonus int, p_loot_ms bigint default 3600000)
+  p_id uuid, p_now bigint, p_exito boolean, p_botin jsonb, p_share int, p_host_bonus int, p_loot_ms bigint default 3600000, p_bonos jsonb default '{}'::jsonb)
 returns public.escaramuzas language plpgsql security definer set search_path = public as $$
-declare b public.escaramuzas; m jsonb; mid text; delta int; cd bigint;
+declare b public.escaramuzas; m jsonb; mid text; delta int; cd bigint; pct numeric;
 begin
   select * into b from public.escaramuzas where id = p_id for update;
   if not found then return null; end if;
@@ -168,7 +171,8 @@ begin
     mid := m->>'id';
     -- OJO: mecenas_stats.miembro_id es UUID y `mid` es TEXT (del jsonb) → hay que castear.
     if p_exito then
-      delta := coalesce(p_share,0) + case when mid = b.host_id then b.coste + coalesce(p_host_bonus,0) else 0 end;
+      pct := coalesce((p_bonos ->> mid)::numeric, 0);   -- +% dinero del equipo de ESE miembro
+      delta := round(coalesce(p_share,0) * (1 + pct)) + case when mid = b.host_id then b.coste + coalesce(p_host_bonus,0) else 0 end;
       update public.mecenas_stats set dinero = dinero + delta, escaramuza_cd = cd where miembro_id = mid::uuid;
       if not found then insert into public.mecenas_stats (miembro_id, dinero, escaramuza_cd) values (mid::uuid, delta, cd); end if;
     else
@@ -195,6 +199,6 @@ grant execute on function public.escaramuza_crear(text,text,text,int,int,int) to
 grant execute on function public.escaramuza_unir(uuid,text,text)              to authenticated, anon;
 grant execute on function public.escaramuza_salir(uuid,text)                  to authenticated, anon;
 grant execute on function public.escaramuza_lanzar(uuid,text,bigint,bigint)    to authenticated, anon;
-grant execute on function public.escaramuza_resolver(uuid,bigint,boolean,jsonb,int,int,bigint) to authenticated, anon;
+grant execute on function public.escaramuza_resolver(uuid,bigint,boolean,jsonb,int,int,bigint,jsonb) to authenticated, anon;
 grant execute on function public.escaramuza_reclamar(uuid,text,int)           to authenticated, anon;
 grant execute on function public.escaramuza_abortar(uuid,text,bigint,bigint)  to authenticated, anon;

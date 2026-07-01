@@ -671,8 +671,11 @@
       if (!band || band.estado !== 'en_curso' || clock() < band.finMs) return;
       const dif = band.dificultad || 4;
       const exito = Math.random() < Math.max(0.35, 0.72 - (dif - 4) * 0.08);
-      const share = 20 + dif * 10, hostBonus = Math.round((band.coste || 0) * 0.25);
-      HacEscaramuzas.resolver(band.id, clock(), exito, exito ? generarBotin(band) : [], share, hostBonus, ESC_FAST ? 30000 : 0)
+      const share = 20 + dif * 10, hostBonus = Math.round((band.coste || 0) * 0.5);   // el host recupera coste +50%
+      // +% dinero del EQUIPO de cada miembro (sellos de comercio) → mapa {id: fracción}.
+      const bonosPct = {};
+      (band.miembros || []).forEach(mm => { const p = (window.HacStats && HacStats.bonusDinero) ? HacStats.bonusDinero(mm.id) : 0; if (p) bonosPct[mm.id] = p; });
+      HacEscaramuzas.resolver(band.id, clock(), exito, exito ? generarBotin(band) : [], share, hostBonus, ESC_FAST ? 30000 : 0, bonosPct)
         .then(() => { if (window.HacStats) HacStats.reload().then(() => { if (charId) buildCharPanel(charId); }); })
         .catch(e => console.warn('[escaramuza] resolver', e));
     }
@@ -716,7 +719,7 @@
         ${cdAviso}
         <div class="hacp-esc-card">
           <div class="hacp-esc-ttl">Montar una banda</div>
-          <div class="hacp-esc-note">Salís varios mecenas a una expedición militar más dura. Pagas por montarla; si volvéis con éxito recuperas el coste +25% y tu parte. Si fracasáis, vuestros mecenas reciben una herida.</div>
+          <div class="hacp-esc-note">Salís varios mecenas a una expedición militar más dura. Pagas por montarla; si volvéis con éxito recuperas el coste +50% y tu parte. Si fracasáis, vuestros mecenas reciben una herida.</div>
           <div class="hacp-esc-plazas">${[2, 3, 4].map(p => `<button class="hacp-esc-p${p === escPlazas ? ' on' : ''}" data-plazas="${p}">${p} plazas</button>`).join('')}</div>
           <button class="hacp-cp-btn hacp-esc-crear" data-crear${(sinDinero || enCd) ? ' disabled' : ''}>Montar banda · 💰 ${coste}${sinDinero ? ' (te falta)' : ''}</button>
         </div>
@@ -761,7 +764,7 @@
             <div class="hacp-esc-loot-nm">${it ? esc(it.nombre) : 'objeto'}</div>${accionItem}</div>`;
         }).join('');
         accion = `<div class="hacp-esc-result ok">✔ ¡Volvisteis con éxito!</div>
-          <div class="hacp-esc-note">Tu parte del dinero ya está en tu monedero${esHost ? ' (recuperaste el coste +25%)' : ''}. Botín común: <b>elige 1 objeto</b>${yaCogi ? ' — ya recogiste el tuyo.' : ' (hay al menos uno para cada quien).'}</div>
+          <div class="hacp-esc-note">Tu parte del dinero ya está en tu monedero${esHost ? ' (recuperaste el coste +50%)' : ''}. Botín común: <b>elige 1 objeto</b>${yaCogi ? ' — ya recogiste el tuyo.' : ' (hay al menos uno para cada quien).'}</div>
           <div class="hacp-esc-loot-grid">${grid}</div>
           <button class="hacp-cp-btn hacp-esc-salir" data-salir>Cerrar</button>`;
       } else {   // resuelta (fracaso)
