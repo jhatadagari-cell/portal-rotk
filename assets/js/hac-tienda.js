@@ -57,13 +57,15 @@ const HacTienda = (function () {
   const disponibles = (tier) => CATALOGO.filter(i => i.tier <= (tier || 1));
   const bloqueados = (tier) => CATALOGO.filter(i => i.tier > (tier || 1));
 
+  // Nombre LEGIBLE de cada dominio (el glifo 武/文/政 solo, sin traducir, no se entendía).
+  const NOM = { militar: 'Militar', cultural: 'Cultural', administrativo: 'Administrativo' };
   function efectoTexto(item) {
     const e = item.efecto || {};
-    if (e.energia) return `+${e.energia} energía ⚡`;
-    if (e.equip) return Object.keys(e.equip).map(d => `+${e.equip[d]} ${G[d] || ''}`).join(' · ') + ' · equipable';
-    if (e.xp) return Object.keys(e.xp).map(d => `+${e.xp[d]} XP ${G[d] || ''}`).join(' · ');
-    if (e.capInv) return `+${e.capInv} ranuras 🎒`;
-    if (e.guardable) return 'Objeto · ocupa 1 ranura';
+    if (e.energia) return `+${e.energia} de energía ⚡`;
+    if (e.equip) return 'Equipable · ' + Object.keys(e.equip).map(d => `+${e.equip[d]} ${NOM[d] || d}`).join(' · ');
+    if (e.xp) return Object.keys(e.xp).map(d => `+${e.xp[d]} XP ${NOM[d] || d}`).join(' · ');
+    if (e.capInv) return `+${e.capInv} ranuras de mochila 🎒`;
+    if (e.guardable) return 'Objeto decorativo · ocupa 1 ranura';
     return '';
   }
   // Bonos de equipo de un item (o {} si no es equipable).

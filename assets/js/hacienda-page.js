@@ -437,10 +437,10 @@
     // Resumen legible de los bonos activos de la finca (solo los no nulos).
     function bonosTexto() {
       const p = [];
-      if (bonos.xp > 0) p.push(`<span style="color:#3a8a5a">文 +${pct(bonos.xp)}% XP</span>`);
-      if (bonos.xpMil > 0) p.push(`<span style="color:#b23b2e">武 +${pct(bonos.xpMil)}% XP en exp. militares</span>`);
-      if (bonos.dinero > 0) p.push(`<span style="color:#3a6ea5">政 +${pct(bonos.dinero)}% 💰</span>`);
-      if (bonos.mercado > 0) p.push(`<span style="color:#3a6ea5">−${pct(bonos.mercado)}% 市</span>`);
+      if (bonos.xp > 0) p.push(`<span style="color:#3a8a5a">+${pct(bonos.xp)}% XP misiones</span>`);
+      if (bonos.xpMil > 0) p.push(`<span style="color:#b23b2e">+${pct(bonos.xpMil)}% XP en exp. militares</span>`);
+      if (bonos.dinero > 0) p.push(`<span style="color:#3a6ea5">+${pct(bonos.dinero)}% dinero</span>`);
+      if (bonos.mercado > 0) p.push(`<span style="color:#3a6ea5">−${pct(bonos.mercado)}% precios</span>`);
       return p.join(' · ');
     }
     // Clave de casa con id de finca (evita colisiones "gx,gy" entre haciendas).
@@ -1252,7 +1252,7 @@
           <button type="button" class="hacp-shop-x" data-act="shop-close" aria-label="Cerrar">✕</button>
           <div class="hacp-shop-h"><span class="hacp-shop-zh">市</span> Mercado <span class="hacp-shop-money">💰 <b id="hacp-shop-money">${money}</b></span></div>
           <div class="hacp-shop-sub">Surtido según el nivel de la finca (nivel ${tier}). Sube de nivel para desbloquear más.</div>
-          ${bonos.mercado > 0 ? `<div class="hacp-shop-note">市 Pabellón administrativo (政): −${pct(bonos.mercado)}% en todos los precios.</div>` : ''}
+          ${bonos.mercado > 0 ? `<div class="hacp-shop-note">Pabellón administrativo: −${pct(bonos.mercado)}% en todos los precios.</div>` : ''}
           ${note}
           <div class="hacp-shop-grid">${disp.map(i => itemCardHTML(i, false)).join('')}</div>
           ${block.length ? `<div class="hacp-shop-lockttl">Se desbloquean al subir de nivel</div><div class="hacp-shop-grid">${block.map(i => itemCardHTML(i, true)).join('')}</div>` : ''}
@@ -1309,7 +1309,7 @@
             <div class="hacp-leave-col keep">
               <div class="hacp-leave-colh">Te llevas</div>
               <ul>
-                <li>Tu progreso (niveles 武 文 政)</li>
+                <li>Tu progreso (niveles Militar/Cultural/Admin.)</li>
                 <li>Lo que llevas equipado${eqN ? ` · ${eqN}/3` : ''}</li>
                 <li>Tu mochila · ${invN}/${cap} objetos</li>
                 <li>💰 ${llevado} monedas en los bolsillos${perdido ? ` <span class="hacp-leave-cap">(caben ${BOLSILLO_MAX})</span>` : ''}</li>
@@ -1458,20 +1458,20 @@
       const me = HacFolk.list().find(w => w.id === myId), nm = me ? me.name : 'tu mecenas';
       // Bonos totales por dominio (de lo equipado).
       const tot = HacStats.DOMS.map(dom => ({ dom, b: HacStats.bonus(myId, dom) }));
-      const totHTML = tot.map(t => `<span class="hacp-eq-tot" style="color:${DOM_COLOR[t.dom]}">${DOM_GLYPH[t.dom]} <b>${t.b > 0 ? '+' + t.b : '0'}</b></span>`).join('');
+      const totHTML = tot.map(t => `<span class="hacp-eq-tot" style="color:${DOM_COLOR[t.dom]}">${DOM_ABBR[t.dom]} <b>${t.b > 0 ? '+' + t.b : '0'}</b></span>`).join('');
       // Ranuras equipadas.
       const slots = [];
       for (let i = 0; i < max; i++) {
         const id = eq[i], def = id && HacTienda.get(id);
         slots.push(def
-          ? `<button type="button" class="hacp-eq-slot full" data-uneq="${esc(id)}" title="${esc(def.nombre)} · clic para quitar"><span class="hacp-eq-ic">${def.icon}</span><span class="hacp-eq-nm">${esc(def.nombre)}</span><span class="hacp-eq-bo">${esc(HacTienda.efectoTexto(def).replace(' · equipable', ''))}</span><span class="hacp-eq-x">✕</span></button>`
+          ? `<button type="button" class="hacp-eq-slot full" data-uneq="${esc(id)}" title="${esc(def.nombre)} · clic para quitar"><span class="hacp-eq-ic">${def.icon}</span><span class="hacp-eq-nm">${esc(def.nombre)}</span><span class="hacp-eq-bo">${esc(HacTienda.efectoTexto(def).replace('Equipable · ', ''))}</span><span class="hacp-eq-x">✕</span></button>`
           : `<div class="hacp-eq-slot empty">Ranura libre</div>`);
       }
       // Objetos equipables en la mochila (no equipados).
       const ownable = HacStats.inventario(myId).filter(it => HacTienda.equipBonus(it.id));
       const list = ownable.length
-        ? ownable.map(it => { const def = HacTienda.get(it.id); const full = eq.length >= max; return `<button type="button" class="hacp-eq-own" data-eq="${esc(it.id)}"${full ? ' disabled' : ''}><span class="hacp-eq-ic">${def.icon}</span><span class="hacp-eq-nm">${esc(def.nombre)}${(it.n || 1) > 1 ? ' ×' + it.n : ''}</span><span class="hacp-eq-bo">${esc(HacTienda.efectoTexto(def).replace(' · equipable', ''))}</span></button>`; }).join('')
-        : '<span class="hacp-inv-note">No tienes objetos equipables. Cómpralos en el mercado (tratados 兵書/經卷/律令…).</span>';
+        ? ownable.map(it => { const def = HacTienda.get(it.id); const full = eq.length >= max; return `<button type="button" class="hacp-eq-own" data-eq="${esc(it.id)}"${full ? ' disabled' : ''}><span class="hacp-eq-ic">${def.icon}</span><span class="hacp-eq-nm">${esc(def.nombre)}${(it.n || 1) > 1 ? ' ×' + it.n : ''}</span><span class="hacp-eq-bo">${esc(HacTienda.efectoTexto(def).replace('Equipable · ', ''))}</span></button>`; }).join('')
+        : '<span class="hacp-inv-note">No tienes objetos equipables. Cómpralos en el mercado (tratados de armas, clásicos, códigos legales…).</span>';
       el.innerHTML = `
         <div class="hacp-shop-box hacp-eq-box">
           <button type="button" class="hacp-shop-x" data-act="equip-close" aria-label="Cerrar">✕</button>
