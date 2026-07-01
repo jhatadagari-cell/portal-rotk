@@ -542,6 +542,7 @@
         if (mis && Math.random() < riesgoMision(mis)) {
           let lost = 0;
           if (window.HacStats) { const wallet = HacStats.dinero(myId); lost = Math.round(wallet * 0.5); if (lost > 0) HacStats.award(myId, { dinero: -lost }); }
+          const emF = finalizeSucesos(o, mis); if (emF.heridas > 0 && HacStats.herir) HacStats.herir(myId, emF.heridas); sucClear(o);
           HacOrdenes.clear(h.id, myId);
           toast(lost > 0 ? `❌ Misión fallida · perdiste ${lost} 💰 del monedero` : '❌ Misión fallida · sin botín');
           if (window.HacBitacora) HacBitacora.log(myId, 'expedicion', '🧭 ' + (mis.nombre || 'Expedición') + ': ✘ fracaso' + (lost > 0 ? ` · −${lost}💰` : ''));
@@ -563,7 +564,11 @@
           const dinPct = bonos.dinero + (HacStats.bonusDinero ? HacStats.bonusDinero(myId) : 0);   // pabellón 政 + sellos de comercio equipados
           // Las HERIDAS merman lo que traes a casa (dinero + XP): −15 % por herida.
           const hurt = 1 - (HacStats.penHerida ? HacStats.penHerida(myId) : 0);
-          const dinB = Math.round(conBono(rec.dinero, dinPct) * hurt), xpB = Math.round(conBono(rec.xp, xpFracMision(rec.dom)) * hurt);
+          let dinB = Math.round(conBono(rec.dinero, dinPct) * hurt), xpB = Math.round(conBono(rec.xp, xpFracMision(rec.dom)) * hurt);
+          // SUCESOS del viaje: resuelve los que falten (opción segura) y aplica sus mods.
+          const em = finalizeSucesos(o, mis);
+          if (em.din) dinB = Math.max(0, Math.round(dinB * (1 + em.din)));
+          if (em.xp) xpB = Math.max(0, Math.round(xpB * (1 + em.xp)));
           const nivAntes = (rec.dom && HacStats.nivel) ? HacStats.nivel(myId, rec.dom) : 0;
           HacStats.award(myId, { dinero: dinB, xp: rec.dom ? { [rec.dom]: xpB } : null });
           if (rec.dom && HacStats.nivel && window.HacBitacora) { const nivD = HacStats.nivel(myId, rec.dom); if (nivD > nivAntes) HacBitacora.log(myId, 'progreso', `⬆ ${DOM_NOMBRE[rec.dom]} sube a nivel ${nivD}`); }
@@ -578,6 +583,14 @@
             if (loot.efecto && loot.efecto.energia) { if (window.HacEnergia) HacEnergia.add(h.id, myId, loot.efecto.energia); extra += ` · 🎁 ${loot.icon} ${loot.nombre}`; }
             else { const r2 = HacStats.darItem(myId, lootId); extra += r2.ok ? ` · 🎁 ${loot.icon} ${loot.nombre}` : ' · 🎁 (mochila llena)'; }
           }
+          // Botín EXTRA de sucesos + heridas sufridas por el camino.
+          for (let k = 0; k < (em.loot || 0); k++) {
+            const xid = HacTienda.botinAleatorio ? HacTienda.botinAleatorio(tier) : null;
+            const xit = xid ? HacTienda.get(xid) : null;
+            if (xit) { if (xit.efecto && xit.efecto.energia) { if (window.HacEnergia) HacEnergia.add(h.id, myId, xit.efecto.energia); } else HacStats.darItem(myId, xid); extra += ` · 🎁 ${xit.icon} ${xit.nombre}`; }
+          }
+          if (em.heridas > 0 && HacStats.herir) { HacStats.herir(myId, em.heridas); extra += ' · ✚ herido'; }
+          sucClear(o);
         }
         HacOrdenes.clear(h.id, myId);   // optimista: la quita del caché ya
         toast('+' + r + ' puntos · misión cumplida' + extra);
@@ -591,6 +604,136 @@
       }
       _wasOnMission = onM;
     }
+
+    // ════════ SUCESOS (capa A) — decisiones EN VIVO durante una expedición ═══════
+    // Solo expediciones EN SOLITARIO (las escaramuzas irán aparte). Deterministas por
+    // semilla del id de orden; la elección se guarda en localStorage (a prueba de
+    // refresco). Si no respondes a tiempo (o no miras), se auto-elige la opción SEGURA.
+    // Los efectos (mods) se aplican al VOLVER, en maybeRewardMyMission.
+    const SUCESOS = [
+      { id: 'emboscada', txt: '¡Emboscada en el desfiladero!', desc: 'Unos bandidos os cortan el paso entre las rocas.',
+        op: [{ t: 'Cargar de frente', dom: 'militar', ok: { loot: 1, xp: 0.3 }, fail: { herida: 1 } },
+             { t: 'Buscar un flanco', dom: 'cultural', ok: { din: 0.25 }, fail: { din: -0.15 } },
+             { t: 'Retirada ordenada', safe: true, res: {} }] },
+      { id: 'aldea', txt: 'Una aldea pide ayuda', desc: 'Los aldeanos sufren el acoso de unos forajidos y ofrecen recompensa.',
+        op: [{ t: 'Expulsarlos por la fuerza', dom: 'militar', ok: { din: 0.3, xp: 0.2 }, fail: { herida: 1 } },
+             { t: 'Mediar y negociar', dom: 'administrativo', ok: { din: 0.3 }, fail: { din: -0.1 } },
+             { t: 'Seguir camino', safe: true, res: {} }] },
+      { id: 'reliquia', txt: 'Un santuario en ruinas', desc: 'Entre las columnas caídas asoma una reliquia y unas inscripciones antiguas.',
+        op: [{ t: 'Descifrar las inscripciones', dom: 'cultural', ok: { xp: 0.4, loot: 1 }, fail: {} },
+             { t: 'Llevarse lo de valor', dom: 'militar', ok: { din: 0.35 }, fail: { herida: 1 } },
+             { t: 'Respetar el lugar', safe: true, res: { xp: 0.05 } }] },
+      { id: 'mercader', txt: 'Un mercader varado', desc: 'Un carro volcado bloquea el vado; su dueño ofrece trato a quien le ayude.',
+        op: [{ t: 'Reparar y escoltar', dom: 'administrativo', ok: { din: 0.3, loot: 1 }, fail: { din: -0.1 } },
+             { t: 'Cargar el carro a pulso', dom: 'militar', ok: { din: 0.2 }, fail: { herida: 1 } },
+             { t: 'Rodear el vado', safe: true, res: {} }] },
+      { id: 'temporal', txt: 'Se desata un temporal', desc: 'La lluvia embarra el camino y amenaza con retrasaros.',
+        op: [{ t: 'Forzar la marcha', dom: 'militar', ok: { din: 0.15 }, fail: { herida: 1 } },
+             { t: 'Refugiaros y esperar', dom: 'cultural', ok: { xp: 0.2 }, fail: {} },
+             { t: 'Buscar un atajo', safe: true, res: {} }] },
+    ];
+    const sucKey = (o) => myId + '|' + o.inicioMs + '|' + o.targetId;
+    // Prob. de éxito de un chequeo de dominio: tu nivel efectivo vs la dificultad.
+    function pSuceso(dom, dif) { return Math.max(0.12, Math.min(0.9, 0.42 + 0.13 * (nivelEf(dom) - (dif || 3)))); }
+    function safeIdx(s) { const i = s.op.findIndex(o => o.safe || !o.dom); return i >= 0 ? i : s.op.length - 1; }
+    function opMods(op, ok) {
+      const src = op.dom ? (ok ? op.ok : op.fail) : (op.res || {});
+      const m = { din: 0, xp: 0, loot: 0, heridas: 0 }; if (!src) return m;
+      if (src.din) m.din += src.din; if (src.xp) m.xp += src.xp; if (src.loot) m.loot += src.loot; if (src.herida) m.heridas += src.herida;
+      return m;
+    }
+    function accumMods(a, b) { a = a || {}; return { din: (a.din || 0) + (b.din || 0), xp: (a.xp || 0) + (b.xp || 0), loot: (a.loot || 0) + (b.loot || 0), heridas: (a.heridas || 0) + (b.heridas || 0) }; }
+    // Plan determinista de sucesos para una orden (mismos para todos, estable al refrescar).
+    function sucPlan(o, mis) {
+      const durMs = (o.duracionSeg || 60) * 1000, startMs = o.inicioMs;
+      const R = HacRand.make('suc#' + sucKey(o));
+      const n = ((mis.dif || 3) >= 5 || durMs >= 200000) ? 2 : 1;
+      const frac = n === 2 ? [0.38, 0.72] : [0.5];
+      const pool = SUCESOS.slice(), plan = [];
+      for (let i = 0; i < n; i++) { const idx = R.int(pool.length); const s = pool.splice(idx, 1)[0]; plan.push({ i: i, sucesoId: s.id, atMs: startMs + Math.round(durMs * frac[i]) }); }
+      return plan;
+    }
+    const sucDeadline = (o, ev) => Math.min(ev.atMs + SUC_WINDOW, o.inicioMs + (o.duracionSeg || 60) * 1000 - 1500);
+    function sucLoad(o) { try { return JSON.parse(localStorage.getItem('rotk.suc.' + sucKey(o))) || { resolved: {}, mods: {} }; } catch (e) { return { resolved: {}, mods: {} }; } }
+    function sucSave(o, st) { try { localStorage.setItem('rotk.suc.' + sucKey(o), JSON.stringify(st)); } catch (e) {} }
+    function sucClear(o) { try { localStorage.removeItem('rotk.suc.' + sucKey(o)); } catch (e) {} }
+    // Resuelve al VOLVER los sucesos no atendidos (opción segura) y devuelve los mods totales.
+    function finalizeSucesos(o, mis) {
+      if (!window.HacRand) return { din: 0, xp: 0, loot: 0, heridas: 0 };
+      const plan = sucPlan(o, mis), st = sucLoad(o); st.resolved = st.resolved || {}; st.mods = st.mods || {};
+      plan.forEach(ev => { if (st.resolved[ev.i] == null) { const s = SUCESOS.find(x => x.id === ev.sucesoId); const idx = safeIdx(s); st.resolved[ev.i] = { c: idx, ok: true, auto: true }; st.mods = accumMods(st.mods, opMods(s.op[idx], true)); } });
+      sucSave(o, st);
+      return { din: st.mods.din || 0, xp: st.mods.xp || 0, loot: st.mods.loot || 0, heridas: st.mods.heridas || 0 };
+    }
+    // Aplica una decisión (manual o auto): tira el dado sembrado, acumula mods, registra.
+    let sucEl = null, sucTimer = 0, sucOpenIdx = null, sucDl0 = 0;
+    function applyResolve(o, mis, ev, choiceIdx, auto) {
+      const s = SUCESOS.find(x => x.id === ev.sucesoId); if (!s) return;
+      const st = sucLoad(o); st.resolved = st.resolved || {};
+      if (st.resolved[ev.i] != null) { closeSuc(); return; }   // ya resuelto (evita doble aplicación)
+      const op = s.op[choiceIdx] || s.op[safeIdx(s)];
+      let ok = true;
+      if (op.dom) { const R = HacRand.make('sucr#' + sucKey(o) + '#' + ev.i); ok = R.next() < pSuceso(op.dom, mis.dif); }
+      if (op.cost && window.HacStats) HacStats.award(myId, { dinero: -op.cost });
+      st.mods = accumMods(st.mods || {}, opMods(op, ok));
+      st.resolved[ev.i] = { c: choiceIdx, ok: ok, auto: !!auto }; sucSave(o, st);
+      if (!auto) toast(`${s.txt} → ${op.t}: ${op.dom ? (ok ? '✔ éxito' : '✘ falló') : 'hecho'}`);
+      if (window.HacBitacora) HacBitacora.log(myId, 'expedicion', `⚔ ${s.txt} → ${op.t}${op.dom ? (ok ? ' ✔' : ' ✘') : ''}`, { clave: 'suc:' + sucKey(o) + ':' + ev.i });
+      closeSuc();
+      if (charId) buildCharPanel(charId);
+    }
+    function autoResolveSafe(o, mis, ev) { const s = SUCESOS.find(x => x.id === ev.sucesoId); if (s) applyResolve(o, mis, ev, safeIdx(s), true); }
+    function ensureSucEl() {
+      if (sucEl) return sucEl;
+      sucEl = document.createElement('div'); sucEl.className = 'hacp-suc-ov'; sucEl.hidden = true; document.body.appendChild(sucEl);
+      ['pointerdown', 'pointerup', 'wheel', 'click'].forEach(ev => sucEl.addEventListener(ev, e => e.stopPropagation(), { passive: false }));
+      return sucEl;
+    }
+    function closeSuc() { if (sucTimer) { clearInterval(sucTimer); sucTimer = 0; } sucOpenIdx = null; if (sucEl) sucEl.hidden = true; }
+    function openSucCard(o, mis, ev, dl) {
+      const s = SUCESOS.find(x => x.id === ev.sucesoId); if (!s) return;
+      sucOpenIdx = ev.i; sucDl0 = dl;
+      const el = ensureSucEl();
+      const opts = s.op.map((op, ix) => op.dom
+        ? `<button type="button" class="hacp-suc-op" data-op="${ix}"><span class="hacp-suc-chk">〔${DOM_GLYPH[op.dom]} ${nivelEf(op.dom)}〕</span><span class="hacp-suc-opt">${esc(op.t)}</span><span class="hacp-suc-pct">${Math.round(pSuceso(op.dom, mis.dif) * 100)}%</span></button>`
+        : `<button type="button" class="hacp-suc-op safe" data-op="${ix}"><span class="hacp-suc-opt">${esc(op.t)}</span><span class="hacp-suc-pct">segura</span></button>`).join('');
+      el.innerHTML = `<div class="hacp-suc-box">
+        <div class="hacp-suc-eyebrow">⚔ Suceso · ${esc(mis.nombre || 'Expedición')}</div>
+        <div class="hacp-suc-ttl">${esc(s.txt)}</div>
+        <div class="hacp-suc-desc">${esc(s.desc || '')}</div>
+        <div class="hacp-suc-ops">${opts}</div>
+        <div class="hacp-suc-bar"><i data-suc-bar></i></div>
+        <div class="hacp-suc-hint" data-suc-hint></div></div>`;
+      el.hidden = false;
+      el.querySelectorAll('[data-op]').forEach(b => b.addEventListener('click', () => resolveSuceso(o, mis, ev, +b.dataset.op)));
+      if (sucTimer) clearInterval(sucTimer);
+      sucTimer = setInterval(() => tickSucCard(o, mis, ev), 200); tickSucCard(o, mis, ev);
+    }
+    function resolveSuceso(o, mis, ev, idx) { applyResolve(o, mis, ev, idx, false); }
+    function tickSucCard(o, mis, ev) {
+      if (!sucEl || sucEl.hidden) return;
+      const now = clock(), total = Math.max(1, sucDl0 - ev.atMs), rem = Math.max(0, sucDl0 - now);
+      const bar = sucEl.querySelector('[data-suc-bar]'); if (bar) bar.style.width = Math.max(0, Math.min(100, rem / total * 100)) + '%';
+      const hint = sucEl.querySelector('[data-suc-hint]'); if (hint) hint.textContent = `Decides en ${Math.ceil(rem / 1000)}s · si no, se toma la opción segura`;
+      if (now >= sucDl0) autoResolveSafe(o, mis, ev);
+    }
+    // Se llama cada segundo: abre la carta cuando toca; auto-resuelve pasada la ventana
+    // (aunque no la estés mirando). Solo para MIS expediciones en solitario en curso.
+    function sucesoTick() {
+      if (!myId || !window.HacOrdenes || !window.HacMisiones || !window.HacRand) return;
+      const o = HacOrdenes.mine(h.id, myId);
+      if (!o || o.tipo !== 'expedicion' || String(o.targetId || '').indexOf('escaramuza:') === 0) { if (sucOpenIdx != null) closeSuc(); return; }
+      const mis = HacMisiones.get(String(o.targetId || '').replace('mis:', '')); if (!mis) return;
+      const now = clock(), endMs = o.inicioMs + (o.duracionSeg || 60) * 1000;
+      if (now >= endMs) { if (sucOpenIdx != null) closeSuc(); return; }
+      const plan = sucPlan(o, mis), rez = (sucLoad(o).resolved) || {};
+      const ev = plan.find(p => now >= p.atMs && rez[p.i] == null);
+      if (!ev) { if (sucOpenIdx != null) closeSuc(); return; }
+      const dl = sucDeadline(o, ev);
+      if (now >= dl) { autoResolveSafe(o, mis, ev); return; }
+      if (sucOpenIdx !== ev.i) openSucCard(o, mis, ev, dl);
+    }
+
     const refresh = () => { renderList(); refreshCharPanel(); };
     let lastOrdersSig = '';
 
@@ -694,6 +837,7 @@
     // refresco por poll. Toda la lógica vive aquí para servir a ambas plataformas.
     const COSTE_BANDA = (plazas) => plazas * 40;     // 2→80, 3→120, 4→160
     const COSTE_CURA = 45 + (tier || 1) * 10;        // curar 1 herida (enfermería), escala con el tier
+    const SUC_WINDOW = (/[?&]escfast=1/.test(location.search || '')) ? 12000 : 22000;   // ventana para decidir un suceso
     const myName = ((h.miembros || []).find(m => m.personajeId === myId) || {}).nombre || 'Tú';
     const ESC_FAST = /[?&]escfast=1/.test(location.search || '');   // modo test: ~1 min, sin cooldown
     let escHost = null, escVisible = false, escPlazas = 3, escBusy = false, escSig = '';
@@ -1745,7 +1889,7 @@
     }
     // Tic de 1 s: refresca SOLO el panel del personaje (cuenta atrás de expedición y
     // energía/regeneración se derivan del reloj de servidor → tienen que verse vivos).
-    setInterval(() => { if (charId) refreshCharPanel(); if (escVisible) escTick(); }, 1000);
+    setInterval(() => { if (charId) refreshCharPanel(); if (escVisible) escTick(); sucesoTick(); }, 1000);
 
     // Popup con la gente que hay dentro de un edificio (al pulsar su banner).
     function showPop(x, y, sign) {
