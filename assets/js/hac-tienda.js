@@ -52,20 +52,20 @@ const HacTienda = (function () {
     { id: 'jade',    nombre: 'Colgante de jade', zh: '玉佩', icon: '💠', tier: 6, precio: 300, tipo: 'mascota', efecto: { guardable: true }, desc: 'Pieza de jade tallado, símbolo de rango.' },
 
     // ── SELLOS DE COMERCIO (equipables): +% al dinero de misiones/expediciones ──
-    { id: 'sello-com',   nombre: 'Sello de comercio', zh: '商印', icon: '🪙', tier: 2, precio: 45,  tipo: 'equipo', efecto: { equip: { dineroPct: 0.03 } }, desc: 'Un sello mercantil. Equípalo para +3% de dinero.' },
-    { id: 'sello-plata', nombre: 'Sello de plata',    zh: '銀印', icon: '🪙', tier: 4, precio: 110, tipo: 'equipo', efecto: { equip: { dineroPct: 0.05 } }, desc: 'Sello de plata de una casa próspera. +5% de dinero.' },
-    { id: 'sello-oro',   nombre: 'Sello imperial',    zh: '金印', icon: '🪙', tier: 6, precio: 300, tipo: 'equipo', efecto: { equip: { dineroPct: 0.08 } }, desc: 'Sello dorado de gran mérito. +8% de dinero.' },
+    { id: 'sello-com',   nombre: 'Sello de comercio', zh: '商印', icon: '🪙', tier: 2, precio: 40,  tipo: 'equipo', efecto: { equip: { dineroPct: 0.03 } }, desc: 'Un sello mercantil. Equípalo para +3% de dinero.' },
+    { id: 'sello-plata', nombre: 'Sello de plata',    zh: '銀印', icon: '🪙', tier: 4, precio: 100, tipo: 'equipo', efecto: { equip: { dineroPct: 0.05 } }, desc: 'Sello de plata de una casa próspera. +5% de dinero.' },
+    { id: 'sello-oro',   nombre: 'Sello imperial',    zh: '金印', icon: '🪙', tier: 6, precio: 210, tipo: 'equipo', efecto: { equip: { dineroPct: 0.08 } }, desc: 'Sello dorado de gran mérito. +8% de dinero.' },
     // ── ENSERES DE MARCHA (equipables): −% al tiempo de las expediciones ──
-    { id: 'botas',       nombre: 'Botas de marcha',   zh: '行靴', icon: '🥾', tier: 2, precio: 45,  tipo: 'equipo', efecto: { equip: { expedPct: 0.08 } }, desc: 'Buen calzado de camino. Equípalo: −8% de tiempo de expedición.' },
-    { id: 'montura-lig', nombre: 'Montura ligera',    zh: '輕騎', icon: '🐴', tier: 4, precio: 120, tipo: 'equipo', efecto: { equip: { expedPct: 0.12 } }, desc: 'Cabalgadura veloz. −12% de tiempo de expedición.' },
-    { id: 'vanguardia',  nombre: 'Enseña de vanguardia', zh: '先鋒旗', icon: '🚩', tier: 6, precio: 300, tipo: 'equipo', efecto: { equip: { expedPct: 0.18 } }, desc: 'Guía la marcha al frente. −18% de tiempo de expedición.' },
+    { id: 'botas',       nombre: 'Botas de marcha',   zh: '行靴', icon: '🥾', tier: 2, precio: 40,  tipo: 'equipo', efecto: { equip: { expedPct: 0.08 } }, desc: 'Buen calzado de camino. Equípalo: −8% de tiempo de expedición.' },
+    { id: 'montura-lig', nombre: 'Montura ligera',    zh: '輕騎', icon: '🐴', tier: 4, precio: 100, tipo: 'equipo', efecto: { equip: { expedPct: 0.12 } }, desc: 'Cabalgadura veloz. −12% de tiempo de expedición.' },
+    { id: 'vanguardia',  nombre: 'Enseña de vanguardia', zh: '先鋒旗', icon: '🚩', tier: 6, precio: 210, tipo: 'equipo', efecto: { equip: { expedPct: 0.18 } }, desc: 'Guía la marcha al frente. −18% de tiempo de expedición.' },
     // ── MANUALES DE EXPERIENCIA (consumibles): +XP FIJA a un stat, se gastan al usar ──
-    { id: 'man-mil',  nombre: 'Manual de instrucción', zh: '操典', icon: '📕', tier: 1, precio: 20, tipo: 'manual', efecto: { manual: { dom: 'militar', xp: 30 } },        desc: 'Ejercicios de armas. Úsalo para +30 XP Militar.' },
-    { id: 'man-cul',  nombre: 'Manual de estudio',     zh: '學典', icon: '📗', tier: 1, precio: 20, tipo: 'manual', efecto: { manual: { dom: 'cultural', xp: 30 } },       desc: 'Lecciones de los clásicos. Úsalo para +30 XP Cultural.' },
-    { id: 'man-adm',  nombre: 'Manual de gobierno',    zh: '政典', icon: '📘', tier: 1, precio: 20, tipo: 'manual', efecto: { manual: { dom: 'administrativo', xp: 30 } }, desc: 'Práctica de registros. Úsalo para +30 XP Administrativo.' },
-    { id: 'comp-mil', nombre: 'Compendio militar',       zh: '武經', icon: '📕', tier: 4, precio: 75, tipo: 'manual', efecto: { manual: { dom: 'militar', xp: 100 } },        desc: 'Gran obra de estrategia. Úsalo para +100 XP Militar.' },
-    { id: 'comp-cul', nombre: 'Compendio cultural',      zh: '文淵', icon: '📗', tier: 4, precio: 75, tipo: 'manual', efecto: { manual: { dom: 'cultural', xp: 100 } },       desc: 'Suma del saber letrado. Úsalo para +100 XP Cultural.' },
-    { id: 'comp-adm', nombre: 'Compendio administrativo', zh: '政要', icon: '📘', tier: 4, precio: 75, tipo: 'manual', efecto: { manual: { dom: 'administrativo', xp: 100 } }, desc: 'Tratado de gobierno. Úsalo para +100 XP Administrativo.' },
+    { id: 'man-mil',  nombre: 'Manual de instrucción', zh: '操典', icon: '📕', tier: 1, precio: 22, tipo: 'manual', efecto: { manual: { dom: 'militar', xp: 35 } },        desc: 'Ejercicios de armas. Úsalo para +35 XP Militar.' },
+    { id: 'man-cul',  nombre: 'Manual de estudio',     zh: '學典', icon: '📗', tier: 1, precio: 22, tipo: 'manual', efecto: { manual: { dom: 'cultural', xp: 35 } },       desc: 'Lecciones de los clásicos. Úsalo para +35 XP Cultural.' },
+    { id: 'man-adm',  nombre: 'Manual de gobierno',    zh: '政典', icon: '📘', tier: 1, precio: 22, tipo: 'manual', efecto: { manual: { dom: 'administrativo', xp: 35 } }, desc: 'Práctica de registros. Úsalo para +35 XP Administrativo.' },
+    { id: 'comp-mil', nombre: 'Compendio militar',       zh: '武經', icon: '📕', tier: 4, precio: 80, tipo: 'manual', efecto: { manual: { dom: 'militar', xp: 130 } },        desc: 'Gran obra de estrategia. Úsalo para +130 XP Militar.' },
+    { id: 'comp-cul', nombre: 'Compendio cultural',      zh: '文淵', icon: '📗', tier: 4, precio: 80, tipo: 'manual', efecto: { manual: { dom: 'cultural', xp: 130 } },       desc: 'Suma del saber letrado. Úsalo para +130 XP Cultural.' },
+    { id: 'comp-adm', nombre: 'Compendio administrativo', zh: '政要', icon: '📘', tier: 4, precio: 80, tipo: 'manual', efecto: { manual: { dom: 'administrativo', xp: 130 } }, desc: 'Tratado de gobierno. Úsalo para +130 XP Administrativo.' },
   ]);
 
   const byId = {}; CATALOGO.forEach(i => { byId[i.id] = i; });
