@@ -900,7 +900,7 @@
     // Mientras el capitán mira la escaramuza en curso, al llegar el momento de un
     // suceso puede CAMBIAR la maniobra (dominio) de ese trance. Se guarda en la BD
     // (escaramuza_suceso). Si no decide (o no mira), se mantiene la doctrina.
-    const ESC_SUC_WINDOW = ESC_FAST ? 12000 : 25000;
+    const ESC_SUC_WINDOW = (/[?&]escfast=1/.test(location.search || '')) ? 12000 : 25000;
     const escSucFrac = (n) => (n === 2 ? [0.38, 0.72] : [0.5]);
     let escSucEl = null, escSucTimer = 0, escSucOpen = null, escSucDl = 0, escSucSel = null;
     const escSucSkipped = new Set();
