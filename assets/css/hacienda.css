@@ -204,7 +204,7 @@ html.hacp-pseudofs, html.hacp-pseudofs body{ overflow:hidden; }
 .hacp-folk-pop-name:hover{ background:rgba(201,168,76,.14); color:#fff; }
 /* Panel de control del personaje seleccionado (overlay sobre el visor). */
 .hacp-char-panel{
-  position:absolute; left:8px; bottom:8px; z-index:4; width:236px; max-width:calc(100% - 16px);
+  position:absolute; left:8px; bottom:8px; z-index:4; width:300px; max-width:calc(100% - 16px);
   background:rgba(11,10,7,.92); border:1px solid rgba(201,168,76,.42); border-radius:8px;
   padding:10px 11px 11px; box-shadow:0 6px 22px rgba(0,0,0,.55);
   font-family:'Noto Sans SC',sans-serif; color:var(--parch); -webkit-backdrop-filter:blur(2px); backdrop-filter:blur(2px);
@@ -309,7 +309,7 @@ html.hacp-pseudofs, html.hacp-pseudofs body{ overflow:hidden; }
 .hacp-cp-btn:disabled{ opacity:.45; cursor:not-allowed; }
 .hacp-cp-btn:disabled:hover{ background:rgba(201,168,76,.16); color:var(--gold); }
 /* Barra de acciones (rejilla de iconos) del panel del personaje */
-.hacp-cp-tools{ display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-top:11px; }
+.hacp-cp-tools{ display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:6px; margin-top:11px; }
 .hacp-cp-tool{ position:relative; box-sizing:border-box; height:60px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; padding:6px 4px; cursor:pointer;
   background:rgba(201,168,76,.1); border:1px solid rgba(201,168,76,.28); border-radius:9px; color:var(--gold); transition:background .12s, color .12s; }
 .hacp-cp-tool:hover{ background:rgba(201,168,76,.22); color:#fff; }
