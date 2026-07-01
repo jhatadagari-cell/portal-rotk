@@ -539,6 +539,7 @@
           if (window.HacStats) { const wallet = HacStats.dinero(myId); lost = Math.round(wallet * 0.5); if (lost > 0) HacStats.award(myId, { dinero: -lost }); }
           HacOrdenes.clear(h.id, myId);
           toast(lost > 0 ? `❌ Misión fallida · perdiste ${lost} 💰 del monedero` : '❌ Misión fallida · sin botín');
+          if (window.HacBitacora) HacBitacora.log(myId, 'expedicion', '🧭 ' + (mis.nombre || 'Expedición') + ': ✘ fracaso' + (lost > 0 ? ` · −${lost}💰` : ''));
           _wasOnMission = false; applyOrders();
           return;
         }
@@ -549,7 +550,9 @@
         if (mis && window.HacStats) {
           const rec = HacMisiones.recompensa(mis);
           const dinB = conBono(rec.dinero, bonos.dinero), xpB = conBono(rec.xp, xpFracMision(rec.dom));   // bonos de pabellón (政 dinero, 文/武 XP)
+          const nivAntes = (rec.dom && HacStats.nivel) ? HacStats.nivel(myId, rec.dom) : 0;
           HacStats.award(myId, { dinero: dinB, xp: rec.dom ? { [rec.dom]: xpB } : null });
+          if (rec.dom && HacStats.nivel && window.HacBitacora) { const nivD = HacStats.nivel(myId, rec.dom); if (nivD > nivAntes) HacBitacora.log(myId, 'progreso', `⬆ ${DOM_NOMBRE[rec.dom]} sube a nivel ${nivD}`); }
           extra = ` · +${dinB}💰 · +${xpB} XP ${DOM_GLYPH[rec.dom] || ''}`.trimEnd();
           // BOTÍN: prob. baja (sube con la dificultad) de traer 1 objeto. Si es de
           // energía, se aplica al momento; si es equipable, va a la mochila.
@@ -562,6 +565,10 @@
         }
         HacOrdenes.clear(h.id, myId);   // optimista: la quita del caché ya
         toast('+' + r + ' puntos · misión cumplida' + extra);
+        if (window.HacBitacora) {
+          if (mis) HacBitacora.log(myId, 'expedicion', '🧭 ' + (mis.nombre || 'Expedición') + ': ✔ éxito' + extra);
+          else { const tk = (window.HacTareas && HacTareas.get) ? HacTareas.get(o.targetId) : null; HacBitacora.log(myId, 'tarea', '⚒ ' + ((tk && (tk.nombre || tk.verbo)) || 'Tarea en la finca') + ` · +${r} pts`); }
+        }
         _wasOnMission = false;
         applyOrders();                  // re-sincroniza el sim sin la orden
         return;
@@ -772,6 +779,7 @@
         await HacStats.award(myId, { dinero: -coste }); pagado = true;
         await HacEscaramuzas.crear({ haciendaId: h.id, hostId: myId, hostNombre: myName, plazas: escPlazas, dificultad: 4 + (escPlazas - 2), coste });
         toast('⚔ Banda montada · esperando mecenas');
+        if (window.HacBitacora) HacBitacora.log(myId, 'escaramuza', `⚔ Montaste una banda de ${escPlazas} plazas (−${coste}💰)`);
       } catch (e) {
         if (pagado && window.HacStats) await HacStats.award(myId, { dinero: coste });
         toast((e && e.message) || 'No se pudo montar'); await HacEscaramuzas.reload();
@@ -801,6 +809,7 @@
       try {
         await HacEscaramuzas.lanzar(id, myId, clock(), ESC_FAST ? 60000 : 0);
         toast(ESC_FAST ? '⚔ ¡Parten! (modo test · ~1 min)' : '⚔ ¡La banda parte a la expedición!');
+        if (window.HacBitacora) HacBitacora.log(myId, 'escaramuza', '⚔ Tu banda partió a la expedición');
         syncEscaramuzaOrder(); syncEscaramuzaFolk();
       } catch (e) { toast((e && e.message) || 'No se pudo lanzar'); await HacEscaramuzas.reload(); }
       finally { escBusy = false; renderEscaramuzas(); }
@@ -831,6 +840,7 @@
         if (itemId && window.HacStats && HacStats.darItem) HacStats.darItem(myId, itemId);
         const it = window.HacTienda && HacTienda.get(itemId);
         toast('🎁 Recogiste ' + (it ? it.nombre : 'tu botín'));
+        if (window.HacBitacora) HacBitacora.log(myId, 'escaramuza', '🎁 Botín de escaramuza: ' + (it ? it.nombre : 'un objeto'));
       } catch (e) { toast((e && e.message) || 'No se pudo recoger'); await HacEscaramuzas.reload(); }
       finally { escBusy = false; renderEscaramuzas(); if (charId) buildCharPanel(charId); }
     }
@@ -852,8 +862,17 @@
         if (itemId && window.HacStats && HacStats.darItem) HacStats.darItem(myId, itemId);
         const it = window.HacTienda && HacTienda.get(itemId);
         toast('🎁 Reparto automático: ' + (it ? it.nombre : 'un objeto'));
+        if (window.HacBitacora) HacBitacora.log(myId, 'escaramuza', '🎁 Botín repartido: ' + (it ? it.nombre : 'un objeto'));
       } catch (e) { await HacEscaramuzas.reload(); }
       finally { escBusy = false; if (charId) buildCharPanel(charId); if (escVisible) renderEscaramuzas(); }
+    }
+    // Registra en la bitácora el resultado de MI escaramuza (una sola vez, por banda).
+    function logEscaramuzaResultado() {
+      if (!myId || !window.HacBitacora || !window.HacEscaramuzas) return;
+      const band = HacEscaramuzas.miBanda(h.id, myId);
+      if (!band) return;
+      if (band.estado === 'botin' && band.exito) HacBitacora.log(myId, 'escaramuza', '⚔ Escaramuza: ✔ éxito · volvisteis con botín', { clave: 'esc-res:' + band.id });
+      else if (band.estado === 'resuelta' && band.exito === false) HacBitacora.log(myId, 'escaramuza', '⚔ Escaramuza: ✘ fracaso · tu mecenas vuelve herido', { clave: 'esc-res:' + band.id });
     }
     function escTick() {
       const el = escHost && escHost.querySelector('[data-esc-timer]'); if (!el) return;
@@ -886,6 +905,41 @@
       if (window.HacEscaramuzas) HacEscaramuzas.reload().then(renderEscaramuzas); else renderEscaramuzas();
     }
     function closeEsc() { escVisible = false; if (escEl) escEl.hidden = true; }
+
+    // ── BITÁCORA (diario del mecenas): overlay con el feed de actividad ────────
+    function fmtWhen(ts) {
+      const d = Math.max(0, clock() - (ts || 0)), m = Math.floor(d / 60000);
+      if (m < 1) return 'ahora'; if (m < 60) return 'hace ' + m + ' min';
+      const hrs = Math.floor(m / 60); if (hrs < 24) return 'hace ' + hrs + ' h';
+      return 'hace ' + Math.floor(hrs / 24) + ' d';
+    }
+    let bitEl = null;
+    function ensureBitEl() {
+      if (bitEl) return bitEl;
+      bitEl = document.createElement('div'); bitEl.className = 'hacp-shop hacp-bit-ov'; bitEl.hidden = true;
+      vp.appendChild(bitEl);
+      ['pointerdown', 'pointerup', 'wheel', 'click'].forEach(ev => bitEl.addEventListener(ev, (e) => e.stopPropagation(), { passive: false }));
+      bitEl.addEventListener('click', (e) => { if (e.target === bitEl) bitEl.hidden = true; });
+      return bitEl;
+    }
+    function renderBitacora() {
+      const el = ensureBitEl();
+      const entries = (window.HacBitacora && myId) ? HacBitacora.listar(myId, 60) : [];
+      const rows = entries.length
+        ? entries.map(e => `<div class="hacp-bit-row t-${esc(e.tipo)}"><span class="hacp-bit-when">${fmtWhen(e.ts)}</span><span class="hacp-bit-txt">${esc(e.texto)}</span></div>`).join('')
+        : '<div class="hacp-inv-note">Aún no hay actividad. Manda a tu mecenas a una misión o escaramuza y su parte quedará aquí.</div>';
+      el.innerHTML = `<div class="hacp-shop-box">
+        <button type="button" class="hacp-shop-x" data-bit-x aria-label="Cerrar">✕</button>
+        <div class="hacp-shop-h"><span class="hacp-shop-zh">錄</span> Bitácora</div>
+        <div class="hacp-shop-sub">Lo que ha hecho tu mecenas.</div>
+        <div class="hacp-bit-list">${rows}</div></div>`;
+      el.querySelector('[data-bit-x]').addEventListener('click', () => { el.hidden = true; });
+    }
+    function openBitacora() {
+      if (!myId) return;
+      const el = ensureBitEl(); el.hidden = false; renderBitacora();
+      if (window.HacBitacora) HacBitacora.reload().then(() => { if (!el.hidden) renderBitacora(); });
+    }
     function release() {
       if (!myId || !window.HacOrdenes) return;
       HacOrdenes.clear(h.id, myId).then(applyOrders).catch(e => console.warn('[orden] clear', e));
@@ -1078,6 +1132,7 @@
         ${(d.mine && hayBonos()) ? `<div class="hacp-cp-bonos" title="Bonos pasivos por los pabellones temáticos de la finca y los edificios de su dominio dentro">Bonos de la finca · ${bonosTexto()}</div>` : ''}
         ${d.mine ? `<button type="button" class="hacp-cp-btn hacp-cp-equipbtn" data-act="equip">⚔ Equipo${d.equipN ? ` · ${d.equipN}/3` : ''}</button>` : ''}
         ${d.mine ? `<button type="button" class="hacp-cp-btn hacp-cp-esc" data-act="esc">兵 Escaramuzas</button>` : ''}
+        ${d.mine ? `<button type="button" class="hacp-cp-btn hacp-cp-log" data-act="log">錄 Bitácora</button>` : ''}
         ${mision}
         ${d.mine ? `<button type="button" class="hacp-cp-btn hacp-cp-invbtn${invOpen ? ' on' : ''}" data-act="inv">🎒 ${invOpen ? 'Ocultar' : 'Inventario'} · 💰 ${d.money}</button>` : ''}
         ${(d.mine && invOpen) ? invPanelHTML(d) : ''}
@@ -1100,6 +1155,8 @@
       if (gh) gh.addEventListener('click', openHome);
       const escb = charEl.querySelector('[data-act="esc"]');
       if (escb) escb.addEventListener('click', openEscOverlay);
+      const logb = charEl.querySelector('[data-act="log"]');
+      if (logb) logb.addEventListener('click', openBitacora);
       const eqb = charEl.querySelector('[data-act="equip"]');
       if (eqb) eqb.addEventListener('click', openEquip);
       const lvb = charEl.querySelector('[data-act="leave"]');
@@ -1110,7 +1167,7 @@
         const lib = casaLibre();                          // re-evalúa por si otra ya la compró
         if (!lib) { toast('Ya no hay casas libres'); buildCharPanel(charId); return; }
         const res = HacStats.comprarCasa(myId, casaKey(lib), PRECIO_CASA);
-        if (res.ok) { toast(`🏠 ¡Compraste una casa por ${PRECIO_CASA} 💰!`); buildCharPanel(charId); }
+        if (res.ok) { toast(`🏠 ¡Compraste una casa por ${PRECIO_CASA} 💰!`); if (window.HacBitacora) HacBitacora.log(myId, 'progreso', `🏠 Compraste una casa (−${PRECIO_CASA}💰)`); buildCharPanel(charId); }
         else toast(res.motivo || 'No se pudo comprar la casa');
       });
     }
@@ -1528,7 +1585,8 @@
     if (window.HacCompetencias) HacCompetencias.ready().then(refresh);
     if (window.HacPuntos) HacPuntos.ready().then(refresh);
     if (window.HacStats) HacStats.ready().then(refresh);
-    const escPulse = () => { syncEscaramuzaOrder(); resolverEscaramuzaSiToca(); autoClaimBotinSiToca(); syncEscaramuzaFolk(); escRefresh(); };
+    const escPulse = () => { syncEscaramuzaOrder(); resolverEscaramuzaSiToca(); autoClaimBotinSiToca(); logEscaramuzaResultado(); syncEscaramuzaFolk(); escRefresh(); };
+    if (window.HacBitacora) HacBitacora.ready();
     if (window.HacEscaramuzas) HacEscaramuzas.ready().then(escPulse);
     if (window.HacOrdenes) {
       HacOrdenes.ready().then(applyOrders);

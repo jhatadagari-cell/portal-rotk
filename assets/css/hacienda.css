@@ -551,6 +551,16 @@ html.hacp-pseudofs, html.hacp-pseudofs body{ overflow:hidden; }
 .hacp-esc-loot .hacp-cp-btn{ width:100%; margin-top:2px; min-height:34px; }
 .hacp-esc-loot-tag{ font:700 10px 'Noto Sans SC',sans-serif; color:var(--parch2); }
 .hacp-esc-loot-tag.mio{ color:#7fc9a0; }
+/* ── Bitácora (diario del mecenas) ────────────────────────────────────── */
+.hacp-bit-list{ display:flex; flex-direction:column; gap:6px; max-height:64vh; overflow-y:auto; margin-top:4px; }
+.hacp-bit-row{ display:flex; gap:9px; align-items:baseline; padding:7px 10px; border-radius:7px;
+  background:rgba(255,255,255,.03); border:1px solid rgba(201,168,76,.16); border-left:3px solid rgba(201,168,76,.3); }
+.hacp-bit-row.t-expedicion{ border-left-color:#3a6ea5; }
+.hacp-bit-row.t-escaramuza{ border-left-color:#b23b2e; }
+.hacp-bit-row.t-tarea{ border-left-color:#3a8a5a; }
+.hacp-bit-row.t-progreso{ border-left-color:#caa42c; }
+.hacp-bit-when{ flex:0 0 auto; font:600 10px 'Noto Sans SC',sans-serif; color:var(--parch2); opacity:.7; white-space:nowrap; min-width:52px; }
+.hacp-bit-txt{ flex:1; min-width:0; font:500 12.5px/1.4 'Noto Sans SC',sans-serif; color:var(--parch); }
 /* Popup de info de edificio (al pulsar su cuerpo en el plano) */
 .hacp-bld-pop{ position:fixed; z-index:9999; width:min(248px,80vw); padding:10px 12px; box-sizing:border-box;
   background:rgba(13,11,7,.97); border:1px solid rgba(201,168,76,.45); border-radius:8px;
