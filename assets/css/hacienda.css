@@ -546,6 +546,20 @@ button.hacp-slot.manual:hover{ background:rgba(127,201,160,.34); }
 .hacp-rel-glyph{ font:900 58px 'Noto Serif SC',serif; line-height:1.1; margin:8px 0 2px; color:var(--gold); }
 .hacp-rel-box.rel-herm .hacp-rel-glyph{ color:#e7c66a; } .hacp-rel-box.rel-riva .hacp-rel-glyph{ color:#e2a06a; }
 .hacp-rel-box.rel-odio .hacp-rel-glyph{ color:#d9756a; } .hacp-rel-box.rel-amor .hacp-rel-glyph{ color:#e08aa8; }
+/* Sendas (talentos) — árbol en el overlay */
+.hacp-senda-tree{ display:flex; flex-direction:column; gap:9px; }
+.hacp-senda-row{ padding:11px 12px; border:1px solid rgba(201,168,76,.25); border-radius:9px; background:rgba(255,255,255,.03); }
+.hacp-senda-row.owned{ border-color:rgba(122,162,110,.5); background:rgba(122,162,110,.08); }
+.hacp-senda-row.locked{ opacity:.62; }
+.hacp-senda-head{ display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; }
+.hacp-senda-zh{ font:900 18px 'Noto Serif SC',serif; color:var(--gold); }
+.hacp-senda-nm{ font-weight:800; color:var(--parch); }
+.hacp-senda-ok{ margin-left:auto; color:#bfe0b2; font-size:11.5px; font-weight:700; }
+.hacp-senda-soon{ margin-left:auto; color:var(--parch2); font-size:11px; font-style:italic; }
+.hacp-senda-lock{ margin-left:auto; color:#e2a06a; font-size:11px; }
+.hacp-senda-ef{ font-size:12px; color:var(--parch2); line-height:1.5; margin-top:5px; }
+.hacp-senda-act{ margin-top:8px; }
+.hacp-senda-act .hacp-cp-btn{ width:100%; }
 /* ── Escaramuzas (sección móvil Y overlay de escritorio) ──────────────── */
 /* fila genérica (también la usa el listado de bandas en el overlay de escritorio) */
 .hacp-mrow{ display:flex; align-items:center; gap:10px; padding:9px 11px; margin-bottom:7px;

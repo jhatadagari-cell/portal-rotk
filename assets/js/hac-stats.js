@@ -36,6 +36,7 @@ const HacStats = (function () {
   }
   function rowToObj(r) {
     const parseInv = (v) => { try { return Array.isArray(v) ? v : (v ? JSON.parse(v) : []); } catch (e) { return []; } };
+    const parseObj = (v) => { try { return (v && typeof v === 'object' && !Array.isArray(v)) ? v : (v ? JSON.parse(v) : {}); } catch (e) { return {}; } };
     return {
       miembroId: r.miembro_id, dinero: Number(r.dinero) || 0,
       militar: Number(r.xp_militar) || 0, cultural: Number(r.xp_cultural) || 0,
@@ -43,7 +44,7 @@ const HacStats = (function () {
       cap: Number(r.cap_inventario) || 8, inv: parseInv(r.inventario), ahorro: Number(r.ahorro) || 0,
       casaPos: r.casa_pos || null, casaInv: parseInv(r.casa_inv), equipado: parseInv(r.equipado),
       heridas: Math.max(0, Math.min(3, Number(r.heridas) || 0)),
-      escaramuzaCd: Number(r.escaramuza_cd) || 0,
+      escaramuzaCd: Number(r.escaramuza_cd) || 0, sendas: parseObj(r.sendas),
     };
   }
   async function load() {
@@ -62,7 +63,7 @@ const HacStats = (function () {
   function reload() { readyPromise = load(); return readyPromise; }
 
   function row(mid) { return cache.find(r => r.miembroId === mid) || null; }
-  function ensure(mid) { let r = row(mid); if (!r) { r = { miembroId: mid, dinero: 0, militar: 0, cultural: 0, administrativo: 0, cap: 8, inv: [], ahorro: 0, casaPos: null, casaInv: [], equipado: [], heridas: 0 }; cache.push(r); } return r; }
+  function ensure(mid) { let r = row(mid); if (!r) { r = { miembroId: mid, dinero: 0, militar: 0, cultural: 0, administrativo: 0, cap: 8, inv: [], ahorro: 0, casaPos: null, casaInv: [], equipado: [], heridas: 0, sendas: {} }; cache.push(r); } if (!r.sendas) r.sendas = {}; return r; }
   // HERIDAS (0..3). Se infligen al fracasar/arriesgar en expediciones y escaramuzas.
   // PESAN: penalizan la recompensa (dinero+XP) y suben el riesgo; a 3 el mecenas
   // está MALHERIDO y no puede salir de la finca hasta curarse.
@@ -134,7 +135,7 @@ const HacStats = (function () {
       const { error } = await client.from(TABLE).upsert({
         miembro_id: r.miembroId, dinero: r.dinero, xp_militar: r.militar, xp_cultural: r.cultural,
         xp_administrativo: r.administrativo, cap_inventario: r.cap, inventario: r.inv, ahorro: r.ahorro,
-        casa_pos: r.casaPos, casa_inv: r.casaInv, equipado: r.equipado, heridas: r.heridas || 0, actualizado: new Date().toISOString(),
+        casa_pos: r.casaPos, casa_inv: r.casaInv, equipado: r.equipado, heridas: r.heridas || 0, sendas: r.sendas || {}, actualizado: new Date().toISOString(),
       });
       if (error) throw error;
     } catch (e) { console.error('[HacStats] persist', e); }
@@ -181,6 +182,15 @@ const HacStats = (function () {
   }
   // Nivel TOTAL del personaje = suma de niveles de dominio − 2 (1-1-1 → nivel 1).
   function nivelPersonaje(mid) { return nivel(mid, 'militar') + nivel(mid, 'cultural') + nivel(mid, 'administrativo') - 2; }
+
+  // ── SENDAS (talentos) ────────────────────────────────────────────────────
+  // Puntos ganados = 1 por cada 8 niveles de stat subidos (suma de niveles − 3).
+  function puntosTalento(mid) { const s = nivel(mid, 'militar') + nivel(mid, 'cultural') + nivel(mid, 'administrativo') - 3; return Math.floor(Math.max(0, s) / 8); }
+  function talentos(mid) { const r = row(mid); if (!r || !r.sendas) return []; return Object.keys(r.sendas).reduce((acc, k) => acc.concat(r.sendas[k] || []), []); }
+  function puntosGastados(mid) { return talentos(mid).length; }
+  function puntosLibres(mid) { return Math.max(0, puntosTalento(mid) - puntosGastados(mid)); }
+  function tieneTalento(mid, id) { return talentos(mid).indexOf(id) >= 0; }
+  function aprenderTalento(mid, dom, id) { const r = ensure(mid); if (!r.sendas[dom]) r.sendas[dom] = []; if (r.sendas[dom].indexOf(id) < 0) { r.sendas[dom].push(id); persist(r); } return r.sendas; }
   function progresoNivel(mid, dom) {
     const x = xp(mid, dom), n = nivel(mid, dom);
     const base = xpAcum(n), next = xpAcum(n + 1), span = next - base;
@@ -272,6 +282,6 @@ const HacStats = (function () {
     } catch (e) { console.error('[HacStats] liberarCasa', e); }
   }
 
-  return { ready, reload, dinero, ahorro, casaPos, casasReclamadas, duenoDeCasa, comprarCasa, liberarCasa, abandonar, heridas, penHerida, malherido, herir, curar, escaramuzaCd, bonusDinero, bonusExped, usarManual, xp, nivel, progresoNivel, bonus, nivelTotal, nivelPersonaje, equipados, equipar, desequipar, MAX_EQUIP, award, comprar, guardar, sacar, darItem, meterEnCasa, sacarDeCasa, inventario, casaInventario, capInventario, ocupadas, recompensaExped, DOMS, dbOk: () => ok, TABLE };
+  return { ready, reload, dinero, ahorro, casaPos, casasReclamadas, duenoDeCasa, comprarCasa, liberarCasa, abandonar, heridas, penHerida, malherido, herir, curar, escaramuzaCd, bonusDinero, bonusExped, usarManual, xp, nivel, progresoNivel, bonus, nivelTotal, nivelPersonaje, puntosTalento, talentos, puntosGastados, puntosLibres, tieneTalento, aprenderTalento, equipados, equipar, desequipar, MAX_EQUIP, award, comprar, guardar, sacar, darItem, meterEnCasa, sacarDeCasa, inventario, casaInventario, capInventario, ocupadas, recompensaExped, DOMS, dbOk: () => ok, TABLE };
 })();
 if (typeof window !== 'undefined') window.HacStats = HacStats;

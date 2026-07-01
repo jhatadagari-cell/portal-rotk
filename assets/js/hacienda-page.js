@@ -534,7 +534,8 @@
     function riesgoMision(m) {
       const base = (window.HacMisiones) ? HacMisiones.riesgo(nivelEf(m.dom), m.dif) : 0.3;
       const her = (window.HacStats && HacStats.heridas) ? HacStats.heridas(myId) : 0;
-      return Math.min(0.9, base + her * 0.08);
+      const soldado = (window.HacStats && HacStats.tieneTalento && HacStats.tieneTalento(myId, 'soldado')) ? 0.06 : 0;   // 武士: aguante
+      return Math.max(0.02, Math.min(0.9, base + her * 0.08 - soldado));
     }
     const fmtDur = (s) => (s < 60) ? Math.round(s) + 's' : Math.round(s / 60) + ' min';
     // Cuenta atrás legible: «1m 45s» / «45s».
@@ -1059,8 +1060,10 @@
       const dif = band.dificultad || 4;
       // SUCESOS (doctrina) + RELACIONES pliegan prob. de éxito, botín y dinero por miembro.
       const sc = escSucesos(band), rb = relBonos(band);
+      // 校尉 Oficial: si el capitán tiene el talento, +5% éxito (liderazgo).
+      const capBonus = (window.HacStats && HacStats.tieneTalento && band.hostId && HacStats.tieneTalento(band.hostId, 'oficial')) ? 0.05 : 0;
       const baseP = Math.max(0.35, 0.72 - (dif - 4) * 0.08);
-      const exito = Math.random() < Math.max(0.1, Math.min(0.95, baseP + sc.pMod + rb.pMod));
+      const exito = Math.random() < Math.max(0.1, Math.min(0.95, baseP + sc.pMod + rb.pMod + capBonus));
       const share = Math.max(0, 20 + dif * 10 + sc.share), hostBonus = Math.round((band.coste || 0) * 0.5);   // el host recupera coste +50%
       // +% dinero: EQUIPO (sellos) + efectos de relaciones → mapa {id: fracción}.
       const bonosPct = {};
@@ -1543,6 +1546,57 @@
       const el = ensureBitEl(); el.hidden = false; renderBitacora();
       if (window.HacBitacora) HacBitacora.reload().then(() => { if (!el.hidden) renderBitacora(); });
     }
+
+    // ── SENDAS (talentos): overlay con el árbol de la aptitud militar (C1) ─────
+    let sendasEl = null;
+    function ensureSendasEl() {
+      if (sendasEl) return sendasEl;
+      sendasEl = document.createElement('div'); sendasEl.className = 'hacp-shop hacp-sendas-ov'; sendasEl.hidden = true; overlayHost().appendChild(sendasEl);
+      ['pointerdown', 'pointerup', 'wheel', 'click'].forEach(ev => sendasEl.addEventListener(ev, (e) => e.stopPropagation(), { passive: false }));
+      sendasEl.addEventListener('click', (e) => { if (e.target === sendasEl) sendasEl.hidden = true; });
+      return sendasEl;
+    }
+    function renderSendas() {
+      if (!myId || !window.HacSendas || !window.HacStats) return;
+      const el = ensureSendasEl();
+      const libres = HacStats.puntosLibres(myId), total = HacStats.puntosTalento(myId);
+      const mil = HacStats.nivel(myId, 'militar'), tot = HacStats.nivelPersonaje(myId);
+      const arb = HacSendas.arbol('militar');
+      const rungs = arb.rungs.map(t => {
+        const owned = HacStats.tieneTalento(myId, t.id), elig = HacSendas.elegible(myId, t.id);
+        let estado = '', btn = '';
+        if (owned) estado = '<span class="hacp-senda-ok">✓ aprendido</span>';
+        else if (!t.activo) estado = '<span class="hacp-senda-soon">próximamente</span>';
+        else if (elig) btn = `<button type="button" class="hacp-cp-btn" data-aprender="${esc(t.id)}">Aprender · 1 pt</button>`;
+        else {
+          const f = [];
+          if (mil < t.reqMil) f.push(`武 ${mil}/${t.reqMil}`);
+          if (t.reqTotal && tot < t.reqTotal) f.push(`nivel ${tot}/${t.reqTotal}`);
+          if (t.prev && !HacStats.tieneTalento(myId, t.prev)) f.push('requiere el anterior');
+          if (!f.length && libres < 1) f.push('sin puntos libres');
+          estado = `<span class="hacp-senda-lock">${esc(f.join(' · '))}</span>`;
+        }
+        return `<div class="hacp-senda-row${owned ? ' owned' : ''}${(!owned && !elig && t.activo) ? ' locked' : ''}">
+          <div class="hacp-senda-head"><span class="hacp-senda-zh">${t.zh}</span><span class="hacp-senda-nm">${esc(t.nombre)}</span>${estado}</div>
+          <div class="hacp-senda-ef">${esc(t.efecto)}</div>${btn ? `<div class="hacp-senda-act">${btn}</div>` : ''}</div>`;
+      }).join('');
+      el.innerHTML = `<div class="hacp-shop-box"><button type="button" class="hacp-shop-x" data-sendas-x aria-label="Cerrar">✕</button>
+        <div class="hacp-shop-h"><span class="hacp-shop-zh">道</span> Sendas de aptitud</div>
+        <div class="hacp-shop-sub">${arb.zh} ${esc(arb.nombre)} · puntos de talento: <b>${libres}</b> libres de ${total} · 1 punto por cada 8 niveles</div>
+        <div class="hacp-senda-tree">${rungs}</div></div>`;
+      el.querySelector('[data-sendas-x]').addEventListener('click', () => { el.hidden = true; });
+      el.querySelectorAll('[data-aprender]').forEach(b => b.addEventListener('click', () => aprenderTalento(b.dataset.aprender)));
+    }
+    function aprenderTalento(id) {
+      const t = window.HacSendas && HacSendas.talento(id);
+      if (!t || !HacSendas.elegible(myId, id)) return;
+      if (!confirm(`¿Aprender ${t.zh} ${t.nombre}? Gastarás 1 punto de talento.`)) return;
+      HacStats.aprenderTalento(myId, t.dom, id);
+      toast(`道 Talento aprendido: ${t.zh} ${t.nombre}`);
+      if (window.HacBitacora) HacBitacora.log(myId, 'progreso', `道 Aprendiste ${t.zh} ${t.nombre}`, { clave: 'talento:' + myId + ':' + id });
+      renderSendas(); if (charId) buildCharPanel(charId);
+    }
+    function openSendas() { if (!myId) return; const el = ensureSendasEl(); el.hidden = false; renderSendas(); }
     function release() {
       if (!myId || !window.HacOrdenes) return;
       HacOrdenes.clear(h.id, myId).then(applyOrders).catch(e => console.warn('[orden] clear', e));
@@ -1767,6 +1821,7 @@
         ${d.mine ? `<button type="button" class="hacp-cp-btn hacp-cp-equipbtn" data-act="equip">⚔ Equipo${d.equipN ? ` · ${d.equipN}/3` : ''}</button>` : ''}
         ${d.mine ? `<button type="button" class="hacp-cp-btn hacp-cp-esc" data-act="esc">兵 Escaramuzas</button>` : ''}
         ${d.mine ? `<button type="button" class="hacp-cp-btn hacp-cp-log" data-act="log">錄 Bitácora</button>` : ''}
+        ${d.mine ? `<button type="button" class="hacp-cp-btn hacp-cp-sendas" data-act="sendas">道 Sendas${(window.HacStats && HacStats.puntosLibres && HacStats.puntosLibres(myId) > 0) ? ` · <b>${HacStats.puntosLibres(myId)} pts</b>` : ''}</button>` : ''}
         ${d.mine ? marketBtnHTML() : ''}
         ${mision}
         ${d.mine ? `<button type="button" class="hacp-cp-btn hacp-cp-invbtn${invOpen ? ' on' : ''}" data-act="inv">🎒 ${invOpen ? 'Ocultar' : 'Inventario'} · 💰 ${d.money}</button>` : ''}
@@ -1793,6 +1848,8 @@
       if (escb) escb.addEventListener('click', openEscOverlay);
       const logb = charEl.querySelector('[data-act="log"]');
       if (logb) logb.addEventListener('click', openBitacora);
+      const sdb = charEl.querySelector('[data-act="sendas"]');
+      if (sdb) sdb.addEventListener('click', openSendas);
       const eqb = charEl.querySelector('[data-act="equip"]');
       if (eqb) eqb.addEventListener('click', openEquip);
       const lvb = charEl.querySelector('[data-act="leave"]');
