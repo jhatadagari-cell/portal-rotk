@@ -2150,7 +2150,13 @@
       });
       // Clic en TU mecenas mientras espera en el tablón (📜) → abre las misiones.
       if (bestId && bestId === myId && HacFolk.consultando && HacFolk.consultando(myId)) { openMissionBoard(); return; }
-      if (bestId) { gotoMember(bestId); return; }
+      if (bestId) {
+        // MÓVIL: tocar un mecenas solo CENTRA la cámara en él (sin panel ni salto a
+        // Personaje; su ficha vive en la pestaña Personaje). ESCRITORIO: panel flotante.
+        if (mShell) { HacFolk.select(bestId); if (cam && cam.focusFollow) cam.focusFollow(() => HacFolk.position(bestId), 3.4); renderList(); }
+        else gotoMember(bestId);
+        return;
+      }
       // ¿el cuerpo de un edificio? → popup con su info y el bono que aporta.
       const cell = (window.HacIso && HacIso.cellAt) ? HacIso.cellAt(iso, e.clientX, e.clientY) : null;
       const bld = cell ? edificioEnCelda(cell[0], cell[1]) : null;
@@ -2295,8 +2301,9 @@
           // recalcula el encuadre al tamaño real y, ya en el frame siguiente, hace zoom
           // al mecenas (focusFollow usa el `fit` recién calculado).
           window.dispatchEvent(new Event('resize'));
-          // En móvil el visor es enorme: acércate bien al mecenas (zoom alto).
-          if (myId && cam && cam.focusFollow) requestAnimationFrame(() => cam.focusFollow(() => HacFolk.position(myId), 8));
+          // Centra en tu mecenas con un zoom cómodo (no demasiado cerca: a 8 la escena
+          // se veía mal; ~4 deja ver al mecenas y su entorno).
+          if (myId && cam && cam.focusFollow) requestAnimationFrame(() => cam.focusFollow(() => HacFolk.position(myId), 4));
         }
       }
       mgo('personaje');   // landing por defecto

@@ -310,7 +310,9 @@ html.hacp-pseudofs, html.hacp-pseudofs body{ overflow:hidden; }
 .hacp-cp-btn:disabled:hover{ background:rgba(201,168,76,.16); color:var(--gold); }
 .hacp-cp-flag{ color:#e0b85a; font-size:12px; }
 /* Botón de inventario (toggle) + panel de mochila/monedero desplegado a la derecha. */
-.hacp-cp-invbtn{ display:block; width:100%; margin-top:9px; text-align:center; }
+.hacp-cp-invbtn{ display:block; width:100%; margin-top:8px; text-align:center; }
+/* Bitácora: mismo tratamiento que Equipo/Inventario (antes salía estrecho). */
+.hacp-cp-log{ display:block; width:100%; margin-top:8px; text-align:center; }
 .hacp-cp-invbtn.on{ background:rgba(201,168,76,.32); color:#fff; }
 .hacp-inv{
   position:absolute; left:calc(100% + 8px); bottom:0; width:190px; box-sizing:border-box;
@@ -382,6 +384,7 @@ html.hacp-pseudofs, html.hacp-pseudofs body{ overflow:hidden; }
      Misiones); solo se conserva el estado de la misión ACTIVA. */
   .hacp-mobile .hacp-cp-board, .hacp-mobile .hacp-cp-mis:not(.hacp-cp-mis-on){ display:none; }
   .hacp-mobile .hacp-cp-esc{ display:none; }   /* en móvil, Escaramuzas vive en la barra inferior */
+  .hacp-mobile .hacp-iso-prestige{ top:calc(8px + env(safe-area-inset-top)); }   /* no bajo el notch */
   .hacp-mobile .hacp-finca{ transform:none; margin:0; width:100%; }
   .hacp-mobile .hacp-iso-area{ margin:0; }
   /* El visor iso es la CAPA DE FONDO a pantalla completa (sección Hacienda). */
@@ -402,7 +405,7 @@ html.hacp-pseudofs, html.hacp-pseudofs body{ overflow:hidden; }
 
   /* Host de secciones (todo menos Hacienda): panel opaco sobre el visor. */
   #hacp-msec{ position:fixed; left:0; right:0; top:0; bottom:62px; z-index:8000; overflow-y:auto;
-    -webkit-overflow-scrolling:touch; box-sizing:border-box; padding:12px 11px 16px;
+    -webkit-overflow-scrolling:touch; box-sizing:border-box; padding:calc(12px + env(safe-area-inset-top)) 11px 16px;
     background:radial-gradient(120% 80% at 50% 0%, #1a160e 0%, #0d0b07 70%); }
   #hacp-msec[hidden]{ display:none; }
   .hacp-msec-pane{ display:none; }
@@ -624,7 +627,7 @@ button.hacp-slot.manual:hover{ background:rgba(127,201,160,.34); }
 .hacp-bld-dr.ok{ color:#7fc9a0; }
 
 /* Abandonar la hacienda: botón discreto de peligro al pie del panel + overlay de aviso */
-.hacp-cp-leave{ display:block; width:100%; margin-top:10px; background:none; border:1px solid rgba(178,59,46,.5);
+.hacp-cp-leave{ display:block; width:100%; margin-top:18px; background:none; border:1px solid rgba(178,59,46,.5);
   color:#d98a7e; font-size:11px; padding:5px 11px; }
 .hacp-cp-leave:hover{ background:rgba(178,59,46,.18); border-color:#b23b2e; color:#f0b8ad; }
 .hacp-leave-h{ color:#e2786a; }
