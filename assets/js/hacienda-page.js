@@ -1777,6 +1777,44 @@
       if (window.HacBitacora) HacBitacora.log(myId, 'progreso', `✚ Curaste una herida (−${COSTE_CURA}💰)`);
       if (charId) buildCharPanel(charId);
     }
+    // Barra de acciones (rejilla de iconos) — sustituye la pila de botones ancha.
+    function toolbarHTML(d) {
+      const pts = (window.HacStats && HacStats.puntosLibres) ? HacStats.puntosLibres(myId) : 0;
+      const tool = (act, ic, lb, extra) => `<button type="button" class="hacp-cp-tool${extra || ''}" data-act="${act}"><span class="ic">${ic}</span><span class="lb">${lb}</span></button>`;
+      const items = [
+        tool('equip', '⚔', 'Equipo' + (d.equipN ? ` ${d.equipN}/3` : '')),
+        tool('inv', '🎒', 'Inventario', invOpen ? ' on' : ''),
+        tool('sendas', '道', 'Sendas') + (pts > 0 ? '' : ''),
+        tool('casa', '邑', 'La casa'),
+        tool('log', '錄', 'Bitácora'),
+        hasMarket ? tool('shop', '市', 'Mercado') : '',
+        tool('esc', '兵', 'Escaramuzas', ' hacp-cp-esc'),
+      ];
+      // Distintivo de puntos de talento sin gastar sobre el icono de Sendas.
+      const sendasBadge = pts > 0 ? `<span class="hacp-cp-badge">${pts}</span>` : '';
+      let html = items.join('');
+      if (sendasBadge) html = html.replace('data-act="sendas"><span class="ic">道</span>', `data-act="sendas">${sendasBadge}<span class="ic">道</span>`);
+      return `<div class="hacp-cp-tools">${html}</div>`;
+    }
+    // Overlay "La casa": bonos de la finca + cargos + relaciones (antes inline).
+    let casaEl = null;
+    function ensureCasaEl() {
+      if (casaEl) return casaEl;
+      casaEl = document.createElement('div'); casaEl.className = 'hacp-shop hacp-casa-ov'; casaEl.hidden = true; overlayHost().appendChild(casaEl);
+      ['pointerdown', 'pointerup', 'wheel', 'click'].forEach(ev => casaEl.addEventListener(ev, (e) => e.stopPropagation(), { passive: false }));
+      casaEl.addEventListener('click', (e) => { if (e.target === casaEl) casaEl.hidden = true; });
+      return casaEl;
+    }
+    function openCasa() {
+      if (!myId) return;
+      const el = ensureCasaEl();
+      const bonos = (hayBonos()) ? `<div class="hacp-cp-bonos">Bonos de la finca · ${bonosTexto()}</div>` : '';
+      el.innerHTML = `<div class="hacp-shop-box"><button type="button" class="hacp-shop-x" data-casa-x aria-label="Cerrar">✕</button>
+        <div class="hacp-shop-h"><span class="hacp-shop-zh">邑</span> La casa</div>
+        ${bonos}${cargosHTML()}${relacionesHTML()}</div>`;
+      el.querySelector('[data-casa-x]').addEventListener('click', () => { el.hidden = true; });
+      el.hidden = false;
+    }
     function buildCharPanel(id) {
       const d = charData(id); if (!d) { closeCharPanel(); return; }
       let comp = '';
@@ -1819,7 +1857,7 @@
             </div>
             ${d.aptDef ? `<div class="hacp-cp-apt">${d.aptDef.icon || ''} ${esc(d.aptDef.nombre)}${comp ? ' · domina ' + comp : ''}</div>` : (comp ? `<div class="hacp-cp-apt">domina ${comp}</div>` : '')}
             ${d.cargo ? `<div class="hacp-cp-cargo">${d.cargo.icon} ${esc(d.cargo.zh)} ${esc(d.cargo.nombre)}</div>` : ''}
-            <div class="hacp-cp-pts">Puntos: <b id="hacp-cp-pts">${d.puntos}</b>${d.earned ? ` <span class="hacp-cp-earn">+${d.earned} en misiones</span>` : ''}</div>
+            <div class="hacp-cp-pts">Puntos: <b id="hacp-cp-pts">${d.puntos}</b>${d.mine ? ` · 💰 <b>${d.money}</b>` : ''}${d.earned ? ` <span class="hacp-cp-earn">+${d.earned}</span>` : ''}</div>
           </div>
         </div>
         <div class="hacp-cp-act" id="hacp-cp-act">${d.it.inside ? '⌂ ' : ''}${esc(d.it.activity || 'Paseando por la finca')}</div>
@@ -1827,16 +1865,8 @@
         <div class="hacp-cp-elabel" id="hacp-cp-elabel">${energyLabel(d)}</div>
         ${statsHTML(d)}
         ${woundsHTML(d)}
-        ${(d.mine && hayBonos()) ? `<div class="hacp-cp-bonos" title="Bonos pasivos por los pabellones temáticos de la finca y los edificios de su dominio dentro">Bonos de la finca · ${bonosTexto()}</div>` : ''}
-        ${d.mine ? cargosHTML() : ''}
-        ${d.mine ? relacionesHTML() : ''}
-        ${d.mine ? `<button type="button" class="hacp-cp-btn hacp-cp-equipbtn" data-act="equip">⚔ Equipo${d.equipN ? ` · ${d.equipN}/3` : ''}</button>` : ''}
-        ${d.mine ? `<button type="button" class="hacp-cp-btn hacp-cp-esc" data-act="esc">兵 Escaramuzas</button>` : ''}
-        ${d.mine ? `<button type="button" class="hacp-cp-btn hacp-cp-log" data-act="log">錄 Bitácora</button>` : ''}
-        ${d.mine ? `<button type="button" class="hacp-cp-btn hacp-cp-sendas" data-act="sendas">道 Sendas${(window.HacStats && HacStats.puntosLibres && HacStats.puntosLibres(myId) > 0) ? ` · <b>${HacStats.puntosLibres(myId)} pts</b>` : ''}</button>` : ''}
-        ${d.mine ? marketBtnHTML() : ''}
+        ${d.mine ? toolbarHTML(d) : ''}
         ${mision}
-        ${d.mine ? `<button type="button" class="hacp-cp-btn hacp-cp-invbtn${invOpen ? ' on' : ''}" data-act="inv">🎒 ${invOpen ? 'Ocultar' : 'Inventario'} · 💰 ${d.money}</button>` : ''}
         ${(d.mine && invOpen) ? invPanelHTML(d) : ''}
         ${d.mine ? `<button type="button" class="hacp-cp-btn hacp-cp-leave" data-act="leave">Abandonar la hacienda</button>` : ''}`;
       lastStatsSig = JSON.stringify(d.stats || 0);   // recién pintadas: marca su firma
@@ -1862,6 +1892,8 @@
       if (logb) logb.addEventListener('click', openBitacora);
       const sdb = charEl.querySelector('[data-act="sendas"]');
       if (sdb) sdb.addEventListener('click', openSendas);
+      const csb = charEl.querySelector('[data-act="casa"]');
+      if (csb) csb.addEventListener('click', openCasa);
       const eqb = charEl.querySelector('[data-act="equip"]');
       if (eqb) eqb.addEventListener('click', openEquip);
       const lvb = charEl.querySelector('[data-act="leave"]');
