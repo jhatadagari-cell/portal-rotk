@@ -1027,20 +1027,46 @@
     }
     // RESOLUCIÓN al volver (≥ fin): cualquier miembro la dispara; la RPC es idempotente
     // (solo la primera surte efecto). Dado de éxito en cliente, como en las expediciones.
+    // R1b — EFECTOS de las relaciones en la escaramuza. pMod (prob. éxito), loot (botín),
+    // per (% dinero a AMBOS del par), perOrigen (% solo a quien SIENTE el vínculo unilateral).
+    const REL_FX = {
+      hermandad: { jurada: { pMod: 0.08, per: 0.10 }, prometida: { loot: 1 } },
+      rivalidad: { competitiva: { loot: 1, pMod: -0.03 }, envidiosa: { per: 0.12, pMod: -0.06 } },
+      odio: { unilateral: { pMod: -0.04, perOrigen: -0.15 }, reciproco: { pMod: -0.10 } },
+      amor: { unilateral: { pMod: 0.03, perOrigen: 0.15 }, reciproco: { pMod: 0.08, per: 0.10 } },
+    };
+    // Suma los efectos de los vínculos entre los pares CO-PRESENTES de una banda.
+    function relBonos(band) {
+      const out = { pMod: 0, loot: 0, per: {} };
+      if (!window.HacRelaciones) return out;
+      const ids = (band.miembros || []).map(m => m.id).filter(Boolean);
+      const addPer = (id, v) => { out.per[id] = (out.per[id] || 0) + v; };
+      for (let i = 0; i < ids.length; i++) for (let j = i + 1; j < ids.length; j++) {
+        const rel = HacRelaciones.get(h.id, ids[i], ids[j]); if (!rel || !rel.tipo) continue;
+        const fx = (REL_FX[rel.tipo] || {})[rel.subtipo]; if (!fx) continue;
+        out.pMod += fx.pMod || 0; out.loot += fx.loot || 0;
+        if (fx.per) { addPer(ids[i], fx.per); addPer(ids[j], fx.per); }
+        if (fx.perOrigen && rel.origen) addPer(rel.origen, fx.perOrigen);
+      }
+      return out;
+    }
     function resolverEscaramuzaSiToca() {
       if (!myId || !window.HacEscaramuzas) return;
       const band = HacEscaramuzas.miBanda(h.id, myId);
       if (!band || band.estado !== 'en_curso' || clock() < band.finMs) return;
       const dif = band.dificultad || 4;
-      // SUCESOS: doctrina + desenlaces deterministas pliegan prob. de éxito, botín y dinero.
-      const sc = escSucesos(band);
+      // SUCESOS (doctrina) + RELACIONES pliegan prob. de éxito, botín y dinero por miembro.
+      const sc = escSucesos(band), rb = relBonos(band);
       const baseP = Math.max(0.35, 0.72 - (dif - 4) * 0.08);
-      const exito = Math.random() < Math.max(0.1, Math.min(0.95, baseP + sc.pMod));
+      const exito = Math.random() < Math.max(0.1, Math.min(0.95, baseP + sc.pMod + rb.pMod));
       const share = Math.max(0, 20 + dif * 10 + sc.share), hostBonus = Math.round((band.coste || 0) * 0.5);   // el host recupera coste +50%
-      // +% dinero del EQUIPO de cada miembro (sellos de comercio) → mapa {id: fracción}.
+      // +% dinero: EQUIPO (sellos) + efectos de relaciones → mapa {id: fracción}.
       const bonosPct = {};
-      (band.miembros || []).forEach(mm => { const p = (window.HacStats && HacStats.bonusDinero) ? HacStats.bonusDinero(mm.id) : 0; if (p) bonosPct[mm.id] = p; });
-      HacEscaramuzas.resolver(band.id, clock(), exito, exito ? generarBotin(band, sc.loot + (bonos.escBotin || 0)) : [], share, hostBonus, ESC_FAST ? 30000 : 0, bonosPct)
+      (band.miembros || []).forEach(mm => {
+        const eq = (window.HacStats && HacStats.bonusDinero) ? HacStats.bonusDinero(mm.id) : 0;
+        const p = eq + (rb.per[mm.id] || 0); if (p) bonosPct[mm.id] = p;
+      });
+      HacEscaramuzas.resolver(band.id, clock(), exito, exito ? generarBotin(band, sc.loot + (bonos.escBotin || 0) + rb.loot) : [], share, hostBonus, ESC_FAST ? 30000 : 0, bonosPct)
         .then(() => { if (window.HacStats) HacStats.reload().then(() => { if (charId) buildCharPanel(charId); }); })
         .catch(e => console.warn('[escaramuza] resolver', e));
     }

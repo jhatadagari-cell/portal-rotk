@@ -80,6 +80,22 @@ const HacFolk = (function () {
   const ESC_MUSTER_MS = 16000;   // ventana de concentración en la puerta (deja margen para llegar)
   const ESC_CHEER_MS = 4200;     // 拱手 + grito de guerra (sub-ventana final, simultáneo)
   const ESC_CRY = '¡A la batalla!';
+  // Grito de guerra de un mecenas al partir: si tiene un VÍNCULO con un co-miembro
+  // de su banda, dice una frase temática (R1b); si no, el genérico. Los unilaterales
+  // (odio/amor no correspondido) solo los "dice" quien SIENTE el vínculo.
+  function escCheerFor(w) {
+    if (!window.HacRelaciones || !haciendaId || !escMap[w.id]) return ESC_CRY;
+    const mine = escMap[w.id];
+    const co = Object.keys(escMap).filter(id => id !== w.id && escMap[id] && escMap[id].inicioMs === mine.inicioMs);
+    for (let i = 0; i < co.length; i++) {
+      const rel = HacRelaciones.get(haciendaId, w.id, co[i]); if (!rel || !rel.tipo) continue;
+      const def = HacRelaciones.TIPOS[rel.tipo]; if (!def) continue;
+      const sub = def.subs[rel.subtipo]; if (!sub || !sub.cheer) continue;
+      if (def.dir && rel.subtipo === 'unilateral' && rel.origen !== w.id) continue;   // el no-correspondido calla
+      return sub.cheer;
+    }
+    return ESC_CRY;
+  }
   // Hora de simulación (ms) del estado actual — base de las misiones.
   // (La energía es un recurso del jugador independiente del sim → HacEnergia.)
   function nowSimMs() { return simNowMs; }
@@ -869,7 +885,7 @@ const HacFolk = (function () {
           w.phase += dt * 0.5;
           if (w.speechT > 0) { w.speechT -= dt; if (w.speechT <= 0) w.speech = null; }
           const t0 = nowSimMs(), end = w._escEnd || t0;
-          if (t0 >= end - ESC_CHEER_MS && !w.bowing) { w.bowing = true; w.speech = ESC_CRY; w.speechT = ESC_CHEER_MS / 1000; w.dir = 'S'; }
+          if (t0 >= end - ESC_CHEER_MS && !w.bowing) { w.bowing = true; w.speech = escCheerFor(w); w.speechT = ESC_CHEER_MS / 1000; w.dir = 'S'; }
           if (t0 >= end) {
             w.bowing = false; w.speech = null; w.state = 'fuera';
             const o = w.order, endOut = o ? o.startMs + (o.durMs || 120000) : t0;
