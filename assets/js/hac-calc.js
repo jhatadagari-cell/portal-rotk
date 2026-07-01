@@ -94,8 +94,37 @@ const HacCalc = (function () {
     return (t && Number(t.maxMiembros)) || Infinity;
   }
 
+  // ── OFICIOS 官職 (cargos) — distintos del RANGO por puntos ────────────────
+  // Los asigna MANUALMENTE el admin a mecenas importantes (uno por oficio y casa).
+  // Dan un perk PERSONAL a quien lo ostenta + un bono a TODA la hacienda mientras
+  // esté ocupado. Perk: {xpDom} (+% XP en su dominio) o {dinero} (+% dinero de
+  // misiones). Casa: {escBotin} (+botín escaramuza), {xpExped} (+% XP expediciones),
+  // {mercado} (−% precios). Valores tuneables.
+  const CARGOS = [
+    { id: 'general',    zh: '將軍', nombre: 'General',    dom: 'militar',        icon: '⚔',
+      perk: { xpDom: 0.15 }, hac: { escBotin: 1 },
+      perkTxt: '+15% XP militar',   hacTxt: '+1 objeto de botín en escaramuzas' },
+    { id: 'consejero',  zh: '軍師', nombre: 'Consejero',  dom: 'cultural',       icon: '☯',
+      perk: { xpDom: 0.15 }, hac: { xpExped: 0.08 },
+      perkTxt: '+15% XP cultural',  hacTxt: '+8% XP en expediciones' },
+    { id: 'intendente', zh: '太守', nombre: 'Intendente', dom: 'administrativo', icon: '⚖',
+      perk: { dinero: 0.15 }, hac: { mercado: 0.08 },
+      perkTxt: '+15% dinero',       hacTxt: '−8% precios de mercado' },
+  ];
+  const cargoDef = (id) => CARGOS.find(c => c.id === id) || null;
+  // Bono a toda la hacienda por los oficios OCUPADOS (suma; una vez por oficio).
+  function cargoHacBonos(miembros) {
+    const out = { escBotin: 0, xpExped: 0, mercado: 0 };
+    const vistos = new Set();
+    (miembros || []).forEach(m => {
+      const c = cargoDef(m && m.cargo); if (!c || vistos.has(c.id)) return; vistos.add(c.id);
+      Object.keys(c.hac).forEach(k => { out[k] = (out[k] || 0) + c.hac[k]; });
+    });
+    return out;
+  }
+
   return { haciendaPuntos, tierDePuntos, progresoHacia, rangoDePuntos, rangoIndex, clampTier, tiersAsc, maxTier,
-    tierPorNivel, nivelAlcanzado, nivelEfectivo, prestigio, nivelAlcanzable, maxMiembros };
+    tierPorNivel, nivelAlcanzado, nivelEfectivo, prestigio, nivelAlcanzable, maxMiembros, CARGOS, cargoDef, cargoHacBonos };
 })();
 
 if (typeof window !== 'undefined') window.HacCalc = HacCalc;

@@ -433,13 +433,21 @@
     const bonos = (window.HacBuild && HacBuild.bonosPabellon)
       ? HacBuild.bonosPabellon(h.mapa, tier, _pabs)
       : { xp: 0, dinero: 0, mercado: 0, xpMil: 0, sinergia: { militar: 0, cultural: 0, administrativo: 0 } };
+    // OFICIOS 官職: bono a TODA la casa (oficios ocupados) fundido con los del pabellón,
+    // + el perk PERSONAL del oficio que ostenta mi mecenas (si tiene alguno).
+    const cargoHac = (window.HacCalc && HacCalc.cargoHacBonos) ? HacCalc.cargoHacBonos(h.miembros) : { escBotin: 0, xpExped: 0, mercado: 0 };
+    bonos.xp += cargoHac.xpExped || 0;
+    bonos.mercado += cargoHac.mercado || 0;
+    bonos.escBotin = cargoHac.escBotin || 0;
+    const miCargo = (window.HacCalc && HacCalc.cargoDef) ? HacCalc.cargoDef(((h.miembros || []).find(m => m.personajeId === myId) || {}).cargo) : null;
     // Fracción de XP extra para UNA misión: el bono cultural (政→文… 文) aplica a
     // todas; el militar (军) SOLO se suma en expediciones de dominio militar.
-    const xpFracMision = (dom) => (bonos.xp || 0) + (dom === 'militar' ? (bonos.xpMil || 0) : 0);
+    const xpFracMision = (dom) => (bonos.xp || 0) + (dom === 'militar' ? (bonos.xpMil || 0) : 0)
+      + ((miCargo && miCargo.perk.xpDom && miCargo.dom === dom) ? miCargo.perk.xpDom : 0);   // perk del oficio en su dominio
     const conBono = (base, frac) => Math.round((base || 0) * (1 + (frac || 0)));        // recompensa con bono
     const precioMercado = (item) => Math.max(1, Math.round((item.precio || 0) * (1 - bonos.mercado)));   // precio con descuento 政
     const pct = (f) => Math.round((f || 0) * 100);
-    const hayBonos = () => bonos.xp > 0 || bonos.dinero > 0 || bonos.mercado > 0 || bonos.xpMil > 0;
+    const hayBonos = () => bonos.xp > 0 || bonos.dinero > 0 || bonos.mercado > 0 || bonos.xpMil > 0 || bonos.escBotin > 0;
     // Resumen legible de los bonos activos de la finca (solo los no nulos).
     function bonosTexto() {
       const p = [];
@@ -447,7 +455,18 @@
       if (bonos.xpMil > 0) p.push(`<span style="color:#b23b2e">+${pct(bonos.xpMil)}% XP en exp. militares</span>`);
       if (bonos.dinero > 0) p.push(`<span style="color:#3a6ea5">+${pct(bonos.dinero)}% dinero</span>`);
       if (bonos.mercado > 0) p.push(`<span style="color:#3a6ea5">−${pct(bonos.mercado)}% precios</span>`);
+      if (bonos.escBotin > 0) p.push(`<span style="color:#c98a3a">+${bonos.escBotin} botín escaramuza</span>`);
       return p.join(' · ');
+    }
+    // Panel de OFICIOS 官職 de la casa: los 3 cargos, quién los ostenta y su bono.
+    function cargosHTML() {
+      if (!window.HacCalc || !HacCalc.CARGOS) return '';
+      const rows = HacCalc.CARGOS.map(c => {
+        const m = (h.miembros || []).find(x => x.cargo === c.id);
+        const quien = m ? (esc(m.nombre || 'mecenas') + (m.personajeId === myId ? ' <em>(tú)</em>' : '')) : '<span class="hacp-cargo-vac">vacante</span>';
+        return `<div class="hacp-cargo-row${m ? '' : ' vac'}"><span class="hacp-cargo-nm">${c.icon} ${esc(c.zh)} ${esc(c.nombre)}</span><span class="hacp-cargo-quien">${quien}</span><span class="hacp-cargo-bono">${esc(c.hacTxt)}</span></div>`;
+      }).join('');
+      return `<div class="hacp-cargos"><div class="hacp-cargos-h">官 Cargos de la casa</div>${rows}</div>`;
     }
     // Clave de casa con id de finca (evita colisiones "gx,gy" entre haciendas).
     const casaKey = (c) => h.id + '@' + c.pos[0] + ',' + c.pos[1];
@@ -570,7 +589,8 @@
         let extra = '';
         if (mis && window.HacStats) {
           const rec = HacMisiones.recompensa(mis);
-          const dinPct = bonos.dinero + (HacStats.bonusDinero ? HacStats.bonusDinero(myId) : 0);   // pabellón 政 + sellos de comercio equipados
+          const dinPct = bonos.dinero + (HacStats.bonusDinero ? HacStats.bonusDinero(myId) : 0)
+            + ((miCargo && miCargo.perk.dinero) ? miCargo.perk.dinero : 0);   // pabellón 政 + sellos + perk 太守
           // Las HERIDAS merman lo que traes a casa (dinero + XP): −15 % por herida.
           const hurt = 1 - (HacStats.penHerida ? HacStats.penHerida(myId) : 0);
           let dinB = Math.round(conBono(rec.dinero, dinPct) * hurt), xpB = Math.round(conBono(rec.xp, xpFracMision(rec.dom)) * hurt);
@@ -990,7 +1010,7 @@
       // +% dinero del EQUIPO de cada miembro (sellos de comercio) → mapa {id: fracción}.
       const bonosPct = {};
       (band.miembros || []).forEach(mm => { const p = (window.HacStats && HacStats.bonusDinero) ? HacStats.bonusDinero(mm.id) : 0; if (p) bonosPct[mm.id] = p; });
-      HacEscaramuzas.resolver(band.id, clock(), exito, exito ? generarBotin(band, sc.loot) : [], share, hostBonus, ESC_FAST ? 30000 : 0, bonosPct)
+      HacEscaramuzas.resolver(band.id, clock(), exito, exito ? generarBotin(band, sc.loot + (bonos.escBotin || 0)) : [], share, hostBonus, ESC_FAST ? 30000 : 0, bonosPct)
         .then(() => { if (window.HacStats) HacStats.reload().then(() => { if (charId) buildCharPanel(charId); }); })
         .catch(e => console.warn('[escaramuza] resolver', e));
     }
@@ -1438,7 +1458,8 @@
         : null;
       const equipN = (window.HacStats && HacStats.equipados) ? HacStats.equipados(id).length : 0;
       const heridas = (window.HacStats && HacStats.heridas) ? HacStats.heridas(id) : 0;
-      return { it, aptId, aptDef, e, eFull, eRegenMin, activa, enTarea, fuera, exped, escaramuza, rest, mine: id === myId, puntos: puntosTotales(id), earned, money, home, ahorro, stats, equipN, heridas };
+      const cargo = (window.HacCalc && HacCalc.cargoDef) ? HacCalc.cargoDef(((h.miembros || []).find(m => m.personajeId === id) || {}).cargo) : null;
+      return { it, aptId, aptDef, cargo, e, eFull, eRegenMin, activa, enTarea, fuera, exped, escaramuza, rest, mine: id === myId, puntos: puntosTotales(id), earned, money, home, ahorro, stats, equipN, heridas };
     }
     // Panel de inventario/monedero que se despliega a la derecha del panel del
     // mecenas. Scaffolding: el dinero y los objetos llegarán al jugar misiones
@@ -1584,6 +1605,7 @@
               <span class="hacp-cp-name">${esc(d.it.name)}${d.mine ? ' <em>(tú)</em>' : ''}</span>
             </div>
             ${d.aptDef ? `<div class="hacp-cp-apt">${d.aptDef.icon || ''} ${esc(d.aptDef.nombre)}${comp ? ' · domina ' + comp : ''}</div>` : (comp ? `<div class="hacp-cp-apt">domina ${comp}</div>` : '')}
+            ${d.cargo ? `<div class="hacp-cp-cargo">${d.cargo.icon} ${esc(d.cargo.zh)} ${esc(d.cargo.nombre)}</div>` : ''}
             <div class="hacp-cp-pts">Puntos: <b id="hacp-cp-pts">${d.puntos}</b>${d.earned ? ` <span class="hacp-cp-earn">+${d.earned} en misiones</span>` : ''}</div>
           </div>
         </div>
@@ -1593,6 +1615,7 @@
         ${statsHTML(d)}
         ${woundsHTML(d)}
         ${(d.mine && hayBonos()) ? `<div class="hacp-cp-bonos" title="Bonos pasivos por los pabellones temáticos de la finca y los edificios de su dominio dentro">Bonos de la finca · ${bonosTexto()}</div>` : ''}
+        ${d.mine ? cargosHTML() : ''}
         ${d.mine ? `<button type="button" class="hacp-cp-btn hacp-cp-equipbtn" data-act="equip">⚔ Equipo${d.equipN ? ` · ${d.equipN}/3` : ''}</button>` : ''}
         ${d.mine ? `<button type="button" class="hacp-cp-btn hacp-cp-esc" data-act="esc">兵 Escaramuzas</button>` : ''}
         ${d.mine ? `<button type="button" class="hacp-cp-btn hacp-cp-log" data-act="log">錄 Bitácora</button>` : ''}

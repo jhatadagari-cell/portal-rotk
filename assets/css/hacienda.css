@@ -520,6 +520,18 @@ button.hacp-slot.manual:hover{ background:rgba(127,201,160,.34); }
 .hacp-wound-txt{ margin-left:auto; font-size:10.5px; color:var(--parch2); }
 .hacp-cp-bonos{ margin-top:8px; padding:6px 9px; font-size:11px; line-height:1.5; text-align:center;
   background:rgba(201,168,76,.08); border:1px solid rgba(201,168,76,.22); border-radius:6px; color:var(--parch2); }
+/* Oficio (官職) en la cabecera + panel de cargos de la casa */
+.hacp-cp-cargo{ font-size:11.5px; color:#e7c66a; margin-top:2px; font-weight:700; }
+.hacp-cargos{ margin-top:8px; padding:8px 10px; background:rgba(201,168,76,.06); border:1px solid rgba(201,168,76,.22); border-radius:8px; }
+.hacp-cargos-h{ font:700 10px 'Cinzel Decorative',serif; letter-spacing:.06em; text-transform:uppercase; color:var(--gold); margin-bottom:5px; }
+.hacp-cargo-row{ display:flex; flex-wrap:wrap; align-items:baseline; gap:3px 8px; font-size:11.5px; padding:5px 0; border-top:1px solid rgba(201,168,76,.1); }
+.hacp-cargo-row:first-of-type{ border-top:0; }
+.hacp-cargo-nm{ color:var(--parch); font-weight:700; }
+.hacp-cargo-quien{ color:var(--gold); margin-left:auto; }
+.hacp-cargo-quien em{ color:var(--parch2); font-style:normal; }
+.hacp-cargo-row.vac .hacp-cargo-quien{ color:var(--parch2); }
+.hacp-cargo-vac{ opacity:.6; font-style:italic; }
+.hacp-cargo-bono{ flex-basis:100%; color:var(--parch2); font-size:10.5px; opacity:.9; }
 /* ── Escaramuzas (sección móvil Y overlay de escritorio) ──────────────── */
 /* fila genérica (también la usa el listado de bandas en el overlay de escritorio) */
 .hacp-mrow{ display:flex; align-items:center; gap:10px; padding:9px 11px; margin-bottom:7px;

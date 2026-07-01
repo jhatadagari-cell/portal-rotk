@@ -131,7 +131,7 @@
 <script src="assets/js/auth.js?v=3"></script>
 <script src="assets/js/hac-util.js?v=1"></script>
 <script src="assets/js/haciendas-data.js?v=11"></script>
-<script src="assets/js/hac-calc.js?v=6"></script>
+<script src="assets/js/hac-calc.js?v=7"></script>
 <script src="assets/js/hac-build.js?v=36"></script>
 <script src="assets/js/hac-store.js?v=5"></script>
 <script src="assets/js/hac-tareas.js?v=2"></script>
@@ -219,7 +219,8 @@
       nombre: m.nombre || m.mecenas || 'Sin nombre',
       puntos: Number(m.puntos) || 0,
       desde: m.desde || '',
-      nota: m.nota || ''
+      nota: m.nota || '',
+      cargo: m.cargo || null   // oficio 官職 (general/consejero/intendente) — manual
     }));
     // Tablero: sanea el mapa y quita dueños que ya no son miembros (fantasmas).
     h.mapa = (typeof HacBuild !== 'undefined')
@@ -571,6 +572,12 @@
       // Competencias por dominio: las INICIALES (de la aptitud) van fijas; las
       // demás se otorgan/retiran con un clic. Clave = personajeId (= walker.id).
       const pid = m.personajeId || '', aptId = pj ? pj.aptitud : '';
+      // Oficio 官職 (manual): perk personal + bono a toda la casa. Único por casa.
+      const OFIC = (window.HacCalc && HacCalc.CARGOS) || [];
+      const oficioSel = OFIC.length ? `<select class="adm-oficio" title="Oficio: perk personal + bono a la casa">
+          <option value="">— sin oficio —</option>
+          ${OFIC.map(c => `<option value="${esc(c.id)}"${m.cargo === c.id ? ' selected' : ''}>${esc(c.zh)} ${esc(c.nombre)}</option>`).join('')}
+        </select>` : '';
       const chips = (window.HacCompetencias && pid) ? HacCompetencias.DOMINIOS.map(d => {
         const ini = HacCompetencias.isInitial(aptId, d);
         const on = ini || HacCompetencias.granted(h.id, pid).indexOf(d) >= 0;
@@ -587,7 +594,7 @@
             <input class="adm-pts" type="number" min="0" value="${Number(m.puntos) || 0}">
             <button class="adm-step" data-step="5">+</button>
           </td>
-          <td>${cargo}${hint}</td>
+          <td>${cargo}${hint}<div class="adm-oficio-wrap">${oficioSel}</div></td>
           <td class="adm-comp-cell" style="white-space:nowrap">${chips}</td>
           <td>${esc(m.nota || '')}</td>
           <td><button class="adm-del" title="Quitar mecenas">✕</button></td>
@@ -786,6 +793,15 @@
         }
         saveHacienda(h);
         render();
+      });
+      // Oficio 官職: único por casa (al asignar uno, se le quita a quien lo tuviera).
+      const ofSel = tr.querySelector('.adm-oficio');
+      if (ofSel) ofSel.addEventListener('change', () => {
+        const m = h.miembros.find(x => x.id === mid); if (!m) return;
+        const val = ofSel.value || null;
+        if (val) h.miembros.forEach(x => { if (x.cargo === val && x.id !== mid) x.cargo = null; });
+        m.cargo = val;
+        saveHacienda(h); render();
       });
       // Otorgar/retirar competencias (las innatas están disabled). Clave = personajeId.
       const pid = tr.dataset.pid;
