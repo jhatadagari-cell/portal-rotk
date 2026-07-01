@@ -546,20 +546,40 @@ button.hacp-slot.manual:hover{ background:rgba(127,201,160,.34); }
 .hacp-rel-glyph{ font:900 58px 'Noto Serif SC',serif; line-height:1.1; margin:8px 0 2px; color:var(--gold); }
 .hacp-rel-box.rel-herm .hacp-rel-glyph{ color:#e7c66a; } .hacp-rel-box.rel-riva .hacp-rel-glyph{ color:#e2a06a; }
 .hacp-rel-box.rel-odio .hacp-rel-glyph{ color:#d9756a; } .hacp-rel-box.rel-amor .hacp-rel-glyph{ color:#e08aa8; }
-/* Sendas (talentos) — árbol en el overlay */
-.hacp-senda-tree{ display:flex; flex-direction:column; gap:9px; }
-.hacp-senda-row{ padding:11px 12px; border:1px solid rgba(201,168,76,.25); border-radius:9px; background:rgba(255,255,255,.03); }
-.hacp-senda-row.owned{ border-color:rgba(122,162,110,.5); background:rgba(122,162,110,.08); }
-.hacp-senda-row.locked{ opacity:.62; }
-.hacp-senda-head{ display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; }
-.hacp-senda-zh{ font:900 18px 'Noto Serif SC',serif; color:var(--gold); }
-.hacp-senda-nm{ font-weight:800; color:var(--parch); }
-.hacp-senda-ok{ margin-left:auto; color:#bfe0b2; font-size:11.5px; font-weight:700; }
-.hacp-senda-soon{ margin-left:auto; color:var(--parch2); font-size:11px; font-style:italic; }
-.hacp-senda-lock{ margin-left:auto; color:#e2a06a; font-size:11px; }
-.hacp-senda-ef{ font-size:12px; color:var(--parch2); line-height:1.5; margin-top:5px; }
-.hacp-senda-act{ margin-top:8px; }
-.hacp-senda-act .hacp-cp-btn{ width:100%; }
+/* Sendas (talentos) — talent tree de 3 columnas temáticas (武/文/政) */
+.hacp-sendas-box{ width:min(780px,96vw)!important; }
+.hacp-sendas-cols{ display:flex; gap:10px; overflow-x:auto; -webkit-overflow-scrolling:touch; padding:2px 0 4px; }
+.hacp-senda-col{ flex:1 0 214px; min-width:214px; border-radius:12px; padding:10px 10px 14px;
+  border:1px solid rgba(201,168,76,.22); background:rgba(255,255,255,.02); }
+.hacp-senda-col.dom-mil{ background:linear-gradient(180deg, rgba(178,59,46,.16), rgba(178,59,46,.02)); border-color:rgba(178,59,46,.42); }
+.hacp-senda-col.dom-cul{ background:linear-gradient(180deg, rgba(58,138,90,.16), rgba(58,138,90,.02)); border-color:rgba(58,138,90,.42); }
+.hacp-senda-col.dom-adm{ background:linear-gradient(180deg, rgba(58,110,165,.16), rgba(58,110,165,.02)); border-color:rgba(58,110,165,.42); }
+.hacp-senda-colh{ display:flex; align-items:baseline; gap:7px; padding:2px 2px 9px; border-bottom:1px solid rgba(255,255,255,.09); margin-bottom:11px; }
+.hacp-senda-colzh{ font:900 22px 'Noto Serif SC',serif; }
+.dom-mil .hacp-senda-colzh{ color:#e2786a; } .dom-cul .hacp-senda-colzh{ color:#7fc9a0; } .dom-adm .hacp-senda-colzh{ color:#7aa8dd; }
+.hacp-senda-colnm{ font:700 11.5px 'Cinzel Decorative',serif; color:var(--parch); flex:1; }
+.hacp-senda-collv{ font-size:10.5px; color:var(--parch2); white-space:nowrap; }
+.hacp-senda-nodes{ position:relative; display:flex; flex-direction:column; gap:13px; }
+.hacp-senda-nodes::before{ content:''; position:absolute; left:22px; top:16px; bottom:16px; width:2px; background:rgba(255,255,255,.12); }
+.hacp-senda-node{ display:flex; gap:10px; align-items:flex-start; position:relative; }
+.hacp-senda-orb{ width:44px; height:44px; flex:0 0 auto; border-radius:50%; display:flex; align-items:center; justify-content:center; box-sizing:border-box;
+  font:900 19px 'Noto Serif SC',serif; background:#14110c; border:2px solid rgba(201,168,76,.35); color:var(--parch2); z-index:1; transition:box-shadow .15s, background .15s; }
+.hacp-senda-info{ flex:1; min-width:0; padding-top:1px; }
+.hacp-senda-nm{ font-weight:800; font-size:13px; color:var(--parch); }
+.hacp-senda-ef{ font-size:11px; line-height:1.45; color:var(--parch2); margin:2px 0 3px; }
+.hacp-senda-state{ font-size:10.5px; font-weight:700; }
+.hacp-senda-node.n-owned .hacp-senda-orb{ color:#0d0b07; border-color:transparent; }
+.dom-mil .n-owned .hacp-senda-orb{ background:#e2786a; box-shadow:0 0 10px rgba(226,120,106,.55); }
+.dom-cul .n-owned .hacp-senda-orb{ background:#7fc9a0; box-shadow:0 0 10px rgba(127,201,160,.55); }
+.dom-adm .n-owned .hacp-senda-orb{ background:#7aa8dd; box-shadow:0 0 10px rgba(122,168,221,.55); }
+.hacp-senda-node.n-owned .hacp-senda-state{ color:#bfe0b2; }
+.hacp-senda-node.n-elig{ cursor:pointer; }
+.hacp-senda-node.n-elig .hacp-senda-orb{ color:var(--gold); border-color:var(--gold); animation:hacpSendaPulse 1.6s ease-in-out infinite; }
+@keyframes hacpSendaPulse{ 0%,100%{ box-shadow:0 0 0 0 rgba(201,168,76,0); } 50%{ box-shadow:0 0 0 4px rgba(201,168,76,.28); } }
+.hacp-senda-node.n-elig:hover .hacp-senda-orb{ background:rgba(201,168,76,.22); }
+.hacp-senda-node.n-elig .hacp-senda-state{ color:var(--gold); }
+.hacp-senda-node.n-locked{ opacity:.5; } .hacp-senda-node.n-locked .hacp-senda-state{ color:#e2a06a; }
+.hacp-senda-node.n-soon{ opacity:.5; } .hacp-senda-node.n-soon .hacp-senda-state{ color:var(--parch2); font-style:italic; }
 /* ── Escaramuzas (sección móvil Y overlay de escritorio) ──────────────── */
 /* fila genérica (también la usa el listado de bandas en el overlay de escritorio) */
 .hacp-mrow{ display:flex; align-items:center; gap:10px; padding:9px 11px; margin-bottom:7px;

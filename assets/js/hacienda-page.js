@@ -440,12 +440,15 @@
     bonos.mercado += cargoHac.mercado || 0;
     bonos.escBotin = cargoHac.escBotin || 0;
     const miCargo = (window.HacCalc && HacCalc.cargoDef) ? HacCalc.cargoDef(((h.miembros || []).find(m => m.personajeId === myId) || {}).cargo) : null;
+    // ¿mi mecenas tiene un talento de senda? (efectos personales, C1)
+    const tieneT = (id) => !!(window.HacStats && HacStats.tieneTalento && HacStats.tieneTalento(myId, id));
     // Fracción de XP extra para UNA misión: el bono cultural (政→文… 文) aplica a
     // todas; el militar (军) SOLO se suma en expediciones de dominio militar.
     const xpFracMision = (dom) => (bonos.xp || 0) + (dom === 'militar' ? (bonos.xpMil || 0) : 0)
-      + ((miCargo && miCargo.perk.xpDom && miCargo.dom === dom) ? miCargo.perk.xpDom : 0);   // perk del oficio en su dominio
+      + ((miCargo && miCargo.perk.xpDom && miCargo.dom === dom) ? miCargo.perk.xpDom : 0)   // perk del oficio en su dominio
+      + ((dom === 'cultural' && tieneT('estudiante')) ? 0.08 : 0);                          // 書生 Estudiante
     const conBono = (base, frac) => Math.round((base || 0) * (1 + (frac || 0)));        // recompensa con bono
-    const precioMercado = (item) => Math.max(1, Math.round((item.precio || 0) * (1 - bonos.mercado)));   // precio con descuento 政
+    const precioMercado = (item) => Math.max(1, Math.round((item.precio || 0) * (1 - bonos.mercado - (tieneT('funcionario') ? 0.06 : 0))));   // descuento 政 + 吏 Funcionario
     const pct = (f) => Math.round((f || 0) * 100);
     const hayBonos = () => bonos.xp > 0 || bonos.dinero > 0 || bonos.mercado > 0 || bonos.xpMil > 0 || bonos.escBotin > 0;
     // Resumen legible de los bonos activos de la finca (solo los no nulos).
@@ -593,7 +596,8 @@
         if (mis && window.HacStats) {
           const rec = HacMisiones.recompensa(mis);
           const dinPct = bonos.dinero + (HacStats.bonusDinero ? HacStats.bonusDinero(myId) : 0)
-            + ((miCargo && miCargo.perk.dinero) ? miCargo.perk.dinero : 0);   // pabellón 政 + sellos + perk 太守
+            + ((miCargo && miCargo.perk.dinero) ? miCargo.perk.dinero : 0)   // pabellón 政 + sellos + perk 太守
+            + (tieneT('gobernador') ? 0.10 : 0);                             // 太守 Gobernador (senda)
           // Las HERIDAS merman lo que traes a casa (dinero + XP): −15 % por herida.
           const hurt = 1 - (HacStats.penHerida ? HacStats.penHerida(myId) : 0);
           let dinB = Math.round(conBono(rec.dinero, dinPct) * hurt), xpB = Math.round(conBono(rec.xp, xpFracMision(rec.dom)) * hurt);
@@ -836,7 +840,7 @@
     }
     // Enviar a una MISIÓN del tablón (sale de la finca, tipo 'expedicion').
     // Duración de una expedición con el ahorro de tiempo del EQUIPO (enseres de marcha).
-    const durExped = (m) => Math.max(30, Math.round(HacMisiones.durSeg(m) * (1 - (HacStats.bonusExped ? HacStats.bonusExped(myId) : 0))));
+    const durExped = (m) => Math.max(30, Math.round(HacMisiones.durSeg(m) * (1 - (HacStats.bonusExped ? HacStats.bonusExped(myId) : 0) - (tieneT('estratega') ? 0.10 : 0))));
     function dispatchMision(misId) {
       if (!myId || !window.HacOrdenes || !window.HacMisiones) return;
       if (window.HacStats && HacStats.malherido && HacStats.malherido(myId)) { toast('Tu mecenas está malherido · cúralo antes de salir'); return; }
@@ -1556,34 +1560,42 @@
       sendasEl.addEventListener('click', (e) => { if (e.target === sendasEl) sendasEl.hidden = true; });
       return sendasEl;
     }
+    const SENDA_CLS = { militar: 'mil', cultural: 'cul', administrativo: 'adm' };
     function renderSendas() {
       if (!myId || !window.HacSendas || !window.HacStats) return;
       const el = ensureSendasEl();
-      const libres = HacStats.puntosLibres(myId), total = HacStats.puntosTalento(myId);
-      const mil = HacStats.nivel(myId, 'militar'), tot = HacStats.nivelPersonaje(myId);
-      const arb = HacSendas.arbol('militar');
-      const rungs = arb.rungs.map(t => {
-        const owned = HacStats.tieneTalento(myId, t.id), elig = HacSendas.elegible(myId, t.id);
-        let estado = '', btn = '';
-        if (owned) estado = '<span class="hacp-senda-ok">✓ aprendido</span>';
-        else if (!t.activo) estado = '<span class="hacp-senda-soon">próximamente</span>';
-        else if (elig) btn = `<button type="button" class="hacp-cp-btn" data-aprender="${esc(t.id)}">Aprender · 1 pt</button>`;
-        else {
-          const f = [];
-          if (mil < t.reqMil) f.push(`武 ${mil}/${t.reqMil}`);
-          if (t.reqTotal && tot < t.reqTotal) f.push(`nivel ${tot}/${t.reqTotal}`);
-          if (t.prev && !HacStats.tieneTalento(myId, t.prev)) f.push('requiere el anterior');
-          if (!f.length && libres < 1) f.push('sin puntos libres');
-          estado = `<span class="hacp-senda-lock">${esc(f.join(' · '))}</span>`;
-        }
-        return `<div class="hacp-senda-row${owned ? ' owned' : ''}${(!owned && !elig && t.activo) ? ' locked' : ''}">
-          <div class="hacp-senda-head"><span class="hacp-senda-zh">${t.zh}</span><span class="hacp-senda-nm">${esc(t.nombre)}</span>${estado}</div>
-          <div class="hacp-senda-ef">${esc(t.efecto)}</div>${btn ? `<div class="hacp-senda-act">${btn}</div>` : ''}</div>`;
+      const libres = HacStats.puntosLibres(myId), total = HacStats.puntosTalento(myId), tot = HacStats.nivelPersonaje(myId);
+      const cols = HacSendas.arboles().map(arb => {
+        const lvl = HacStats.nivel(myId, arb.dom);
+        const nodes = arb.rungs.map(t => {
+          const owned = HacStats.tieneTalento(myId, t.id), elig = HacSendas.elegible(myId, t.id);
+          let cls = 'locked', estado;
+          if (owned) { cls = 'owned'; estado = '✓ aprendido'; }
+          else if (elig) { cls = 'elig'; estado = 'Aprender · 1 pt'; }
+          else if (!t.activo) { cls = 'soon'; estado = 'próximamente'; }
+          else {
+            const f = [];
+            if (lvl < t.req) f.push(`${arb.zh} ${lvl}/${t.req}`);
+            if (t.reqTotal && tot < t.reqTotal) f.push(`nivel ${tot}/${t.reqTotal}`);
+            if (t.prev && !HacStats.tieneTalento(myId, t.prev)) f.push('requiere el anterior');
+            if (!f.length && libres < 1) f.push('sin puntos');
+            estado = f.join(' · ');
+          }
+          return `<div class="hacp-senda-node n-${cls}"${elig ? ` data-aprender="${esc(t.id)}"` : ''}>
+            <div class="hacp-senda-orb">${t.zh}</div>
+            <div class="hacp-senda-info"><div class="hacp-senda-nm">${esc(t.nombre)}</div>
+              <div class="hacp-senda-ef">${esc(t.efecto)}</div>
+              <div class="hacp-senda-state">${esc(estado)}</div></div></div>`;
+        }).join('');
+        return `<div class="hacp-senda-col dom-${SENDA_CLS[arb.dom]}">
+          <div class="hacp-senda-colh"><span class="hacp-senda-colzh">${arb.zh}</span>
+            <span class="hacp-senda-colnm">${esc(arb.nombre)}</span><span class="hacp-senda-collv">nivel ${lvl}</span></div>
+          <div class="hacp-senda-nodes">${nodes}</div></div>`;
       }).join('');
-      el.innerHTML = `<div class="hacp-shop-box"><button type="button" class="hacp-shop-x" data-sendas-x aria-label="Cerrar">✕</button>
+      el.innerHTML = `<div class="hacp-shop-box hacp-sendas-box"><button type="button" class="hacp-shop-x" data-sendas-x aria-label="Cerrar">✕</button>
         <div class="hacp-shop-h"><span class="hacp-shop-zh">道</span> Sendas de aptitud</div>
-        <div class="hacp-shop-sub">${arb.zh} ${esc(arb.nombre)} · puntos de talento: <b>${libres}</b> libres de ${total} · 1 punto por cada 8 niveles</div>
-        <div class="hacp-senda-tree">${rungs}</div></div>`;
+        <div class="hacp-shop-sub">Talentos: <b>${libres}</b> puntos libres de ${total} · 1 punto por cada 8 niveles subidos</div>
+        <div class="hacp-sendas-cols">${cols}</div></div>`;
       el.querySelector('[data-sendas-x]').addEventListener('click', () => { el.hidden = true; });
       el.querySelectorAll('[data-aprender]').forEach(b => b.addEventListener('click', () => aprenderTalento(b.dataset.aprender)));
     }
