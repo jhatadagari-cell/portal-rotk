@@ -1667,7 +1667,14 @@
         else toast(res.motivo || 'No se pudo comprar la casa');
       });
     }
-    function sigOf(d) { return charId + '|' + (d.activa ? (d.enTarea ? 't' : 'g') : '-') + '|' + (d.mine ? 'me' : '-'); }
+    // Firma para decidir cuándo RECONSTRUIR el panel entero (vs. refresco parcial de
+    // contadores). Incluye los datos que llegan async (HacStats) y NO se actualizan en
+    // el refresco parcial —oro, ahorro, heridas, equipo, cargo, casa—, para que al
+    // cargar/cambiar se re-pinte solo (antes el oro se quedaba a 0 hasta cambiar de pestaña).
+    function sigOf(d) {
+      return [charId, d.activa ? (d.enTarea ? 't' : 'g') : '-', d.mine ? 'me' : '-',
+        d.money, d.ahorro, d.heridas, d.equipN, d.cargo ? d.cargo.id : '-', d.home ? 1 : 0].join('|');
+    }
     // Retrato animado: pinta el sprite ACTUAL del mecenas (dir/andar/sentado) cada
     // frame mientras el panel está abierto. Funciona también a pantalla completa.
     let avatarRAF = null;
