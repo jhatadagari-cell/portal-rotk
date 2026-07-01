@@ -501,8 +501,13 @@
     const DOM_GLYPH = { militar: '武', cultural: '文', administrativo: '政' };
     // Nivel EFECTIVO en un dominio (nivel por XP + bonos de equipo).
     function nivelEf(dom) { return (window.HacStats && HacStats.nivelTotal && dom) ? HacStats.nivelTotal(myId, dom) : 1; }
-    // Riesgo de una MISIÓN del tablón: depende de tu nivel efectivo vs su dificultad.
-    function riesgoMision(m) { return (window.HacMisiones) ? HacMisiones.riesgo(nivelEf(m.dom), m.dif) : 0.3; }
+    // Riesgo de una MISIÓN del tablón: depende de tu nivel efectivo vs su dificultad,
+    // + un extra si tu mecenas va herido (+8 % por herida).
+    function riesgoMision(m) {
+      const base = (window.HacMisiones) ? HacMisiones.riesgo(nivelEf(m.dom), m.dif) : 0.3;
+      const her = (window.HacStats && HacStats.heridas) ? HacStats.heridas(myId) : 0;
+      return Math.min(0.9, base + her * 0.08);
+    }
     const fmtDur = (s) => (s < 60) ? Math.round(s) + 's' : Math.round(s / 60) + ' min';
     // Cuenta atrás legible: «1m 45s» / «45s».
     const fmtClock = (s) => { s = Math.max(0, Math.round(s)); const m = Math.floor(s / 60), r = s % 60; return m ? `${m}m ${r}s` : `${r}s`; };
@@ -556,11 +561,14 @@
         if (mis && window.HacStats) {
           const rec = HacMisiones.recompensa(mis);
           const dinPct = bonos.dinero + (HacStats.bonusDinero ? HacStats.bonusDinero(myId) : 0);   // pabellón 政 + sellos de comercio equipados
-          const dinB = conBono(rec.dinero, dinPct), xpB = conBono(rec.xp, xpFracMision(rec.dom));
+          // Las HERIDAS merman lo que traes a casa (dinero + XP): −15 % por herida.
+          const hurt = 1 - (HacStats.penHerida ? HacStats.penHerida(myId) : 0);
+          const dinB = Math.round(conBono(rec.dinero, dinPct) * hurt), xpB = Math.round(conBono(rec.xp, xpFracMision(rec.dom)) * hurt);
           const nivAntes = (rec.dom && HacStats.nivel) ? HacStats.nivel(myId, rec.dom) : 0;
           HacStats.award(myId, { dinero: dinB, xp: rec.dom ? { [rec.dom]: xpB } : null });
           if (rec.dom && HacStats.nivel && window.HacBitacora) { const nivD = HacStats.nivel(myId, rec.dom); if (nivD > nivAntes) HacBitacora.log(myId, 'progreso', `⬆ ${DOM_NOMBRE[rec.dom]} sube a nivel ${nivD}`); }
           extra = ` · +${dinB}💰 · +${xpB} XP ${DOM_GLYPH[rec.dom] || ''}`.trimEnd();
+          if (hurt < 1) extra += ` · herido −${Math.round((1 - hurt) * 100)}%`;
           // BOTÍN: prob. baja (sube con la dificultad) de traer 1 objeto del pool
           // completo, ponderado por tier. Si es comida, se aplica; si no, a la mochila.
           const gotLoot = HacMisiones.lootChance ? (Math.random() < HacMisiones.lootChance(mis.dif)) : false;
@@ -609,6 +617,7 @@
     const durExped = (m) => Math.max(30, Math.round(HacMisiones.durSeg(m) * (1 - (HacStats.bonusExped ? HacStats.bonusExped(myId) : 0))));
     function dispatchMision(misId) {
       if (!myId || !window.HacOrdenes || !window.HacMisiones) return;
+      if (window.HacStats && HacStats.malherido && HacStats.malherido(myId)) { toast('Tu mecenas está malherido · cúralo antes de salir'); return; }
       const m = HacMisiones.get(misId); if (!m) return;
       if (window.HacEnergia) HacEnergia.spend(h.id, myId, costeExped(m));
       HacOrdenes.set({ haciendaId: h.id, miembroId: myId, tipo: 'expedicion', targetId: 'mis:' + misId, duracionSeg: durExped(m) })
@@ -684,6 +693,7 @@
     // Renderiza en `escHost` (lo fija quien la muestra). `escVisible` gobierna el
     // refresco por poll. Toda la lógica vive aquí para servir a ambas plataformas.
     const COSTE_BANDA = (plazas) => plazas * 40;     // 2→80, 3→120, 4→160
+    const COSTE_CURA = 45 + (tier || 1) * 10;        // curar 1 herida (enfermería), escala con el tier
     const myName = ((h.miembros || []).find(m => m.personajeId === myId) || {}).nombre || 'Tú';
     const ESC_FAST = /[?&]escfast=1/.test(location.search || '');   // modo test: ~1 min, sin cooldown
     let escHost = null, escVisible = false, escPlazas = 3, escBusy = false, escSig = '';
@@ -709,12 +719,15 @@
       const coste = COSTE_BANDA(escPlazas), sinDinero = dinero < coste;
       const cd = (window.HacStats && HacStats.escaramuzaCd) ? HacStats.escaramuzaCd(myId) : 0;
       const enCd = !ESC_FAST && cd > clock();
-      const cdAviso = enCd ? `<div class="hacp-esc-note" style="color:#e2a06a">⏳ En cooldown · podrás unirte o montar banda en ${fmtClock((cd - clock()) / 1000)}.</div>` : '';
+      const malherido = !!(window.HacStats && HacStats.malherido && HacStats.malherido(myId));
+      const bloqueado = enCd || malherido;
+      const cdAviso = malherido ? `<div class="hacp-esc-note" style="color:#e2a06a">✚ Tu mecenas está malherido (3/3) · cúralo en su panel antes de salir.</div>`
+        : enCd ? `<div class="hacp-esc-note" style="color:#e2a06a">⏳ En cooldown · podrás unirte o montar banda en ${fmtClock((cd - clock()) / 1000)}.</div>` : '';
       const abiertas = HacEscaramuzas.abiertas(h.id).filter(b => b.miembros.length < b.plazas);
       const lista = abiertas.map(b => `
         <div class="hacp-mrow"><div class="hacp-mrow-main"><b>Banda de ${esc(b.hostNombre || 'un mecenas')}</b>
           <span>${b.miembros.length}/${b.plazas} · dif. ${b.dificultad}</span></div>
-          <button class="hacp-cp-btn" data-unir="${esc(b.id)}"${enCd ? ' disabled' : ''}>Unirse</button></div>`).join('')
+          <button class="hacp-cp-btn" data-unir="${esc(b.id)}"${bloqueado ? ' disabled' : ''}>Unirse</button></div>`).join('')
         || '<div class="hacp-inv-note">No hay bandas abiertas. ¡Monta la tuya!</div>';
       body.innerHTML = `
         <div class="hacp-esc-h">兵 Escaramuzas <span class="hacp-esc-sub">expediciones cooperativas</span></div>
@@ -723,7 +736,7 @@
           <div class="hacp-esc-ttl">Montar una banda</div>
           <div class="hacp-esc-note">Salís varios mecenas a una expedición militar más dura. Pagas por montarla; si volvéis con éxito recuperas el coste +50% y tu parte. Si fracasáis, vuestros mecenas reciben una herida.</div>
           <div class="hacp-esc-plazas">${[2, 3, 4].map(p => `<button class="hacp-esc-p${p === escPlazas ? ' on' : ''}" data-plazas="${p}">${p} plazas</button>`).join('')}</div>
-          <button class="hacp-cp-btn hacp-esc-crear" data-crear${(sinDinero || enCd) ? ' disabled' : ''}>Montar banda · 💰 ${coste}${sinDinero ? ' (te falta)' : ''}</button>
+          <button class="hacp-cp-btn hacp-esc-crear" data-crear${(sinDinero || bloqueado) ? ' disabled' : ''}>Montar banda · 💰 ${coste}${sinDinero ? ' (te falta)' : ''}</button>
         </div>
         <div class="hacp-esc-ttl2">Bandas abiertas</div>${lista}`;
       body.querySelectorAll('[data-plazas]').forEach(b => b.addEventListener('click', () => { escPlazas = +b.dataset.plazas; renderEscaramuzas(); }));
@@ -782,6 +795,7 @@
     }
     async function crearBanda() {
       if (escBusy) return;
+      if (window.HacStats && HacStats.malherido && HacStats.malherido(myId)) { toast('Tu mecenas está malherido · cúralo antes de salir'); return; }
       if (!ESC_FAST && window.HacStats && HacStats.escaramuzaCd && HacStats.escaramuzaCd(myId) > clock()) { toast('Escaramuza en cooldown'); return; }
       const coste = COSTE_BANDA(escPlazas);
       if (!window.HacStats || HacStats.dinero(myId) < coste) { toast('No tienes suficiente dinero'); return; }
@@ -798,6 +812,7 @@
     }
     async function unirBanda(id) {
       if (escBusy) return;
+      if (window.HacStats && HacStats.malherido && HacStats.malherido(myId)) { toast('Tu mecenas está malherido · cúralo antes de salir'); return; }
       if (!ESC_FAST && window.HacStats && HacStats.escaramuzaCd && HacStats.escaramuzaCd(myId) > clock()) { toast('Escaramuza en cooldown'); return; }
       escBusy = true;
       try { await HacEscaramuzas.unir(id, { id: myId, nombre: myName }); toast('Te has unido a la banda'); }
@@ -1184,13 +1199,27 @@
       }).join('');
       return `<div class="hacp-cp-stats" id="hacp-cp-stats"><div class="hacp-cp-statslbl">Poder personal <span>· nivel por dominio</span></div><div class="hacp-cp-statsrow">${chips}</div></div>`;
     }
-    // Heridas (0..3): tres ranuras; las llenas son heridas. Sin efecto jugable aún.
+    // Heridas (0..3): tres ranuras. PESAN — merman recompensa (−15 %/herida) y suben
+    // el riesgo; a 3/3 el mecenas está malherido y no puede salir. Se curan pagando.
     function woundsHTML(d) {
       const n = Math.max(0, Math.min(3, d.heridas || 0));
       const slots = [0, 1, 2].map(i => `<span class="hacp-wound${i < n ? ' on' : ''}">${i < n ? '✚' : '·'}</span>`).join('');
-      const txt = n ? `${n}/3 · se curan con el tiempo (aún sin efecto)` : 'ileso';
-      return `<div class="hacp-cp-wounds${n ? ' hurt' : ''}" title="Heridas ${n}/3. Se reciben al fracasar escaramuzas. De momento no afectan.">
-        <span class="hacp-wound-h">Heridas</span><span class="hacp-wound-slots">${slots}</span><span class="hacp-wound-txt">${txt}</span></div>`;
+      const pen = Math.round(Math.min(0.45, n * 0.15) * 100);
+      const txt = !n ? 'ileso' : (n >= 3 ? 'malherido · no puede salir' : `${n}/3 · −${pen}% recompensa · +riesgo`);
+      const cura = (d.mine && n > 0) ? `<button type="button" class="hacp-cp-btn hacp-cp-cura" data-act="cura"${d.money < COSTE_CURA ? ' disabled' : ''}>✚ Curar 1 herida · 💰 ${COSTE_CURA}${d.money < COSTE_CURA ? ' (te falta)' : ''}</button>` : '';
+      return `<div class="hacp-cp-wounds${n ? ' hurt' : ''}${n >= 3 ? ' bad' : ''}" title="Heridas ${n}/3. Reducen la recompensa (−15 % por herida) y suben el riesgo de las expediciones; a 3/3 tu mecenas no puede salir hasta curarse.">
+        <span class="hacp-wound-h">Heridas</span><span class="hacp-wound-slots">${slots}</span><span class="hacp-wound-txt">${txt}</span></div>${cura}`;
+    }
+    // Cura 1 herida pagando en la enfermería (decisión: gastar dinero vs. seguir herido).
+    function curarHerida() {
+      if (!myId || !window.HacStats) return;
+      const n = HacStats.heridas(myId); if (n <= 0) return;
+      if (HacStats.dinero(myId) < COSTE_CURA) { toast('No tienes suficiente dinero para curarte'); return; }
+      HacStats.award(myId, { dinero: -COSTE_CURA });
+      HacStats.curar(myId, 1);
+      toast(`✚ Herida curada · −${COSTE_CURA}💰`);
+      if (window.HacBitacora) HacBitacora.log(myId, 'progreso', `✚ Curaste una herida (−${COSTE_CURA}💰)`);
+      if (charId) buildCharPanel(charId);
     }
     function buildCharPanel(id) {
       const d = charData(id); if (!d) { closeCharPanel(); return; }
@@ -1274,6 +1303,8 @@
       if (eqb) eqb.addEventListener('click', openEquip);
       const lvb = charEl.querySelector('[data-act="leave"]');
       if (lvb) lvb.addEventListener('click', openLeave);
+      const cub = charEl.querySelector('[data-act="cura"]');
+      if (cub && !cub.disabled) cub.addEventListener('click', curarHerida);
       const bh = charEl.querySelector('[data-act="buyhome"]');
       if (bh && !bh.disabled) bh.addEventListener('click', () => {
         if (!myId || !window.HacStats) return;

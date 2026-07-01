@@ -63,9 +63,14 @@ const HacStats = (function () {
 
   function row(mid) { return cache.find(r => r.miembroId === mid) || null; }
   function ensure(mid) { let r = row(mid); if (!r) { r = { miembroId: mid, dinero: 0, militar: 0, cultural: 0, administrativo: 0, cap: 8, inv: [], ahorro: 0, casaPos: null, casaInv: [], equipado: [], heridas: 0 }; cache.push(r); } return r; }
-  // HERIDAS (0..3). Por ahora SIN efecto jugable: solo se muestran en el panel.
-  // Se infligen al fracasar una escaramuza (cooperativo, futuro).
+  // HERIDAS (0..3). Se infligen al fracasar/arriesgar en expediciones y escaramuzas.
+  // PESAN: penalizan la recompensa (dinero+XP) y suben el riesgo; a 3 el mecenas
+  // está MALHERIDO y no puede salir de la finca hasta curarse.
   function heridas(mid) { const r = row(mid); return r ? (r.heridas || 0) : 0; }
+  // Penalización por heridas (fracción 0..0.45): −15 % por herida sobre lo ganado.
+  function penHerida(mid) { return Math.min(0.45, (heridas(mid) || 0) * 0.15); }
+  // Malherido: 3/3 → bloquea salir a expediciones y escaramuzas.
+  function malherido(mid) { return heridas(mid) >= 3; }
   function escaramuzaCd(mid) { const r = row(mid); return r ? (r.escaramuzaCd || 0) : 0; }
   function herir(mid, n) { const r = ensure(mid); r.heridas = Math.max(0, Math.min(3, (r.heridas || 0) + (n == null ? 1 : n))); persist(r); return r.heridas; }
   function curar(mid, n) { return herir(mid, -(n == null ? 1 : n)); }
@@ -262,6 +267,6 @@ const HacStats = (function () {
     } catch (e) { console.error('[HacStats] liberarCasa', e); }
   }
 
-  return { ready, reload, dinero, ahorro, casaPos, casasReclamadas, duenoDeCasa, comprarCasa, liberarCasa, abandonar, heridas, herir, curar, escaramuzaCd, bonusDinero, bonusExped, usarManual, xp, nivel, progresoNivel, bonus, nivelTotal, equipados, equipar, desequipar, MAX_EQUIP, award, comprar, guardar, sacar, darItem, meterEnCasa, sacarDeCasa, inventario, casaInventario, capInventario, ocupadas, recompensaExped, DOMS, dbOk: () => ok, TABLE };
+  return { ready, reload, dinero, ahorro, casaPos, casasReclamadas, duenoDeCasa, comprarCasa, liberarCasa, abandonar, heridas, penHerida, malherido, herir, curar, escaramuzaCd, bonusDinero, bonusExped, usarManual, xp, nivel, progresoNivel, bonus, nivelTotal, equipados, equipar, desequipar, MAX_EQUIP, award, comprar, guardar, sacar, darItem, meterEnCasa, sacarDeCasa, inventario, casaInventario, capInventario, ocupadas, recompensaExped, DOMS, dbOk: () => ok, TABLE };
 })();
 if (typeof window !== 'undefined') window.HacStats = HacStats;
