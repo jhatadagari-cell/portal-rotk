@@ -315,6 +315,12 @@
     const listEl = document.getElementById('hacp-folk-list');
     const charEl = document.getElementById('hacp-char-panel');
     if (!panel || !listEl) return;
+    // Dónde colgar los modales (tienda/equipo/casa/abandonar/bitácora): en MÓVIL van
+    // a <body> para escapar del contexto de apilado del visor (#hacp-iso-wrap es
+    // position:fixed → su z-index:auto queda por DEBAJO de #hacp-msec z-index:8000, y
+    // taparía el modal aunque tenga z-index alto). En escritorio, dentro del visor.
+    const isMobile = () => document.body.classList.contains('hacp-mobile');
+    const overlayHost = () => (isMobile() ? document.body : vp);
     // El panel vive DENTRO del visor: evita que sus clics/rueda burbujeen a los
     // manejadores de la cámara (que romperían el seguimiento) y al tap (que
     // deseleccionaría). Así puedes usar el selector y los botones sin perder el zoom.
@@ -1169,7 +1175,7 @@
     function ensureBitEl() {
       if (bitEl) return bitEl;
       bitEl = document.createElement('div'); bitEl.className = 'hacp-shop hacp-bit-ov'; bitEl.hidden = true;
-      vp.appendChild(bitEl);
+      overlayHost().appendChild(bitEl);
       ['pointerdown', 'pointerup', 'wheel', 'click'].forEach(ev => bitEl.addEventListener(ev, (e) => e.stopPropagation(), { passive: false }));
       bitEl.addEventListener('click', (e) => { if (e.target === bitEl) bitEl.hidden = true; });
       return bitEl;
@@ -1508,7 +1514,7 @@
       if (shopEl) return shopEl;
       shopEl = document.createElement('div');
       shopEl.className = 'hacp-shop'; shopEl.id = 'hacp-shop'; shopEl.hidden = true;
-      vp.appendChild(shopEl);
+      overlayHost().appendChild(shopEl);
       ['pointerdown', 'pointerup', 'wheel', 'click'].forEach(ev => shopEl.addEventListener(ev, (e) => e.stopPropagation(), { passive: false }));
       shopEl.addEventListener('click', (e) => { if (e.target === shopEl) closeShop(); });   // tocar fuera cierra
       return shopEl;
@@ -1569,7 +1575,7 @@
       if (leaveEl) return leaveEl;
       leaveEl = document.createElement('div');
       leaveEl.className = 'hacp-shop hacp-leave-ov'; leaveEl.id = 'hacp-leave'; leaveEl.hidden = true;
-      vp.appendChild(leaveEl);
+      overlayHost().appendChild(leaveEl);
       ['pointerdown', 'pointerup', 'wheel', 'click'].forEach(ev => leaveEl.addEventListener(ev, (e) => e.stopPropagation(), { passive: false }));
       leaveEl.addEventListener('click', (e) => { if (e.target === leaveEl) closeLeave(); });
       return leaveEl;
@@ -1663,7 +1669,7 @@
       if (homeEl) return homeEl;
       homeEl = document.createElement('div');
       homeEl.className = 'hacp-shop hacp-home-ov'; homeEl.id = 'hacp-home'; homeEl.hidden = true;
-      vp.appendChild(homeEl);
+      overlayHost().appendChild(homeEl);
       ['pointerdown', 'pointerup', 'wheel', 'click'].forEach(ev => homeEl.addEventListener(ev, (e) => e.stopPropagation(), { passive: false }));
       homeEl.addEventListener('click', (e) => { if (e.target === homeEl) closeHome(); });
       return homeEl;
@@ -1732,7 +1738,7 @@
       if (equipEl) return equipEl;
       equipEl = document.createElement('div');
       equipEl.className = 'hacp-shop hacp-equip-ov'; equipEl.id = 'hacp-equip'; equipEl.hidden = true;
-      vp.appendChild(equipEl);
+      overlayHost().appendChild(equipEl);
       ['pointerdown', 'pointerup', 'wheel', 'click'].forEach(ev => equipEl.addEventListener(ev, (e) => e.stopPropagation(), { passive: false }));
       equipEl.addEventListener('click', (e) => { if (e.target === equipEl) closeEquip(); });
       return equipEl;
@@ -2076,7 +2082,7 @@
       let mActive = 'personaje';
       // Muestra un mecenas (el tuyo o cualquiera al tocarlo en la finca) en el HOME.
       function showChar(id) {
-        [shopEl, equipEl, homeEl, leaveEl].forEach(e => { if (e) e.hidden = true; }); hidePop();
+        [shopEl, equipEl, homeEl, leaveEl, bitEl].forEach(e => { if (e) e.hidden = true; }); hidePop();
         mActive = 'personaje';
         SEC.forEach(s => navBtns[s.id].classList.toggle('on', s.id === 'personaje'));
         sec.querySelectorAll('.hacp-msec-pane').forEach(p => p.classList.toggle('on', p.dataset.pane === 'personaje'));
@@ -2087,7 +2093,7 @@
 
       function mgo(id) {
         // Cierra cualquier modal (tienda/equipo/casa/abandonar) y el popup de edificio.
-        [shopEl, equipEl, homeEl, leaveEl].forEach(e => { if (e) e.hidden = true; });
+        [shopEl, equipEl, homeEl, leaveEl, bitEl].forEach(e => { if (e) e.hidden = true; });
         hidePop();
         if (mActive === 'personaje' && id !== 'personaje') stopAvatar();   // no animes el retrato fuera del home
         // El tablón (boardEl) lo embebe renderExped en Misiones; al salir, devuélvelo
