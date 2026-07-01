@@ -1047,8 +1047,14 @@
       if (!myId || !window.HacBitacora || !window.HacEscaramuzas) return;
       const band = HacEscaramuzas.miBanda(h.id, myId);
       if (!band) return;
-      if (band.estado === 'botin' && band.exito) HacBitacora.log(myId, 'escaramuza', '⚔ Escaramuza: ✔ éxito · volvisteis con botín', { clave: 'esc-res:' + band.id });
-      else if (band.estado === 'resuelta' && band.exito === false) HacBitacora.log(myId, 'escaramuza', '⚔ Escaramuza: ✘ fracaso · tu mecenas vuelve herido', { clave: 'esc-res:' + band.id });
+      // Éxito: se registra tanto en 'botin' (botín pendiente) como en 'resuelta' (ya
+      // repartido) — antes solo en 'botin', y se perdía si volvías tras cerrarse el reparto.
+      if (band.exito === true && (band.estado === 'botin' || band.estado === 'resuelta'))
+        HacBitacora.log(myId, 'escaramuza', '⚔ Escaramuza: ✔ éxito · volvisteis con botín', { clave: 'esc-res:' + band.id });
+      else if (band.exito === false && band.estado === 'resuelta')
+        HacBitacora.log(myId, 'escaramuza', '⚔ Escaramuza: ✘ fracaso · tu mecenas vuelve herido', { clave: 'esc-res:' + band.id });
+      else if (band.estado === 'abortando')
+        HacBitacora.log(myId, 'escaramuza', '↩ Escaramuza abortada · la banda regresa', { clave: 'esc-abort:' + band.id });
     }
     function escTick() {
       const el = escHost && escHost.querySelector('[data-esc-timer]'); if (!el) return;
