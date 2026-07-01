@@ -683,9 +683,19 @@
       return plan;
     }
     const sucDeadline = (o, ev) => Math.min(ev.atMs + SUC_WINDOW, o.inicioMs + (o.duracionSeg || 60) * 1000 - 1500);
-    function sucLoad(o) { try { return JSON.parse(localStorage.getItem('rotk.suc.' + sucKey(o))) || { resolved: {}, mods: {} }; } catch (e) { return { resolved: {}, mods: {} }; } }
-    function sucSave(o, st) { try { localStorage.setItem('rotk.suc.' + sucKey(o), JSON.stringify(st)); } catch (e) {} }
-    function sucClear(o) { try { localStorage.removeItem('rotk.suc.' + sucKey(o)); } catch (e) {} }
+    // Estado de sucesos: EN MEMORIA (fuente de verdad de la sesión) + espejo en
+    // localStorage (para sobrevivir a refrescos). Si localStorage falla (Safari
+    // privado / iOS), el mapa en memoria evita que la carta se reabra en bucle.
+    const sucMem = {};
+    const sucLsKey = (o) => 'rotk.suc.' + sucKey(o);
+    function sucLoad(o) {
+      const k = sucLsKey(o);
+      if (sucMem[k]) return sucMem[k];
+      try { const v = JSON.parse(localStorage.getItem(k)); if (v) { sucMem[k] = v; return v; } } catch (e) {}
+      const def = { resolved: {}, mods: {} }; sucMem[k] = def; return def;
+    }
+    function sucSave(o, st) { const k = sucLsKey(o); sucMem[k] = st; try { localStorage.setItem(k, JSON.stringify(st)); } catch (e) {} }
+    function sucClear(o) { const k = sucLsKey(o); delete sucMem[k]; try { localStorage.removeItem(k); } catch (e) {} }
     // Resuelve al VOLVER los sucesos no atendidos (opción segura) y devuelve los mods totales.
     function finalizeSucesos(o, mis) {
       if (!window.HacRand) return { din: 0, xp: 0, loot: 0, heridas: 0 };
@@ -695,7 +705,16 @@
       return { din: st.mods.din || 0, xp: st.mods.xp || 0, loot: st.mods.loot || 0, heridas: st.mods.heridas || 0 };
     }
     // Aplica una decisión (manual o auto): tira el dado sembrado, acumula mods, registra.
-    let sucEl = null, sucTimer = 0, sucOpenIdx = null, sucDl0 = 0, sucSel = null;
+    let sucEl = null, sucTimer = 0, sucOpenIdx = null, sucDl0 = 0, sucSel = null, sucResultOpen = false;
+    // Resumen legible del efecto (se aplica al VOLVER de la expedición).
+    function sucEffTxt(op, ok) {
+      const m = opMods(op, ok), p = [];
+      if (m.din) p.push((m.din > 0 ? '+' : '−') + Math.round(Math.abs(m.din) * 100) + '% dinero');
+      if (m.xp) p.push('+' + Math.round(m.xp * 100) + '% XP');
+      if (m.loot) p.push('+' + m.loot + ' botín');
+      if (m.heridas) p.push('herido');
+      return p.length ? p.join(' · ') : 'sin novedad';
+    }
     function applyResolve(o, mis, ev, choiceIdx, auto) {
       const s = SUCESOS.find(x => x.id === ev.sucesoId); if (!s) return;
       const st = sucLoad(o); st.resolved = st.resolved || {};
@@ -706,10 +725,20 @@
       if (op.cost && window.HacStats) HacStats.award(myId, { dinero: -op.cost });
       st.mods = accumMods(st.mods || {}, opMods(op, ok));
       st.resolved[ev.i] = { c: choiceIdx, ok: ok, auto: !!auto }; sucSave(o, st);
-      if (!auto) toast(`${s.txt} → ${op.t}: ${op.dom ? (ok ? '✔ éxito' : '✘ falló') : 'hecho'}`);
       if (window.HacBitacora) HacBitacora.log(myId, 'expedicion', `⚔ ${s.txt} → ${op.t}${op.dom ? (ok ? ' ✔' : ' ✘') : ''}`, { clave: 'suc:' + sucKey(o) + ':' + ev.i });
-      closeSuc();
       if (charId) buildCharPanel(charId);
+      if (auto) { closeSuc(); return; }   // auto/segura: cierra sin pantalla de resultado
+      // Manual: enseña el RESULTADO en la carta (no un toast fugaz) hasta que confirmes.
+      if (sucTimer) { clearInterval(sucTimer); sucTimer = 0; }
+      sucResultOpen = true;
+      const el = ensureSucEl(); el.hidden = false;
+      el.innerHTML = `<div class="hacp-suc-box">
+        <div class="hacp-suc-eyebrow">⚔ Suceso · ${esc(mis.nombre || 'Expedición')}</div>
+        <div class="hacp-suc-ttl">${esc(s.txt)}</div>
+        <div class="hacp-suc-verdict ${op.dom ? (ok ? 'ok' : 'bad') : 'neutral'}">${op.dom ? (ok ? '✔ Éxito' : '✘ Ha salido mal') : '· Hecho'}</div>
+        <div class="hacp-suc-eff"><b>${esc(op.t)}</b> — al volver: ${esc(sucEffTxt(op, ok))}</div>
+        <button type="button" class="hacp-cp-btn hacp-suc-done" data-suc-done>Continuar</button></div>`;
+      el.querySelector('[data-suc-done]').addEventListener('click', closeSuc);
     }
     function autoResolveSafe(o, mis, ev) { const s = SUCESOS.find(x => x.id === ev.sucesoId); if (s) applyResolve(o, mis, ev, safeIdx(s), true); }
     function ensureSucEl() {
@@ -718,7 +747,7 @@
       ['pointerdown', 'pointerup', 'wheel', 'click'].forEach(ev => sucEl.addEventListener(ev, e => e.stopPropagation(), { passive: false }));
       return sucEl;
     }
-    function closeSuc() { if (sucTimer) { clearInterval(sucTimer); sucTimer = 0; } sucOpenIdx = null; sucSel = null; if (sucEl) sucEl.hidden = true; }
+    function closeSuc() { if (sucTimer) { clearInterval(sucTimer); sucTimer = 0; } sucOpenIdx = null; sucSel = null; sucResultOpen = false; if (sucEl) sucEl.hidden = true; }
     // Cuerpo de la carta: se elige una opción (queda MARCADA) y luego se confirma con
     // Aceptar/Cancelar — el toque no resuelve por sí solo (evita decisiones por error).
     function sucBoxHTML(s, mis) {
@@ -766,6 +795,7 @@
     // Se llama cada segundo: abre la carta cuando toca; auto-resuelve pasada la ventana
     // (aunque no la estés mirando). Solo para MIS expediciones en solitario en curso.
     function sucesoTick() {
+      if (sucResultOpen) return;   // mostrando el resultado: no abras otra carta hasta Continuar
       if (!myId || !window.HacOrdenes || !window.HacMisiones || !window.HacRand) return;
       const o = HacOrdenes.mine(h.id, myId);
       if (!o || o.tipo !== 'expedicion' || String(o.targetId || '').indexOf('escaramuza:') === 0) { if (sucOpenIdx != null) closeSuc(); return; }
