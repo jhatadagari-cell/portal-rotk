@@ -672,7 +672,7 @@
       return { din: st.mods.din || 0, xp: st.mods.xp || 0, loot: st.mods.loot || 0, heridas: st.mods.heridas || 0 };
     }
     // Aplica una decisión (manual o auto): tira el dado sembrado, acumula mods, registra.
-    let sucEl = null, sucTimer = 0, sucOpenIdx = null, sucDl0 = 0;
+    let sucEl = null, sucTimer = 0, sucOpenIdx = null, sucDl0 = 0, sucSel = null;
     function applyResolve(o, mis, ev, choiceIdx, auto) {
       const s = SUCESOS.find(x => x.id === ev.sucesoId); if (!s) return;
       const st = sucLoad(o); st.resolved = st.resolved || {};
@@ -695,33 +695,50 @@
       ['pointerdown', 'pointerup', 'wheel', 'click'].forEach(ev => sucEl.addEventListener(ev, e => e.stopPropagation(), { passive: false }));
       return sucEl;
     }
-    function closeSuc() { if (sucTimer) { clearInterval(sucTimer); sucTimer = 0; } sucOpenIdx = null; if (sucEl) sucEl.hidden = true; }
-    function openSucCard(o, mis, ev, dl) {
-      const s = SUCESOS.find(x => x.id === ev.sucesoId); if (!s) return;
-      sucOpenIdx = ev.i; sucDl0 = dl;
-      const el = ensureSucEl();
-      const opts = s.op.map((op, ix) => op.dom
-        ? `<button type="button" class="hacp-suc-op" data-op="${ix}"><span class="hacp-suc-chk">〔${DOM_GLYPH[op.dom]} ${nivelEf(op.dom)}〕</span><span class="hacp-suc-opt">${esc(op.t)}</span><span class="hacp-suc-pct">${Math.round(pSuceso(op.dom, mis.dif) * 100)}%</span></button>`
-        : `<button type="button" class="hacp-suc-op safe" data-op="${ix}"><span class="hacp-suc-opt">${esc(op.t)}</span><span class="hacp-suc-pct">segura</span></button>`).join('');
-      el.innerHTML = `<div class="hacp-suc-box">
+    function closeSuc() { if (sucTimer) { clearInterval(sucTimer); sucTimer = 0; } sucOpenIdx = null; sucSel = null; if (sucEl) sucEl.hidden = true; }
+    // Cuerpo de la carta: se elige una opción (queda MARCADA) y luego se confirma con
+    // Aceptar/Cancelar — el toque no resuelve por sí solo (evita decisiones por error).
+    function sucBoxHTML(s, mis) {
+      const opts = s.op.map((op, ix) => {
+        const on = (sucSel === ix) ? ' on' : '';
+        const meta = op.dom ? `<span class="hacp-suc-chk">〔${DOM_GLYPH[op.dom]} ${nivelEf(op.dom)}〕</span>` : '';
+        const tag = op.dom ? `<span class="hacp-suc-pct">${Math.round(pSuceso(op.dom, mis.dif) * 100)}%</span>` : `<span class="hacp-suc-pct">segura</span>`;
+        return `<button type="button" class="hacp-suc-op${op.dom ? '' : ' safe'}${on}" data-op="${ix}">${meta}<span class="hacp-suc-opt">${esc(op.t)}</span>${tag}</button>`;
+      }).join('');
+      const footer = (sucSel != null)
+        ? `<div class="hacp-suc-confirm"><button type="button" class="hacp-cp-btn hacp-suc-cancel" data-suc-cancel>Cancelar</button><button type="button" class="hacp-cp-btn hacp-suc-ok" data-suc-ok>Aceptar</button></div>`
+        : '';
+      return `<div class="hacp-suc-box">
         <div class="hacp-suc-eyebrow">⚔ Suceso · ${esc(mis.nombre || 'Expedición')}</div>
         <div class="hacp-suc-ttl">${esc(s.txt)}</div>
         <div class="hacp-suc-desc">${esc(s.desc || '')}</div>
         <div class="hacp-suc-ops">${opts}</div>
+        ${footer}
         <div class="hacp-suc-bar"><i data-suc-bar></i></div>
         <div class="hacp-suc-hint" data-suc-hint></div></div>`;
-      el.hidden = false;
-      el.querySelectorAll('[data-op]').forEach(b => b.addEventListener('click', () => resolveSuceso(o, mis, ev, +b.dataset.op)));
+    }
+    function renderSucBody(o, mis, ev) {
+      const s = SUCESOS.find(x => x.id === ev.sucesoId); if (!s || !sucEl) return;
+      sucEl.innerHTML = sucBoxHTML(s, mis);
+      sucEl.querySelectorAll('[data-op]').forEach(b => b.addEventListener('click', () => { sucSel = +b.dataset.op; renderSucBody(o, mis, ev); }));
+      const ok = sucEl.querySelector('[data-suc-ok]'); if (ok) ok.addEventListener('click', () => { if (sucSel != null) applyResolve(o, mis, ev, sucSel, false); });
+      const cc = sucEl.querySelector('[data-suc-cancel]'); if (cc) cc.addEventListener('click', () => { sucSel = null; renderSucBody(o, mis, ev); });
+    }
+    function openSucCard(o, mis, ev, dl) {
+      const s = SUCESOS.find(x => x.id === ev.sucesoId); if (!s) return;
+      sucOpenIdx = ev.i; sucDl0 = dl; sucSel = null;
+      ensureSucEl(); renderSucBody(o, mis, ev); sucEl.hidden = false;
       if (sucTimer) clearInterval(sucTimer);
       sucTimer = setInterval(() => tickSucCard(o, mis, ev), 200); tickSucCard(o, mis, ev);
     }
-    function resolveSuceso(o, mis, ev, idx) { applyResolve(o, mis, ev, idx, false); }
     function tickSucCard(o, mis, ev) {
       if (!sucEl || sucEl.hidden) return;
       const now = clock(), total = Math.max(1, sucDl0 - ev.atMs), rem = Math.max(0, sucDl0 - now);
       const bar = sucEl.querySelector('[data-suc-bar]'); if (bar) bar.style.width = Math.max(0, Math.min(100, rem / total * 100)) + '%';
-      const hint = sucEl.querySelector('[data-suc-hint]'); if (hint) hint.textContent = `Decides en ${Math.ceil(rem / 1000)}s · si no, se toma la opción segura`;
-      if (now >= sucDl0) autoResolveSafe(o, mis, ev);
+      const hint = sucEl.querySelector('[data-suc-hint]');
+      if (hint) hint.textContent = (sucSel != null) ? `Confirma en ${Math.ceil(rem / 1000)}s` : `Elige en ${Math.ceil(rem / 1000)}s · si no, opción segura`;
+      // Al vencer: si tienes una opción marcada, se aplica esa; si no, la segura.
+      if (now >= sucDl0) { if (sucSel != null) applyResolve(o, mis, ev, sucSel, false); else autoResolveSafe(o, mis, ev); }
     }
     // Se llama cada segundo: abre la carta cuando toca; auto-resuelve pasada la ventana
     // (aunque no la estés mirando). Solo para MIS expediciones en solitario en curso.
