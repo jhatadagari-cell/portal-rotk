@@ -1375,15 +1375,21 @@
     }
     function renderBitacora() {
       const el = ensureBitEl();
+      const dbOk = !!(window.HacBitacora && HacBitacora.dbOk && HacBitacora.dbOk());
       const all = (window.HacBitacora && myId) ? HacBitacora.listar(myId, 200) : [];
       const hoy = diaKey(clock()), ayer = diaKey(clock() - 86400000);
-      const g = { hoy: [], ayer: [] };
-      all.forEach(e => { const k = diaKey(e.ts); if (k === hoy) g.hoy.push(e); else if (k === ayer) g.ayer.push(e); });
+      const g = { hoy: [], ayer: [], prev: [] };
+      all.forEach(e => { const k = diaKey(e.ts); if (k === hoy) g.hoy.push(e); else if (k === ayer) g.ayer.push(e); else g.prev.push(e); });
       const rowsOf = (arr) => arr.map(e => `<div class="hacp-bit-row t-${esc(e.tipo)}"><span class="hacp-bit-when">${fmtHora(e.ts)}</span><span class="hacp-bit-txt">${esc(e.texto)}</span></div>`).join('');
       let body = '';
       if (g.hoy.length) body += `<div class="hacp-bit-day">Hoy</div>` + rowsOf(g.hoy);
       if (g.ayer.length) body += `<div class="hacp-bit-day">Ayer</div>` + rowsOf(g.ayer);
-      if (!body) body = '<div class="hacp-inv-note">Sin actividad hoy ni ayer. Manda a tu mecenas a una misión o escaramuza y su parte quedará aquí.</div>';
+      // Si no hay nada reciente pero SÍ hay historial, muéstralo (evita ver "nada"
+      // teniendo registro; tu actividad puede ser de hace más de un día).
+      if (!g.hoy.length && !g.ayer.length && g.prev.length) body += `<div class="hacp-bit-day">Anteriores</div>` + rowsOf(g.prev.slice(0, 40));
+      if (!body) body = dbOk
+        ? '<div class="hacp-inv-note">Aún no hay actividad registrada. Manda a tu mecenas a una misión o escaramuza y su parte quedará aquí.</div>'
+        : '<div class="hacp-inv-note">La bitácora no está disponible ahora mismo (reintenta en un momento).</div>';
       el.innerHTML = `<div class="hacp-shop-box">
         <button type="button" class="hacp-shop-x" data-bit-x aria-label="Cerrar">✕</button>
         <div class="hacp-shop-h"><span class="hacp-shop-zh">錄</span> Bitácora</div>
