@@ -581,8 +581,10 @@
         // Las ACTIVIDADES INTERNAS (en edificios) rinden MÁS prestigio según tu nivel
         // del stat de ese dominio: nivel 1 = ×1, nivel 2 = ×1.2, nivel 3 = ×1.3, …
         if (!mis && dom && HacStats && HacStats.nivelTotal) {
+          // ×1 a nivel 1, +0,1 por nivel, CAPADO a ×3 (nivel 20+) para que la curva
+          // aplanada no dispare el prestigio de las tareas internas en niveles altos.
           const n = HacStats.nivelTotal(myId, dom);
-          r = Math.round(r * (n <= 1 ? 1 : 1 + n * 0.1));
+          r = Math.round(r * (n <= 1 ? 1 : 1 + Math.min(n, 20) * 0.1));
         }
         HacPuntos.award(h.id, myId, r);
         // La misión del tablón da, además del prestigio, dinero + XP PERSONAL (al dominio).

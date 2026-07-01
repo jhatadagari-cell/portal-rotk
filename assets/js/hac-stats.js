@@ -169,13 +169,18 @@ const HacStats = (function () {
   }
 
   // Curva de nivel: cada nivel n→n+1 cuesta 50·n XP (acumulado: 25·n·(n-1)).
-  // Nivel 1 = 0 XP, 2 = 50, 3 = 150, 4 = 300, 5 = 500…
-  const xpAcum = n => 25 * n * (n - 1);
+  // Curva APLANADA (endgame real): subir es asequible para que niveles altos (hasta
+  // ~150 por dominio) sean una meta larga pero alcanzable, no imposible. Coste por
+  // nivel ≈ 100 + 3·(n−1) XP → acumulada casi lineal con leve pendiente.
+  //   lvl2≈100 · lvl10≈1.008 · lvl50≈8.428 · lvl100≈24.453 · lvl150≈47.978
+  const xpAcum = n => Math.round(100 * (n - 1) + 1.5 * (n - 1) * (n - 2));
   function nivel(mid, dom) {
     const x = xp(mid, dom); let n = 1;
-    while (xpAcum(n + 1) <= x) n++;
+    while (n < 999 && xpAcum(n + 1) <= x) n++;
     return n;
   }
+  // Nivel TOTAL del personaje = suma de niveles de dominio − 2 (1-1-1 → nivel 1).
+  function nivelPersonaje(mid) { return nivel(mid, 'militar') + nivel(mid, 'cultural') + nivel(mid, 'administrativo') - 2; }
   function progresoNivel(mid, dom) {
     const x = xp(mid, dom), n = nivel(mid, dom);
     const base = xpAcum(n), next = xpAcum(n + 1), span = next - base;
@@ -267,6 +272,6 @@ const HacStats = (function () {
     } catch (e) { console.error('[HacStats] liberarCasa', e); }
   }
 
-  return { ready, reload, dinero, ahorro, casaPos, casasReclamadas, duenoDeCasa, comprarCasa, liberarCasa, abandonar, heridas, penHerida, malherido, herir, curar, escaramuzaCd, bonusDinero, bonusExped, usarManual, xp, nivel, progresoNivel, bonus, nivelTotal, equipados, equipar, desequipar, MAX_EQUIP, award, comprar, guardar, sacar, darItem, meterEnCasa, sacarDeCasa, inventario, casaInventario, capInventario, ocupadas, recompensaExped, DOMS, dbOk: () => ok, TABLE };
+  return { ready, reload, dinero, ahorro, casaPos, casasReclamadas, duenoDeCasa, comprarCasa, liberarCasa, abandonar, heridas, penHerida, malherido, herir, curar, escaramuzaCd, bonusDinero, bonusExped, usarManual, xp, nivel, progresoNivel, bonus, nivelTotal, nivelPersonaje, equipados, equipar, desequipar, MAX_EQUIP, award, comprar, guardar, sacar, darItem, meterEnCasa, sacarDeCasa, inventario, casaInventario, capInventario, ocupadas, recompensaExped, DOMS, dbOk: () => ok, TABLE };
 })();
 if (typeof window !== 'undefined') window.HacStats = HacStats;
