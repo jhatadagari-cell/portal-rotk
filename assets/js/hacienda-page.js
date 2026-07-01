@@ -1789,6 +1789,7 @@
         tool('log', '錄', 'Bitácora'),
         hasMarket ? tool('shop', '市', 'Mercado') : '',
         tool('esc', '兵', 'Escaramuzas', ' hacp-cp-esc'),
+        hasMain ? tool('board', '檄', 'Misiones', ' hacp-cp-board') : '',
       ];
       // Distintivo de puntos de talento sin gastar sobre el icono de Sendas.
       const sendasBadge = pts > 0 ? `<span class="hacp-cp-badge">${pts}</span>` : '';
@@ -1841,9 +1842,10 @@
         } else {
           const tasks = availableTasks();   // tareas DENTRO de la finca (edificios)
           const opts = tasks.map(t => `<option value="${esc(t.taskId)}">${esc(t.nombre)} · ${fmtDur(t.duracionSeg)} · −${costeMision(t.dominio)}⚡</option>`).join('');
-          const board = hasMain ? `<button type="button" class="hacp-cp-btn hacp-cp-board" data-act="board">📜 Buscar misiones</button>` : '';
+          // "Buscar misiones" ahora vive en la barra de iconos (檄 Misiones); aquí solo
+          // queda el selector de tarea interna.
           const sel = tasks.length ? `<div class="hacp-cp-mis"><label class="hacp-cp-lbl">Tarea en la finca</label><div class="hacp-cp-row"><select class="hacp-cp-sel">${opts}</select><button type="button" class="hacp-cp-btn hacp-cp-go" data-act="dispatch">Enviar</button></div></div>` : '';
-          mision = board + sel;
+          mision = sel;
         }
       }
       charEl.innerHTML = `
