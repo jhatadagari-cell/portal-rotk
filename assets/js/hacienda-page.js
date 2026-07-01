@@ -907,12 +907,8 @@
     function closeEsc() { escVisible = false; if (escEl) escEl.hidden = true; }
 
     // ── BITÁCORA (diario del mecenas): overlay con el feed de actividad ────────
-    function fmtWhen(ts) {
-      const d = Math.max(0, clock() - (ts || 0)), m = Math.floor(d / 60000);
-      if (m < 1) return 'ahora'; if (m < 60) return 'hace ' + m + ' min';
-      const hrs = Math.floor(m / 60); if (hrs < 24) return 'hace ' + hrs + ' h';
-      return 'hace ' + Math.floor(hrs / 24) + ' d';
-    }
+    function fmtHora(ts) { try { return new Date(ts).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }); } catch (e) { return ''; } }
+    const diaKey = (ts) => { const d = new Date(ts); return d.getFullYear() + '-' + d.getMonth() + '-' + d.getDate(); };
     let bitEl = null;
     function ensureBitEl() {
       if (bitEl) return bitEl;
@@ -924,15 +920,20 @@
     }
     function renderBitacora() {
       const el = ensureBitEl();
-      const entries = (window.HacBitacora && myId) ? HacBitacora.listar(myId, 60) : [];
-      const rows = entries.length
-        ? entries.map(e => `<div class="hacp-bit-row t-${esc(e.tipo)}"><span class="hacp-bit-when">${fmtWhen(e.ts)}</span><span class="hacp-bit-txt">${esc(e.texto)}</span></div>`).join('')
-        : '<div class="hacp-inv-note">Aún no hay actividad. Manda a tu mecenas a una misión o escaramuza y su parte quedará aquí.</div>';
+      const all = (window.HacBitacora && myId) ? HacBitacora.listar(myId, 200) : [];
+      const hoy = diaKey(clock()), ayer = diaKey(clock() - 86400000);
+      const g = { hoy: [], ayer: [] };
+      all.forEach(e => { const k = diaKey(e.ts); if (k === hoy) g.hoy.push(e); else if (k === ayer) g.ayer.push(e); });
+      const rowsOf = (arr) => arr.map(e => `<div class="hacp-bit-row t-${esc(e.tipo)}"><span class="hacp-bit-when">${fmtHora(e.ts)}</span><span class="hacp-bit-txt">${esc(e.texto)}</span></div>`).join('');
+      let body = '';
+      if (g.hoy.length) body += `<div class="hacp-bit-day">Hoy</div>` + rowsOf(g.hoy);
+      if (g.ayer.length) body += `<div class="hacp-bit-day">Ayer</div>` + rowsOf(g.ayer);
+      if (!body) body = '<div class="hacp-inv-note">Sin actividad hoy ni ayer. Manda a tu mecenas a una misión o escaramuza y su parte quedará aquí.</div>';
       el.innerHTML = `<div class="hacp-shop-box">
         <button type="button" class="hacp-shop-x" data-bit-x aria-label="Cerrar">✕</button>
         <div class="hacp-shop-h"><span class="hacp-shop-zh">錄</span> Bitácora</div>
-        <div class="hacp-shop-sub">Lo que ha hecho tu mecenas.</div>
-        <div class="hacp-bit-list">${rows}</div></div>`;
+        <div class="hacp-shop-sub">Lo que ha hecho tu mecenas · hoy y ayer.</div>
+        <div class="hacp-bit-list">${body}</div></div>`;
       el.querySelector('[data-bit-x]').addEventListener('click', () => { el.hidden = true; });
     }
     function openBitacora() {

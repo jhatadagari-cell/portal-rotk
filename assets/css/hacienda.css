@@ -559,7 +559,9 @@ html.hacp-pseudofs, html.hacp-pseudofs body{ overflow:hidden; }
 .hacp-bit-row.t-escaramuza{ border-left-color:#b23b2e; }
 .hacp-bit-row.t-tarea{ border-left-color:#3a8a5a; }
 .hacp-bit-row.t-progreso{ border-left-color:#caa42c; }
-.hacp-bit-when{ flex:0 0 auto; font:600 10px 'Noto Sans SC',sans-serif; color:var(--parch2); opacity:.7; white-space:nowrap; min-width:52px; }
+.hacp-bit-day{ font:700 10px 'Cinzel Decorative',serif; letter-spacing:.09em; text-transform:uppercase; color:var(--hac,var(--gold)); opacity:.85; margin:10px 2px 2px; }
+.hacp-bit-day:first-child{ margin-top:2px; }
+.hacp-bit-when{ flex:0 0 auto; font:600 10px 'Noto Sans SC',sans-serif; color:var(--parch2); opacity:.7; white-space:nowrap; min-width:40px; font-variant-numeric:tabular-nums; }
 .hacp-bit-txt{ flex:1; min-width:0; font:500 12.5px/1.4 'Noto Sans SC',sans-serif; color:var(--parch); }
 /* Popup de info de edificio (al pulsar su cuerpo en el plano) */
 .hacp-bld-pop{ position:fixed; z-index:9999; width:min(248px,80vw); padding:10px 12px; box-sizing:border-box;
