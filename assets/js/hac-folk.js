@@ -1198,6 +1198,7 @@ const HacFolk = (function () {
       const FEET = charFEET();
       const dx = Math.round(fx - charW() * 0.5 + (m.riderDx || 0));
       const dy = Math.round(fy - FEET - (m.riderY || 0));
+      g.imageSmoothingEnabled = pngOn();   // sprite pintado del jinete: suavizar (no el caballo)
       g.drawImage(cv, dx, dy, charW(), charH());
     }
     g.restore();
@@ -1293,7 +1294,7 @@ const HacFolk = (function () {
       // quede nítido (igual que los sprites de edificio). Pies del sprite sobre (lx,ly).
       g.save();
       g.setTransform(1, 0, 0, 1, 0, 0);
-      g.imageSmoothingEnabled = false;
+      g.imageSmoothingEnabled = pngOn();
       const dx = Math.round(lx * SCALE - charW() * 0.5 * disp);
       const dy = Math.round(ly * SCALE - FEET * disp);
       g.drawImage(cv, dx, dy, Math.round(charW() * disp), Math.round(charH() * disp));
@@ -1833,7 +1834,7 @@ const HacFolk = (function () {
     const pose = (w.state === 'tumbado') ? 'sit' : (w.bowing ? 'bow' : (moving ? 'walk' : 'stand'));
     const cv = spriteFor(w, w.dir || 'S', frame, pose);
     if (!cv) return;
-    g.imageSmoothingEnabled = false;
+    g.imageSmoothingEnabled = pngOn();
     const cw = cv.width || charW(), ch = cv.height || charH();
     const s = Math.min(canvas.width / cw, canvas.height / ch);
     const dw = Math.round(cw * s), dh = Math.round(ch * s);
