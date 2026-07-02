@@ -442,6 +442,61 @@
     const miCargo = (window.HacCalc && HacCalc.cargoDef) ? HacCalc.cargoDef(((h.miembros || []).find(m => m.personajeId === myId) || {}).cargo) : null;
     // ¿mi mecenas tiene un talento de senda? (efectos personales, C1)
     const tieneT = (id) => !!(window.HacStats && HacStats.tieneTalento && HacStats.tieneTalento(myId, id));
+    // CABALLO: montura propia → −% tiempo de expedición mientras lo tengas.
+    const CABALLO_EXPED = 0.12;
+    const caballoExped = () => (window.HacStats && HacStats.tieneCaballo && HacStats.tieneCaballo(myId)) ? CABALLO_EXPED : 0;
+    // ── BUFOS/DEBUFOS (modificadores %): registro EXTENSIBLE de todo lo que te afecta.
+    // tipo → cómo se muestra (etiqueta, signo, si es reductor bueno o un debuf). Añadir
+    // fuentes nuevas (eventos, relaciones…) = empujar más entradas en recopilarBufos().
+    const BUF_TIPOS = {
+      dinero:    { label: 'Dinero de misiones',    signo: '+', color: '#c9a84c', good: true },
+      xpMision:  { label: 'XP de misiones',        signo: '+', color: '#3a8a5a', good: true },
+      xpMil:     { label: 'XP en exp. militares',  signo: '+', color: '#b23b2e', good: true },
+      mercado:   { label: 'Precios de mercado',    signo: '−', color: '#3a6ea5', good: true },
+      exped:     { label: 'Tiempo de expedición',  signo: '−', color: '#c98a3a', good: true },
+      riesgo:    { label: 'Riesgo de misión',      signo: '−', color: '#7aa26e', good: true },
+      prestigio: { label: 'Prestigio en tareas',   signo: '+', color: '#c9a84c', good: true },
+      botin:     { label: 'Botín de escaramuza',   signo: '+', color: '#c98a3a', good: true, num: true },
+      heridas:   { label: 'Merma por heridas',     signo: '−', color: '#b23b2e', good: false },
+    };
+    // Talentos de senda con efecto porcentual (para listarlos como bufos).
+    const SENDA_FX = [
+      { id: 'estudiante',  tipo: 'xpMision',  val: 0.08, label: 'Senda · Estudiante (XP 文)' },
+      { id: 'estratega',   tipo: 'exped',     val: 0.10, label: 'Senda · Estratega' },
+      { id: 'gobernador',  tipo: 'dinero',    val: 0.10, label: 'Senda · Gobernador' },
+      { id: 'funcionario', tipo: 'mercado',   val: 0.06, label: 'Senda · Funcionario' },
+      { id: 'soldado',     tipo: 'riesgo',    val: 0.06, label: 'Senda · Soldado' },
+      { id: 'canciller',   tipo: 'prestigio', val: 0.30, label: 'Senda · Canciller' },
+    ];
+    // Reúne TODOS los modificadores activos del mecenas, con su fuente. Extensible.
+    function recopilarBufos() {
+      const items = [];
+      const add = (tipo, label, val) => { if (val) items.push({ tipo, label, val }); };
+      add('xpMision', 'Pabellón cultural',       (bonos.xp || 0) - (cargoHac.xpExped || 0));
+      add('xpMil',    'Pabellón militar',        bonos.xpMil || 0);
+      add('dinero',   'Pabellón administrativo', bonos.dinero || 0);
+      add('mercado',  'Pabellón administrativo', (bonos.mercado || 0) - (cargoHac.mercado || 0));
+      add('xpMision', 'Cargos de la casa',       cargoHac.xpExped || 0);
+      add('mercado',  'Cargos de la casa',       cargoHac.mercado || 0);
+      add('botin',    'Cargos de la casa',       cargoHac.escBotin || 0);
+      if (miCargo && miCargo.perk) {
+        if (miCargo.perk.dinero) add('dinero', 'Tu cargo · ' + miCargo.nombre, miCargo.perk.dinero);
+        if (miCargo.perk.xpDom)  add('xpMision', 'Tu cargo · ' + miCargo.nombre + ' (' + (DOM_GLYPH[miCargo.dom] || '') + ')', miCargo.perk.xpDom);
+      }
+      if (window.HacStats) {
+        add('dinero', 'Objetos equipados',  HacStats.bonusDinero ? HacStats.bonusDinero(myId) : 0);
+        add('exped',  'Objetos equipados',  HacStats.bonusExped ? HacStats.bonusExped(myId) : 0);
+      }
+      SENDA_FX.forEach(s => { if (tieneT(s.id)) add(s.tipo, s.label, s.val); });
+      if (window.HacStats && HacStats.tieneCaballo && HacStats.tieneCaballo(myId)) {
+        const c = HacStats.caballo(myId);
+        add('exped', '🐎 ' + ((c && c.nombre) || 'Caballo'), CABALLO_EXPED);
+      }
+      add('heridas', 'Heridas', (window.HacStats && HacStats.penHerida) ? HacStats.penHerida(myId) : 0);
+      const totales = {};
+      items.forEach(it => { totales[it.tipo] = (totales[it.tipo] || 0) + it.val; });
+      return { items, totales };
+    }
     // Fracción de XP extra para UNA misión: el bono cultural (政→文… 文) aplica a
     // todas; el militar (军) SOLO se suma en expediciones de dominio militar.
     const xpFracMision = (dom) => (bonos.xp || 0) + (dom === 'militar' ? (bonos.xpMil || 0) : 0)
@@ -840,8 +895,9 @@
         .then(applyOrders).catch(e => console.warn('[orden] set', e));
     }
     // Enviar a una MISIÓN del tablón (sale de la finca, tipo 'expedicion').
-    // Duración de una expedición con el ahorro de tiempo del EQUIPO (enseres de marcha).
-    const durExped = (m) => Math.max(30, Math.round(HacMisiones.durSeg(m) * (1 - (HacStats.bonusExped ? HacStats.bonusExped(myId) : 0) - (tieneT('estratega') ? 0.10 : 0))));
+    // Duración de una expedición con el ahorro de tiempo del EQUIPO (enseres de marcha)
+    // + el CABALLO (montura propia → viaje más rápido).
+    const durExped = (m) => Math.max(30, Math.round(HacMisiones.durSeg(m) * (1 - (HacStats.bonusExped ? HacStats.bonusExped(myId) : 0) - (tieneT('estratega') ? 0.10 : 0) - caballoExped())));
     function dispatchMision(misId) {
       if (!myId || !window.HacOrdenes || !window.HacMisiones) return;
       if (window.HacStats && HacStats.malherido && HacStats.malherido(myId)) { toast('Tu mecenas está malherido · cúralo antes de salir'); return; }
@@ -1021,23 +1077,30 @@
       catch (e) { escSucSkipped.delete(band.id + ':' + ev.i); toast((e && e.message) || 'No se pudo fijar la maniobra'); }
     }
     // Tic (1 s): solo el CAPITÁN y solo mientras mira la escaramuza en curso.
-    function escSucesoTick() {
-      if (!escVisible || !myId || !window.HacEscaramuzas || !window.HacRand) return;
+    // ¿Hay AHORA una decisión de maniobra pendiente para el CAPITÁN? Devuelve
+    // {band, ev, dl} o null. No depende de que el panel esté abierto: lo usan tanto
+    // el tick (que abre la carta) como el parpadeo del botón del nav (que avisa).
+    function escSucesoPend() {
+      if (!myId || !window.HacEscaramuzas || !window.HacRand) return null;
       const band = HacEscaramuzas.miBanda(h.id, myId);
-      if (!band || band.hostId !== myId || band.estado !== 'en_curso') { if (escSucOpen != null) closeEscSuc(); return; }
-      const plan = escPlan(band); if (!plan.length) { if (escSucOpen != null) closeEscSuc(); return; }
+      if (!band || band.hostId !== myId || band.estado !== 'en_curso') return null;
+      const plan = escPlan(band); if (!plan.length) return null;
       const now = clock(), startMs = band.inicioMs, durMs = Math.max(1, band.finMs - band.inicioMs);
       const fr = escSucFrac(plan.length), ov = band.sucesos || {};
-      let ev = null, dl = 0;
       for (let k = 0; k < plan.length; k++) {
         const t = startMs + durMs * fr[k];
         if (now >= t && ov[plan[k].i] == null && !escSucSkipped.has(band.id + ':' + plan[k].i)) {
           const deadline = Math.min(t + ESC_SUC_WINDOW, band.finMs - 2000);
-          if (now < deadline) { ev = plan[k]; dl = deadline; break; }
+          if (now < deadline) return { band: band, ev: plan[k], dl: deadline };
         }
       }
-      if (!ev) { if (escSucOpen != null) closeEscSuc(); return; }
-      if (escSucOpen !== ev.i) openEscSucCard(band, ev, dl);
+      return null;
+    }
+    function escSucesoTick() {
+      if (!escVisible) { if (escSucOpen != null) closeEscSuc(); return; }   // la carta solo se abre con el panel a la vista
+      const pend = escSucesoPend();
+      if (!pend) { if (escSucOpen != null) closeEscSuc(); return; }
+      if (escSucOpen !== pend.ev.i) openEscSucCard(pend.band, pend.ev, pend.dl);
     }
     // RESOLUCIÓN al volver (≥ fin): cualquier miembro la dispara; la RPC es idempotente
     // (solo la primera surte efecto). Dado de éxito en cliente, como en las expediciones.
@@ -1796,7 +1859,7 @@
         tool('equip', '⚔', 'Equipo' + (d.equipN ? ` ${d.equipN}/3` : '')),
         tool('inv', '🎒', 'Inventario', invOpen ? ' on' : ''),
         tool('sendas', '道', 'Sendas') + (pts > 0 ? '' : ''),
-        tool('casa', '邑', 'La casa'),
+        tool('caballo', '🐎', 'Tu Caballo'),
         tool('log', '錄', 'Bitácora'),
         hasMarket ? tool('shop', '市', 'Mercado') : '',
         tool('esc', '兵', 'Escaramuzas', ' hacp-cp-esc'),
@@ -1808,7 +1871,7 @@
       if (sendasBadge) html = html.replace('data-act="sendas"><span class="ic">道</span>', `data-act="sendas">${sendasBadge}<span class="ic">道</span>`);
       return `<div class="hacp-cp-tools">${html}</div>`;
     }
-    // Overlay "La casa": bonos de la finca + cargos + relaciones (antes inline).
+    // Overlay reutilizable para "Tu Caballo" y "Bufos".
     let casaEl = null;
     function ensureCasaEl() {
       if (casaEl) return casaEl;
@@ -1817,13 +1880,53 @@
       casaEl.addEventListener('click', (e) => { if (e.target === casaEl) casaEl.hidden = true; });
       return casaEl;
     }
-    function openCasa() {
+    // TU CABALLO (antes "La casa"): estado del corcel y qué te aporta.
+    function caballoInfoHTML() {
+      const c = (window.HacStats && HacStats.caballo) ? HacStats.caballo(myId) : null;
+      if (!c) return `<div class="hacp-inv-note">Aún no tienes caballo. Cómpralo en el <b>市 Mercado</b> (requiere 武 5): lo bautizas, rondará libre por los campos de la finca y saldrás <b>montado</b> en tus expediciones y escaramuzas.</div>`;
+      return `<div class="hacp-caballo-card">
+          <div class="hacp-caballo-ic">🐎</div>
+          <div class="hacp-caballo-nm">${esc(c.nombre)}</div>
+          <div class="hacp-caballo-sub">Caballo de raza · 寶馬</div>
+        </div>
+        <div class="hacp-caballo-fx">
+          <div>道 Ronda libre por los campos, fuera de la finca.</div>
+          <div>⚔ Sales <b>montado</b> en expediciones y escaramuzas.</div>
+          <div>⏱ <b>−${Math.round(CABALLO_EXPED * 100)}%</b> de tiempo de expedición.</div>
+        </div>`;
+    }
+    function openCaballo() {
       if (!myId) return;
       const el = ensureCasaEl();
-      const bonos = (hayBonos()) ? `<div class="hacp-cp-bonos">Bonos de la finca · ${bonosTexto()}</div>` : '';
       el.innerHTML = `<div class="hacp-shop-box"><button type="button" class="hacp-shop-x" data-casa-x aria-label="Cerrar">✕</button>
-        <div class="hacp-shop-h"><span class="hacp-shop-zh">邑</span> La casa</div>
-        ${bonos}${cargosHTML()}${relacionesHTML()}</div>`;
+        <div class="hacp-shop-h"><span class="hacp-shop-zh">🐎</span> Tu Caballo</div>
+        ${caballoInfoHTML()}</div>`;
+      el.querySelector('[data-casa-x]').addEventListener('click', () => { el.hidden = true; });
+      el.hidden = false;
+    }
+    // BUFOS/DEBUFOS: total por tipo arriba + desglose por fuente. Incluye, de paso, el
+    // panel de cargos de la casa y las relaciones (fuentes de futuros bufos).
+    function bufosHTML() {
+      const { items, totales } = recopilarBufos();
+      const fmt = (t, v) => (BUF_TIPOS[t] && BUF_TIPOS[t].num) ? ('' + v) : (Math.round(v * 100) + '%');
+      const tot = Object.keys(totales).filter(t => Math.abs(totales[t]) > 0.0001).map(t => {
+        const d = BUF_TIPOS[t] || { label: t, signo: '+', color: '#c9a84c', good: true };
+        return `<div class="hacp-buf-tot ${d.good ? 'good' : 'bad'}"><span>${esc(d.label)}</span><b style="color:${d.color}">${d.signo}${fmt(t, totales[t])}</b></div>`;
+      }).join('');
+      const rows = items.map(it => {
+        const d = BUF_TIPOS[it.tipo] || {};
+        return `<div class="hacp-buf-row"><span class="hacp-buf-src">${esc(it.label)}</span><span class="hacp-buf-ef" style="color:${d.color || 'var(--gold)'}">${d.signo || '+'}${fmt(it.tipo, it.val)} ${esc(d.label || it.tipo)}</span></div>`;
+      }).join('');
+      return `<div class="hacp-buf-tots">${tot || '<div class="hacp-inv-note">Sin modificadores activos ahora mismo.</div>'}</div>
+        ${rows ? `<div class="hacp-buf-list">${rows}</div>` : ''}
+        ${cargosHTML()}${relacionesHTML()}`;
+    }
+    function openBufos() {
+      if (!myId) return;
+      const el = ensureCasaEl();
+      el.innerHTML = `<div class="hacp-shop-box"><button type="button" class="hacp-shop-x" data-casa-x aria-label="Cerrar">✕</button>
+        <div class="hacp-shop-h"><span class="hacp-shop-zh">✦</span> Bufos y debufos</div>
+        ${bufosHTML()}</div>`;
       el.querySelector('[data-casa-x]').addEventListener('click', () => { el.hidden = true; });
       el.hidden = false;
     }
@@ -1870,7 +1973,7 @@
             </div>
             ${d.aptDef ? `<div class="hacp-cp-apt">${d.aptDef.icon || ''} ${esc(d.aptDef.nombre)}${comp ? ' · domina ' + comp : ''}</div>` : (comp ? `<div class="hacp-cp-apt">domina ${comp}</div>` : '')}
             ${d.cargo ? `<div class="hacp-cp-cargo">${d.cargo.icon} ${esc(d.cargo.zh)} ${esc(d.cargo.nombre)}</div>` : ''}
-            <div class="hacp-cp-pts"><span data-tip="Prestigio: la reputación de tu mecenas en la casa (aportación base + lo ganado en misiones y tareas). Cuanto más, mayor tu rango dentro de la hacienda.">Prestigio: <b id="hacp-cp-pts">${d.puntos}</b>${d.earned ? ` <span class="hacp-cp-earn">+${d.earned}</span>` : ''}</span>${d.mine ? ` · <span data-tip="Dinero de tu monedero. Lo gastas en el mercado y en curar heridas; lo ganas en misiones y escaramuzas.">💰 <b>${d.money}</b></span>` : ''}</div>
+            <div class="hacp-cp-pts"><span data-tip="Prestigio: la reputación de tu mecenas en la casa (aportación base + lo ganado en misiones y tareas). Cuanto más, mayor tu rango dentro de la hacienda.">Prestigio: <b id="hacp-cp-pts">${d.puntos}</b>${d.earned ? ` <span class="hacp-cp-earn">+${d.earned}</span>` : ''}</span>${d.mine ? ` · <span data-tip="Dinero de tu monedero. Lo gastas en el mercado y en curar heridas; lo ganas en misiones y escaramuzas.">💰 <b>${d.money}</b></span> <button type="button" class="hacp-cp-bufbtn" data-act="bufos" data-tip="Bufos y debufos: todas las mejoras y penalizaciones porcentuales que te afectan (cargos, objetos, sendas, caballo, heridas…), con el total.">✦ Bufos</button>` : ''}</div>
           </div>
         </div>
         <div class="hacp-cp-act" id="hacp-cp-act">${d.it.inside ? '⌂ ' : ''}${esc(d.it.activity || 'Paseando por la finca')}</div>
@@ -1905,8 +2008,10 @@
       if (logb) logb.addEventListener('click', openBitacora);
       const sdb = charEl.querySelector('[data-act="sendas"]');
       if (sdb) sdb.addEventListener('click', openSendas);
-      const csb = charEl.querySelector('[data-act="casa"]');
-      if (csb) csb.addEventListener('click', openCasa);
+      const csb = charEl.querySelector('[data-act="caballo"]');
+      if (csb) csb.addEventListener('click', openCaballo);
+      const bfb = charEl.querySelector('[data-act="bufos"]');
+      if (bfb) bfb.addEventListener('click', openBufos);
       const eqb = charEl.querySelector('[data-act="equip"]');
       if (eqb) eqb.addEventListener('click', openEquip);
       const lvb = charEl.querySelector('[data-act="leave"]');
@@ -2541,9 +2646,15 @@
       const enMuster = !!(band && band.estado === 'en_curso' && clock() < (band.inicioMs + 26000));
       btn.classList.toggle('pulse', enMuster && !btn.classList.contains('on'));   // deja de parpadear si ya estás en Hacienda
     }
+    // Parpadeo del botón Escaramuzas cuando el capitán tiene una decisión de maniobra
+    // pendiente y NO está en esa sección (dentro, la carta ya se abre sola).
+    function pulseEscNav() {
+      const btn = document.querySelector('#hacp-mnav [data-sec="escaramuzas"]'); if (!btn) return;
+      btn.classList.toggle('pulse', !!escSucesoPend() && !btn.classList.contains('on'));
+    }
     // Tic de 1 s: refresca SOLO el panel del personaje (cuenta atrás de expedición y
     // energía/regeneración se derivan del reloj de servidor → tienen que verse vivos).
-    setInterval(() => { if (charId) refreshCharPanel(); if (escVisible) escTick(); sucesoTick(); escSucesoTick(); pulseHaciendaNav(); }, 1000);
+    setInterval(() => { if (charId) refreshCharPanel(); if (escVisible) escTick(); sucesoTick(); escSucesoTick(); pulseHaciendaNav(); pulseEscNav(); }, 1000);
 
     // Popup con la gente que hay dentro de un edificio (al pulsar su banner).
     function showPop(x, y, sign) {
