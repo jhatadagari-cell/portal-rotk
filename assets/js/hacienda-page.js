@@ -1867,7 +1867,7 @@
             </div>
             ${d.aptDef ? `<div class="hacp-cp-apt">${d.aptDef.icon || ''} ${esc(d.aptDef.nombre)}${comp ? ' · domina ' + comp : ''}</div>` : (comp ? `<div class="hacp-cp-apt">domina ${comp}</div>` : '')}
             ${d.cargo ? `<div class="hacp-cp-cargo">${d.cargo.icon} ${esc(d.cargo.zh)} ${esc(d.cargo.nombre)}</div>` : ''}
-            <div class="hacp-cp-pts">Puntos: <b id="hacp-cp-pts">${d.puntos}</b>${d.mine ? ` · 💰 <b>${d.money}</b>` : ''}${d.earned ? ` <span class="hacp-cp-earn">+${d.earned}</span>` : ''}</div>
+            <div class="hacp-cp-pts">Puntos: <b id="hacp-cp-pts">${d.puntos}</b>${d.earned ? ` <span class="hacp-cp-earn">+${d.earned}</span>` : ''}${d.mine ? ` · 💰 <b>${d.money}</b>` : ''}</div>
           </div>
         </div>
         <div class="hacp-cp-act" id="hacp-cp-act">${d.it.inside ? '⌂ ' : ''}${esc(d.it.activity || 'Paseando por la finca')}</div>
