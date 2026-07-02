@@ -1160,16 +1160,21 @@ const HacFolk = (function () {
   // ¿Va montado este walker? (de momento solo un flag de depuración global para
   // previsualizar; el disparador real —p.ej. expediciones militares— vendrá luego.)
   if (typeof window !== 'undefined' && /[?&]mount=1/.test(window.location.search || '')) window.__HAC_MOUNT_ALL = true;   // previsualización
+  // Estados en los que el mecenas está de VIAJE (sale/vuelve de expedición o escaramuza):
+  // si tiene caballo, los recorre MONTADO (usa su propio corcel, que deja de rondar).
+  const MOUNT_STATES = { 'exped-out': 1, 'exped-in': 1, 'esc-cheer': 1 };
+  function montaSuCaballo(w) { return !!(w && caballos[w.id] && MOUNT_STATES[w.state]); }
   function isMounted(w) {
-    const want = !!(w && (w.mounted || (typeof window !== 'undefined' && window.__HAC_MOUNT_ALL)));
+    const want = !!(w && (w.mounted || montaSuCaballo(w) || (typeof window !== 'undefined' && window.__HAC_MOUNT_ALL)));
     if (want) ensureHorses();
     return want && horseReady;
   }
   // Dibuja el caballo (frame del ciclo según el paso) bajo el jinete sentado en la silla.
   function drawMount(g, lx, ly, w, moving) {
-    const v = HORSE_VIEW[w.dir || 'S'] || 'SW', m = HORSE_META[v], arr = horseImg[v];
+    const v = HORSE_VIEW[w.dir || 'S'] || 'SW', m = HORSE_META[v];
     const fi = moving ? (Math.floor(w.phase * 1.6) % HORSE_NF) : 0;   // 0 = en reposo
-    const img = arr && arr[fi];
+    const variante = (caballos[w.id] && caballos[w.id].variante) || 'caballo';
+    const img = horseFrame(variante, v, fi);
     const fx = lx * SCALE, fy = ly * SCALE;
     g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.imageSmoothingEnabled = false;
     if (img) g.drawImage(img, Math.round(fx - m.ax), Math.round(fy - m.ay), m.w, m.h);
@@ -1540,10 +1545,16 @@ const HacFolk = (function () {
       overlays.push({ draw: (g) => { const p = logic(ck.fx, ck.fy); npcBanner(g, p[0], p[1] - npcDy, ck.name, '📜'); } });
     });
     // Caballos sueltos: sprite como actor (con oclusión/profundidad) + su nombre encima.
-    if (horses.length && horseReady) horses.forEach(h => {
-      actors.push({ fx: h.fx, fy: h.fy, draw: (g, lx, ly) => drawHorse(g, lx, ly, h) });
-      overlays.push({ draw: (g) => { const p = logic(h.fx, h.fy); const m = HORSE_META[HORSE_VIEW[h.dir || 'SE'] || 'SE']; npcBanner(g, p[0], p[1] - (Math.round(m.h * SPRITE_DISP / SCALE) - 1), h.nombre, '🐎'); } });
-    });
+    // Si su dueño está de VIAJE (lo va montando), el corcel no ronda: viaja con él.
+    if (horses.length && horseReady) {
+      const enViaje = {};
+      walkers.forEach(w => { if (w.state === 'exped-out' || w.state === 'exped-in' || w.state === 'esc-cheer' || w.state === 'fuera') enViaje[w.id] = 1; });
+      horses.forEach(h => {
+        if (enViaje[h.id]) return;                     // lo lleva su jinete
+        actors.push({ fx: h.fx, fy: h.fy, draw: (g, lx, ly) => drawHorse(g, lx, ly, h) });
+        overlays.push({ draw: (g) => { const p = logic(h.fx, h.fy); const m = HORSE_META[HORSE_VIEW[h.dir || 'SE'] || 'SE']; npcBanner(g, p[0], p[1] - (Math.round(m.h * SPRITE_DISP / SCALE) - 1), h.nombre, '🐎'); } });
+      });
+    }
     // Mecenas visibles: el sprite va como actor (con oclusión); el NOMBRE va aparte.
     const nameCands = [];
     walkers.forEach(w => {
