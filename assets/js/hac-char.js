@@ -519,7 +519,7 @@ const HacChar = (function () {
   }
   function pngLoad() {
     if (typeof document === 'undefined' || !document.createElement) return;
-    const base = 'assets/img/char/', V = '?v=2';
+    const base = 'assets/img/char/', V = '?v=3';
     pngImgs = {}; let need = 0, got = 0;
     const done = () => { if (++got >= need && !pngReadyFlag) { try { pngBake(); } catch (e) {} } };
     PNG_DIRS.forEach(v => {
