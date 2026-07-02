@@ -497,7 +497,7 @@ const HacChar = (function () {
   const PNG_DIRS  = ['SW', 'SE', 'NW', 'NE'];
   const PNG_VIEW  = { E: 'SE', SE: 'SE', S: 'SE', SW: 'SW', W: 'SW', NW: 'NW', N: 'NW', NE: 'NE' };
   const PNG_NF    = 8;
-  const M_W = 90, M_H = 150, M_FEET = 135;   // maestros a 2× del juego (nítidos, LANCZOS+enfoque)
+  const M_W = 88, M_H = 148, M_FEET = 133;   // maestros a 2× EXACTO del juego (LANCZOS limpio, bake 2×)
   const PNG_H = 74;
   const PNG_W = Math.round(M_W * PNG_H / M_H);
   const PNG_FEET = Math.round(M_FEET * PNG_H / M_H);
@@ -518,7 +518,7 @@ const HacChar = (function () {
   }
   function pngLoad() {
     if (typeof document === 'undefined' || !document.createElement) return;
-    const base = 'assets/img/char/', V = '?v=6';
+    const base = 'assets/img/char/', V = '?v=7';
     pngImgs = {}; let need = 0, got = 0;
     const done = () => { if (++got >= need && !pngReadyFlag) { try { pngBake(); } catch (e) {} } };
     PNG_DIRS.forEach(v => {
