@@ -1829,11 +1829,15 @@ const HacFolk = (function () {
     g.clearRect(0, 0, canvas.width, canvas.height);
     const w = walkers.find(x => x.id === id);
     if (!w) return;
-    const moving = w.moving && w.state !== 'tarea' && w.state !== 'saludo';
-    const frame = moving ? (Math.floor(w.phase * 1.2) % charNF()) : 0;
-    const pose = (w.state === 'tumbado') ? 'sit' : (w.bowing ? 'bow' : (moving ? 'walk' : 'stand'));
+    // Retrato = pose DIGNA fija, no el frame de andar en vivo (quedaba a media zancada,
+    // con la túnica abierta y a menudo de espaldas). Siempre de pie y de cara al espectador
+    // (vista frontal SW/SE según hacia dónde mire), salvo si está tumbado/saludando.
+    let pose = 'stand', frame = 0, dir;
+    if (w.state === 'tumbado') { pose = 'sit'; dir = w.dir || 'SE'; }
+    else if (w.bowing) { pose = 'bow'; dir = w.dir || 'SE'; }
+    else { const east = /E$/.test(w.dir || '') || (w.dir || '') === 'S'; dir = east ? 'SE' : 'SW'; }
     // Retrato: usa el MASTER de alta resolución (nítido) si está; si no, el sprite de finca.
-    const cv = (HacChar.imgFor && HacChar.imgFor(w.dir || 'S', pose, frame)) || spriteFor(w, w.dir || 'S', frame, pose);
+    const cv = (HacChar.imgFor && HacChar.imgFor(dir, pose, frame)) || spriteFor(w, dir, frame, pose);
     if (!cv) return;
     g.imageSmoothingEnabled = pngOn();
     const cw = cv.width || charW(), ch = cv.height || charH();
