@@ -48,7 +48,7 @@ const HacTienda = (function () {
     { id: 'grulla', nombre: 'Grulla',     zh: '仙鶴', icon: '🦢', tier: 5, precio: 140, tipo: 'mascota', efecto: { guardable: true }, desc: 'Grulla de buen augurio y larga vida.' },
     { id: 'perro',  nombre: 'Perro guardián', zh: '看門犬', icon: '🐕', tier: 5, precio: 130, tipo: 'mascota', efecto: { guardable: true }, desc: 'Leal can que vigila la finca.' },
     // ── Tier 6 ── piezas de prestigio
-    { id: 'caballo', nombre: 'Caballo de raza', zh: '寶馬', icon: '🐎', tier: 6, precio: 260, tipo: 'caballo', efecto: { caballo: true }, desc: 'Un corcel digno de un general. Lo bautizas y ronda libre por los campos de la finca. Uno por mecenas.' },
+    { id: 'caballo', nombre: 'Caballo de raza', zh: '寶馬', icon: '🐎', tier: 2, precio: 260, tipo: 'caballo', req: { militar: 5 }, efecto: { caballo: true }, desc: 'Un corcel digno de un general. Lo bautizas y ronda libre por los campos de la finca. Requiere 武 5 · uno por mecenas.' },
     { id: 'jade',    nombre: 'Colgante de jade', zh: '玉佩', icon: '💠', tier: 6, precio: 300, tipo: 'mascota', efecto: { guardable: true }, desc: 'Pieza de jade tallado, símbolo de rango.' },
 
     // ── SELLOS DE COMERCIO (equipables): +% al dinero de misiones/expediciones ──
@@ -103,11 +103,13 @@ const HacTienda = (function () {
   const COUNT_BY_TIER = [4, 6, 7, 9, 10, 12];
   function diaStr() { const t = (typeof window !== 'undefined' && window.HacClock && HacClock.now) ? HacClock.now() : Date.now(); const d = new Date(t); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); }
   function stockDelDia(tier, seedKey) {
-    const pool = disponibles(tier).slice();
+    const all = disponibles(tier);
+    const fijos = all.filter(i => i.tipo === 'caballo');   // permanentes (compra única): SIEMPRE a la venta, no rotan
+    const pool = all.filter(i => i.tipo !== 'caballo');
     const n = Math.min(pool.length, COUNT_BY_TIER[Math.max(1, Math.min(6, tier || 1)) - 1] || 4);
     const rng = (typeof window !== 'undefined' && window.HacRand && HacRand.make) ? HacRand.make('mkt-' + (seedKey || '') + '-' + diaStr()) : null;
     for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor((rng ? rng.next() : Math.random()) * (i + 1)); const t = pool[i]; pool[i] = pool[j]; pool[j] = t; }
-    return pool.slice(0, n).sort((a, b) => a.tier - b.tier);
+    return fijos.concat(pool.slice(0, n)).sort((a, b) => a.tier - b.tier);
   }
   // Botín aleatorio PONDERADO por tier (los de mayor tier salen menos), de ≤ tier.
   function botinAleatorio(tier) {

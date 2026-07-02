@@ -1984,18 +1984,28 @@
       shopEl.addEventListener('click', (e) => { if (e.target === shopEl) closeShop(); });   // tocar fuera cierra
       return shopEl;
     }
+    // Requisito de STATS de un artículo (item.req = { militar:5, … }): devuelve el
+    // primer dominio cuyo nivel (con equipo) no llega, o null si se cumple todo.
+    function reqNoCumplido(item) {
+      if (!item || !item.req || !myId || !window.HacStats || !HacStats.nivelTotal) return null;
+      for (const d in item.req) { if (HacStats.nivelTotal(myId, d) < item.req[d]) return d; }
+      return null;
+    }
     function itemCardHTML(item, locked) {
       const money = window.HacStats ? HacStats.dinero(myId) : 0;
       const precio = precioMercado(item), rebaja = bonos.mercado > 0 && precio < item.precio;
       const noMoney = money < precio;
       const owned = item.tipo === 'caballo' && window.HacStats && HacStats.tieneCaballo && HacStats.tieneCaballo(myId);
-      const disabled = locked || !myId || noMoney || owned;
+      const reqFail = reqNoCumplido(item);   // dominio cuyo nivel no llega (o null)
+      const disabled = locked || !myId || noMoney || owned || !!reqFail;
       const precioHTML = rebaja ? `<s>${item.precio}</s> ${precio}` : `${item.precio}`;
       const btn = locked
         ? `<span class="hacp-item-lock">🔒 Nivel ${item.tier}</span>`
         : owned
           ? `<span class="hacp-item-owned">✔ ${esc((HacStats.caballo(myId) || {}).nombre || 'Tuyo')}</span>`
-          : `<button type="button" class="hacp-item-buy" data-buy="${esc(item.id)}"${disabled ? ' disabled' : ''}>💰 ${precioHTML}</button>`;
+          : reqFail
+            ? `<span class="hacp-item-lock" title="Requiere ${DOM_GLYPH[reqFail]} ${item.req[reqFail]}">🔒 ${DOM_GLYPH[reqFail]} ${item.req[reqFail]}</span>`
+            : `<button type="button" class="hacp-item-buy" data-buy="${esc(item.id)}"${disabled ? ' disabled' : ''}>💰 ${precioHTML}</button>`;
       return `<div class="hacp-item${locked ? ' locked' : ''}${item.tipo ? ' t-' + item.tipo : ''}">
         <div class="hacp-item-ic">${item.icon || '∎'}</div>
         <div class="hacp-item-main">
@@ -2025,6 +2035,8 @@
     function buyItem(item) {
       if (!item || !myId || !window.HacStats) return;
       if (item.tier > tier) { toast('🔒 Necesita una finca de nivel ' + item.tier); return; }
+      const rf = reqNoCumplido(item);
+      if (rf) { toast(`Necesitas ${DOM_GLYPH[rf]} ${item.req[rf]} para comprarlo`); return; }
       // CABALLO: compra única con nombre → abre el bautizo (no va a la mochila).
       if (item.tipo === 'caballo') {
         if (HacStats.tieneCaballo(myId)) { toast('Ya tienes un caballo'); return; }
