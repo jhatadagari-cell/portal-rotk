@@ -497,9 +497,9 @@ const HacChar = (function () {
   // ══════════════════════════════════════════════════════════════════════
   const PNG_DIRS  = ['SW', 'SE', 'NW', 'NE'];
   const PNG_VIEW  = { E: 'SE', SE: 'SE', S: 'SE', SW: 'SW', W: 'SW', NW: 'NW', N: 'NW', NE: 'NE' };
-  const PNG_NF    = 7;
+  const PNG_NF    = 4;                         // ciclo de andar (4 tiempos, alterna piernas)
   const M_W = 300, M_H = 520, M_FEET = 496;    // geometría del maestro
-  const PNG_H = 90;                            // alto del lienzo horneado (px dispositivo)
+  const PNG_H = 74;                            // alto del lienzo horneado (px dispositivo)
   const PNG_W = Math.round(M_W * PNG_H / M_H); //  → ~80 px de personaje
   const PNG_FEET = Math.round(M_FEET * PNG_H / M_H);
   let pngImgs = null, pngBaked = null, pngReadyFlag = false;
@@ -519,7 +519,7 @@ const HacChar = (function () {
   }
   function pngLoad() {
     if (typeof document === 'undefined' || !document.createElement) return;
-    const base = 'assets/img/char/', V = '?v=1';
+    const base = 'assets/img/char/', V = '?v=2';
     pngImgs = {}; let need = 0, got = 0;
     const done = () => { if (++got >= need && !pngReadyFlag) { try { pngBake(); } catch (e) {} } };
     PNG_DIRS.forEach(v => {

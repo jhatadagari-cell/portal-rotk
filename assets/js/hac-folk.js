@@ -1150,10 +1150,10 @@ const HacFolk = (function () {
   // riderY = altura (px disp.) de los PIES colgantes del jinete sentado sobre el
   // suelo (sube al jinete hasta la silla); riderDx = ajuste lateral sobre la silla.
   const HORSE_META = {
-    SW: { w: 56, h: 69, ax: 18, ay: 69, riderY: 5, riderDx: 5 },
-    SE: { w: 55, h: 68, ax: 15, ay: 68, riderY: 5, riderDx: -5 },
-    NW: { w: 50, h: 76, ax: 11, ay: 76, riderY: 8, riderDx: 4 },
-    NE: { w: 48, h: 75, ax: 36, ay: 75, riderY: 8, riderDx: -4 },
+    SW: { w: 56, h: 69, ax: 18, ay: 69, riderY: 9, riderDx: 5 },
+    SE: { w: 55, h: 68, ax: 15, ay: 68, riderY: 9, riderDx: -5 },
+    NW: { w: 50, h: 76, ax: 11, ay: 76, riderY: 12, riderDx: 4 },
+    NE: { w: 48, h: 75, ax: 36, ay: 75, riderY: 12, riderDx: -4 },
   };
   const HORSE_VIEW = { E: 'SE', SE: 'SE', S: 'SE', SW: 'SW', W: 'SW', NW: 'NW', N: 'NW', NE: 'NE' };
   const horseImg = {}; let horseReady = false, horseLoadStarted = false;
