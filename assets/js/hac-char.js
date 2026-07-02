@@ -483,7 +483,66 @@ const HacChar = (function () {
     ctx.restore();
   }
 
-  return { draw, DIRS, FRAMES, W, H, palette, OUTFIT, SKINS, HAIRS };
+  // ══════════════════════════════════════════════════════════════════════
+  // Capa SPRITES PNG (rework de calidad). Sustituye al procedural SOLO en el
+  // render de la finca (hac-folk). Onboarding/avatares de barra siguen con draw().
+  //
+  //   assets/img/char/mecenas-{idle,walk-<i>}-{SW,SE,NW,NE}.png
+  //   · 4 vistas diagonales: SW/SE = FRONTAL (misma tira), NW/NE = ESPALDA.
+  //     8 dirs del motor → 4 vía PNG_VIEW. Andar = 8 fotogramas (alterna piernas).
+  //   · mecenas-sit-<dir> (montar): si no existe, cae al idle.
+  //   · Maestros 300×520 (pies y=496, eje x=150). Se HORNEAN una vez a tamaño de
+  //     juego y se cachean; nunca se reprocesan por frame (cf. FPS de la finca).
+  // ══════════════════════════════════════════════════════════════════════
+  const PNG_DIRS  = ['SW', 'SE', 'NW', 'NE'];
+  const PNG_VIEW  = { E: 'SE', SE: 'SE', S: 'SE', SW: 'SW', W: 'SW', NW: 'NW', N: 'NW', NE: 'NE' };
+  const PNG_NF    = 8;
+  const M_W = 300, M_H = 520, M_FEET = 496;
+  const PNG_H = 74;
+  const PNG_W = Math.round(M_W * PNG_H / M_H);
+  const PNG_FEET = Math.round(M_FEET * PNG_H / M_H);
+  let pngImgs = null, pngBaked = null, pngReadyFlag = false;
+
+  function pngBake() {
+    const bake = (img) => {
+      const c = document.createElement('canvas'); c.width = PNG_W; c.height = PNG_H;
+      const x = c.getContext('2d'); x.imageSmoothingEnabled = true; x.imageSmoothingQuality = 'high';
+      x.drawImage(img, 0, 0, PNG_W, PNG_H); return c;
+    };
+    const baked = {};
+    PNG_DIRS.forEach(v => {
+      const im = pngImgs[v]; const idle = bake(im.idle);
+      baked[v] = { idle, sit: im.sit ? bake(im.sit) : idle, walk: im.walk.filter(Boolean).map(bake) };
+    });
+    pngBaked = baked; pngReadyFlag = true;
+  }
+  function pngLoad() {
+    if (typeof document === 'undefined' || !document.createElement) return;
+    const base = 'assets/img/char/', V = '?v=5';
+    pngImgs = {}; let need = 0, got = 0;
+    const done = () => { if (++got >= need && !pngReadyFlag) { try { pngBake(); } catch (e) {} } };
+    PNG_DIRS.forEach(v => {
+      pngImgs[v] = { idle: null, sit: null, walk: [] };
+      const L = (src, set) => { need++; const im = new Image(); im.onload = () => { set(im); done(); }; im.onerror = done; im.src = base + src + V; };
+      L('mecenas-idle-' + v + '.png', im => pngImgs[v].idle = im);
+      L('mecenas-sit-' + v + '.png', im => pngImgs[v].sit = im);   // opcional (montar); si 404 → cae al idle
+      for (let i = 0; i < PNG_NF; i++) (function (i) { L('mecenas-walk-' + v + '-' + i + '.png', im => pngImgs[v].walk[i] = im); })(i);
+    });
+  }
+  // Lienzo horneado para (dir, pose, frame) o null si aún no está listo.
+  function sprite(dir, pose, frame) {
+    if (!pngReadyFlag) return null;
+    const b = pngBaked[PNG_VIEW[dir] || 'SE']; if (!b) return null;
+    if (pose === 'sit' || pose === 'tumbado') return b.sit;
+    if (pose === 'walk') { const n = b.walk.length; if (!n) return b.idle; return b.walk[(((frame | 0) % n) + n) % n]; }
+    return b.idle;
+  }
+  pngLoad();
+
+  return {
+    draw, DIRS, FRAMES, W, H, palette, OUTFIT, SKINS, HAIRS,
+    sprite, pngReady: () => pngReadyFlag, PNG_W, PNG_H, PNG_FEET, PNG_NF
+  };
 })();
 
 if (typeof window !== 'undefined') window.HacChar = HacChar;
