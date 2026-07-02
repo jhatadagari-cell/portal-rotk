@@ -2357,9 +2357,17 @@
         HacOrdenes.reload().then(applyOrders);
       }, 5000);
     }
+    // MÓVIL: mientras tu banda se concentra en la puerta (recién lanzada), parpadea
+    // el botón "Hacienda" de la barra para invitarte a mirar la animación conjunta.
+    function pulseHaciendaNav() {
+      const btn = document.querySelector('#hacp-mnav [data-sec="hacienda"]'); if (!btn) return;   // solo móvil
+      const band = (myId && window.HacEscaramuzas) ? HacEscaramuzas.miBanda(h.id, myId) : null;
+      const enMuster = !!(band && band.estado === 'en_curso' && clock() < (band.inicioMs + 26000));
+      btn.classList.toggle('pulse', enMuster && !btn.classList.contains('on'));   // deja de parpadear si ya estás en Hacienda
+    }
     // Tic de 1 s: refresca SOLO el panel del personaje (cuenta atrás de expedición y
     // energía/regeneración se derivan del reloj de servidor → tienen que verse vivos).
-    setInterval(() => { if (charId) refreshCharPanel(); if (escVisible) escTick(); sucesoTick(); escSucesoTick(); }, 1000);
+    setInterval(() => { if (charId) refreshCharPanel(); if (escVisible) escTick(); sucesoTick(); escSucesoTick(); pulseHaciendaNav(); }, 1000);
 
     // Popup con la gente que hay dentro de un edificio (al pulsar su banner).
     function showPop(x, y, sign) {

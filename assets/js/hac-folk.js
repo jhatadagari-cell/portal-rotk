@@ -77,7 +77,9 @@ const HacFolk = (function () {
   // Sincronizado por inicioMs (reloj de servidor) → todos los clientes lo ven igual.
   let escMap = {};
   function setEscaramuzas(m) { escMap = m || {}; }
-  const ESC_MUSTER_MS = 16000;   // ventana de concentración en la puerta (deja margen para llegar)
+  const ESC_MUSTER_MS = 24000;   // ventana de concentración en la puerta: amplia para que
+                                 // todos los mecenas (incluso clientes con poll lento / app en
+                                 // segundo plano) lleguen y ESPEREN antes del grito conjunto.
   const ESC_CHEER_MS = 4200;     // 拱手 + grito de guerra (sub-ventana final, simultáneo)
   const ESC_CRY = '¡A la batalla!';
   // Grito de guerra de un mecenas al partir: si tiene un VÍNCULO con un co-miembro
