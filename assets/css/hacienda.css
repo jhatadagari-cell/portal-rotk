@@ -664,6 +664,20 @@ button.hacp-slot.manual:hover{ background:rgba(201,168,76,.24); }
 .hacp-horse-chip:hover{ background:rgba(201,168,76,.28); color:#fff; }
 .hacp-item-owned{ flex:0 0 auto; font:700 12px 'Noto Serif SC',serif; color:#bfe0b2; background:rgba(122,162,110,.16);
   border:1px solid rgba(122,162,110,.45); border-radius:8px; padding:5px 9px; white-space:nowrap; }
+/* ── Mercado: pestañas Comprar/Vender ── */
+.hacp-shop-tabs{ display:flex; gap:6px; margin:2px 0 10px; }
+.hacp-shop-tab{ flex:1; padding:8px 6px; font:700 13px 'Noto Serif SC',serif; color:var(--parch2,#c9bda6);
+  background:rgba(0,0,0,.22); border:1px solid rgba(201,168,76,.3); border-radius:9px; cursor:pointer; transition:background .15s,color .15s; }
+.hacp-shop-tab.on{ background:rgba(201,168,76,.2); color:var(--gold); border-color:var(--gold); }
+.hacp-shop-tab:hover{ color:#fff; }
+/* ── Regateo de venta ── */
+.hacp-venta-ic{ font-size:40px; text-align:center; margin:2px 0 6px; }
+.hacp-venta-deal{ display:flex; gap:10px; margin:6px 0 4px; }
+.hacp-venta-side{ flex:1; text-align:center; background:rgba(0,0,0,.24); border:1px solid rgba(201,168,76,.28); border-radius:10px; padding:9px 6px; }
+.hacp-venta-side span{ display:block; font-size:11px; color:var(--parch2,#c9bda6); margin-bottom:3px; }
+.hacp-venta-side b{ font:800 20px 'Noto Serif SC',serif; color:var(--gold); font-variant-numeric:tabular-nums; }
+.hacp-venta-side.dim b{ color:var(--parch2,#c9bda6); }
+.hacp-venta-cur{ transition:color .15s; }
 .hacp-esc-timer{ font:900 19px 'Noto Serif SC',serif; color:var(--gold); text-align:center; padding:10px 0 4px; font-variant-numeric:tabular-nums; }
 /* ── Doctrina de banda + narración de sucesos (A2b) ── */
 .hacp-esc-doc{ font:700 12px 'Noto Serif SC',serif; color:var(--gold); text-align:center; margin:4px 0 8px; }

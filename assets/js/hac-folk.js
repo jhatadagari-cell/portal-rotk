@@ -1173,11 +1173,33 @@ const HacFolk = (function () {
     }
     g.restore();
   }
+  // Registro de VARIANTES de caballo (preparado para más caballos con distintas
+  // características). Cada variante puede teñir el sprite (tono) — se HORNEA una vez
+  // por (variante,vista,frame) y se cachea, sin coste por fotograma. En el futuro una
+  // variante podría además apuntar a otro juego de sprites.
+  const HORSE_SKINS = { caballo: { tono: null } };
+  const horseTintCache = new Map();
+  function horseFrame(variante, v, fi) {
+    const arr = horseImg[v], base = arr && arr[fi]; if (!base) return null;
+    const skin = HORSE_SKINS[variante] || HORSE_SKINS.caballo;
+    if (!skin || !skin.tono) return base;                 // sin tinte → sprite crudo (caso actual)
+    const key = variante + '|' + v + '|' + fi;
+    let cv = horseTintCache.get(key);
+    if (!cv) {
+      const m = HORSE_META[v]; cv = document.createElement('canvas'); cv.width = m.w; cv.height = m.h;
+      const c = cv.getContext('2d'); c.imageSmoothingEnabled = false;
+      c.drawImage(base, 0, 0, m.w, m.h);
+      c.globalCompositeOperation = 'source-atop'; c.globalAlpha = 0.38; c.fillStyle = skin.tono;
+      c.fillRect(0, 0, m.w, m.h);
+      horseTintCache.set(key, cv);
+    }
+    return cv;
+  }
   // Dibuja un caballo SUELTO (sin jinete) rondando el campo exterior.
   function drawHorse(g, lx, ly, h) {
-    const v = HORSE_VIEW[h.dir || 'SE'] || 'SE', m = HORSE_META[v], arr = horseImg[v];
+    const v = HORSE_VIEW[h.dir || 'SE'] || 'SE', m = HORSE_META[v];
     const fi = h.moving ? (Math.floor(h.phase * 1.6) % HORSE_NF) : 0;
-    const img = arr && arr[fi]; if (!img) return;
+    const img = horseFrame(h.variante || 'caballo', v, fi); if (!img) return;
     const fx = lx * SCALE, fy = ly * SCALE;
     g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.imageSmoothingEnabled = false;
     g.drawImage(img, Math.round(fx - m.ax), Math.round(fy - m.ay), m.w, m.h);
@@ -1191,8 +1213,8 @@ const HacFolk = (function () {
     const r0 = (seed % 997) / 997;                         // 0..1 estable por dueño
     const homeX = e[0] + (r0 * 2 - 1) * 1.8;               // desplazamiento lateral estable
     const homeY = e[1] + 2.8 + r0 * 1.2;                   // al sur, fuera de la muralla (entre outNear y outFar)
-    return { id, nombre: (info && info.nombre) || 'Corcel', _r: seed || 1, homeX, homeY,
-      fx: homeX, fy: homeY, tx: homeX, ty: homeY, dir: 'SE', phase: 0, moving: false, pauseT: 1 + r0 * 3 };
+    return { id, nombre: (info && info.nombre) || 'Corcel', variante: (info && info.variante) || 'caballo',
+      _r: seed || 1, homeX, homeY, fx: homeX, fy: homeY, tx: homeX, ty: homeY, dir: 'SE', phase: 0, moving: false, pauseT: 1 + r0 * 3 };
   }
   // VIDA del caballo: pasta un rato, camina a un punto cercano del pastizal, se para.
   // Semi-determinista (mrand por dueño) → todos los clientes lo ven parecido. Se

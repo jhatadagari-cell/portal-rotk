@@ -2013,22 +2013,51 @@
           <div class="hacp-item-ef">${esc(HacTienda.efectoTexto(item))}</div>
         </div>${btn}</div>`;
     }
+    let shopMode = 'comprar';   // 'comprar' | 'vender'
     function buildShop() {
       const el = ensureShopEl();
       const money = window.HacStats ? HacStats.dinero(myId) : 0;
-      const disp = HacTienda.stockDelDia ? HacTienda.stockDelDia(tier, h.id) : HacTienda.disponibles(tier);
-      const note = !myId ? `<div class="hacp-shop-note">Entra con tu mecenas en esta finca para comprar.</div>` : '';
+      if (!myId) shopMode = 'comprar';
+      const tabs = myId ? `<div class="hacp-shop-tabs">
+          <button type="button" class="hacp-shop-tab${shopMode === 'comprar' ? ' on' : ''}" data-mode="comprar">市 Comprar</button>
+          <button type="button" class="hacp-shop-tab${shopMode === 'vender' ? ' on' : ''}" data-mode="vender">💰 Vender</button>
+        </div>` : '';
+      let body;
+      if (shopMode === 'vender') {
+        const inv = (window.HacStats && HacStats.inventario) ? HacStats.inventario(myId) : [];
+        const cards = [];
+        inv.forEach(it => { const def = HacTienda.get(it.id); if (def) for (let k = 0; k < (it.n || 1); k++) cards.push(def); });
+        body = `<div class="hacp-shop-sub">Regatea con el mercader para sacar más por lo que llevas · tu labia depende de 文·政.</div>
+          ${cards.length ? `<div class="hacp-shop-grid">${cards.map(d => ventaCardHTML(d)).join('')}</div>`
+            : `<div class="hacp-shop-note">No llevas nada que vender en la mochila.</div>`}`;
+      } else {
+        const disp = HacTienda.stockDelDia ? HacTienda.stockDelDia(tier, h.id) : HacTienda.disponibles(tier);
+        const note = !myId ? `<div class="hacp-shop-note">Entra con tu mecenas en esta finca para comprar.</div>` : '';
+        body = `<div class="hacp-shop-sub">El mercader renueva su género cada día · ${disp.length} artículos hoy (nivel ${tier}).</div>
+          ${bonos.mercado > 0 ? `<div class="hacp-shop-note">Pabellón administrativo: −${pct(bonos.mercado)}% en todos los precios.</div>` : ''}
+          ${note}
+          <div class="hacp-shop-grid">${disp.map(i => itemCardHTML(i, false)).join('')}</div>`;
+      }
       el.innerHTML = `
         <div class="hacp-shop-box">
           <button type="button" class="hacp-shop-x" data-act="shop-close" aria-label="Cerrar">✕</button>
           <div class="hacp-shop-h"><span class="hacp-shop-zh">市</span> Mercado <span class="hacp-shop-money">💰 <b id="hacp-shop-money">${money}</b></span></div>
-          <div class="hacp-shop-sub">El mercader renueva su género cada día · ${disp.length} artículos hoy (nivel ${tier}).</div>
-          ${bonos.mercado > 0 ? `<div class="hacp-shop-note">Pabellón administrativo: −${pct(bonos.mercado)}% en todos los precios.</div>` : ''}
-          ${note}
-          <div class="hacp-shop-grid">${disp.map(i => itemCardHTML(i, false)).join('')}</div>
+          ${tabs}
+          ${body}
         </div>`;
       el.querySelector('[data-act="shop-close"]').addEventListener('click', closeShop);
+      el.querySelectorAll('[data-mode]').forEach(b => b.addEventListener('click', () => { shopMode = b.dataset.mode; buildShop(); }));
       el.querySelectorAll('[data-buy]').forEach(b => b.addEventListener('click', () => buyItem(HacTienda.get(b.dataset.buy))));
+      el.querySelectorAll('[data-sell]').forEach(b => b.addEventListener('click', () => abrirRegateo(HacTienda.get(b.dataset.sell))));
+    }
+    function ventaCardHTML(item) {
+      return `<div class="hacp-item t-venta">
+        <div class="hacp-item-ic">${item.icon || '∎'}</div>
+        <div class="hacp-item-main">
+          <div class="hacp-item-name">${esc(item.nombre)} <span class="zh">${esc(item.zh || '')}</span></div>
+          <div class="hacp-item-ef">Ofrecen desde 💰 ${ventaOferta(item)}</div>
+        </div>
+        <button type="button" class="hacp-item-buy" data-sell="${esc(item.id)}">💰 Vender</button></div>`;
     }
     function openShop() { if (!hasMarket) return; buildShop(); ensureShopEl().hidden = false; }
     function closeShop() { if (shopEl) shopEl.hidden = true; }
@@ -2049,6 +2078,75 @@
       toast(`${item.icon || ''} ${item.nombre} · ${HacTienda.efectoTexto(item)}`.trim());
       buildShop();                 // refresca dinero y botones
       if (charId) buildCharPanel(charId);   // refresca monedero/inventario/energía
+    }
+
+    // ── VENTA con REGATEO ────────────────────────────────────────────────────
+    // El mercader arranca por DEBAJO del valor; tú aspiras a un TOPE = valor × mult,
+    // con mult 1.75 para objetos ≤100 monedas y bajando (≈1.5 a las 1000) para que un
+    // objeto caro no se venda desproporcionado. Cada «Regatear» empuja su oferta hacia
+    // tu tope, con probabilidad de que CEDA (alta al principio; mejora con 文·政) o se
+    // PLANTE. Futuro: objetos que suban esa labia (HacStats.bonusRegateo).
+    const valorItem = (item) => Math.max(1, item.precio | 0);
+    const ventaMult = (v) => Math.max(1.15, Math.min(1.75, 2.25 - 0.25 * Math.log10(Math.max(1, v))));
+    const ventaTope = (item) => Math.round(valorItem(item) * ventaMult(valorItem(item)));
+    const ventaOferta = (item) => Math.max(1, Math.round(valorItem(item) * 0.5));
+    function regateoLabia() {
+      if (!window.HacStats || !HacStats.nivelTotal) return 0;
+      return HacStats.nivelTotal(myId, 'cultural') + HacStats.nivelTotal(myId, 'administrativo')
+        + (HacStats.bonusRegateo ? HacStats.bonusRegateo(myId) : 0);
+    }
+    let ventaEl = null;
+    function ensureVentaEl() {
+      if (ventaEl) return ventaEl;
+      ventaEl = document.createElement('div'); ventaEl.className = 'hacp-suc-ov hacp-venta-ov'; ventaEl.hidden = true;
+      overlayHost().appendChild(ventaEl);
+      ['pointerdown', 'pointerup', 'wheel', 'click'].forEach(ev => ventaEl.addEventListener(ev, (e) => e.stopPropagation(), { passive: false }));
+      return ventaEl;
+    }
+    function cerrarVenta() { if (ventaEl) ventaEl.hidden = true; }
+    function abrirRegateo(item) {
+      if (!item || !myId) return;
+      const st = { item, tope: ventaTope(item), cur: ventaOferta(item), ronda: 0, planted: false };
+      renderRegateo(ensureVentaEl(), st);
+      ventaEl.hidden = false;
+    }
+    function regatear(st) {
+      const skill = regateoLabia();
+      st.ronda++;
+      const gap = st.tope - st.cur;
+      if (gap <= 0) { st.planted = true; return; }
+      const step = Math.max(1, Math.ceil(gap * (0.45 + Math.min(0.25, skill * 0.008))));
+      const base = [0.98, 0.72, 0.52, 0.36, 0.24][Math.min(4, st.ronda - 1)];   // cede menos cada ronda
+      const p = Math.max(0.05, Math.min(0.97, base + Math.min(0.30, skill * 0.01)));   // …pero 文·政 lo mejora
+      if (Math.random() < p) { st.cur = Math.min(st.tope, st.cur + step); if (st.cur >= st.tope) st.planted = true; }
+      else st.planted = true;   // «no doy más»
+    }
+    function renderRegateo(el, st) {
+      const it = st.item, skill = regateoLabia();
+      el.innerHTML = `<div class="hacp-suc-box hacp-venta-box">
+        <div class="hacp-suc-eyebrow">💰 Vender · ${esc(it.nombre)} <span class="zh">${esc(it.zh || '')}</span></div>
+        <div class="hacp-venta-ic">${it.icon || '∎'}</div>
+        <div class="hacp-venta-deal">
+          <div class="hacp-venta-side"><span>El mercader ofrece</span><b class="hacp-venta-cur">💰 ${st.cur}</b></div>
+          <div class="hacp-venta-side dim"><span>Aspiras a</span><b>💰 ${st.tope}</b></div>
+        </div>
+        <div class="hacp-suc-hint">${st.planted ? '🧔 «Es mi última palabra, ni una moneda más.»' : `Tu labia 〔文·政〕: <b>${skill}</b> · regatea para subir la oferta`}</div>
+        <div class="hacp-suc-confirm">
+          <button type="button" class="hacp-cp-btn hacp-suc-cancel" data-v-cancel>Dejarlo</button>
+          ${st.planted ? '' : `<button type="button" class="hacp-cp-btn" data-v-regatear>Regatear</button>`}
+          <button type="button" class="hacp-cp-btn hacp-suc-ok" data-v-ok>Vender 💰 ${st.cur}</button>
+        </div></div>`;
+      el.querySelector('[data-v-cancel]').addEventListener('click', cerrarVenta);
+      const rb = el.querySelector('[data-v-regatear]');
+      if (rb) rb.addEventListener('click', () => { regatear(st); renderRegateo(el, st); });
+      el.querySelector('[data-v-ok]').addEventListener('click', () => {
+        const res = HacStats.venderItem(myId, it.id, st.cur);
+        if (!res.ok) { toast(res.motivo || 'No se pudo vender'); return; }
+        cerrarVenta();
+        toast(`💰 Vendiste ${it.nombre} por ${st.cur}`);
+        if (window.HacBitacora) HacBitacora.log(myId, 'venta', `💰 Vendiste ${it.nombre} por ${st.cur} monedas`);
+        buildShop(); if (charId) buildCharPanel(charId);
+      });
     }
 
     // ── Bautizo del CABALLO (compra única) ───────────────────────────────────
@@ -2084,7 +2182,7 @@
       el.querySelector('[data-h-cancel]').addEventListener('click', cerrarBautizo);
       el.querySelector('[data-h-ok]').addEventListener('click', () => {
         const nombre = (input && input.value || '').trim() || CABALLO_NOMBRES[0];
-        const res = HacStats.comprarCaballo(myId, nombre, precio);
+        const res = HacStats.comprarCaballo(myId, item.id, nombre, precio);
         if (!res.ok) { toast(res.motivo || 'No se pudo comprar'); return; }
         cerrarBautizo();
         toast(`🐎 ${esc(res.caballo.nombre)} · ¡tu corcel ronda ya por los campos!`);
@@ -2098,7 +2196,7 @@
     function syncCaballosFolk() {
       if (!window.HacFolk || !HacFolk.setCaballos || !window.HacStats || !HacStats.caballo) return;
       const map = {};
-      (h.miembros || []).forEach(m => { const c = HacStats.caballo(m.id); if (c) map[m.id] = { nombre: c.nombre }; });
+      (h.miembros || []).forEach(m => { const c = HacStats.caballo(m.id); if (c) map[m.id] = { nombre: c.nombre, variante: c.id || 'caballo' }; });
       HacFolk.setCaballos(map);
     }
 

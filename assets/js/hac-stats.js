@@ -295,18 +295,26 @@ const HacStats = (function () {
   // ── CABALLO (mascota única con nombre; ronda por fuera de la finca) ───────
   function caballo(mid) { const r = row(mid); return (r && r.caballo) ? r.caballo : null; }
   function tieneCaballo(mid) { return !!caballo(mid); }
-  // Compra ÚNICA: descuenta el precio y bautiza al caballo. Devuelve {ok, motivo}.
-  function comprarCaballo(mid, nombre, precio) {
+  // Compra ÚNICA (uno por mecenas, sea la variante que sea): descuenta el precio,
+  // guarda QUÉ caballo (variante) y su nombre. Devuelve {ok, motivo}.
+  function comprarCaballo(mid, variante, nombre, precio) {
     if (!mid) return { ok: false, motivo: 'Sin mecenas' };
     const r = ensure(mid);
     if (r.caballo) return { ok: false, motivo: 'Ya tienes un caballo' };
     const p = Math.max(0, precio | 0);
     if (r.dinero < p) return { ok: false, motivo: 'No tienes suficiente dinero' };
     const nom = String(nombre || '').trim().slice(0, 24) || 'Corcel';
-    r.dinero -= p; r.caballo = { nombre: nom, ms: Date.now() };
+    r.dinero -= p; r.caballo = { id: variante || 'caballo', nombre: nom, ms: Date.now() };
     persist(r); return { ok: true, caballo: r.caballo };
   }
+  // VENDER un objeto de la mochila por `precio` (lo negocia la página con el regateo).
+  function venderItem(mid, id, precio) {
+    const r = ensure(mid);
+    if (!quita(r.inv, id)) return { ok: false, motivo: 'No llevas ese objeto' };
+    r.dinero += Math.max(0, precio | 0);
+    persist(r); return { ok: true, dinero: r.dinero };
+  }
 
-  return { ready, reload, dinero, ahorro, casaPos, casasReclamadas, duenoDeCasa, comprarCasa, liberarCasa, abandonar, heridas, penHerida, malherido, herir, curar, escaramuzaCd, bonusDinero, bonusExped, usarManual, xp, nivel, progresoNivel, bonus, nivelTotal, nivelPersonaje, puntosTalento, talentos, puntosGastados, puntosLibres, tieneTalento, aprenderTalento, equipados, equipar, desequipar, MAX_EQUIP, award, comprar, guardar, sacar, darItem, meterEnCasa, sacarDeCasa, inventario, casaInventario, capInventario, ocupadas, recompensaExped, caballo, tieneCaballo, comprarCaballo, DOMS, dbOk: () => ok, TABLE };
+  return { ready, reload, dinero, ahorro, casaPos, casasReclamadas, duenoDeCasa, comprarCasa, liberarCasa, abandonar, heridas, penHerida, malherido, herir, curar, escaramuzaCd, bonusDinero, bonusExped, usarManual, xp, nivel, progresoNivel, bonus, nivelTotal, nivelPersonaje, puntosTalento, talentos, puntosGastados, puntosLibres, tieneTalento, aprenderTalento, equipados, equipar, desequipar, MAX_EQUIP, award, comprar, guardar, sacar, darItem, meterEnCasa, sacarDeCasa, inventario, casaInventario, capInventario, ocupadas, recompensaExped, caballo, tieneCaballo, comprarCaballo, venderItem, DOMS, dbOk: () => ok, TABLE };
 })();
 if (typeof window !== 'undefined') window.HacStats = HacStats;
