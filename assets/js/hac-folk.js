@@ -77,10 +77,12 @@ const HacFolk = (function () {
   // Sincronizado por inicioMs (reloj de servidor) → todos los clientes lo ven igual.
   let escMap = {};
   function setEscaramuzas(m) { escMap = m || {}; }
-  const ESC_MUSTER_MS = 24000;   // ventana de concentración en la puerta: amplia para que
+  const ESC_MUSTER_MS = 26000;   // ventana de concentración en la puerta: amplia para que
                                  // todos los mecenas (incluso clientes con poll lento / app en
                                  // segundo plano) lleguen y ESPEREN antes del grito conjunto.
   const ESC_CHEER_MS = 4200;     // 拱手 + grito de guerra (sub-ventana final, simultáneo)
+  const ESC_RUSH = 2.3;          // los mecenas ACUDEN al portón a paso ligero (van a la guerra):
+                                 // así cruzan incluso una finca grande dentro de la ventana.
   const ESC_CRY = '¡A la batalla!';
   // Grito de guerra de un mecenas al partir: si tiene un VÍNCULO con un co-miembro
   // de su banda, dice una frase temática (R1b); si no, el genérico. Los unilaterales
@@ -455,8 +457,14 @@ const HacFolk = (function () {
     if (!e) { endMission(w); return; }
     const path = bfs([Math.round(w.fx), Math.round(w.fy)], new Set([wk.exitKey]));
     if (!path) { endMission(w); return; }
-    if (wk.outNear) path.push(wk.outNear);
-    if (wk.outFar) path.push(wk.outFar);                              // cruza el vano y se aleja por el campo
+    // ESCARAMUZA en ventana de concentración: se detiene EN el portón (no cruza aún)
+    // y espera a los demás. El resto (o si la ventana ya cerró) sigue hasta el campo.
+    const em = escMap[w.id];
+    const musterActive = em && nowSimMs() < em.inicioMs + ESC_MUSTER_MS;
+    if (!musterActive) {
+      if (wk.outNear) path.push(wk.outNear);
+      if (wk.outFar) path.push(wk.outFar);                            // cruza el vano y se aleja por el campo
+    }
     w.path = path; w.state = 'exped-out'; w.goalBid = null; w.insideId = null; w.task = null; w.moving = false;
   }
   // Vuelve: APARECE en el exterior (lejos), camina hacia la puerta y ENTRA.
@@ -553,7 +561,7 @@ const HacFolk = (function () {
         if (e) { const off = (em.idx - (em.n - 1) / 2) * 0.85; w.fx = e[0] + off; w.fy = e[1]; w.tx = w.fx; w.ty = w.fy; }
       } else {
         w.moving = false; w.path = null; w.state = 'fuera';
-        const o = w.order, endOut = o ? o.startMs + (o.durMs || 120000) : t0;
+        const o = escOrder(w) || w.order, endOut = o ? o.startMs + (o.durMs || 120000) : t0;
         w.outTimer = Math.max(2, (endOut - t0) / 1000);
       }
     } else if (w.state === 'exped-in') {
@@ -810,9 +818,20 @@ const HacFolk = (function () {
   }
 
   const MISSION_GRACE_MS = 90 * 1000;   // margen (saludo + viaje) sobre la duración de la tarea
+  // Orden SINTÉTICA de escaramuza derivada del estado de banda COMPARTIDO (escMap):
+  // así TODOS los miembros salen, se concentran y vuelven con el MISMO inicioMs/finMs
+  // en CADA cliente, sin depender de que la orden individual de cada uno (RLS: solo la
+  // escribe su dueño) se haya propagado. La orden real solo sirve para el bookkeeping
+  // de recompensa del propio mecenas.
+  function escOrder(w) {
+    const em = escMap[w.id]; if (!em) return null;
+    const fin = em.finMs || (em.inicioMs + 1800000);
+    return { startMs: em.inicioMs, durMs: Math.max(30000, fin - em.inicioMs), tipo: 'expedicion', targetId: 'escaramuza', esc: true };
+  }
 
   function endMission(w) {
-    if (w.order) w.missionDoneFor = w.order.startMs;   // marca ESTA orden como cumplida (no re-activar)
+    const eo = escOrder(w) || w.order;
+    if (eo) w.missionDoneFor = eo.startMs;   // marca ESTA orden como cumplida (no re-activar)
     w.onMission = false; w.bowing = false; w.missionTask = null;
     // Si terminó FUERA de la finca (expedición cumplida/cortada fuera), que entre.
     if (!w.insideId && fueraDeFinca(w)) { enterFromOutside(w); return; }
@@ -823,10 +842,16 @@ const HacFolk = (function () {
   // sí dura desde que LLEGA (ver onPathDone); aquí solo arrancamos (saludo) y damos
   // un tope de seguridad por si el viaje se atasca. Termina al completar la tarea.
   function missionGate(w) {
-    const o = w.order;
+    const o = escOrder(w) || w.order;   // la escaramuza (estado compartido) tiene prioridad
     if (!o) { if (w.onMission) endMission(w); return; }   // orden retirada → al ambiente
     const t = nowSimMs(), dur = o.durMs || 60000, winEnd = o.startMs + dur + MISSION_GRACE_MS;
-    if (t >= o.startMs && t < winEnd && !w.onMission && w.missionDoneFor !== o.startMs) {
+    // En una ESCARAMUZA, y SOLO dentro de la ventana de concentración, reintentamos
+    // acudir al portón aunque una vez fallara el trazado (p.ej. el mecenas estaba dentro
+    // de un edificio): así nadie se queda descolgado. Pasada la ventana, el guardián
+    // normal evita re-disparos (que provocarían bucles de "regreso").
+    const enMuster = o.esc && t < o.startMs + ESC_MUSTER_MS;
+    const yaHecha = w.missionDoneFor === o.startMs && !enMuster;
+    if (t >= o.startMs && t < winEnd && !w.onMission && !yaHecha) {
       if (w.chatWith) endChat(w);
       if (w.meetWith) abortMeet(w);
       w.onMission = true; w.moving = false; w.speech = null; w.dir = 'S'; w.path = null;
@@ -879,8 +904,8 @@ const HacFolk = (function () {
           if (w.gawkFace) { const fd = faceFromGrid(w.gawkFace[0] - w.fx, w.gawkFace[1] - w.fy); if (fd) w.dir = fd; }
           if (w.idleTimer <= 0) { w.state = 'paseando'; w.strollTimer = 1.2; w.wait = 0.4; w.gawkFace = null; w.speech = null; }
           break;
-        case 'saludo': w.phase += dt * 0.5; w.missionTimer -= dt; if (w.missionTimer <= 0) { w.bowing = false; (w.order && w.order.tipo === 'expedicion') ? startExpedition(w) : startMissionVisit(w); } break;
-        case 'exped-out':
+        case 'saludo': { w.phase += dt * 0.5; w.missionTimer -= dt; if (w.missionTimer <= 0) { w.bowing = false; const so = escOrder(w) || w.order; (so && so.tipo === 'expedicion') ? startExpedition(w) : startMissionVisit(w); } break; }
+        case 'exped-out': followPath(w, dt, escMap[w.id] ? SPD * ESC_RUSH : SPD); break;
         case 'exped-in': followPath(w, dt, SPD); break;
         case 'esc-cheer': {
           // Espera en la puerta; en la sub-ventana final, 拱手 + grito al unísono.
@@ -889,9 +914,17 @@ const HacFolk = (function () {
           const t0 = nowSimMs(), end = w._escEnd || t0;
           if (t0 >= end - ESC_CHEER_MS && !w.bowing) { w.bowing = true; w.speech = escCheerFor(w); w.speechT = ESC_CHEER_MS / 1000; w.dir = 'S'; }
           if (t0 >= end) {
-            w.bowing = false; w.speech = null; w.state = 'fuera';
-            const o = w.order, endOut = o ? o.startMs + (o.durMs || 120000) : t0;
-            w.outTimer = Math.max(2, (endOut - t0) / 1000);
+            // Grito hecho: SALEN JUNTOS cruzando el portón hacia el campo.
+            w.bowing = false; w.speech = null;
+            const out = [];
+            if (wk.outNear) out.push(wk.outNear);
+            if (wk.outFar) out.push(wk.outFar);
+            if (out.length) { w.path = out; w.state = 'exped-out'; w.moving = false; }
+            else {
+              w.state = 'fuera';
+              const o = escOrder(w) || w.order, endOut = o ? o.startMs + (o.durMs || 120000) : t0;
+              w.outTimer = Math.max(2, (endOut - t0) / 1000);
+            }
           }
           break;
         }
@@ -1615,9 +1648,11 @@ const HacFolk = (function () {
   // ── API para la página ────────────────────────────────────────────────────
   // Texto de lo que está haciendo un mecenas ahora mismo.
   function activityText(w) {
-    if (w.state === 'saludo') return 'Recibe tus órdenes';
-    if (w.state === 'fuera') return 'En expedición fuera de la finca';
-    if (w.state === 'exped-out') return 'Saliendo de la finca';
+    const enEsc = !!escMap[w.id];
+    if (w.state === 'esc-cheer') return w.bowing ? '¡A la batalla!' : 'Formando en el portón';
+    if (w.state === 'saludo') return enEsc ? 'Se prepara para la escaramuza' : 'Recibe tus órdenes';
+    if (w.state === 'fuera') return enEsc ? 'Combatiendo en la escaramuza' : 'En expedición fuera de la finca';
+    if (w.state === 'exped-out') return enEsc ? 'Acude al portón' : 'Saliendo de la finca';
     if (w.state === 'exped-in') return 'Regresando de la expedición';
     if (w.state === 'a-consultar') return 'Va al tablón de misiones';
     if (w.state === 'consultando') return 'Consultando el tablón de misiones';

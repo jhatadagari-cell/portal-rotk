@@ -887,7 +887,7 @@
       (HacEscaramuzas.all(h.id) || []).forEach(b => {
         if (b.estado !== 'en_curso') return;
         const ms = b.miembros || [];
-        ms.forEach((m, idx) => { map[m.id] = { inicioMs: b.inicioMs, idx, n: ms.length }; });
+        ms.forEach((m, idx) => { map[m.id] = { inicioMs: b.inicioMs, finMs: b.finMs, idx, n: ms.length }; });
       });
       HacFolk.setEscaramuzas(map);
     }
