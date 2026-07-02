@@ -141,9 +141,9 @@
   // Ratón/táctil: arrastrar = desplazar; pellizco con dos toques = zoom.
   function enablePanZoom(vp, cv) {
     if (!vp || !cv) return;
-    let scale = 1, tx = 0, ty = 0, fit = 1;
+    let scale = 1, tx = 0, ty = 0, fit = 1, applyCb = null;
     const clampS = (s) => Math.max(fit * 0.6, Math.min(fit * 14, s));
-    const apply = () => { cv.style.transform = 'translate(' + tx + 'px,' + ty + 'px) scale(' + scale + ')'; };
+    const apply = () => { cv.style.transform = 'translate(' + tx + 'px,' + ty + 'px) scale(' + scale + ')'; if (applyCb) applyCb(); };
     function fitView() {
       const vw = vp.clientWidth, vh = vp.clientHeight;
       if (!vw || !cv.width) return;
@@ -230,7 +230,13 @@
     }
     // centerOn (compat): enfoca un punto fijo sin seguimiento.
     function centerOn(lx, ly) { stopFollow(); focusFollow(() => [lx, ly], 3); stopFollow(); lookAt([lx, ly]); }
-    return { centerOn, focusFollow, stopFollow, reset };
+    // Transform actual del lienzo (para la capa de personajes nítida, que proyecta
+    // las coords del mundo a pantalla cada frame). tx,ty en px CSS; scale = zoom.
+    function getT() { return { tx: tx, ty: ty, scale: scale }; }
+    // Callback en cada cambio de transform (pan/zoom/seguimiento): la capa de
+    // personajes se repinta al instante para no arrastrarse tras el tablero.
+    function setOnApply(fn) { applyCb = fn; }
+    return { centerOn, focusFollow, stopFollow, reset, getT, setOnApply };
   }
 
   // Botón de pantalla completa sobre el visor (vp). Usa la API nativa donde existe;
@@ -2614,7 +2620,8 @@
       listEl.querySelectorAll('.hacp-folk-item').forEach(b => b.addEventListener('click', () => gotoMember(b.dataset.id)));
     }
 
-    HacFolk.start(iso, { mapa: h.mapa, tier, color, miembros: h.miembros, onState: applyOrders, seedKey: h.id, haciendaId: h.id, ordenes: {} });
+    HacFolk.start(iso, { mapa: h.mapa, tier, color, miembros: h.miembros, onState: applyOrders, seedKey: h.id, haciendaId: h.id, ordenes: {}, getTransform: (cam && cam.getT) || null });
+    if (cam && cam.setOnApply) cam.setOnApply(() => { if (window.HacFolk && HacFolk.repaintOverlay) HacFolk.repaintOverlay(); });
     renderList();
     // Carga órdenes + energía + competencias (compartidas); refresca por poll (≤5 s).
     if (window.HacEnergia) HacEnergia.ready().then(refresh);

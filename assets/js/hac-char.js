@@ -497,7 +497,7 @@ const HacChar = (function () {
   const PNG_DIRS  = ['SW', 'SE', 'NW', 'NE'];
   const PNG_VIEW  = { E: 'SE', SE: 'SE', S: 'SE', SW: 'SW', W: 'SW', NW: 'NW', N: 'NW', NE: 'NE' };
   const PNG_NF    = 8;
-  const M_W = 88, M_H = 148, M_FEET = 133;   // maestros a 2× EXACTO del juego (LANCZOS limpio, bake 2×)
+  const M_W = 352, M_H = 592, M_FEET = 532;   // maestros de ALTA resolución (8× del juego): nítidos en la capa de personajes a cualquier zoom
   const PNG_H = 74;
   const PNG_W = Math.round(M_W * PNG_H / M_H);
   const PNG_FEET = Math.round(M_FEET * PNG_H / M_H);
@@ -518,7 +518,7 @@ const HacChar = (function () {
   }
   function pngLoad() {
     if (typeof document === 'undefined' || !document.createElement) return;
-    const base = 'assets/img/char/', V = '?v=7';
+    const base = 'assets/img/char/', V = '?v=8';
     pngImgs = {}; let need = 0, got = 0;
     const done = () => { if (++got >= need && !pngReadyFlag) { try { pngBake(); } catch (e) {} } };
     PNG_DIRS.forEach(v => {
@@ -550,7 +550,10 @@ const HacChar = (function () {
 
   return {
     draw, DIRS, FRAMES, W, H, palette, OUTFIT, SKINS, HAIRS,
-    sprite, imgFor, pngReady: () => pngReadyFlag, PNG_W, PNG_H, PNG_FEET, PNG_NF
+    sprite, imgFor, pngReady: () => pngReadyFlag, PNG_W, PNG_H, PNG_FEET, PNG_NF,
+    // Fracciones del MAESTRO (para la capa de personajes nítida, que dibuja el
+    // maestro de alta resolución directamente): pies y ancho relativos a su alto.
+    feetFrac: M_FEET / M_H, aspect: M_W / M_H
   };
 })();
 

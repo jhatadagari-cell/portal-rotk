@@ -35,6 +35,12 @@ const HacFolk = (function () {
   let raf = null, iso = null, opts = null, walkers = [], wk = null, names = {};
   let running = false, visible = true, onScreen = true, io = null;
   let selectedId = null, stateSig = '', hailCd = 20;
+  // Capa de personajes NÍTIDA: los mecenas/mercaderes/escribanos se dibujan en un
+  // lienzo aparte a resolución de PANTALLA (desde el maestro de alta resolución),
+  // proyectando mundo→pantalla con el transform de la cámara cada frame. Así se ven
+  // nítidos a cualquier zoom (el lienzo del mundo es pixel-art horneado a SCALE=2 y
+  // se emborrona al ampliar). Compromiso: se pierde la oclusión por edificios altos.
+  let ovCanvas = null, ovCtx = null, lastOv = { people: [], sel: null };
 
   // ── Determinismo / vida compartida (CONTINUA, con snapshots) ────────────────
   // La simulación es función de un STREAM sembrado (R) y de una hora COMPARTIDA
@@ -1538,6 +1544,71 @@ const HacFolk = (function () {
     gateLeaf(g, gate, hw, GATE_GAP);
   }
 
+  // ── Capa de personajes nítida (overlay a resolución de pantalla) ────────────
+  const getT = () => (opts && typeof opts.getTransform === 'function') ? opts.getTransform() : null;
+  // Activa solo con sprites PNG listos, cámara disponible y animación en marcha
+  // (con motion reducido no hay tick continuo → se queda el sprite del lienzo).
+  function ovActive() { return pngOn() && running && !!getT() && !!(window.HacChar && HacChar.imgFor); }
+  function ensureOverlay() {
+    if (!iso || !iso.parentElement) return null;
+    if (ovCanvas && ovCanvas.parentElement === iso.parentElement) return ovCanvas;
+    ovCanvas = document.createElement('canvas');
+    ovCanvas.className = 'hacp-iso-ov';
+    ovCanvas.style.cssText = 'position:absolute;left:0;top:0;width:100%;height:100%;z-index:1;pointer-events:none;image-rendering:auto';
+    iso.parentElement.appendChild(ovCanvas);
+    ovCtx = ovCanvas.getContext('2d');
+    return ovCanvas;
+  }
+  function removeOverlay() {
+    if (ovCanvas && ovCanvas.parentElement) ovCanvas.parentElement.removeChild(ovCanvas);
+    ovCanvas = null; ovCtx = null;
+  }
+  // Pose/frame de un personaje para el maestro (mismo criterio que drawWalker).
+  function ovPose(w) {
+    const moving = w.moving && w.state !== 'tarea';
+    return {
+      dir: w.dir || 'SE',
+      pose: (w.state === 'tumbado') ? 'sit' : (w.bowing ? 'bow' : (moving ? 'walk' : 'stand')),
+      frame: moving ? (Math.floor(w.phase * 1.2) % charNF()) : 0
+    };
+  }
+  // Dibuja la lista de personajes (ordenada de atrás→delante) en el overlay, a
+  // resolución de pantalla, desde el maestro de alta resolución.
+  function paintOverlay(people, sel) {
+    if (!ovActive()) { if (ovCtx) ovCtx.clearRect(0, 0, ovCanvas.width, ovCanvas.height); return; }
+    if (!ensureOverlay()) return;
+    const t = getT(); if (!t) return;
+    const vp = iso.parentElement, dpr = (window.devicePixelRatio || 1);
+    const vw = vp.clientWidth, vh = vp.clientHeight;
+    const bw = Math.max(1, Math.round(vw * dpr)), bh = Math.max(1, Math.round(vh * dpr));
+    if (ovCanvas.width !== bw || ovCanvas.height !== bh) { ovCanvas.width = bw; ovCanvas.height = bh; }
+    const g = ovCtx;
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.clearRect(0, 0, bw, bh);
+    g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
+    const S = SCALE, cs = t.scale, k = cs * dpr;                 // backing px → device px del overlay
+    const feetFrac = (HacChar.feetFrac || (charFEET() / charH()));
+    const aspect = (HacChar.aspect || (charW() / charH()));
+    const one = (p, highlight) => {
+      const pr = ovPose(p);
+      const master = HacChar.imgFor(pr.dir, pr.pose, pr.frame); if (!master) return;
+      const lp = logic(p.fx, p.fy);
+      const fsx = (t.tx + lp[0] * S * cs) * dpr;                 // pies en px de dispositivo
+      const fsy = (t.ty + lp[1] * S * cs) * dpr;
+      const destH = charH() * k, destW = destH * aspect;
+      if (highlight) {                                            // glow del seleccionado, bajo los pies
+        const rx = (8 + Math.sin(p.phase * 0.5) * 1.4) * S * k, ry = rx * 0.5;
+        g.save();
+        g.fillStyle = 'rgba(255,224,130,0.22)'; g.beginPath(); g.ellipse(fsx, fsy, rx, ry, 0, 0, 6.2832); g.fill();
+        g.strokeStyle = 'rgba(255,224,130,0.95)'; g.lineWidth = 1.4 * k; g.beginPath(); g.ellipse(fsx, fsy, rx, ry, 0, 0, 6.2832); g.stroke();
+        g.restore();
+      }
+      g.drawImage(master, Math.round(fsx - destW * 0.5), Math.round(fsy - destH * feetFrac), Math.round(destW), Math.round(destH));
+    };
+    people.forEach(p => one(p, false));
+    if (sel) one(sel, true);
+  }
+
   function paint() {
     if (!window.HacIso || !HacIso.frame) return;
     // Agrupa quién está DENTRO de cada edificio (estado 'tarea').
@@ -1545,6 +1616,9 @@ const HacFolk = (function () {
     walkers.forEach(w => { if (w.insideId) (inside[w.insideId] = inside[w.insideId] || []).push(w); });
 
     const actors = [], overlays = [], signs = [];
+    // Capa nítida activa → los personajes (no montados) se recogen aparte y se
+    // pintan en el overlay a resolución de pantalla; si no, van al lienzo como antes.
+    const OV = ovActive(), ovPeople = [];
     const FEET = charFEET(), bannerDy = Math.round(FEET * SPRITE_DISP / SCALE) - 1;
     // Portones: hojas animadas (overlay; el sprite no las trae). Primero, para
     // quedar bajo los banners y bocadillos. Coste mínimo: 2 polígonos por portón.
@@ -1552,11 +1626,11 @@ const HacFolk = (function () {
     // Mercader(es): personajes fijos al frente de cada mercado (mismo render).
     const npcDy = bannerDy;
     if (wk && wk.merchants) wk.merchants.forEach(mk => {
-      actors.push({ fx: mk.fx, fy: mk.fy, draw: (g, lx, ly) => drawWalker(g, lx, ly, mk, { banner: false }) });
+      if (OV) ovPeople.push(mk); else actors.push({ fx: mk.fx, fy: mk.fy, draw: (g, lx, ly) => drawWalker(g, lx, ly, mk, { banner: false }) });
       overlays.push({ draw: (g) => { const p = logic(mk.fx, mk.fy); npcBanner(g, p[0], p[1] - npcDy, mk.name, '市'); } });
     });
     if (wk && wk.clerks) wk.clerks.forEach(ck => {
-      actors.push({ fx: ck.fx, fy: ck.fy, draw: (g, lx, ly) => drawWalker(g, lx, ly, ck, { banner: false }) });
+      if (OV) ovPeople.push(ck); else actors.push({ fx: ck.fx, fy: ck.fy, draw: (g, lx, ly) => drawWalker(g, lx, ly, ck, { banner: false }) });
       overlays.push({ draw: (g) => { const p = logic(ck.fx, ck.fy); npcBanner(g, p[0], p[1] - npcDy, ck.name, '📜'); } });
     });
     // Caballos sueltos: sprite como actor (con oclusión/profundidad) + su nombre encima.
@@ -1576,7 +1650,9 @@ const HacFolk = (function () {
       if (w.id === selectedId) return;                 // el seleccionado va en overlay (encima)
       if (w.insideId) return;                          // DENTRO de un edificio: oculto (su presencia la anuncia el banner 匾額)
       if (w.state === 'fuera') return;                 // EN EXPEDICIÓN fuera de la finca: oculto hasta volver
-      actors.push({ fx: w.fx, fy: w.fy, draw: (g, lx, ly) => drawWalker(g, lx, ly, w, { banner: false }) });
+      // No montados → capa nítida; montados (caballo+jinete) siguen en el lienzo.
+      if (OV && !isMounted(w)) ovPeople.push(w);
+      else actors.push({ fx: w.fx, fy: w.fy, draw: (g, lx, ly) => drawWalker(g, lx, ly, w, { banner: false }) });
       nameCands.push(w);
     });
     // Banners de nombre (overlay): de DELANTE hacia atrás, se CLAMPEAN en horizontal
@@ -1610,7 +1686,11 @@ const HacFolk = (function () {
 
     // Mecenas SELECCIONADO: siempre encima, resaltado (aunque esté dentro/detrás).
     const sel = walkers.find(w => w.id === selectedId);
-    if (sel && sel.state !== 'fuera') overlays.push({ draw: (g) => drawWalker(g, logic(sel.fx, sel.fy)[0], logic(sel.fx, sel.fy)[1], sel, { highlight: true }) });
+    let ovSel = null;
+    if (sel && sel.state !== 'fuera') {
+      if (OV && !isMounted(sel)) ovSel = sel;   // resaltado en la capa nítida, siempre encima
+      else overlays.push({ draw: (g) => drawWalker(g, logic(sel.fx, sel.fy)[0], logic(sel.fx, sel.fy)[1], sel, { highlight: true }) });
+    }
 
     // Bocadillos de las charlas: capa overlay, encima de todo y sin oclusión.
     walkers.forEach(w => {
@@ -1623,7 +1703,14 @@ const HacFolk = (function () {
 
     iso._hacSigns = signs;
     HacIso.frame(iso, actors, overlays);
+    // Capa nítida de personajes (atrás→delante; el seleccionado, encima de todo).
+    if (OV) { ovPeople.sort((a, b) => (a.fx + a.fy) - (b.fx + b.fy)); lastOv = { people: ovPeople, sel: ovSel }; paintOverlay(ovPeople, ovSel); }
+    else { lastOv = { people: [], sel: null }; if (ovCtx) ovCtx.clearRect(0, 0, ovCanvas.width, ovCanvas.height); }
   }
+  // Repinta SOLO la capa nítida (barato) con las posiciones del último frame de sim,
+  // reproyectando con el transform ACTUAL. Lo llama la cámara en cada pan/zoom para
+  // que los personajes sigan al tablero sin retraso (0 frames de desfase).
+  function repaintOverlay() { if (ovActive()) paintOverlay(lastOv.people, lastOv.sel); }
 
   // Avisa a la página cuando cambia el "estado social" (quién hace qué, o el
   // seleccionado) para que refresque el listado lateral.
@@ -1699,6 +1786,7 @@ const HacFolk = (function () {
     running = false; started = false;
     if (raf) cancelAnimationFrame(raf); raf = null;
     if (snapTimer) { clearInterval(snapTimer); snapTimer = null; }
+    removeOverlay();
     document.removeEventListener('visibilitychange', onVis);
     if (typeof window !== 'undefined') window.removeEventListener('pagehide', onHide);
     if (io) { io.disconnect(); io = null; }
@@ -1869,6 +1957,6 @@ const HacFolk = (function () {
   }
 
   function mainBuildingId() { return wk ? (wk.mainBid || null) : null; }
-  return { start, stop, list, select, selected, position, buildings, buildingTypes, setOrders, setEscaramuzas, setCaballos, drawAvatar, goHome, consultar, consultando, dejarConsulta, mainBuildingId };
+  return { start, stop, list, select, selected, position, buildings, buildingTypes, setOrders, setEscaramuzas, setCaballos, drawAvatar, goHome, consultar, consultando, dejarConsulta, mainBuildingId, repaintOverlay };
 })();
 if (typeof window !== 'undefined') window.HacFolk = HacFolk;
