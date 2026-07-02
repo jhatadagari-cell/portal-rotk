@@ -1069,11 +1069,13 @@ const HacFolk = (function () {
         const w = readers[Math.floor(mrand(ck) * readers.length)];
         w.speech = BOARD_CRIES[Math.floor(mrand(ck) * BOARD_CRIES.length)]; w.speechT = 2.8;
         boardTalkCd = 2.6 + mrand(ck) * 2.4;
-      } else if (!ck.speech) {                                      // habla el FUNCIONARIO
-        const tabla = readers.length ? CLERK_GAWKER : CLERK_PREGON; // a los curiosos, o pregón al aire
-        ck.speech = tabla[Math.floor(mrand(ck) * tabla.length)]; ck.speechT = 2.8;
-        boardTalkCd = 2.8 + mrand(ck) * 2.6;
-      } else boardTalkCd = 1;
+      } else if (!ck.speech && readers.length) {                    // COMENTA a los curiosos presentes
+        ck.speech = CLERK_GAWKER[Math.floor(mrand(ck) * CLERK_GAWKER.length)]; ck.speechT = 2.8;
+        boardTalkCd = 4 + mrand(ck) * 3;
+      } else if (!ck.speech && mrand(ck) < 0.22) {                  // PREGÓN al aire: solo de vez en cuando
+        ck.speech = CLERK_PREGON[Math.floor(mrand(ck) * CLERK_PREGON.length)]; ck.speechT = 2.8;
+        boardTalkCd = 16 + mrand(ck) * 14;                          // y espacia bien el siguiente
+      } else boardTalkCd = 7 + mrand(ck) * 6;                       // en silencio: reintenta más tarde
     }
   }
   // Vida del MERCADER (flavor, local): atiende el puesto — pasea entre un par de
