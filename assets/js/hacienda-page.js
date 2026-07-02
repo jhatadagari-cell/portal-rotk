@@ -1082,7 +1082,10 @@
         const eq = (window.HacStats && HacStats.bonusDinero) ? HacStats.bonusDinero(mm.id) : 0;
         const p = eq + (rb.per[mm.id] || 0); if (p) bonosPct[mm.id] = p;
       });
-      const wounds = bandTiene(band, 'tigre') ? 0 : 1;   // 虎將: la banda ignora la 1ª herida al fracasar
+      // 虎將: la banda ignora la 1ª herida al fracasar. Solo pasamos p_heridas cuando
+      // hay que anularla (=0): así la resolución NORMAL usa la firma antigua y no depende
+      // de talentos_c2.sql (que puede no estar ejecutado). null → se omite el parámetro.
+      const wounds = bandTiene(band, 'tigre') ? 0 : null;
       HacEscaramuzas.resolver(band.id, clock(), exito, exito ? generarBotin(band, sc.loot + (bonos.escBotin || 0) + rb.loot) : [], share, hostBonus, ESC_FAST ? 30000 : 0, bonosPct, wounds)
         .then(() => { if (window.HacStats) HacStats.reload().then(() => { if (charId) buildCharPanel(charId); }); })
         .catch(e => console.warn('[escaramuza] resolver', e));
