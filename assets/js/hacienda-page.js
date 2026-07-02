@@ -589,6 +589,7 @@
           // aplanada no dispare el prestigio de las tareas internas en niveles altos.
           const n = HacStats.nivelTotal(myId, dom);
           r = Math.round(r * (n <= 1 ? 1 : 1 + Math.min(n, 20) * 0.1));
+          if (tieneT('canciller')) r = Math.round(r * 1.3);   // 丞相: +30% prestigio en tareas internas
         }
         HacPuntos.award(h.id, myId, r);
         // La misión del tablón da, además del prestigio, dinero + XP PERSONAL (al dominio).
@@ -916,6 +917,8 @@
     const doctrinaDef = (id) => DOCTRINAS.find(d => d.id === id) || null;
     // Nivel de la banda en un dominio = el del mejor miembro (un especialista lidera).
     function bandStat(band, dom) { let best = 0; (band.miembros || []).forEach(m => { const n = (window.HacStats && HacStats.nivelTotal) ? HacStats.nivelTotal(m.id, dom) : 1; if (n > best) best = n; }); return best || 1; }
+    // ¿algún miembro de la banda tiene un talento? (efectos de banda: 虎將, 軍師…)
+    const bandTiene = (band, id) => (band.miembros || []).some(m => window.HacStats && HacStats.tieneTalento && HacStats.tieneTalento(m.id, id));
     // Plan determinista de sucesos de una escaramuza (mismo para todos los clientes).
     function escPlan(band) {
       if (!window.HacRand) return [];
@@ -934,8 +937,12 @@
         const s = SUCESOS_COOP.find(x => x.id === ev.sucesoId); if (!s) return;
         const ov = (band.sucesos || {})[ev.i];                        // override del capitán (A2b-2)
         const dom = (ov != null && DOCTRINAS[ov]) ? DOCTRINAS[ov].dom : (docDef ? docDef.dom : 'militar');
+        // 軍師 Gran estratega: la banda usa su MEJOR stat en los chequeos.
+        const stat = bandTiene(band, 'granestratega')
+          ? Math.max(bandStat(band, 'militar'), bandStat(band, 'cultural'), bandStat(band, 'administrativo'))
+          : bandStat(band, dom);
         const R = window.HacRand ? HacRand.make('escr#' + band.id + '#' + ev.i) : null;
-        const ok = R ? (R.next() < pSuceso(bandStat(band, dom), band.dificultad || 4)) : true;
+        const ok = R ? (R.next() < pSuceso(stat, band.dificultad || 4)) : true;
         const m = ok ? (s.ok || {}) : (s.fail || {});
         pMod += m.pMod || 0; loot += m.loot || 0; share += m.share || 0;
         items.push({ txt: s.txt, ok: ok });
@@ -1075,7 +1082,8 @@
         const eq = (window.HacStats && HacStats.bonusDinero) ? HacStats.bonusDinero(mm.id) : 0;
         const p = eq + (rb.per[mm.id] || 0); if (p) bonosPct[mm.id] = p;
       });
-      HacEscaramuzas.resolver(band.id, clock(), exito, exito ? generarBotin(band, sc.loot + (bonos.escBotin || 0) + rb.loot) : [], share, hostBonus, ESC_FAST ? 30000 : 0, bonosPct)
+      const wounds = bandTiene(band, 'tigre') ? 0 : 1;   // 虎將: la banda ignora la 1ª herida al fracasar
+      HacEscaramuzas.resolver(band.id, clock(), exito, exito ? generarBotin(band, sc.loot + (bonos.escBotin || 0) + rb.loot) : [], share, hostBonus, ESC_FAST ? 30000 : 0, bonosPct, wounds)
         .then(() => { if (window.HacStats) HacStats.reload().then(() => { if (charId) buildCharPanel(charId); }); })
         .catch(e => console.warn('[escaramuza] resolver', e));
     }

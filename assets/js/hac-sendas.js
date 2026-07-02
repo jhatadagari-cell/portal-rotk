@@ -16,7 +16,7 @@ const HacSendas = (function () {
       rungs: [
         { id: 'soldado', zh: '武士', nombre: 'Soldado curtido', req: 10, prev: null, activo: true, efecto: 'Aguante: −6% de riesgo en tus expediciones.' },
         { id: 'oficial', zh: '校尉', nombre: 'Oficial', req: 30, prev: 'soldado', activo: true, efecto: 'Liderazgo: cuando eres el capitán, tu banda tiene +5% de éxito.' },
-        { id: 'tigre', zh: '虎將', nombre: 'General Tigre', req: 70, prev: 'oficial', activo: false, efecto: '萬人敵: la banda ignora la primera herida al fracasar.' },
+        { id: 'tigre', zh: '虎將', nombre: 'General Tigre', req: 70, prev: 'oficial', activo: true, efecto: '萬人敵: tu banda ignora la primera herida al fracasar una escaramuza.' },
         { id: 'legendario', zh: '猛將', nombre: 'Guerrero Legendario', req: 150, reqTotal: 200, prev: 'tigre', activo: false, efecto: 'Montas a caballo, lanzas escaramuzas en solitario y ostentas el rango de respeto más alto tras el fundador.' },
       ],
     },
@@ -25,7 +25,7 @@ const HacSendas = (function () {
       rungs: [
         { id: 'estudiante', zh: '書生', nombre: 'Estudiante', req: 10, prev: null, activo: true, efecto: 'Estudio: +8% de XP cultural en misiones.' },
         { id: 'estratega', zh: '謀士', nombre: 'Estratega', req: 30, prev: 'estudiante', activo: true, efecto: 'Planificación: −10% de tiempo de expedición.' },
-        { id: 'granestratega', zh: '軍師', nombre: 'Gran estratega', req: 70, prev: 'estratega', activo: false, efecto: 'La banda usa su mejor stat en los chequeos.' },
+        { id: 'granestratega', zh: '軍師', nombre: 'Gran estratega', req: 70, prev: 'estratega', activo: true, efecto: 'Genio táctico: la banda usa su mejor stat en los chequeos de sucesos.' },
         { id: 'dragon', zh: '臥龍', nombre: 'Dragón durmiente', req: 150, reqTotal: 200, prev: 'granestratega', activo: false, efecto: 'Previsión: ves y fuerzas el desenlace de un suceso.' },
       ],
     },
@@ -34,7 +34,7 @@ const HacSendas = (function () {
       rungs: [
         { id: 'funcionario', zh: '吏', nombre: 'Funcionario', req: 10, prev: null, activo: true, efecto: 'Comercio: −6% en los precios del mercado.' },
         { id: 'gobernador', zh: '太守', nombre: 'Gobernador', req: 30, prev: 'funcionario', activo: true, efecto: 'Fortuna: +10% de dinero en misiones.' },
-        { id: 'canciller', zh: '丞相', nombre: 'Canciller', req: 70, prev: 'gobernador', activo: false, efecto: 'Los cargos de la casa rinden el doble a su alrededor.' },
+        { id: 'canciller', zh: '丞相', nombre: 'Canciller', req: 70, prev: 'gobernador', activo: true, efecto: 'Gobierno experto: +30% de prestigio en las tareas internas.' },
         { id: 'heroe', zh: '梟雄', nombre: 'Héroe ambicioso', req: 150, reqTotal: 200, prev: 'canciller', activo: false, efecto: 'Ostentas dos cargos a la vez y te acompaña una escolta.' },
       ],
     },
