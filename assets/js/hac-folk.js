@@ -471,17 +471,27 @@ const HacFolk = (function () {
     }
     w.path = path; w.state = 'exped-out'; w.goalBid = null; w.insideId = null; w.task = null; w.moving = false;
   }
-  // Vuelve: APARECE en el exterior (lejos), camina hacia la puerta y ENTRA.
+  // Vuelve: APARECE en el exterior (lejos), camina hacia la puerta, CRUZA el vano y da
+  // un par de pasos adentro. La misión termina AQUÍ (endMission → recompensa): así el
+  // mecenas cobra justo al reaparecer en la finca, sin recorrer todo el recinto hasta
+  // una celda lejana. Desde dentro, retoma el paseo normal por su cuenta.
   function startReturn(w) {
     const e = wk.exitCell || [Math.round(w.fx), Math.round(w.fy)];
     const far = wk.outFar || e;
     w.fx = far[0]; w.fy = far[1]; w.tx = far[0]; w.ty = far[1];        // reaparece FUERA, a lo lejos
-    const goal = (wk.camCells.length && R.next() < 0.7) ? wk.camCells[rnd(wk.camCells.length)] : wk.cells[rnd(wk.cells.length)];
-    const inside = bfs(e, new Set([goal[0] + ',' + goal[1]])) || [e];
     const path = [];
     if (wk.outNear) path.push(wk.outNear);                            // se acerca al portón desde fuera
     path.push(e);                                                     // cruza el vano
-    path.push.apply(path, inside);                                    // y entra a la finca
+    // Un par de celdas HACIA EL INTERIOR (hacia el centro) para quedar claramente
+    // dentro, sin cruzar toda la finca.
+    const cxC = (wk.GW - 1) / 2, cyC = (wk.GH - 1) / 2;
+    let cx = e[0], cy = e[1];
+    for (let s = 0; s < 2; s++) {
+      const nx = cx + Math.sign(cxC - cx), ny = cy + Math.sign(cyC - cy);
+      const cand = [[cx, ny], [nx, cy], [nx, ny]].find(c => (c[0] !== cx || c[1] !== cy) && wk.set.has(c[0] + ',' + c[1]));
+      if (!cand) break;
+      cx = cand[0]; cy = cand[1]; path.push([cx, cy]);
+    }
     w.path = path; w.state = 'exped-in'; w.moving = false;
   }
   // ¿Está el mecenas MÁS ALLÁ de la rejilla interior (fuera de la muralla)? Solo en

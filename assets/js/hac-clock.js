@@ -27,7 +27,7 @@ const HacClock = (function () {
 
   function setFromServer(serverMs, t0, t1) {
     if (!isFinite(serverMs)) return false;
-    offset = serverMs - (t0 + (t1 - t0) / 2);   // instante del servidor ≈ centro del round-trip
+    offset = Math.round(serverMs - (t0 + (t1 - t0) / 2));   // instante del servidor ≈ centro del round-trip (entero: now() alimenta columnas bigint)
     synced = true;
     return true;
   }

@@ -2150,8 +2150,9 @@
     }
 
     // ── Bautizo del CABALLO (compra única) ───────────────────────────────────
-    // Corceles célebres del período para sugerir; el jugador puede escribir el suyo.
-    const CABALLO_NOMBRES = ['赤兔', '的盧', '絕影', '照夜白', '烏騅', '大宛', '驚帆', '爪黃'];
+    // Nombres sugeridos EN CASTELLANO (glosas de corceles célebres del período); el
+    // jugador puede escribir el suyo. Nada de chino aquí: debe entenderse.
+    const CABALLO_NOMBRES = ['Liebre Roja', 'Sombra Fugaz', 'Rayo Bayo', 'Azabache', 'Vela Veloz', 'Tormenta'];
     let caballoEl = null;
     function ensureCaballoEl() {
       if (caballoEl) return caballoEl;
@@ -2196,7 +2197,9 @@
     function syncCaballosFolk() {
       if (!window.HacFolk || !HacFolk.setCaballos || !window.HacStats || !HacStats.caballo) return;
       const map = {};
-      (h.miembros || []).forEach(m => { const c = HacStats.caballo(m.id); if (c) map[m.id] = { nombre: c.nombre, variante: c.id || 'caballo' }; });
+      // OJO: HacStats y los walkers se indexan por personajeId (= myId), NO por el id
+      // de la fila de miembro. Usar m.id aquí hacía que el caballo comprado no apareciera.
+      (h.miembros || []).forEach(m => { const pid = m.personajeId || m.id; const c = HacStats.caballo(pid); if (c) map[pid] = { nombre: c.nombre, variante: c.id || 'caballo' }; });
       HacFolk.setCaballos(map);
     }
 
