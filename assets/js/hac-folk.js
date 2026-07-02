@@ -152,6 +152,10 @@ const HacFolk = (function () {
     return cv;
   }
   // Dimensiones del sprite ACTIVO (PNG de calidad si está listo, si no procedural).
+  // El arte de andar generado NO alterna piernas (siempre la misma pierna delante),
+  // así que de momento los mecenas se DESLIZAN con la pose idle (la túnica larga lo
+  // disimula). Poner a true cuando tengamos una tira con zancada alterna real.
+  const WALK_ANIM = false;
   const pngOn  = () => !!(window.HacChar && HacChar.pngReady && HacChar.pngReady());
   const charW  = () => pngOn() ? HacChar.PNG_W : (window.HacChar ? HacChar.W : 40);
   const charH  = () => pngOn() ? HacChar.PNG_H : (window.HacChar ? HacChar.H : 56);
@@ -1283,7 +1287,7 @@ const HacFolk = (function () {
     }
     const moving = w.moving && w.state !== 'tarea';
     const frame = moving ? (Math.floor(w.phase * 1.2) % charNF()) : 0;
-    const pose = (w.state === 'tumbado') ? 'sit' : (w.bowing ? 'bow' : (moving ? 'walk' : 'stand'));
+    const pose = (w.state === 'tumbado') ? 'sit' : (w.bowing ? 'bow' : (moving && WALK_ANIM ? 'walk' : 'stand'));
     const cv = window.HacChar ? spriteFor(w, w.dir || 'S', frame, pose) : null;
     const disp = SPRITE_DISP, FEET = charFEET();
     if (isMounted(w)) {
@@ -1830,7 +1834,7 @@ const HacFolk = (function () {
     if (!w) return;
     const moving = w.moving && w.state !== 'tarea' && w.state !== 'saludo';
     const frame = moving ? (Math.floor(w.phase * 1.2) % charNF()) : 0;
-    const pose = (w.state === 'tumbado') ? 'sit' : (w.bowing ? 'bow' : (moving ? 'walk' : 'stand'));
+    const pose = (w.state === 'tumbado') ? 'sit' : (w.bowing ? 'bow' : (moving && WALK_ANIM ? 'walk' : 'stand'));
     const cv = spriteFor(w, w.dir || 'S', frame, pose);
     if (!cv) return;
     g.imageSmoothingEnabled = false;
