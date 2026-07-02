@@ -332,7 +332,7 @@
     const placeTip = (x, y) => { statTip.style.left = Math.min(x + 13, window.innerWidth - statTip.offsetWidth - 8) + 'px'; statTip.style.top = Math.max(6, y - 10) + 'px'; };
     function hideStatTip() { if (statTip) statTip.style.display = 'none'; }
     if (charEl) {
-      const tipOf = (e) => (e.target.closest && e.target.closest('.hacp-cp-stat'));
+      const tipOf = (e) => (e.target.closest && e.target.closest('[data-tip]'));
       charEl.addEventListener('mouseover', (e) => { const c = tipOf(e); if (!c || !c.dataset.tip) return; if (!statTip) { statTip = document.createElement('div'); statTip.className = 'hacp-stat-tip'; document.body.appendChild(statTip); } statTip.textContent = c.dataset.tip; statTip.style.display = 'block'; placeTip(e.clientX, e.clientY); });
       charEl.addEventListener('mousemove', (e) => { if (statTip && statTip.style.display === 'block' && tipOf(e)) placeTip(e.clientX, e.clientY); });
       charEl.addEventListener('mouseout', (e) => { if (tipOf(e)) hideStatTip(); });
@@ -1696,7 +1696,7 @@
         const def = flat[i];
         if (!def) return '<div class="hacp-slot"></div>';
         const man = def.efecto && def.efecto.manual;
-        if (man && d.mine) return `<button type="button" class="hacp-slot full manual" data-usar="${esc(def.id)}" title="${esc(def.nombre)} · toca para usar (${HacTienda.efectoTexto(def)})">${def.icon || '∎'}</button>`;
+        if (man && d.mine) return `<button type="button" class="hacp-slot full manual" data-usar="${esc(def.id)}" title="${esc(def.nombre)} · toca para usar (${HacTienda.efectoTexto(def)})">${def.icon || '∎'}<span class="hacp-slot-xp" style="color:${DOM_COLOR[man.dom] || 'var(--gold)'}">${DOM_GLYPH[man.dom] || ''} +${man.xp} XP</span></button>`;
         return `<div class="hacp-slot full" title="${esc(def.nombre)} ${esc(def.zh || '')}">${def.icon || '∎'}</div>`;
       }).join('');
       const canStore = hasHome && d.mine && d.money > 0;
@@ -1755,7 +1755,7 @@
       if (!d.stats) return '';
       const chips = d.stats.map(s => {
         const tip = `${DOM_GLYPH[s.dom]} ${DOM_NOMBRE[s.dom]} · nivel ${s.nivel}${s.bonus ? ` (+${s.bonus} de equipo)` : ''} · ${s.xp} XP${s.falta ? ` · faltan ${s.falta} para el siguiente nivel` : ''}`;
-        return `<div class="hacp-cp-stat" data-tip="${esc(tip)}" title="${esc(tip)}">
+        return `<div class="hacp-cp-stat" data-tip="${esc(tip)}">
           <span class="hacp-cp-stat-h"><span class="hacp-cp-stat-g" style="color:${DOM_COLOR[s.dom]}">${DOM_GLYPH[s.dom]}</span><span class="hacp-cp-stat-nm">${DOM_ABBR[s.dom]}</span></span>
           <span class="hacp-cp-stat-n">${s.total}${s.bonus ? `<i class="hacp-cp-stat-eq">+${s.bonus}</i>` : ''}</span>
           <i class="hacp-cp-stat-bar"><b style="width:${Math.round(s.pct * 100)}%;background:${DOM_COLOR[s.dom]}"></b></i>
@@ -1771,7 +1771,7 @@
       const pen = Math.round(Math.min(0.45, n * 0.15) * 100);
       const txt = !n ? 'ileso' : (n >= 3 ? 'malherido · no puede salir' : `${n}/3 · −${pen}% recompensa · +riesgo`);
       const cura = (d.mine && n > 0) ? `<button type="button" class="hacp-cp-btn hacp-cp-cura" data-act="cura"${d.money < COSTE_CURA ? ' disabled' : ''}>✚ Curar 1 herida · 💰 ${COSTE_CURA}${d.money < COSTE_CURA ? ' (te falta)' : ''}</button>` : '';
-      return `<div class="hacp-cp-wounds${n ? ' hurt' : ''}${n >= 3 ? ' bad' : ''}" title="Heridas ${n}/3. Reducen la recompensa (−15 % por herida) y suben el riesgo de las expediciones; a 3/3 tu mecenas no puede salir hasta curarse.">
+      return `<div class="hacp-cp-wounds${n ? ' hurt' : ''}${n >= 3 ? ' bad' : ''}" data-tip="Heridas ${n}/3. Reducen la recompensa (−15% por herida) y suben el riesgo de las expediciones; a 3/3 tu mecenas queda malherido y no puede salir hasta curarse.">
         <span class="hacp-wound-h">Heridas</span><span class="hacp-wound-slots">${slots}</span><span class="hacp-wound-txt">${txt}</span></div>${cura}`;
     }
     // Cura 1 herida pagando en la enfermería (decisión: gastar dinero vs. seguir herido).
@@ -1867,11 +1867,11 @@
             </div>
             ${d.aptDef ? `<div class="hacp-cp-apt">${d.aptDef.icon || ''} ${esc(d.aptDef.nombre)}${comp ? ' · domina ' + comp : ''}</div>` : (comp ? `<div class="hacp-cp-apt">domina ${comp}</div>` : '')}
             ${d.cargo ? `<div class="hacp-cp-cargo">${d.cargo.icon} ${esc(d.cargo.zh)} ${esc(d.cargo.nombre)}</div>` : ''}
-            <div class="hacp-cp-pts">Puntos: <b id="hacp-cp-pts">${d.puntos}</b>${d.earned ? ` <span class="hacp-cp-earn">+${d.earned}</span>` : ''}${d.mine ? ` · 💰 <b>${d.money}</b>` : ''}</div>
+            <div class="hacp-cp-pts"><span data-tip="Prestigio: la reputación de tu mecenas en la casa (aportación base + lo ganado en misiones y tareas). Cuanto más, mayor tu rango dentro de la hacienda.">Prestigio: <b id="hacp-cp-pts">${d.puntos}</b>${d.earned ? ` <span class="hacp-cp-earn">+${d.earned}</span>` : ''}</span>${d.mine ? ` · <span data-tip="Dinero de tu monedero. Lo gastas en el mercado y en curar heridas; lo ganas en misiones y escaramuzas.">💰 <b>${d.money}</b></span>` : ''}</div>
           </div>
         </div>
         <div class="hacp-cp-act" id="hacp-cp-act">${d.it.inside ? '⌂ ' : ''}${esc(d.it.activity || 'Paseando por la finca')}</div>
-        <div class="hacp-cp-energy" title="Energía ${d.e}%"><i id="hacp-cp-ebar" style="width:${d.e}%"></i></div>
+        <div class="hacp-cp-energy" data-tip="Energía: ${d.e}%. Se gasta al enviar tareas y expediciones, y se regenera con el tiempo. Sin energía no puedes salir." title="Energía ${d.e}%"><i id="hacp-cp-ebar" style="width:${d.e}%"></i></div>
         <div class="hacp-cp-elabel" id="hacp-cp-elabel">${energyLabel(d)}</div>
         ${statsHTML(d)}
         ${woundsHTML(d)}
