@@ -135,6 +135,12 @@ const HacFolk = (function () {
   // Sprite cacheado para (aptitud+aspecto, dir, frame). Evita rehacer el contorno
   // cada fotograma; muchos walkers comparten combinaciones.
   function spriteFor(w, dir, frame, pose) {
+    // Rework PNG: si el sprite de calidad está horneado, se usa (todos los
+    // mecenas comparten el sprite por defecto → sin cachear por walker).
+    if (window.HacChar && HacChar.sprite) {
+      const png = HacChar.sprite(dir, pose, frame);
+      if (png) return png;
+    }
     const a = w.aspecto || {};
     const key = (w.aptitud || '_') + '|' + (a.robe || '') + '|' + (a.piel || 0) + '|' + (a.pelo || 0) + '|' + dir + '|' + frame + '|' + (pose || 's');
     let cv = spriteCache.get(key);
@@ -145,6 +151,12 @@ const HacFolk = (function () {
     }
     return cv;
   }
+  // Dimensiones del sprite ACTIVO (PNG de calidad si está listo, si no procedural).
+  const pngOn  = () => !!(window.HacChar && HacChar.pngReady && HacChar.pngReady());
+  const charW  = () => pngOn() ? HacChar.PNG_W : (window.HacChar ? HacChar.W : 40);
+  const charH  = () => pngOn() ? HacChar.PNG_H : (window.HacChar ? HacChar.H : 56);
+  const charFEET = () => pngOn() ? HacChar.PNG_FEET : (window.HacChar ? HacChar.H - 5 : 51);
+  const charNF = () => pngOn() ? HacChar.PNG_NF : (window.HacChar ? HacChar.FRAMES : 4);
 
   // Composición de la línea de actividad ("de camino al cuartel" / "Entrenando
   // en el cuartel"). lugar viene con artículo en minúscula ("el cuartel").
@@ -1135,11 +1147,13 @@ const HacFolk = (function () {
   // del walker se mapean a las 4 vistas. `seatY` = altura de la silla sobre el suelo;
   // `seatDx` = desplazamiento lateral del jinete (a afinar a ojo con ?mount=1).
   const HORSE_NF = 7;
+  // riderY = altura (px disp.) de los PIES colgantes del jinete sentado sobre el
+  // suelo (sube al jinete hasta la silla); riderDx = ajuste lateral sobre la silla.
   const HORSE_META = {
-    SW: { w: 56, h: 69, ax: 18, ay: 69, seatY: 40, seatDx: 9 },
-    SE: { w: 55, h: 68, ax: 15, ay: 68, seatY: 40, seatDx: 12 },
-    NW: { w: 50, h: 76, ax: 11, ay: 76, seatY: 47, seatDx: 13 },
-    NE: { w: 48, h: 75, ax: 36, ay: 75, seatY: 47, seatDx: -12 },
+    SW: { w: 56, h: 69, ax: 18, ay: 69, riderY: 5, riderDx: 5 },
+    SE: { w: 55, h: 68, ax: 15, ay: 68, riderY: 5, riderDx: -5 },
+    NW: { w: 50, h: 76, ax: 11, ay: 76, riderY: 8, riderDx: 4 },
+    NE: { w: 48, h: 75, ax: 36, ay: 75, riderY: 8, riderDx: -4 },
   };
   const HORSE_VIEW = { E: 'SE', SE: 'SE', S: 'SE', SW: 'SW', W: 'SW', NW: 'NW', N: 'NW', NE: 'NE' };
   const horseImg = {}; let horseReady = false, horseLoadStarted = false;
@@ -1178,13 +1192,13 @@ const HacFolk = (function () {
     const fx = lx * SCALE, fy = ly * SCALE;
     g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.imageSmoothingEnabled = false;
     if (img) g.drawImage(img, Math.round(fx - m.ax), Math.round(fy - m.ay), m.w, m.h);
-    // Jinete: sprite del mecenas quieto (sentado), elevado hasta la silla.
-    const cv = window.HacChar ? spriteFor(w, w.dir || 'S', 0, 'stand') : null;
+    // Jinete: sprite del mecenas SENTADO, elevado hasta la silla.
+    const cv = window.HacChar ? spriteFor(w, w.dir || 'S', 0, 'sit') : null;
     if (cv) {
-      const FEET = HacChar.H - 5;
-      const dx = Math.round(fx - HacChar.W * 0.5 + (m.seatDx || 0));
-      const dy = Math.round(fy - FEET - m.seatY);
-      g.drawImage(cv, dx, dy, HacChar.W, HacChar.H);
+      const FEET = charFEET();
+      const dx = Math.round(fx - charW() * 0.5 + (m.riderDx || 0));
+      const dy = Math.round(fy - FEET - (m.riderY || 0));
+      g.drawImage(cv, dx, dy, charW(), charH());
     }
     g.restore();
   }
@@ -1268,21 +1282,21 @@ const HacFolk = (function () {
       g.strokeStyle = 'rgba(255,224,130,0.95)'; g.lineWidth = 1.4; g.beginPath(); g.ellipse(lx, ly, r, r * 0.5, 0, 0, 6.2832); g.stroke();
     }
     const moving = w.moving && w.state !== 'tarea';
-    const frame = moving ? (Math.floor(w.phase * 1.2) % HacChar.FRAMES) : 0;
-    const pose = (w.state === 'tumbado') ? 'sit' : (w.bowing ? 'bow' : 'stand');
+    const frame = moving ? (Math.floor(w.phase * 1.2) % charNF()) : 0;
+    const pose = (w.state === 'tumbado') ? 'sit' : (w.bowing ? 'bow' : (moving ? 'walk' : 'stand'));
     const cv = window.HacChar ? spriteFor(w, w.dir || 'S', frame, pose) : null;
-    const disp = SPRITE_DISP, FEET = HacChar ? HacChar.H - 5 : 51;
+    const disp = SPRITE_DISP, FEET = charFEET();
     if (isMounted(w)) {
       drawMount(g, lx, ly, w, moving);   // caballo (ciclo de andar) + jinete sobre la silla
     } else if (cv) {
-      // Blit en espacio de DISPOSITIVO (transform identidad) para que el pixel-art
+      // Blit en espacio de DISPOSITIVO (transform identidad) para que el sprite
       // quede nítido (igual que los sprites de edificio). Pies del sprite sobre (lx,ly).
       g.save();
       g.setTransform(1, 0, 0, 1, 0, 0);
       g.imageSmoothingEnabled = false;
-      const dx = Math.round(lx * SCALE - HacChar.W * 0.5 * disp);
+      const dx = Math.round(lx * SCALE - charW() * 0.5 * disp);
       const dy = Math.round(ly * SCALE - FEET * disp);
-      g.drawImage(cv, dx, dy, Math.round(HacChar.W * disp), Math.round(HacChar.H * disp));
+      g.drawImage(cv, dx, dy, Math.round(charW() * disp), Math.round(charH() * disp));
       g.restore();
     }
     if (o.banner !== false) banner(g, lx, ly - Math.round(FEET * disp / SCALE) + 1, w, o.highlight);
@@ -1297,7 +1311,7 @@ const HacFolk = (function () {
   // Bocadillo de diálogo sobre la cabeza de un mecenas que habla. (lx,lyFeet) son
   // los pies en coords lógicas; el texto se ajusta en varias líneas si hace falta.
   function speechBubble(g, lx, lyFeet, text) {
-    const disp = SPRITE_DISP, FEET = HacChar ? HacChar.H - 5 : 51;
+    const disp = SPRITE_DISP, FEET = charFEET();
     const headY = lyFeet - FEET * disp / SCALE;
     const baseY = headY - 18;                       // por encima del banner del nombre
     g.font = '600 7px "Noto Sans SC",sans-serif';
@@ -1530,7 +1544,7 @@ const HacFolk = (function () {
     walkers.forEach(w => { if (w.insideId) (inside[w.insideId] = inside[w.insideId] || []).push(w); });
 
     const actors = [], overlays = [], signs = [];
-    const FEET = HacChar ? HacChar.H - 5 : 51, bannerDy = Math.round(FEET * SPRITE_DISP / SCALE) - 1;
+    const FEET = charFEET(), bannerDy = Math.round(FEET * SPRITE_DISP / SCALE) - 1;
     // Portones: hojas animadas (overlay; el sprite no las trae). Primero, para
     // quedar bajo los banners y bocadillos. Coste mínimo: 2 polígonos por portón.
     if (wk && wk.gates) wk.gates.forEach(gate => overlays.push({ draw: (g) => drawGate(g, gate) }));
@@ -1815,13 +1829,14 @@ const HacFolk = (function () {
     const w = walkers.find(x => x.id === id);
     if (!w) return;
     const moving = w.moving && w.state !== 'tarea' && w.state !== 'saludo';
-    const frame = moving ? (Math.floor(w.phase * 1.2) % HacChar.FRAMES) : 0;
-    const pose = (w.state === 'tumbado') ? 'sit' : (w.bowing ? 'bow' : 'stand');
+    const frame = moving ? (Math.floor(w.phase * 1.2) % charNF()) : 0;
+    const pose = (w.state === 'tumbado') ? 'sit' : (w.bowing ? 'bow' : (moving ? 'walk' : 'stand'));
     const cv = spriteFor(w, w.dir || 'S', frame, pose);
     if (!cv) return;
     g.imageSmoothingEnabled = false;
-    const s = Math.min(canvas.width / HacChar.W, canvas.height / HacChar.H);
-    const dw = Math.round(HacChar.W * s), dh = Math.round(HacChar.H * s);
+    const cw = cv.width || charW(), ch = cv.height || charH();
+    const s = Math.min(canvas.width / cw, canvas.height / ch);
+    const dw = Math.round(cw * s), dh = Math.round(ch * s);
     g.drawImage(cv, Math.round((canvas.width - dw) / 2), canvas.height - dh, dw, dh);   // pies abajo
   }
 
