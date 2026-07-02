@@ -1832,7 +1832,8 @@ const HacFolk = (function () {
     const moving = w.moving && w.state !== 'tarea' && w.state !== 'saludo';
     const frame = moving ? (Math.floor(w.phase * 1.2) % charNF()) : 0;
     const pose = (w.state === 'tumbado') ? 'sit' : (w.bowing ? 'bow' : (moving ? 'walk' : 'stand'));
-    const cv = spriteFor(w, w.dir || 'S', frame, pose);
+    // Retrato: usa el MASTER de alta resolución (nítido) si está; si no, el sprite de finca.
+    const cv = (HacChar.imgFor && HacChar.imgFor(w.dir || 'S', pose, frame)) || spriteFor(w, w.dir || 'S', frame, pose);
     if (!cv) return;
     g.imageSmoothingEnabled = pngOn();
     const cw = cv.width || charW(), ch = cv.height || charH();

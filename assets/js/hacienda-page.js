@@ -1965,7 +1965,7 @@
       charEl.innerHTML = `
         <button type="button" class="hacp-cp-x" data-act="close" aria-label="Cerrar">✕</button>
         <div class="hacp-cp-top">
-          <canvas class="hacp-cp-avatar" width="64" height="92"></canvas>
+          <canvas class="hacp-cp-avatar" width="128" height="184"></canvas>
           <div class="hacp-cp-id">
             <div class="hacp-cp-head">
               <span class="hacp-cp-dot" style="--c:${esc(d.it.color)}"></span>

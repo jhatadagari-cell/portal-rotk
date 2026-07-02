@@ -537,11 +537,20 @@ const HacChar = (function () {
     if (pose === 'walk') { const n = b.walk.length; if (!n) return b.idle; return b.walk[(((frame | 0) % n) + n) % n]; }
     return b.idle;
   }
+  // Imagen MAESTRA (alta resolución, 2× del juego) para (dir,pose,frame). Útil para
+  // el retrato del panel, que se muestra más grande que el sprite de la finca.
+  function imgFor(dir, pose, frame) {
+    if (!pngImgs) return null;
+    const im = pngImgs[PNG_VIEW[dir] || 'SE']; if (!im) return null;
+    if (pose === 'sit' || pose === 'tumbado') return im.sit || im.idle;
+    if (pose === 'walk') { const a = (im.walk || []).filter(Boolean); return a.length ? a[(((frame | 0) % a.length) + a.length) % a.length] : im.idle; }
+    return im.idle;
+  }
   pngLoad();
 
   return {
     draw, DIRS, FRAMES, W, H, palette, OUTFIT, SKINS, HAIRS,
-    sprite, pngReady: () => pngReadyFlag, PNG_W, PNG_H, PNG_FEET, PNG_NF
+    sprite, imgFor, pngReady: () => pngReadyFlag, PNG_W, PNG_H, PNG_FEET, PNG_NF
   };
 })();
 

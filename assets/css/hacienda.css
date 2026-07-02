@@ -217,7 +217,7 @@ html.hacp-pseudofs, html.hacp-pseudofs body{ overflow:hidden; }
 .hacp-cp-x:hover{ opacity:1; color:#fff; }
 .hacp-cp-top{ display:flex; align-items:center; gap:10px; padding-right:30px; }
 .hacp-cp-id{ flex:1; min-width:0; }
-.hacp-cp-avatar{ flex:none; width:48px; height:69px; image-rendering:pixelated; border-radius:5px;
+.hacp-cp-avatar{ flex:none; width:48px; height:69px; image-rendering:auto; border-radius:5px;
   background:radial-gradient(ellipse at 50% 78%, rgba(201,168,76,.16), rgba(0,0,0,.18)); border:1px solid rgba(201,168,76,.18); }
 .hacp-cp-head{ display:flex; align-items:center; gap:7px; }
 .hacp-cp-dot{ flex:none; width:11px; height:11px; border-radius:50%; background:var(--c,#c9a84c); box-shadow:0 0 0 1px rgba(0,0,0,.4); }
