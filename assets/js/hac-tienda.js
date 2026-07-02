@@ -48,7 +48,7 @@ const HacTienda = (function () {
     { id: 'grulla', nombre: 'Grulla',     zh: '仙鶴', icon: '🦢', tier: 5, precio: 140, tipo: 'mascota', efecto: { guardable: true }, desc: 'Grulla de buen augurio y larga vida.' },
     { id: 'perro',  nombre: 'Perro guardián', zh: '看門犬', icon: '🐕', tier: 5, precio: 130, tipo: 'mascota', efecto: { guardable: true }, desc: 'Leal can que vigila la finca.' },
     // ── Tier 6 ── piezas de prestigio
-    { id: 'caballo', nombre: 'Caballo de raza', zh: '寶馬', icon: '🐎', tier: 6, precio: 260, tipo: 'mascota', efecto: { guardable: true }, desc: 'Un corcel digno de un general.' },
+    { id: 'caballo', nombre: 'Caballo de raza', zh: '寶馬', icon: '🐎', tier: 6, precio: 260, tipo: 'caballo', efecto: { caballo: true }, desc: 'Un corcel digno de un general. Lo bautizas y ronda libre por los campos de la finca. Uno por mecenas.' },
     { id: 'jade',    nombre: 'Colgante de jade', zh: '玉佩', icon: '💠', tier: 6, precio: 300, tipo: 'mascota', efecto: { guardable: true }, desc: 'Pieza de jade tallado, símbolo de rango.' },
 
     // ── SELLOS DE COMERCIO (equipables): +% al dinero de misiones/expediciones ──
@@ -111,7 +111,7 @@ const HacTienda = (function () {
   }
   // Botín aleatorio PONDERADO por tier (los de mayor tier salen menos), de ≤ tier.
   function botinAleatorio(tier) {
-    const pool = disponibles(tier); if (!pool.length) return null;
+    const pool = disponibles(tier).filter(i => i.tipo !== 'caballo'); if (!pool.length) return null;   // el caballo no cae como botín (es compra única)
     const w = pool.map(i => 1 / Math.pow(2, (i.tier || 1) - 1));
     let tot = 0; w.forEach(x => tot += x); let r = Math.random() * tot;
     for (let i = 0; i < pool.length; i++) { r -= w[i]; if (r <= 0) return pool[i].id; }

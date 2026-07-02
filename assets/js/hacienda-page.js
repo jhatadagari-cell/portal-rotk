@@ -818,7 +818,7 @@
       if (sucOpenIdx !== ev.i) openSucCard(o, mis, ev, dl);
     }
 
-    const refresh = () => { renderList(); refreshCharPanel(); };
+    const refresh = () => { renderList(); refreshCharPanel(); syncCaballosFolk(); };
     let lastOrdersSig = '';
 
     function applyOrders() {
@@ -1988,11 +1988,14 @@
       const money = window.HacStats ? HacStats.dinero(myId) : 0;
       const precio = precioMercado(item), rebaja = bonos.mercado > 0 && precio < item.precio;
       const noMoney = money < precio;
-      const disabled = locked || !myId || noMoney;
+      const owned = item.tipo === 'caballo' && window.HacStats && HacStats.tieneCaballo && HacStats.tieneCaballo(myId);
+      const disabled = locked || !myId || noMoney || owned;
       const precioHTML = rebaja ? `<s>${item.precio}</s> ${precio}` : `${item.precio}`;
       const btn = locked
         ? `<span class="hacp-item-lock">🔒 Nivel ${item.tier}</span>`
-        : `<button type="button" class="hacp-item-buy" data-buy="${esc(item.id)}"${disabled ? ' disabled' : ''}>💰 ${precioHTML}</button>`;
+        : owned
+          ? `<span class="hacp-item-owned">✔ ${esc((HacStats.caballo(myId) || {}).nombre || 'Tuyo')}</span>`
+          : `<button type="button" class="hacp-item-buy" data-buy="${esc(item.id)}"${disabled ? ' disabled' : ''}>💰 ${precioHTML}</button>`;
       return `<div class="hacp-item${locked ? ' locked' : ''}${item.tipo ? ' t-' + item.tipo : ''}">
         <div class="hacp-item-ic">${item.icon || '∎'}</div>
         <div class="hacp-item-main">
@@ -2022,12 +2025,69 @@
     function buyItem(item) {
       if (!item || !myId || !window.HacStats) return;
       if (item.tier > tier) { toast('🔒 Necesita una finca de nivel ' + item.tier); return; }
+      // CABALLO: compra única con nombre → abre el bautizo (no va a la mochila).
+      if (item.tipo === 'caballo') {
+        if (HacStats.tieneCaballo(myId)) { toast('Ya tienes un caballo'); return; }
+        if (HacStats.dinero(myId) < precioMercado(item)) { toast('No tienes suficiente dinero'); return; }
+        abrirBautizoCaballo(item); return;
+      }
       const res = HacStats.comprar(myId, item, precioMercado(item));   // precio con descuento del pabellón 政
       if (!res.ok) { toast(res.motivo || 'No se pudo comprar'); return; }
       if (item.efecto && item.efecto.energia && window.HacEnergia) HacEnergia.add(h.id, myId, item.efecto.energia);
       toast(`${item.icon || ''} ${item.nombre} · ${HacTienda.efectoTexto(item)}`.trim());
       buildShop();                 // refresca dinero y botones
       if (charId) buildCharPanel(charId);   // refresca monedero/inventario/energía
+    }
+
+    // ── Bautizo del CABALLO (compra única) ───────────────────────────────────
+    // Corceles célebres del período para sugerir; el jugador puede escribir el suyo.
+    const CABALLO_NOMBRES = ['赤兔', '的盧', '絕影', '照夜白', '烏騅', '大宛', '驚帆', '爪黃'];
+    let caballoEl = null;
+    function ensureCaballoEl() {
+      if (caballoEl) return caballoEl;
+      caballoEl = document.createElement('div'); caballoEl.className = 'hacp-suc-ov hacp-horse-ov'; caballoEl.hidden = true;
+      overlayHost().appendChild(caballoEl);
+      ['pointerdown', 'pointerup', 'wheel', 'click'].forEach(ev => caballoEl.addEventListener(ev, (e) => e.stopPropagation(), { passive: false }));
+      return caballoEl;
+    }
+    function cerrarBautizo() { if (caballoEl) caballoEl.hidden = true; }
+    function abrirBautizoCaballo(item) {
+      const el = ensureCaballoEl();
+      const sug = CABALLO_NOMBRES[Math.floor(Math.random() * CABALLO_NOMBRES.length)];
+      const precio = precioMercado(item);
+      el.innerHTML = `<div class="hacp-suc-box hacp-horse-box">
+        <div class="hacp-suc-eyebrow">🐎 ${esc(item.zh || '')} · Caballo de raza</div>
+        <div class="hacp-suc-ttl">Bautiza a tu corcel</div>
+        <div class="hacp-suc-desc">Vivirá suelto por los campos de la finca. Solo tendrás uno · cuesta 💰 ${precio}.</div>
+        <input type="text" class="hacp-horse-in" maxlength="24" value="${esc(sug)}" placeholder="Nombre del caballo" />
+        <div class="hacp-horse-sug">${CABALLO_NOMBRES.map(n => `<button type="button" class="hacp-horse-chip" data-nom="${esc(n)}">${esc(n)}</button>`).join('')}</div>
+        <div class="hacp-suc-confirm">
+          <button type="button" class="hacp-cp-btn hacp-suc-cancel" data-h-cancel>Cancelar</button>
+          <button type="button" class="hacp-cp-btn hacp-suc-ok" data-h-ok>Bautizar 💰 ${precio}</button>
+        </div></div>`;
+      el.hidden = false;
+      const input = el.querySelector('.hacp-horse-in');
+      if (input) { try { input.focus(); input.select(); } catch (e) {} }
+      el.querySelectorAll('[data-nom]').forEach(b => b.addEventListener('click', () => { if (input) { input.value = b.dataset.nom; input.focus(); } }));
+      el.querySelector('[data-h-cancel]').addEventListener('click', cerrarBautizo);
+      el.querySelector('[data-h-ok]').addEventListener('click', () => {
+        const nombre = (input && input.value || '').trim() || CABALLO_NOMBRES[0];
+        const res = HacStats.comprarCaballo(myId, nombre, precio);
+        if (!res.ok) { toast(res.motivo || 'No se pudo comprar'); return; }
+        cerrarBautizo();
+        toast(`🐎 ${esc(res.caballo.nombre)} · ¡tu corcel ronda ya por los campos!`);
+        if (window.HacBitacora) HacBitacora.log(myId, 'compra', `🐎 Compraste un caballo y lo llamaste ${res.caballo.nombre}`);
+        syncCaballosFolk();          // que aparezca al instante
+        buildShop();                 // refresca dinero y marca «ya lo tienes»
+        if (charId) buildCharPanel(charId);
+      });
+    }
+    // Pasa al simulador qué mecenas tienen caballo (nombre) → rondan por el exterior.
+    function syncCaballosFolk() {
+      if (!window.HacFolk || !HacFolk.setCaballos || !window.HacStats || !HacStats.caballo) return;
+      const map = {};
+      (h.miembros || []).forEach(m => { const c = HacStats.caballo(m.id); if (c) map[m.id] = { nombre: c.nombre }; });
+      HacFolk.setCaballos(map);
     }
 
     // ── Abandonar la hacienda (lo decide el jugador) ─────────────────────────

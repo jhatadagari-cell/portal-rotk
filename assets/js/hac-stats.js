@@ -45,6 +45,7 @@ const HacStats = (function () {
       casaPos: r.casa_pos || null, casaInv: parseInv(r.casa_inv), equipado: parseInv(r.equipado),
       heridas: Math.max(0, Math.min(3, Number(r.heridas) || 0)),
       escaramuzaCd: Number(r.escaramuza_cd) || 0, sendas: parseObj(r.sendas),
+      caballo: (r.caballo && typeof r.caballo === 'object') ? r.caballo : (r.caballo ? (function () { try { return JSON.parse(r.caballo); } catch (e) { return null; } })() : null),
     };
   }
   async function load() {
@@ -63,7 +64,7 @@ const HacStats = (function () {
   function reload() { readyPromise = load(); return readyPromise; }
 
   function row(mid) { return cache.find(r => r.miembroId === mid) || null; }
-  function ensure(mid) { let r = row(mid); if (!r) { r = { miembroId: mid, dinero: 0, militar: 0, cultural: 0, administrativo: 0, cap: 8, inv: [], ahorro: 0, casaPos: null, casaInv: [], equipado: [], heridas: 0, sendas: {} }; cache.push(r); } if (!r.sendas) r.sendas = {}; return r; }
+  function ensure(mid) { let r = row(mid); if (!r) { r = { miembroId: mid, dinero: 0, militar: 0, cultural: 0, administrativo: 0, cap: 8, inv: [], ahorro: 0, casaPos: null, casaInv: [], equipado: [], heridas: 0, sendas: {}, caballo: null }; cache.push(r); } if (!r.sendas) r.sendas = {}; return r; }
   // HERIDAS (0..3). Se infligen al fracasar/arriesgar en expediciones y escaramuzas.
   // PESAN: penalizan la recompensa (dinero+XP) y suben el riesgo; a 3 el mecenas
   // está MALHERIDO y no puede salir de la finca hasta curarse.
@@ -129,14 +130,23 @@ const HacStats = (function () {
   function quita(arr, id) { const e = arr.find(x => x.id === id); if (!e) return false; e.n = (e.n || 1) - 1; if (e.n <= 0) arr.splice(arr.indexOf(e), 1); return true; }
   function mete(arr, id) { const e = arr.find(x => x.id === id); if (e) e.n = (e.n || 1) + 1; else arr.push({ id, n: 1 }); }
 
+  let caballoCol = true;   // false si la columna `caballo` aún no existe (falta caballo.sql)
   async function persist(r) {
     try {
       const client = await sb();
-      const { error } = await client.from(TABLE).upsert({
+      const rowData = {
         miembro_id: r.miembroId, dinero: r.dinero, xp_militar: r.militar, xp_cultural: r.cultural,
         xp_administrativo: r.administrativo, cap_inventario: r.cap, inventario: r.inv, ahorro: r.ahorro,
         casa_pos: r.casaPos, casa_inv: r.casaInv, equipado: r.equipado, heridas: r.heridas || 0, sendas: r.sendas || {}, actualizado: new Date().toISOString(),
-      });
+      };
+      if (caballoCol) rowData.caballo = r.caballo || null;
+      let { error } = await client.from(TABLE).upsert(rowData);
+      // Si la columna `caballo` no existe todavía, reintenta SIN ella para no perder
+      // el resto de stats (el caballo no persistirá hasta ejecutar caballo.sql).
+      if (error && caballoCol && /caballo/i.test(String(error.message || ''))) {
+        caballoCol = false; delete rowData.caballo;
+        ({ error } = await client.from(TABLE).upsert(rowData));
+      }
       if (error) throw error;
     } catch (e) { console.error('[HacStats] persist', e); }
   }
@@ -282,6 +292,21 @@ const HacStats = (function () {
     } catch (e) { console.error('[HacStats] liberarCasa', e); }
   }
 
-  return { ready, reload, dinero, ahorro, casaPos, casasReclamadas, duenoDeCasa, comprarCasa, liberarCasa, abandonar, heridas, penHerida, malherido, herir, curar, escaramuzaCd, bonusDinero, bonusExped, usarManual, xp, nivel, progresoNivel, bonus, nivelTotal, nivelPersonaje, puntosTalento, talentos, puntosGastados, puntosLibres, tieneTalento, aprenderTalento, equipados, equipar, desequipar, MAX_EQUIP, award, comprar, guardar, sacar, darItem, meterEnCasa, sacarDeCasa, inventario, casaInventario, capInventario, ocupadas, recompensaExped, DOMS, dbOk: () => ok, TABLE };
+  // ── CABALLO (mascota única con nombre; ronda por fuera de la finca) ───────
+  function caballo(mid) { const r = row(mid); return (r && r.caballo) ? r.caballo : null; }
+  function tieneCaballo(mid) { return !!caballo(mid); }
+  // Compra ÚNICA: descuenta el precio y bautiza al caballo. Devuelve {ok, motivo}.
+  function comprarCaballo(mid, nombre, precio) {
+    if (!mid) return { ok: false, motivo: 'Sin mecenas' };
+    const r = ensure(mid);
+    if (r.caballo) return { ok: false, motivo: 'Ya tienes un caballo' };
+    const p = Math.max(0, precio | 0);
+    if (r.dinero < p) return { ok: false, motivo: 'No tienes suficiente dinero' };
+    const nom = String(nombre || '').trim().slice(0, 24) || 'Corcel';
+    r.dinero -= p; r.caballo = { nombre: nom, ms: Date.now() };
+    persist(r); return { ok: true, caballo: r.caballo };
+  }
+
+  return { ready, reload, dinero, ahorro, casaPos, casasReclamadas, duenoDeCasa, comprarCasa, liberarCasa, abandonar, heridas, penHerida, malherido, herir, curar, escaramuzaCd, bonusDinero, bonusExped, usarManual, xp, nivel, progresoNivel, bonus, nivelTotal, nivelPersonaje, puntosTalento, talentos, puntosGastados, puntosLibres, tieneTalento, aprenderTalento, equipados, equipar, desequipar, MAX_EQUIP, award, comprar, guardar, sacar, darItem, meterEnCasa, sacarDeCasa, inventario, casaInventario, capInventario, ocupadas, recompensaExped, caballo, tieneCaballo, comprarCaballo, DOMS, dbOk: () => ok, TABLE };
 })();
 if (typeof window !== 'undefined') window.HacStats = HacStats;

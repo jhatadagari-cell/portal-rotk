@@ -77,6 +77,10 @@ const HacFolk = (function () {
   // Sincronizado por inicioMs (reloj de servidor) → todos los clientes lo ven igual.
   let escMap = {};
   function setEscaramuzas(m) { escMap = m || {}; }
+  // caballos[ownerId] = { nombre } — mascotas que rondan por FUERA de la finca.
+  // La página lo alimenta desde HacStats; `horses` (más abajo) es su encarnación viva.
+  let caballos = {}, horses = [];
+  function setCaballos(m) { caballos = m || {}; if (Object.keys(caballos).length) ensureHorses(); }
   const ESC_MUSTER_MS = 26000;   // ventana de concentración en la puerta: amplia para que
                                  // todos los mecenas (incluso clientes con poll lento / app en
                                  // segundo plano) lleguen y ESPEREN antes del grito conjunto.
@@ -971,6 +975,7 @@ const HacFolk = (function () {
     stepGates(dt);
     stepMerchants(dt);
     stepBoard(dt);
+    stepHorses(dt);
   }
 
   // Apertura/cierre de los portones: se abre si hay un mecenas cerca de la celda
@@ -1167,6 +1172,54 @@ const HacFolk = (function () {
       g.drawImage(cv, dx, dy, HacChar.W, HacChar.H);
     }
     g.restore();
+  }
+  // Dibuja un caballo SUELTO (sin jinete) rondando el campo exterior.
+  function drawHorse(g, lx, ly, h) {
+    const v = HORSE_VIEW[h.dir || 'SE'] || 'SE', m = HORSE_META[v], arr = horseImg[v];
+    const fi = h.moving ? (Math.floor(h.phase * 1.6) % HORSE_NF) : 0;
+    const img = arr && arr[fi]; if (!img) return;
+    const fx = lx * SCALE, fy = ly * SCALE;
+    g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.imageSmoothingEnabled = false;
+    g.drawImage(img, Math.round(fx - m.ax), Math.round(fy - m.ay), m.w, m.h);
+    g.restore();
+  }
+  // Crea la encarnación de un caballo: hogar ESTABLE (semilla por dueño) en el campo
+  // que hay frente al portón sur, para que varios caballos no se amontonen.
+  function makeHorse(id, info) {
+    const e = wk && wk.exitCell; if (!e) return null;
+    let seed = 2166136261; for (let i = 0; i < id.length; i++) seed = (seed ^ id.charCodeAt(i)) * 16777619 >>> 0;
+    const r0 = (seed % 997) / 997;                         // 0..1 estable por dueño
+    const homeX = e[0] + (r0 * 2 - 1) * 1.8;               // desplazamiento lateral estable
+    const homeY = e[1] + 2.8 + r0 * 1.2;                   // al sur, fuera de la muralla (entre outNear y outFar)
+    return { id, nombre: (info && info.nombre) || 'Corcel', _r: seed || 1, homeX, homeY,
+      fx: homeX, fy: homeY, tx: homeX, ty: homeY, dir: 'SE', phase: 0, moving: false, pauseT: 1 + r0 * 3 };
+  }
+  // VIDA del caballo: pasta un rato, camina a un punto cercano del pastizal, se para.
+  // Semi-determinista (mrand por dueño) → todos los clientes lo ven parecido. Se
+  // auto-sincroniza con `caballos` (crea/quita) por si el mapa llega antes que la finca.
+  function stepHorses(dt) {
+    if (!wk || !wk.exitCell) return;
+    const ids = Object.keys(caballos);
+    if (horses.length !== ids.length || horses.some(h => !caballos[h.id])) {
+      horses = horses.filter(h => caballos[h.id]);
+      ids.forEach(id => { if (!horses.find(h => h.id === id)) { const nh = makeHorse(id, caballos[id]); if (nh) horses.push(nh); } });
+    }
+    const SPD = 0.62;
+    horses.forEach(h => {
+      const c = caballos[h.id]; if (c && c.nombre) h.nombre = c.nombre;
+      if (h.moving) h.phase += dt * 4;
+      if (h.pauseT > 0) { h.pauseT -= dt; return; }
+      if (h.moving) {
+        const dx = h.tx - h.fx, dy = h.ty - h.fy, d = Math.sqrt(dx * dx + dy * dy), adv = SPD * dt;
+        const fd = faceFromGrid(dx, dy); if (fd) h.dir = fd;
+        if (d <= adv || d < 0.02) { h.fx = h.tx; h.fy = h.ty; h.moving = false; h.pauseT = 2.5 + mrand(h) * 6; }
+        else { h.fx += dx / d * adv; h.fy += dy / d * adv; }
+      } else if (mrand(h) < 0.55) {                        // se pone a caminar por el pastizal
+        h.tx = h.homeX + (mrand(h) * 2 - 1) * 1.3;
+        h.ty = h.homeY + (mrand(h) * 2 - 1) * 0.9;
+        h.moving = true;
+      } else h.pauseT = 2 + mrand(h) * 5;                  // sigue pastando quieto
+    });
   }
 
   function drawWalker(g, lx, ly, w, o) {
@@ -1454,6 +1507,11 @@ const HacFolk = (function () {
       actors.push({ fx: ck.fx, fy: ck.fy, draw: (g, lx, ly) => drawWalker(g, lx, ly, ck, { banner: false }) });
       overlays.push({ draw: (g) => { const p = logic(ck.fx, ck.fy); npcBanner(g, p[0], p[1] - npcDy, ck.name, '📜'); } });
     });
+    // Caballos sueltos: sprite como actor (con oclusión/profundidad) + su nombre encima.
+    if (horses.length && horseReady) horses.forEach(h => {
+      actors.push({ fx: h.fx, fy: h.fy, draw: (g, lx, ly) => drawHorse(g, lx, ly, h) });
+      overlays.push({ draw: (g) => { const p = logic(h.fx, h.fy); const m = HORSE_META[HORSE_VIEW[h.dir || 'SE'] || 'SE']; npcBanner(g, p[0], p[1] - (Math.round(m.h * SPRITE_DISP / SCALE) - 1), h.nombre, '🐎'); } });
+    });
     // Mecenas visibles: el sprite va como actor (con oclusión); el NOMBRE va aparte.
     const nameCands = [];
     walkers.forEach(w => {
@@ -1607,6 +1665,7 @@ const HacFolk = (function () {
   function start(isoCanvas, o) {
     stop();
     iso = isoCanvas; opts = o || {}; selectedId = null; stateSig = ''; started = false;
+    horses = [];   // se recolocan sobre la finca nueva al re-sincronizar caballos
     if (!iso) return;
     // Semilla ESTABLE de la finca (génesis). Y el id para snapshots (null = demo
     // sin persistencia, p.ej. onboarding → corre continuo desde génesis local).
@@ -1746,6 +1805,6 @@ const HacFolk = (function () {
   }
 
   function mainBuildingId() { return wk ? (wk.mainBid || null) : null; }
-  return { start, stop, list, select, selected, position, buildings, buildingTypes, setOrders, setEscaramuzas, drawAvatar, goHome, consultar, consultando, dejarConsulta, mainBuildingId };
+  return { start, stop, list, select, selected, position, buildings, buildingTypes, setOrders, setEscaramuzas, setCaballos, drawAvatar, goHome, consultar, consultando, dejarConsulta, mainBuildingId };
 })();
 if (typeof window !== 'undefined') window.HacFolk = HacFolk;

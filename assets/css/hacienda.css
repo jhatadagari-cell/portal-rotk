@@ -654,6 +654,16 @@ button.hacp-slot.manual:hover{ background:rgba(201,168,76,.24); }
 .hacp-suc-eff{ font-size:12.5px; color:var(--parch2,#c9bda6); text-align:center; line-height:1.5; margin-bottom:14px; }
 .hacp-suc-eff b{ color:var(--parch,#eadfce); }
 .hacp-suc-done{ display:block; width:100%; }
+/* ── Bautizo del caballo ── */
+.hacp-horse-in{ width:100%; box-sizing:border-box; margin-top:4px; padding:11px 12px; font:800 18px 'Noto Serif SC',serif; text-align:center;
+  color:var(--parch,#eadfce); background:rgba(0,0,0,.28); border:1px solid rgba(201,168,76,.45); border-radius:10px; }
+.hacp-horse-in:focus{ outline:none; border-color:var(--gold); box-shadow:0 0 0 2px rgba(201,168,76,.22); }
+.hacp-horse-sug{ display:flex; flex-wrap:wrap; gap:6px; justify-content:center; margin-top:10px; }
+.hacp-horse-chip{ font:700 15px 'Noto Serif SC',serif; color:var(--gold); background:rgba(201,168,76,.10); border:1px solid rgba(201,168,76,.35);
+  border-radius:8px; padding:5px 10px; cursor:pointer; transition:background .15s,color .15s; }
+.hacp-horse-chip:hover{ background:rgba(201,168,76,.28); color:#fff; }
+.hacp-item-owned{ flex:0 0 auto; font:700 12px 'Noto Serif SC',serif; color:#bfe0b2; background:rgba(122,162,110,.16);
+  border:1px solid rgba(122,162,110,.45); border-radius:8px; padding:5px 9px; white-space:nowrap; }
 .hacp-esc-timer{ font:900 19px 'Noto Serif SC',serif; color:var(--gold); text-align:center; padding:10px 0 4px; font-variant-numeric:tabular-nums; }
 /* ── Doctrina de banda + narración de sucesos (A2b) ── */
 .hacp-esc-doc{ font:700 12px 'Noto Serif SC',serif; color:var(--gold); text-align:center; margin:4px 0 8px; }

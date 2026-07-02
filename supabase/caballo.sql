@@ -1,0 +1,12 @@
+-- ═══════════════════════════════════════════════════════════════════════
+-- caballo.sql — Caballo del mecenas (mascota única con nombre).
+-- ─────────────────────────────────────────────────────────────────────────
+-- Añade a mecenas_stats una columna `caballo` (jsonb): { nombre, ms } o NULL.
+-- Cada mecenas puede comprar UN caballo (compra única). Una vez comprado, ronda
+-- por FUERA de la finca haciendo su vida (pasta, camina, se para). La RLS de
+-- mecenas_stats ya existe (lectura pública, escritura del dueño); no hace falta
+-- tocarla. El cliente tolera que la columna aún no exista (no persiste el caballo
+-- hasta ejecutar esto, pero el resto de stats siguen guardándose).
+-- Ejecutar una vez en el SQL editor de Supabase (después de mecenas_stats.sql).
+-- ═══════════════════════════════════════════════════════════════════════
+alter table public.mecenas_stats add column if not exists caballo jsonb;
