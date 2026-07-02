@@ -152,10 +152,10 @@ const HacFolk = (function () {
     return cv;
   }
   // Dimensiones del sprite ACTIVO (PNG de calidad si está listo, si no procedural).
-  // El arte de andar generado NO alterna piernas (siempre la misma pierna delante),
-  // así que de momento los mecenas se DESLIZAN con la pose idle (la túnica larga lo
-  // disimula). Poner a true cuando tengamos una tira con zancada alterna real.
-  const WALK_ANIM = false;
+  // Andar de PERFIL (zancada alterna real): al moverse se usa el sprite de perfil
+  // volteado según la dirección; quieto y montado siguen en ¾. Poner a false para
+  // volver al deslizado con la pose idle.
+  const WALK_ANIM = true;
   const pngOn  = () => !!(window.HacChar && HacChar.pngReady && HacChar.pngReady());
   const charW  = () => pngOn() ? HacChar.PNG_W : (window.HacChar ? HacChar.W : 40);
   const charH  = () => pngOn() ? HacChar.PNG_H : (window.HacChar ? HacChar.H : 56);

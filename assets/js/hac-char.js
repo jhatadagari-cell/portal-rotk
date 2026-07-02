@@ -488,54 +488,67 @@ const HacChar = (function () {
   // render de la finca (hac-folk). El resto (onboarding, avatares de barra)
   // sigue usando draw() procedural con W/H/FRAMES de arriba.
   //
-  //   assets/img/char/mecenas-{idle,walk-<i>,sit}-{SW,SE,NW,NE}.png
-  //   · 4 vistas diagonales (como el caballo). 8 dirs del motor → 4 vía VIEW.
-  //   · Andar = 7 fotogramas. idle y sentado (montar) = 1 cada uno.
+  //   · QUIETO / SENTADO (montar): vista ¾ diagonal (4 vistas SW·SE·NW·NE, como
+  //     el caballo). Ficheros mecenas-{idle,sit}-{SW,SE,NW,NE}.png.
+  //   · ANDAR: vista de PERFIL (la única en la que la IA dibuja bien la zancada
+  //     alterna). Ficheros mecenas-walkP-<i>.png (mirando a la DERECHA). Se
+  //     voltea a la izquierda por código según la dirección de avance.
   //   · Maestros 300×520 (pies en y=496, eje del cuerpo en x=150). Se HORNEAN
-  //     una vez a tamaño de juego (~80 px de alto) y se cachean; nunca se
-  //     reprocesan por frame (cf. FPS de la finca).
+  //     una vez a tamaño de juego y se cachean; nunca se reprocesan por frame.
   // ══════════════════════════════════════════════════════════════════════
   const PNG_DIRS  = ['SW', 'SE', 'NW', 'NE'];
   const PNG_VIEW  = { E: 'SE', SE: 'SE', S: 'SE', SW: 'SW', W: 'SW', NW: 'NW', N: 'NW', NE: 'NE' };
-  const PNG_NF    = 4;                         // ciclo de andar (4 tiempos, alterna piernas)
+  // Perfil mira a la derecha: se usa tal cual si el avance es hacia la derecha
+  // de la pantalla (E/SE/NE/S/N) y espejado si es hacia la izquierda (W/SW/NW).
+  const FACE_LEFT = { W: 1, SW: 1, NW: 1 };
+  const PROFILE_NF = 9;                        // fotogramas del andar de perfil
   const M_W = 300, M_H = 520, M_FEET = 496;    // geometría del maestro
-  const PNG_H = 74;                            // alto del lienzo horneado (px dispositivo)
-  const PNG_W = Math.round(M_W * PNG_H / M_H); //  → ~80 px de personaje
-  const PNG_FEET = Math.round(M_FEET * PNG_H / M_H);
+  const PNG_H = 74;                            // alto del lienzo horneado
+  const K = PNG_H / M_H, SCW = Math.round(M_W * K);
+  const PNG_W = 56;                            // ancho del lienzo (holgado para la zancada de perfil)
+  const OFFX = Math.round((PNG_W - SCW) / 2);
+  const PNG_FEET = Math.round(M_FEET * K);
+  const PNG_NF = PROFILE_NF;                   // charNF() en el motor (andar)
   let pngImgs = null, pngBaked = null, pngReadyFlag = false;
 
+  // Hornea un maestro (300×520) al lienzo de juego, centrado y a escala uniforme.
+  function pngBakeOne(img, flip) {
+    const c = document.createElement('canvas'); c.width = PNG_W; c.height = PNG_H;
+    const x = c.getContext('2d'); x.imageSmoothingEnabled = true; x.imageSmoothingQuality = 'high';
+    if (flip) { x.translate(PNG_W, 0); x.scale(-1, 1); }
+    x.drawImage(img, OFFX, 0, SCW, PNG_H); return c;
+  }
   function pngBake() {
-    const bake = (img) => {
-      const c = document.createElement('canvas'); c.width = PNG_W; c.height = PNG_H;
-      const x = c.getContext('2d'); x.imageSmoothingEnabled = true; x.imageSmoothingQuality = 'high';
-      x.drawImage(img, 0, 0, PNG_W, PNG_H); return c;
-    };
-    const baked = {};
+    const baked = { view: {}, walkR: [], walkL: [] };
     PNG_DIRS.forEach(v => {
-      const im = pngImgs[v];
-      baked[v] = { idle: bake(im.idle), sit: bake(im.sit), walk: im.walk.map(bake) };
+      const im = pngImgs.view[v];
+      baked.view[v] = { idle: pngBakeOne(im.idle), sit: pngBakeOne(im.sit) };
     });
+    pngImgs.walk.forEach(im => { if (im) { baked.walkR.push(pngBakeOne(im, false)); baked.walkL.push(pngBakeOne(im, true)); } });
     pngBaked = baked; pngReadyFlag = true;
   }
   function pngLoad() {
     if (typeof document === 'undefined' || !document.createElement) return;
-    const base = 'assets/img/char/', V = '?v=3';
-    pngImgs = {}; let need = 0, got = 0;
+    const base = 'assets/img/char/', V = '?v=4';
+    pngImgs = { view: {}, walk: [] }; let need = 0, got = 0;
     const done = () => { if (++got >= need && !pngReadyFlag) { try { pngBake(); } catch (e) {} } };
+    const L = (src, set) => { need++; const im = new Image(); im.onload = () => { set(im); done(); }; im.onerror = done; im.src = base + src + V; };
     PNG_DIRS.forEach(v => {
-      pngImgs[v] = { idle: null, sit: null, walk: [] };
-      const L = (src, set) => { need++; const im = new Image(); im.onload = () => { set(im); done(); }; im.onerror = done; im.src = base + src + V; };
-      L('mecenas-idle-' + v + '.png', im => pngImgs[v].idle = im);
-      L('mecenas-sit-' + v + '.png', im => pngImgs[v].sit = im);
-      for (let i = 0; i < PNG_NF; i++) (function (i) { L('mecenas-walk-' + v + '-' + i + '.png', im => pngImgs[v].walk[i] = im); })(i);
+      pngImgs.view[v] = { idle: null, sit: null };
+      L('mecenas-idle-' + v + '.png', im => pngImgs.view[v].idle = im);
+      L('mecenas-sit-' + v + '.png', im => pngImgs.view[v].sit = im);
     });
+    for (let i = 0; i < PROFILE_NF; i++) (function (i) { L('mecenas-walkP-' + i + '.png', im => pngImgs.walk[i] = im); })(i);
   }
   // Devuelve el lienzo horneado para (dir, pose, frame) o null si aún no está listo.
   function sprite(dir, pose, frame) {
     if (!pngReadyFlag) return null;
-    const b = pngBaked[PNG_VIEW[dir] || 'SE']; if (!b) return null;
+    if (pose === 'walk') {
+      const arr = FACE_LEFT[dir] ? pngBaked.walkL : pngBaked.walkR; const n = arr.length;
+      if (!n) return null; return arr[(((frame | 0) % n) + n) % n];
+    }
+    const b = pngBaked.view[PNG_VIEW[dir] || 'SE']; if (!b) return null;
     if (pose === 'sit' || pose === 'tumbado') return b.sit;
-    if (pose === 'walk') { const n = PNG_NF; return b.walk[(((frame | 0) % n) + n) % n]; }
     return b.idle;                                  // stand / bow / (sin pose)
   }
   pngLoad();
