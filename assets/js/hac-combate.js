@@ -130,28 +130,38 @@ const HacCombate = (function () {
     skin: '#c06a44', skinDk: '#8f4a30', skinHi: '#d68a5c', beard: '#1c1409', beardHi: '#33240f',
     cap: '#2f5738', capHi: '#4a7351', capDk: '#1f3b26', pole: '#6e4326', poleHi: '#8f5c34',
     steel: '#cfd3da', steelHi: '#eef0f4', steelDk: '#7f858f', gold: '#d8b24a', sash: '#c49a3e', out: [16, 12, 7] };
-  // Guandao (青龍偃月刀): asta de madera + hoja creciente de acero, con collar dorado y borla.
+  // Guandao (青龍偃月刀): asta de madera + hoja de media luna, collar dorado (吞口) y borla.
   function drawGuandao(g, hx, hy, ang) {
-    g.save(); g.translate(hx, hy); g.rotate(ang);
-    g.fillStyle = GY.pole; g.fillRect(-1.5, -32, 3, 52); g.fillStyle = GY.poleHi; g.fillRect(-1.5, -32, 1, 52);
-    const by = -32;
-    g.fillStyle = '#a83b2b'; g.fillRect(-4, by + 2, 3, 7);                 // borla roja
-    g.fillStyle = GY.gold; g.fillRect(-3, by - 1, 6, 4);                   // collar dorado
-    const grad = g.createLinearGradient(-14, by, 2, by); grad.addColorStop(0, GY.steelHi); grad.addColorStop(1, GY.steelDk);
-    g.fillStyle = grad; g.beginPath();                                     // hoja creciente hacia -x
-    g.moveTo(0, by); g.quadraticCurveTo(-16, by - 1, -13, by - 12);
-    g.quadraticCurveTo(-9, by - 16, -2, by - 15); g.quadraticCurveTo(-4, by - 7, 0, by);
-    g.closePath(); g.fill(); g.strokeStyle = GY.steelHi; g.lineWidth = 1; g.stroke();
-    g.fillStyle = GY.steel; g.beginPath();                                // gancho trasero
-    g.moveTo(0, by - 3); g.quadraticCurveTo(6, by - 6, 7, by); g.quadraticCurveTo(3, by - 1, 0, by); g.closePath(); g.fill();
+    g.save(); g.translate(hx, hy); g.rotate(ang); g.lineJoin = 'round';
+    // Asta de madera.
+    g.fillStyle = GY.pole; g.fillRect(-1.5, -30, 3, 50); g.fillStyle = GY.poleHi; g.fillRect(-1.5, -30, 1, 50);
+    const by = -30;
+    // Borla roja bajo el collar.
+    g.fillStyle = '#a83b2b'; g.fillRect(-3.5, by + 4, 3, 8); g.fillStyle = '#7c281c'; g.fillRect(-3.5, by + 10, 3, 2);
+    // Collar dorado (吞口) donde encaja la hoja.
+    g.fillStyle = GY.gold; g.beginPath(); g.moveTo(-4, by + 2); g.lineTo(4, by + 2); g.lineTo(3, by - 3); g.lineTo(-3, by - 3); g.closePath(); g.fill();
+    g.fillStyle = GY.steelHi; g.fillRect(-3, by - 3, 6, 1);
+    // Hoja de media luna (filo convexo hacia -x, punta afilada arriba).
+    const grad = g.createLinearGradient(-16, by - 12, 3, by - 12); grad.addColorStop(0, GY.steelHi); grad.addColorStop(0.5, GY.steel); grad.addColorStop(1, GY.steelDk);
+    g.fillStyle = grad; g.beginPath();
+    g.moveTo(2, by - 2);                                 // base del lomo (junto al asta)
+    g.quadraticCurveTo(1, by - 12, -2, by - 23);        // lomo cóncavo → punta
+    g.quadraticCurveTo(-11, by - 19, -16, by - 8);      // punta → filo convexo (sale a la izq)
+    g.quadraticCurveTo(-15, by - 1, -6, by - 2);        // filo inferior curva de vuelta
+    g.closePath(); g.fill();
+    // Filo brillante a lo largo del corte.
+    g.strokeStyle = GY.steelHi; g.lineWidth = 1.4; g.lineCap = 'round';
+    g.beginPath(); g.moveTo(-2, by - 23); g.quadraticCurveTo(-11, by - 19, -16, by - 8); g.quadraticCurveTo(-15, by - 1, -6, by - 2); g.stroke();
+    // Pequeño espolón en el lomo.
+    g.fillStyle = GY.steel; g.beginPath(); g.moveTo(1, by - 10); g.lineTo(7, by - 9); g.lineTo(1, by - 6); g.closePath(); g.fill();
     g.restore();
   }
   const gyCache = {};
   function guanyu(pose) {
     if (gyCache[pose]) return gyCache[pose];
-    const w = 56, h = 76, c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d');
+    const w = 56, h = 84, c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d');
     const px = (x, y, ww, hh, col) => { g.fillStyle = col; g.fillRect(x, y, ww, hh); };
-    const P = GY, atk = pose === 'atk', cx = 32, footY = 70;
+    const P = GY, atk = pose === 'atk', cx = 32, footY = 78;
     if (!atk) drawGuandao(g, cx - 17, footY - 24, 0);   // idle: asta erguida por detrás
     // Piernas + botas.
     px(cx - 6, footY - 13, 5, 13, P.robeDk); px(cx + 1, footY - 13, 5, 13, P.robeDk);
@@ -183,7 +193,7 @@ const HacCombate = (function () {
     if (!atk) { px(cx - 11, footY - 28, 5, 4, P.robe); px(cx - 15, footY - 24, 5, 3, P.robe); px(cx - 17, footY - 21, 4, 3, P.skin); }
     else {
       px(cx - 11, footY - 33, 6, 4, P.robe); px(cx - 16, footY - 35, 5, 3, P.robe); px(cx - 19, footY - 36, 4, 3, P.skin);
-      drawGuandao(g, cx - 19, footY - 35, -1.15);   // atk: guandao alzado y llevado al frente
+      drawGuandao(g, cx - 19, footY - 37, -1.15);   // atk: guandao alzado y llevado al frente
     }
     outlineCanvas(c, P.out);
     gyCache[pose] = c; return c;
@@ -194,7 +204,7 @@ const HacCombate = (function () {
     const gy = H * 0.80;
     enemy.ax = W * 0.24; enemy.ay = gy; enemy.th = H * 0.42;
     enemy.ox = 0; enemy.oy = 0; enemy.flash = 0; enemy.deadA = 1; enemy.hitT = 0;
-    party.forEach((u, i) => { u.ax = W * 0.66 + i * (W * 0.11); u.ay = gy - i * (H * 0.015); u.th = H * (u.sprite === 'guanyu' ? 0.33 : 0.26); u.ox = 0; u.oy = 0; u.flash = 0; u.deadA = 1; u.hitT = 0; });
+    party.forEach((u, i) => { u.ax = W * 0.66 + i * (W * 0.11); u.ay = gy - i * (H * 0.015); u.th = H * (u.sprite === 'guanyu' ? 0.36 : 0.26); u.ox = 0; u.oy = 0; u.flash = 0; u.deadA = 1; u.hitT = 0; });
   }
 
   // ── Fondo (mazmorra) horneado una vez ────────────────────────────────────────
