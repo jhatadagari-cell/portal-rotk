@@ -34,7 +34,7 @@ const HacCombate = (function () {
       { id: 'a', name: 'Huang Zhong', rol: 'Arquero', aptitud: 'militar', aspecto: { robe: '#4e6f8f', piel: 0, pelo: 2 },
         maxHp: 98, hp: 98, maxSp: 26, sp: 26, spd: 12, bp: 1, wpn: 'arco', def: false,
         skills: [ { name: 'Andanada', type: 'arco', sp: 7, hits: 3, power: 10 }, { name: 'Flecha ígnea', type: 'fuego', sp: 10, hits: 1, power: 26 } ] },
-      { id: 'm', name: 'Zhuge Liang', rol: 'Estratega', aptitud: 'cultural', aspecto: { robe: '#7f9e6a', piel: 0, pelo: 0 },
+      { id: 'm', name: 'Zhuge Liang', rol: 'Estratega', aptitud: 'cultural', sprite: 'zhugeliang', aspecto: { robe: '#7f9e6a', piel: 0, pelo: 0 },
         maxHp: 84, hp: 84, maxSp: 38, sp: 38, spd: 8, bp: 1, wpn: 'viento', def: false,
         skills: [ { name: 'Llamarada', type: 'fuego', sp: 9, hits: 1, power: 30 }, { name: 'Ventisca', type: 'viento', sp: 9, hits: 2, power: 15 }, { name: 'Vendaval curativo', type: 'cura', sp: 10, heal: 55 } ] },
     ];
@@ -50,9 +50,15 @@ const HacCombate = (function () {
   let root = null, party = [], enemy = null, orden = [], idx = 0, ronda = 1, busy = false, over = false, sel = { boost: 0 };
   let elScene, elParty, elMenu, elLog, elTimeline, logLines = [];
   // Canvas / animación
-  let cv, ctx, bg, bgImg = null, gySheet = null, W = 0, H = 0, dpr = 1, raf = 0, t = 0, shake = 0;
-  // Spritesheet de ataque de Guan Yu (frame 0 = reposo; 0→60 = ataque).
-  const GYA = { cols: 8, count: 61, cellW: 361, cellH: 300, pivotX: 233, feetY: 285, charH: 199 };
+  let cv, ctx, bg, bgImg = null, W = 0, H = 0, dpr = 1, raf = 0, t = 0, shake = 0;
+  // Spritesheets de ataque (frame 0 = reposo; 0→60 = ataque). Anclados por los pies.
+  // thf = altura del CUERPO en pantalla (fracción de H); calibrado para que todos midan igual
+  // ignorando lo que sobresale por arriba (p. ej. la guandao de Guan Yu).
+  const SHEETS = {
+    guanyu:     { src: 'assets/img/guanyu-atk.webp?v=1',     img: null, cols: 8, count: 61, cellW: 361, cellH: 300, pivotX: 233, feetY: 285, charH: 199, thf: 0.300 },
+    zhugeliang: { src: 'assets/img/zhugeliang-atk.webp?v=1', img: null, cols: 8, count: 61, cellW: 392, cellH: 300, pivotX: 245, feetY: 293, charH: 275, thf: 0.226 },
+  };
+  const sheetReady = (u) => !u.foe && u.sprite && SHEETS[u.sprite] && SHEETS[u.sprite].img && SHEETS[u.sprite].img.complete && SHEETS[u.sprite].img.naturalWidth;
   const tweens = [], floaters = [], parts = [], projs = [], slashes = [];
   const alive = (u) => u.hp > 0;
   const partyAlive = () => party.filter(alive);
@@ -206,7 +212,7 @@ const HacCombate = (function () {
     const gy = H * 0.80;
     enemy.ax = W * 0.24; enemy.ay = gy; enemy.th = H * 0.42;
     enemy.ox = 0; enemy.oy = 0; enemy.flash = 0; enemy.deadA = 1; enemy.hitT = 0;
-    party.forEach((u, i) => { u.ax = W * 0.66 + i * (W * 0.11); u.ay = gy - i * (H * 0.015); u.th = H * (u.sprite === 'guanyu' ? 0.30 : 0.26); u.ox = 0; u.oy = 0; u.flash = 0; u.deadA = 1; u.hitT = 0; });
+    party.forEach((u, i) => { u.ax = W * 0.66 + i * (W * 0.11); u.ay = gy - i * (H * 0.015); u.th = H * (SHEETS[u.sprite] ? SHEETS[u.sprite].thf : 0.26); u.ox = 0; u.oy = 0; u.flash = 0; u.deadA = 1; u.hitT = 0; });
   }
 
   // ── Fondo horneado una vez ───────────────────────────────────────────────────
@@ -301,9 +307,9 @@ const HacCombate = (function () {
   }
   function drawSaber(w) { ctx.save(); ctx.translate(-w * 0.30, -w * 0.9); ctx.rotate(-0.5); ctx.fillStyle = '#d8b24a'; ctx.fillRect(-2 * dpr, -2 * dpr, 6 * dpr, 4 * dpr); ctx.strokeStyle = '#eef1f6'; ctx.lineWidth = 3 * dpr; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(2 * dpr, 0); ctx.quadraticCurveTo(-16 * dpr, -7 * dpr, -32 * dpr, -1 * dpr); ctx.stroke(); ctx.restore(); }
   function drawBow(h) { ctx.save(); ctx.translate(-h * 0.30, -h * 0.55); const r = h * 0.32; ctx.strokeStyle = '#8a5a2c'; ctx.lineWidth = 3 * dpr; ctx.beginPath(); ctx.arc(0, 0, r, -1.1, 1.1); ctx.stroke(); ctx.strokeStyle = 'rgba(240,240,220,.6)'; ctx.lineWidth = 1 * dpr; ctx.beginPath(); ctx.moveTo(Math.cos(-1.1) * r, Math.sin(-1.1) * r); ctx.lineTo(Math.cos(1.1) * r, Math.sin(1.1) * r); ctx.stroke(); ctx.restore(); }
-  // Guan Yu animado desde el spritesheet (reposo = frame 0; ataque = clip 0→60 estirado a la duración de la acción).
-  function drawGuanyuSheet(u) {
-    const A = GYA; let fi = 0;
+  // Aliado animado desde spritesheet (reposo = frame 0; ataque = clip 0→60 estirado a la duración de la acción).
+  function drawSheet(u) {
+    const A = SHEETS[u.sprite]; let fi = 0;
     if (u._atk && u._animT0) { const p = clamp((now() - u._animT0) / (u._animDur || 800), 0, 1); fi = Math.min(A.count - 1, Math.floor(p * A.count)); }
     const col = fi % A.cols, row = Math.floor(fi / A.cols);
     const k = (u.th * dpr) / A.charH;
@@ -312,14 +318,15 @@ const HacCombate = (function () {
     const dW = A.cellW * k, dH = A.cellH * k, dx = fx - A.pivotX * k, dy = fy - A.feetY * k;
     ctx.save(); ctx.globalAlpha = u.deadA;
     ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.beginPath(); ctx.ellipse(fx, fy, dW * 0.20, dH * 0.028, 0, 0, 6.283); ctx.fill();
+    if (u._atk && u._cast) { const rg = ctx.createRadialGradient(fx, fy - dH * 0.42, 0, fx, fy - dH * 0.42, dW * 0.62); rg.addColorStop(0, u._cast); rg.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = rg; ctx.beginPath(); ctx.arc(fx, fy - dH * 0.42, dW * 0.62, 0, 6.283); ctx.fill(); }
     if (u.flash > 0.02) ctx.filter = `brightness(${1 + u.flash * 4})`;
     ctx.imageSmoothingEnabled = true;
-    ctx.drawImage(gySheet, col * A.cellW, row * A.cellH, A.cellW, A.cellH, dx, dy, dW, dH);
+    ctx.drawImage(A.img, col * A.cellW, row * A.cellH, A.cellW, A.cellH, dx, dy, dW, dH);
     ctx.filter = 'none'; ctx.restore(); u.flash *= 0.82;
   }
   function drawUnit(u) {
     if (u.deadA <= 0.01) return;
-    if (!u.foe && u.sprite === 'guanyu' && gySheet && gySheet.complete && gySheet.naturalWidth) { drawGuanyuSheet(u); return; }
+    if (sheetReady(u)) { drawSheet(u); return; }
     let img, walking;
     if (u.foe) { img = turbante(u._atk ? 'atk' : 'idle'); walking = false; }
     else if (u.sprite === 'guanyu') { img = guanyu(u._atk ? 'atk' : 'idle'); walking = false; }
@@ -377,7 +384,7 @@ const HacCombate = (function () {
       u._cast = 'rgba(140,210,110,.5)';
       const target = partyAlive().slice().sort((a, b) => (a.hp / a.maxHp) - (b.hp / b.maxHp))[0] || u;
       const heal = Math.round(action.heal * (1 + boost * 0.5));
-      tween(260, (p) => { u.oy = -10 * Math.sin(p * 3.14); }, () => { u.oy = 0; });
+      if (!u.sprite) tween(260, (p) => { u.oy = -10 * Math.sin(p * 3.14); }, () => { u.oy = 0; });   // sin saltito si tiene animación propia
       wait(220, () => { target.hp = Math.min(target.maxHp, target.hp + heal); target.flash = 0.7; burst(ux(target), uy(target) - target.th * 0.5, 'rgba(140,210,110,', 16, 1.4); floater(ux(target), uy(target) - target.th, '+' + heal, '#8ed16f', true); log(`<b>${u.name}</b> cura a <b>${target.name}</b> (+${heal} PV).`); renderParty(); });
       return finTurno(760);
     }
@@ -399,8 +406,8 @@ const HacCombate = (function () {
       });
       return finTurno(230 + 150 * hits + 340);
     }
-    // ranged / magic: hop + proyectil(es)
-    tween(220, (p) => { u.oy = -8 * Math.sin(p * 3.14); }, () => { u.oy = 0; });
+    // ranged / magic: proyectil(es); saltito solo si NO tiene animación propia (se queda en el sitio)
+    if (!u.sprite) tween(220, (p) => { u.oy = -8 * Math.sin(p * 3.14); }, () => { u.oy = 0; });
     let done = 0;
     for (let i = 0; i < hits; i++) wait(130 * i, () => {
       projs.push({ t0: now(), dur: 300, x0: ux(u), y0: uy(u) - u.th * 0.55, x1: ux(enemy), y1: uy(enemy) - enemy.th * 0.55, kind: cat === 'arrow' ? 'arrow' : 'orb', col: t2 ? t2.col : '#ff8a3c', onHit: () => { doHit(); if (++done === hits) resumen(); } });
@@ -518,7 +525,7 @@ const HacCombate = (function () {
   function init(container) {
     root = container;
     bgImg = new Image(); bgImg.onload = () => { if (cv) bakeBg(); }; bgImg.src = 'assets/img/bg-turbantes.jpg?v=1';
-    gySheet = new Image(); gySheet.src = 'assets/img/guanyu-atk.webp?v=1';
+    Object.values(SHEETS).forEach(s => { s.img = new Image(); s.img.src = s.src; });
     root.innerHTML = `<div class="hcb">
       <div class="hcb-timeline" data-tl></div>
       <div class="hcb-scene" data-scene><canvas data-cv></canvas><div class="hcb-foehud" data-foehud></div></div>
