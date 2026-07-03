@@ -28,7 +28,7 @@ const HacCombate = (function () {
 
   function nuevaParty() {
     return [
-      { id: 'g', name: 'Guan Yu', rol: 'Guerrero', aptitud: 'militar', aspecto: { robe: '#7a3b34', piel: 1, pelo: 0 },
+      { id: 'g', name: 'Guan Yu', rol: 'Guerrero', aptitud: 'militar', sprite: 'guanyu', aspecto: { robe: '#7a3b34', piel: 1, pelo: 0 },
         maxHp: 130, hp: 130, maxSp: 22, sp: 22, spd: 9, bp: 1, wpn: 'espada', def: false,
         skills: [ { name: 'Tajo doble', type: 'espada', sp: 6, hits: 2, power: 15 }, { name: 'Estocada', type: 'lanza', sp: 8, hits: 1, power: 30 } ] },
       { id: 'a', name: 'Huang Zhong', rol: 'Arquero', aptitud: 'militar', aspecto: { robe: '#4e6f8f', piel: 0, pelo: 2 },
@@ -125,12 +125,76 @@ const HacCombate = (function () {
     turbCache[pose] = c; return c;
   }
 
+  // ── Aliado BESPOKE: Guan Yu 關羽 (美髯公 — cara rojiza, barbón, verde, guandao) ─
+  const GY = { robe: '#3f6b45', robeHi: '#57895b', robeDk: '#294a30', scale: '#b98a3e', scaleHi: '#d8ab55', scaleDk: '#8a6329',
+    skin: '#c06a44', skinDk: '#8f4a30', skinHi: '#d68a5c', beard: '#1c1409', beardHi: '#33240f',
+    cap: '#2f5738', capHi: '#4a7351', capDk: '#1f3b26', pole: '#6e4326', poleHi: '#8f5c34',
+    steel: '#cfd3da', steelHi: '#eef0f4', steelDk: '#7f858f', gold: '#d8b24a', sash: '#c49a3e', out: [16, 12, 7] };
+  // Guandao (青龍偃月刀): asta de madera + hoja creciente de acero, con collar dorado y borla.
+  function drawGuandao(g, hx, hy, ang) {
+    g.save(); g.translate(hx, hy); g.rotate(ang);
+    g.fillStyle = GY.pole; g.fillRect(-1.5, -32, 3, 52); g.fillStyle = GY.poleHi; g.fillRect(-1.5, -32, 1, 52);
+    const by = -32;
+    g.fillStyle = '#a83b2b'; g.fillRect(-4, by + 2, 3, 7);                 // borla roja
+    g.fillStyle = GY.gold; g.fillRect(-3, by - 1, 6, 4);                   // collar dorado
+    const grad = g.createLinearGradient(-14, by, 2, by); grad.addColorStop(0, GY.steelHi); grad.addColorStop(1, GY.steelDk);
+    g.fillStyle = grad; g.beginPath();                                     // hoja creciente hacia -x
+    g.moveTo(0, by); g.quadraticCurveTo(-16, by - 1, -13, by - 12);
+    g.quadraticCurveTo(-9, by - 16, -2, by - 15); g.quadraticCurveTo(-4, by - 7, 0, by);
+    g.closePath(); g.fill(); g.strokeStyle = GY.steelHi; g.lineWidth = 1; g.stroke();
+    g.fillStyle = GY.steel; g.beginPath();                                // gancho trasero
+    g.moveTo(0, by - 3); g.quadraticCurveTo(6, by - 6, 7, by); g.quadraticCurveTo(3, by - 1, 0, by); g.closePath(); g.fill();
+    g.restore();
+  }
+  const gyCache = {};
+  function guanyu(pose) {
+    if (gyCache[pose]) return gyCache[pose];
+    const w = 56, h = 76, c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d');
+    const px = (x, y, ww, hh, col) => { g.fillStyle = col; g.fillRect(x, y, ww, hh); };
+    const P = GY, atk = pose === 'atk', cx = 32, footY = 70;
+    if (!atk) drawGuandao(g, cx - 17, footY - 24, 0);   // idle: asta erguida por detrás
+    // Piernas + botas.
+    px(cx - 6, footY - 13, 5, 13, P.robeDk); px(cx + 1, footY - 13, 5, 13, P.robeDk);
+    px(cx - 7, footY - 3, 7, 3, '#20160c'); px(cx + 1, footY - 3, 7, 3, '#20160c');
+    // Túnica verde (falda ancha).
+    for (let i = 0; i < 20; i++) { const t = i / 19, hw = Math.round(8 + 4 * t), y = footY - 31 + i; px(cx - hw, y, hw * 2, 1, P.robe); px(cx - hw, y, Math.max(1, Math.round(hw * 0.5)), 1, P.robeHi); px(cx + Math.round(hw * 0.35), y, hw - Math.round(hw * 0.35), 1, P.robeDk); }
+    // Coraza escamada (pecho) + borde dorado.
+    for (let r = 0; r < 11; r += 2) { px(cx - 8, footY - 30 + r, 16, 2, P.scale); px(cx - 8, footY - 30 + r, 16, 1, P.scaleHi); for (let s = -7; s < 8; s += 3) px(cx + s, footY - 30 + r, 1, 1, P.scaleDk); }
+    px(cx - 8, footY - 31, 16, 1, P.gold);
+    // Faja dorada.
+    px(cx - 9, footY - 18, 18, 3, P.sash); px(cx - 9, footY - 18, 18, 1, P.gold); px(cx - 9, footY - 15, 18, 1, '#8a6329');
+    // Hombreras.
+    px(cx - 12, footY - 31, 6, 5, P.scaleDk); px(cx - 12, footY - 31, 6, 1, P.gold);
+    px(cx + 6, footY - 31, 6, 5, P.scaleDk); px(cx + 6, footY - 31, 6, 1, P.gold);
+    // Brazo trasero (derecha).
+    px(cx + 7, footY - 29, 4, 13, P.robe); px(cx + 8, footY - 17, 3, 2, P.skin);
+    // Cabeza (cara rojiza).
+    const hy = footY - 46;
+    px(cx - 5, hy + 1, 12, 11, P.skin); px(cx - 5, hy + 1, 12, 1, P.skinHi); px(cx + 5, hy + 2, 1, 9, P.skinDk); px(cx - 5, hy + 1, 1, 10, P.skinDk);
+    px(cx - 4, hy + 4, 3, 1, '#3a2213'); px(cx + 2, hy + 4, 3, 1, '#3a2213');   // cejas (gusano de seda)
+    px(cx - 4, hy + 5, 2, 1, P.out); px(cx + 2, hy + 5, 2, 1, P.out);           // ojos fénix
+    // Barba larga (美髯公) — cae por el pecho.
+    px(cx - 5, hy + 9, 11, 2, P.beard); px(cx - 4, hy + 11, 10, 4, P.beard); px(cx - 3, hy + 15, 8, 5, P.beard);
+    px(cx - 2, hy + 20, 6, 5, P.beard); px(cx - 1, hy + 25, 4, 3, P.beardHi); px(cx - 4, hy + 11, 2, 8, P.beardHi);
+    // Gorro verde (綸巾) + adorno.
+    px(cx - 6, hy - 4, 13, 6, P.cap); px(cx - 6, hy - 4, 13, 2, P.capHi); px(cx - 6, hy + 1, 13, 1, P.capDk);
+    px(cx - 5, hy - 7, 5, 3, P.cap); px(cx + 1, hy - 7, 5, 3, P.cap); px(cx - 1, hy - 8, 3, 3, P.gold);
+    // Brazo delantero + guandao.
+    if (!atk) { px(cx - 11, footY - 28, 5, 4, P.robe); px(cx - 15, footY - 24, 5, 3, P.robe); px(cx - 17, footY - 21, 4, 3, P.skin); }
+    else {
+      px(cx - 11, footY - 33, 6, 4, P.robe); px(cx - 16, footY - 35, 5, 3, P.robe); px(cx - 19, footY - 36, 4, 3, P.skin);
+      drawGuandao(g, cx - 19, footY - 35, -1.15);   // atk: guandao alzado y llevado al frente
+    }
+    outlineCanvas(c, P.out);
+    gyCache[pose] = c; return c;
+  }
+
   // ── Layout de la escena ──────────────────────────────────────────────────────
   function layout() {
     const gy = H * 0.80;
     enemy.ax = W * 0.24; enemy.ay = gy; enemy.th = H * 0.42;
     enemy.ox = 0; enemy.oy = 0; enemy.flash = 0; enemy.deadA = 1; enemy.hitT = 0;
-    party.forEach((u, i) => { u.ax = W * 0.66 + i * (W * 0.11); u.ay = gy - i * (H * 0.015); u.th = H * 0.26; u.ox = 0; u.oy = 0; u.flash = 0; u.deadA = 1; u.hitT = 0; });
+    party.forEach((u, i) => { u.ax = W * 0.66 + i * (W * 0.11); u.ay = gy - i * (H * 0.015); u.th = H * (u.sprite === 'guanyu' ? 0.33 : 0.26); u.ox = 0; u.oy = 0; u.flash = 0; u.deadA = 1; u.hitT = 0; });
   }
 
   // ── Fondo (mazmorra) horneado una vez ────────────────────────────────────────
@@ -213,6 +277,7 @@ const HacCombate = (function () {
     if (u.deadA <= 0.01) return;
     let img, walking;
     if (u.foe) { img = turbante(u._atk ? 'atk' : 'idle'); walking = false; }
+    else if (u.sprite === 'guanyu') { img = guanyu(u._atk ? 'atk' : 'idle'); walking = false; }
     else { const fr = frames(u); walking = Math.abs(u.ox) > 1 && !u._atk; img = fr[walking ? (Math.floor(t * 0.012) % 4) : 0]; }
     const th = u.th * dpr, scl = th / img.height, w = img.width * scl, h = th;
     const bob = u._atk ? 0 : Math.sin(t * 0.004 + (u.foe ? 0 : 1)) * 2 * dpr;
@@ -225,7 +290,7 @@ const HacCombate = (function () {
     let filt = ''; if (u.flash > 0.02) filt = `brightness(${1 + u.flash * 4})`; else if (u.foe && u.roto) filt = 'grayscale(.65) brightness(.8)';
     if (filt) ctx.filter = filt;
     ctx.imageSmoothingEnabled = false; ctx.drawImage(img, -w / 2, -h, w, h); ctx.filter = 'none';
-    if (!u.foe && u._atk) { if (u._wcat === 'melee') drawSaber(w); else if (u._wcat === 'arrow') drawBow(h); }
+    if (!u.foe && u._atk && !u.sprite) { if (u._wcat === 'melee') drawSaber(w); else if (u._wcat === 'arrow') drawBow(h); }
     ctx.restore();
     u.flash *= 0.82;
   }
