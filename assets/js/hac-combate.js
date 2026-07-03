@@ -55,9 +55,11 @@ const HacCombate = (function () {
   // thf = altura del CUERPO en pantalla (fracción de H); calibrado para que todos midan igual
   // ignorando lo que sobresale por arriba (p. ej. la guandao de Guan Yu).
   const SHEETS = {
+    // play = nº de frames a reproducir (recorta la recuperación frontal sobrante); release = frame en el que
+    // sale el proyectil; muzzle = [frac hacia el enemigo, frac de altura] desde los pies para el origen del disparo.
     guanyu:     { src: 'assets/img/guanyu-atk.webp?v=1',     img: null, cols: 8, count: 61, cellW: 361, cellH: 300, pivotX: 233, feetY: 285, charH: 199, thf: 0.300 },
-    zhugeliang: { src: 'assets/img/zhugeliang-atk.webp?v=1', img: null, cols: 8, count: 61, cellW: 392, cellH: 300, pivotX: 245, feetY: 293, charH: 275, thf: 0.226 },
-    huangzhong: { src: 'assets/img/huangzhong-atk.webp?v=1', img: null, cols: 8, count: 61, cellW: 427, cellH: 300, pivotX: 293, feetY: 298, charH: 203, thf: 0.236 },
+    zhugeliang: { src: 'assets/img/zhugeliang-atk.webp?v=1', img: null, cols: 8, count: 61, cellW: 392, cellH: 300, pivotX: 245, feetY: 293, charH: 275, thf: 0.226, muzzle: [0.42, 0.72] },
+    huangzhong: { src: 'assets/img/huangzhong-atk.webp?v=1', img: null, cols: 8, count: 61, cellW: 427, cellH: 300, pivotX: 293, feetY: 298, charH: 203, thf: 0.236, play: 54, release: 48, muzzle: [0.34, 0.72] },
   };
   const sheetReady = (u) => !u.foe && u.sprite && SHEETS[u.sprite] && SHEETS[u.sprite].img && SHEETS[u.sprite].img.complete && SHEETS[u.sprite].img.naturalWidth;
   const tweens = [], floaters = [], parts = [], projs = [], slashes = [];
@@ -310,8 +312,8 @@ const HacCombate = (function () {
   function drawBow(h) { ctx.save(); ctx.translate(-h * 0.30, -h * 0.55); const r = h * 0.32; ctx.strokeStyle = '#8a5a2c'; ctx.lineWidth = 3 * dpr; ctx.beginPath(); ctx.arc(0, 0, r, -1.1, 1.1); ctx.stroke(); ctx.strokeStyle = 'rgba(240,240,220,.6)'; ctx.lineWidth = 1 * dpr; ctx.beginPath(); ctx.moveTo(Math.cos(-1.1) * r, Math.sin(-1.1) * r); ctx.lineTo(Math.cos(1.1) * r, Math.sin(1.1) * r); ctx.stroke(); ctx.restore(); }
   // Aliado animado desde spritesheet (reposo = frame 0; ataque = clip 0→60 estirado a la duración de la acción).
   function drawSheet(u) {
-    const A = SHEETS[u.sprite]; let fi = 0;
-    if (u._atk && u._animT0) { const p = clamp((now() - u._animT0) / (u._animDur || 800), 0, 1); fi = Math.min(A.count - 1, Math.floor(p * A.count)); }
+    const A = SHEETS[u.sprite]; const play = A.play || A.count; let fi = 0;
+    if (u._atk && u._animT0) { const p = clamp((now() - u._animT0) / (u._animDur || 800), 0, 1); fi = Math.min(play - 1, Math.floor(p * play)); }
     const col = fi % A.cols, row = Math.floor(fi / A.cols);
     const k = (u.th * dpr) / A.charH;
     const bob = u._atk ? 0 : Math.sin(t * 0.004 + 1) * 2 * dpr;
@@ -411,15 +413,20 @@ const HacCombate = (function () {
     }
     // ranged / magic: proyectil(es). Con animación propia NO hay saltito (se queda en el sitio) y el
     // disparo se retrasa para que salga en el barrido final y el impacto coincida con el fin del clip.
-    const anim = !!u.sprite;
+    const anim = !!u.sprite, A2 = SHEETS[u.sprite];
     if (!anim) tween(220, (p) => { u.oy = -8 * Math.sin(p * 3.14); }, () => { u.oy = 0; });
     if (anim) u._animDur = 950;
+    const play = A2 ? (A2.play || A2.count) : 0;
+    const relFrac = A2 ? (A2.release ? A2.release / play : 0.80) : 0;   // el disparo sale en el frame de soltar
     const projDur = anim ? 200 : 300;
-    const launch = anim ? Math.round(u._animDur * 0.80) : 0;   // ~frame 49: momento del conjuro
+    const launch = anim ? Math.round(u._animDur * relFrac) : 0;
     const gap = anim ? 110 : 130;
+    // Origen del disparo: la "boca" del arma (arco/abanico), no el pecho.
+    let mx = ux(u), my = uy(u) - u.th * 0.55;
+    if (A2 && A2.muzzle) { const dir = Math.sign(enemy.ax - u.ax) || -1; mx = ux(u) + dir * u.th * A2.muzzle[0]; my = uy(u) - u.th * A2.muzzle[1]; }
     let done = 0;
     for (let i = 0; i < hits; i++) wait(launch + gap * i, () => {
-      projs.push({ t0: now(), dur: projDur, x0: ux(u), y0: uy(u) - u.th * 0.55, x1: ux(enemy), y1: uy(enemy) - enemy.th * 0.55, kind: cat === 'arrow' ? 'arrow' : 'orb', col: t2 ? t2.col : '#ff8a3c', onHit: () => { doHit(); if (++done === hits) resumen(); } });
+      projs.push({ t0: now(), dur: projDur, x0: mx, y0: my, x1: ux(enemy), y1: uy(enemy) - enemy.th * 0.55, kind: cat === 'arrow' ? 'arrow' : 'orb', col: t2 ? t2.col : '#ff8a3c', onHit: () => { doHit(); if (++done === hits) resumen(); } });
     });
     return finTurno(launch + gap * (hits - 1) + projDur + 140);
   }
