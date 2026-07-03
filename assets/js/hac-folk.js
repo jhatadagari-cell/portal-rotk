@@ -1212,11 +1212,11 @@ const HacFolk = (function () {
   }
   // Dibuja un caballo SUELTO. TEMPORAL: círculo rojo (placeholder) hasta tener un
   // asset de caballo mejor.
-  const HORSE_R = 10;   // radio en px lógicos del placeholder
+  const HORSE_R = 4;   // radio en px lógicos del placeholder (discreto)
   function drawHorse(g, lx, ly, h) {
     const fx = lx * SCALE, fy = ly * SCALE, r = HORSE_R * SCALE;
     g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.imageSmoothingEnabled = true;
-    g.fillStyle = '#c0392b'; g.strokeStyle = 'rgba(0,0,0,.45)'; g.lineWidth = 1.5 * SCALE;
+    g.fillStyle = 'rgba(192,57,43,.9)'; g.strokeStyle = 'rgba(0,0,0,.4)'; g.lineWidth = 1 * SCALE;
     g.beginPath(); g.arc(fx, fy - r, r, 0, 6.2832); g.fill(); g.stroke();
     g.restore();
   }
