@@ -50,7 +50,9 @@ const HacCombate = (function () {
   let root = null, party = [], enemy = null, orden = [], idx = 0, ronda = 1, busy = false, over = false, sel = { boost: 0 };
   let elScene, elParty, elMenu, elLog, elTimeline, logLines = [];
   // Canvas / animación
-  let cv, ctx, bg, bgImg = null, W = 0, H = 0, dpr = 1, raf = 0, t = 0, shake = 0;
+  let cv, ctx, bg, bgImg = null, gySheet = null, W = 0, H = 0, dpr = 1, raf = 0, t = 0, shake = 0;
+  // Spritesheet de ataque de Guan Yu (frame 0 = reposo; 0→60 = ataque).
+  const GYA = { cols: 8, count: 61, cellW: 361, cellH: 300, pivotX: 233, feetY: 285, charH: 199 };
   const tweens = [], floaters = [], parts = [], projs = [], slashes = [];
   const alive = (u) => u.hp > 0;
   const partyAlive = () => party.filter(alive);
@@ -204,7 +206,7 @@ const HacCombate = (function () {
     const gy = H * 0.80;
     enemy.ax = W * 0.24; enemy.ay = gy; enemy.th = H * 0.42;
     enemy.ox = 0; enemy.oy = 0; enemy.flash = 0; enemy.deadA = 1; enemy.hitT = 0;
-    party.forEach((u, i) => { u.ax = W * 0.66 + i * (W * 0.11); u.ay = gy - i * (H * 0.015); u.th = H * (u.sprite === 'guanyu' ? 0.36 : 0.26); u.ox = 0; u.oy = 0; u.flash = 0; u.deadA = 1; u.hitT = 0; });
+    party.forEach((u, i) => { u.ax = W * 0.66 + i * (W * 0.11); u.ay = gy - i * (H * 0.015); u.th = H * (u.sprite === 'guanyu' ? 0.30 : 0.26); u.ox = 0; u.oy = 0; u.flash = 0; u.deadA = 1; u.hitT = 0; });
   }
 
   // ── Fondo horneado una vez ───────────────────────────────────────────────────
@@ -299,8 +301,25 @@ const HacCombate = (function () {
   }
   function drawSaber(w) { ctx.save(); ctx.translate(-w * 0.30, -w * 0.9); ctx.rotate(-0.5); ctx.fillStyle = '#d8b24a'; ctx.fillRect(-2 * dpr, -2 * dpr, 6 * dpr, 4 * dpr); ctx.strokeStyle = '#eef1f6'; ctx.lineWidth = 3 * dpr; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(2 * dpr, 0); ctx.quadraticCurveTo(-16 * dpr, -7 * dpr, -32 * dpr, -1 * dpr); ctx.stroke(); ctx.restore(); }
   function drawBow(h) { ctx.save(); ctx.translate(-h * 0.30, -h * 0.55); const r = h * 0.32; ctx.strokeStyle = '#8a5a2c'; ctx.lineWidth = 3 * dpr; ctx.beginPath(); ctx.arc(0, 0, r, -1.1, 1.1); ctx.stroke(); ctx.strokeStyle = 'rgba(240,240,220,.6)'; ctx.lineWidth = 1 * dpr; ctx.beginPath(); ctx.moveTo(Math.cos(-1.1) * r, Math.sin(-1.1) * r); ctx.lineTo(Math.cos(1.1) * r, Math.sin(1.1) * r); ctx.stroke(); ctx.restore(); }
+  // Guan Yu animado desde el spritesheet (reposo = frame 0; ataque = clip 0→60 estirado a la duración de la acción).
+  function drawGuanyuSheet(u) {
+    const A = GYA; let fi = 0;
+    if (u._atk && u._animT0) { const p = clamp((now() - u._animT0) / (u._animDur || 800), 0, 1); fi = Math.min(A.count - 1, Math.floor(p * A.count)); }
+    const col = fi % A.cols, row = Math.floor(fi / A.cols);
+    const k = (u.th * dpr) / A.charH;
+    const bob = u._atk ? 0 : Math.sin(t * 0.004 + 1) * 2 * dpr;
+    const fx = ux(u) * dpr, fy = uy(u) * dpr + bob;
+    const dW = A.cellW * k, dH = A.cellH * k, dx = fx - A.pivotX * k, dy = fy - A.feetY * k;
+    ctx.save(); ctx.globalAlpha = u.deadA;
+    ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.beginPath(); ctx.ellipse(fx, fy, dW * 0.20, dH * 0.028, 0, 0, 6.283); ctx.fill();
+    if (u.flash > 0.02) ctx.filter = `brightness(${1 + u.flash * 4})`;
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(gySheet, col * A.cellW, row * A.cellH, A.cellW, A.cellH, dx, dy, dW, dH);
+    ctx.filter = 'none'; ctx.restore(); u.flash *= 0.82;
+  }
   function drawUnit(u) {
     if (u.deadA <= 0.01) return;
+    if (!u.foe && u.sprite === 'guanyu' && gySheet && gySheet.complete && gySheet.naturalWidth) { drawGuanyuSheet(u); return; }
     let img, walking;
     if (u.foe) { img = turbante(u._atk ? 'atk' : 'idle'); walking = false; }
     else if (u.sprite === 'guanyu') { img = guanyu(u._atk ? 'atk' : 'idle'); walking = false; }
@@ -351,7 +370,7 @@ const HacCombate = (function () {
     if (action.sp && u.sp < action.sp) { log(`<b>${u.name}</b> no tiene SP para ${action.name}.`); return; }
     if (action.sp) u.sp -= action.sp;
     if (boost > 0) u.bp = Math.max(0, u.bp - boost);
-    busy = true; u.def = false; u._atk = true; renderMenu();
+    busy = true; u.def = false; u._atk = true; u._animT0 = now(); u._animDur = 800; renderMenu();
 
     if (action.defend) { u._atk = false; u.def = true; u.sp = Math.min(u.maxSp, u.sp + 4); log(`<b>${u.name}</b> se pone en guardia.`); floater(ux(u), uy(u) - u.th, 'Guardia', '#7fb6e0'); return finTurno(360); }
     if (action.heal) {
@@ -373,6 +392,7 @@ const HacCombate = (function () {
     const resumen = () => { log(`<b>${u.name}</b> · ${action.name} 〔${t2 ? t2.zh : '·'}〕 → ${totalDmg} de daño${rompio ? ' · <span class="hcb-break">¡ESCUDO ROTO!</span>' : ''}`); renderParty(); };
 
     if (cat === 'melee') {
+      u._animDur = 230 + 150 * hits + 340;
       const dx = (enemy.ax - u.ax) * 0.68;
       tween(230, (p) => { u.ox = dx * easeOut(p); }, () => {
         let done = 0; for (let i = 0; i < hits; i++) wait(150 * i, () => { doHit(); if (++done === hits) { resumen(); tween(300, (p) => { u.ox = dx * (1 - easeInOut(p)); }, () => { u.ox = 0; }); } });
@@ -387,7 +407,7 @@ const HacCombate = (function () {
     });
     return finTurno(220 + 130 * hits + 300 + 120);
   }
-  function finTurno(ms) { wait(ms + 120, () => { enemy._atk = false; party.forEach(x => { x._atk = false; x._wcat = null; x._cast = null; }); busy = false; avanzar(); }); }
+  function finTurno(ms) { wait(ms + 120, () => { enemy._atk = false; party.forEach(x => { x._atk = false; x._wcat = null; x._cast = null; x._animT0 = 0; }); busy = false; avanzar(); }); }
 
   // ── Turno enemigo ────────────────────────────────────────────────────────────
   function turnoEnemigo() {
@@ -498,6 +518,7 @@ const HacCombate = (function () {
   function init(container) {
     root = container;
     bgImg = new Image(); bgImg.onload = () => { if (cv) bakeBg(); }; bgImg.src = 'assets/img/bg-turbantes.jpg?v=1';
+    gySheet = new Image(); gySheet.src = 'assets/img/guanyu-atk.webp?v=1';
     root.innerHTML = `<div class="hcb">
       <div class="hcb-timeline" data-tl></div>
       <div class="hcb-scene" data-scene><canvas data-cv></canvas><div class="hcb-foehud" data-foehud></div></div>
