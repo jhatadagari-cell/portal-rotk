@@ -51,7 +51,7 @@ const HacCombate = (function () {
   let elScene, elParty, elMenu, elLog, elTimeline, logLines = [];
   // Canvas / animación
   let cv, ctx, bg, W = 0, H = 0, dpr = 1, raf = 0, t = 0, shake = 0;
-  const tweens = [], floaters = [], parts = [], projs = [];
+  const tweens = [], floaters = [], parts = [], projs = [], slashes = [];
   const alive = (u) => u.hp > 0;
   const partyAlive = () => party.filter(alive);
   const actual = () => orden[idx];
@@ -67,6 +67,62 @@ const HacCombate = (function () {
     const arr = [];
     for (let f = 0; f < 4; f++) { const c = document.createElement('canvas'); if (window.HacChar) HacChar.draw(c, { aptitud: u.aptitud, aspecto: u.aspecto, dir: dir, frame: f, scale: 4 }); arr.push(c); }
     u._frames = arr; return arr;
+  }
+
+  // ── Enemigo BESPOKE: general Turbante Amarillo (pixel-art propio) ────────────
+  const ENC = { yel: '#e8c84a', yelHi: '#f6e08a', yelDk: '#b0892a', skin: '#cb9c6c', skinDk: '#9c7248', beard: '#241a10',
+    tunic: '#7a6a44', tunicHi: '#9a8a58', tunicDk: '#54492c', leather: '#463521', leatherHi: '#5c4a2a', sash: '#a83b2b', sashDk: '#7c281c',
+    boot: '#2c2118', steel: '#cfd3da', steelDk: '#828892', steelHi: '#eef0f4', gold: '#d8b24a', out: [18, 13, 8] };
+  function outlineCanvas(c, col) {
+    const g = c.getContext('2d'), w = c.width, h = c.height, im = g.getImageData(0, 0, w, h), d = im.data, o = new Uint8ClampedArray(d);
+    const A = (x, y) => (x < 0 || y < 0 || x >= w || y >= h) ? 0 : d[(y * w + x) * 4 + 3];
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const i = (y * w + x) * 4; if (d[i + 3] < 20 && (A(x - 1, y) > 40 || A(x + 1, y) > 40 || A(x, y - 1) > 40 || A(x, y + 1) > 40)) { o[i] = col[0]; o[i + 1] = col[1]; o[i + 2] = col[2]; o[i + 3] = 255; } }
+    g.putImageData(new ImageData(o, w, h), 0, 0);
+  }
+  const turbCache = {};
+  function turbante(pose) {
+    if (turbCache[pose]) return turbCache[pose];
+    const w = 48, h = 62, c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d');
+    const px = (x, y, ww, hh, col) => { g.fillStyle = col; g.fillRect(x, y, ww, hh); };
+    const P = ENC, atk = pose === 'atk', cx = 21, footY = 59;
+    // Piernas robustas + botas (pierna dcha adelantada).
+    px(cx - 7, footY - 12, 6, 12, P.tunicDk); px(cx + 1, footY - 12, 6, 12, P.tunicDk);
+    px(cx - 8, footY - 3, 8, 3, P.boot); px(cx + 1, footY - 3, 9, 3, P.boot);
+    px(cx - 8, footY - 3, 8, 1, '#3c2e20'); px(cx + 1, footY - 3, 9, 1, '#3c2e20');
+    // Cuerpo (túnica ancha).
+    for (let i = 0; i < 22; i++) { const t = i / 21, hw = Math.round(9 + 5 * t), y = footY - 33 + i; px(cx - hw, y, hw * 2, 1, P.tunic); px(cx - hw, y, Math.round(hw * 0.5), 1, P.tunicHi); px(cx + Math.round(hw * 0.4), y, hw - Math.round(hw * 0.4), 1, P.tunicDk); }
+    // Coraza de cuero lamelar (pecho).
+    for (let r = 0; r < 13; r += 2) { px(cx - 9, footY - 31 + r, 18, 2, P.leather); px(cx - 9, footY - 31 + r, 18, 1, P.leatherHi); for (let s = -8; s < 9; s += 3) px(cx + s, footY - 31 + r, 1, 1, P.gold); }
+    // Faja roja.
+    px(cx - 10, footY - 16, 20, 3, P.sash); px(cx - 10, footY - 16, 20, 1, '#c25541'); px(cx - 10, footY - 14, 20, 1, P.sashDk);
+    px(cx - 3, footY - 15, 5, 6, P.sashDk);   // nudo de la faja
+    // Hombreras (placas).
+    px(cx - 13, footY - 32, 6, 5, P.steelDk); px(cx - 13, footY - 32, 6, 1, P.steel);
+    px(cx + 7, footY - 32, 6, 5, P.steelDk); px(cx + 7, footY - 32, 6, 1, P.steel);
+    // Brazo izquierdo (atrás, al costado).
+    px(cx - 12, footY - 27, 4, 13, P.tunicDk); px(cx - 12, footY - 15, 4, 2, P.skin);
+    // Cabeza.
+    const hy = footY - 47;
+    px(cx - 6, hy + 1, 13, 11, P.skin); px(cx - 6, hy + 1, 13, 1, P.skinDk); px(cx + 5, hy + 2, 1, 9, P.skinDk);
+    px(cx - 5, hy + 4, 3, 2, P.out); px(cx + 3, hy + 4, 3, 2, P.out);            // ceño/ojos furiosos
+    px(cx - 5, hy + 3, 4, 1, '#4a3620'); px(cx + 2, hy + 3, 4, 1, '#4a3620');    // cejas
+    px(cx - 5, hy + 8, 12, 4, P.beard); px(cx - 3, hy + 7, 8, 1, P.beard);       // barba
+    // Turbante amarillo (envoltura + nudo + cola).
+    px(cx - 8, hy - 4, 16, 6, P.yel); px(cx - 8, hy - 4, 16, 2, P.yelHi); px(cx - 8, hy + 1, 16, 1, P.yelDk);
+    px(cx - 9, hy - 1, 3, 5, P.yel); px(cx + 6, hy - 1, 3, 5, P.yel);
+    px(cx + 6, hy - 3, 5, 3, P.yelDk); px(cx + 9, hy + 1, 3, 9, P.yel); px(cx + 9, hy + 1, 2, 9, P.yelHi);  // cola colgante
+    // Brazo derecho + DAO (sable curvo). Idle: apoyado; Atk: alzado al frente.
+    if (!atk) {
+      px(cx + 8, footY - 30, 4, 14, P.tunic); px(cx + 9, footY - 18, 3, 3, P.skin);        // brazo bajo
+      px(cx + 12, footY - 22, 2, 12, P.steel); px(cx + 12, footY - 22, 1, 12, P.steelHi);   // hoja hacia abajo
+      px(cx + 11, footY - 11, 4, 2, P.gold);                                                // guarda
+    } else {
+      px(cx + 7, footY - 34, 5, 8, P.tunic); px(cx + 10, footY - 34, 3, 3, P.skin);         // brazo alzado
+      for (let k = 0; k < 14; k++) px(cx + 12 + k, footY - 40 - Math.round(k * 0.4), 2, 2, k < 2 ? P.gold : P.steel);  // hoja al frente/arriba
+      for (let k = 0; k < 14; k++) px(cx + 12 + k, footY - 40 - Math.round(k * 0.4), 1, 1, P.steelHi);
+    }
+    outlineCanvas(c, P.out);
+    turbCache[pose] = c; return c;
   }
 
   // ── Layout de la escena ──────────────────────────────────────────────────────
@@ -108,6 +164,7 @@ const HacCombate = (function () {
   function floater(x, y, text, col, big) { floaters.push({ x: x * dpr, y: y * dpr, vy: -0.55 * dpr, life: 0, max: 1100, text, col, size: (big ? 34 : 24) * dpr }); }
   function burst(x, y, col, n, spd) { for (let i = 0; i < n; i++) { const a = rnd(0, 6.28), s = rnd(0.3, 1) * (spd || 1) * dpr; parts.push({ x: x * dpr, y: y * dpr, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 0.3 * dpr, life: 0, max: rnd(400, 800), col, r: rnd(1.5, 3.5) * dpr }); } }
   function ember() { parts.push({ x: rnd(0, W) * dpr, y: H * dpr, vx: rnd(-0.1, 0.1) * dpr, vy: rnd(-0.35, -0.15) * dpr, life: 0, max: rnd(2200, 4200), col: 'rgba(230,150,60,', r: rnd(1, 2.2) * dpr, ember: true }); }
+  function slash(x, y, col) { slashes.push({ x: x * dpr, y: y * dpr, t0: now(), dur: 260, col: col || 'rgba(255,255,255,' }); }
 
   // ── Tween sencillo ───────────────────────────────────────────────────────────
   function tween(dur, on, done) { tweens.push({ t0: now(), dur, on, done }); }
@@ -143,28 +200,33 @@ const HacCombate = (function () {
     drawUnit(enemy); party.forEach(drawUnit);
     // proyectiles
     for (let i = projs.length - 1; i >= 0; i--) { const pr = projs[i]; const p = clamp((tt - pr.t0) / pr.dur, 0, 1); const x = lerp(pr.x0, pr.x1, p) * dpr, y = (lerp(pr.y0, pr.y1, p) - Math.sin(p * 3.14) * 26) * dpr; drawProj(pr, x, y, p); if (p >= 1) { projs.splice(i, 1); if (pr.onHit) pr.onHit(); } }
+    // cortes de sable (crescent)
+    for (let i = slashes.length - 1; i >= 0; i--) { const s = slashes[i]; const p = clamp((tt - s.t0) / s.dur, 0, 1); if (p >= 1) { slashes.splice(i, 1); continue; } ctx.save(); ctx.globalAlpha = 1 - p; ctx.strokeStyle = s.col + (1 - p) + ')'; ctx.lineWidth = (7 - 5 * p) * dpr; ctx.lineCap = 'round'; const r = (18 + p * 30) * dpr, a0 = -1.0 + p * 0.5; ctx.beginPath(); ctx.arc(s.x, s.y, r, a0, a0 + 1.7); ctx.stroke(); ctx.restore(); }
     // números flotantes (encima de todo)
     for (let i = floaters.length - 1; i >= 0; i--) { const f = floaters[i]; f.life += dt; if (f.life >= f.max) { floaters.splice(i, 1); continue; } f.y += f.vy * dt * 0.06; f.vy += 0.004 * dpr * dt * 0.06; const a = f.life > f.max * 0.7 ? 1 - (f.life - f.max * 0.7) / (f.max * 0.3) : 1; ctx.globalAlpha = a; ctx.font = `900 ${f.size}px 'Cinzel Decorative',serif`; ctx.textAlign = 'center'; ctx.lineWidth = 4 * dpr; ctx.strokeStyle = 'rgba(0,0,0,.8)'; ctx.strokeText(f.text, f.x, f.y); ctx.fillStyle = f.col; ctx.fillText(f.text, f.x, f.y); }
     ctx.globalAlpha = 1;
     raf = requestAnimationFrame(frame);
   }
+  function drawSaber(w) { ctx.save(); ctx.translate(-w * 0.30, -w * 0.9); ctx.rotate(-0.5); ctx.fillStyle = '#d8b24a'; ctx.fillRect(-2 * dpr, -2 * dpr, 6 * dpr, 4 * dpr); ctx.strokeStyle = '#eef1f6'; ctx.lineWidth = 3 * dpr; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(2 * dpr, 0); ctx.quadraticCurveTo(-16 * dpr, -7 * dpr, -32 * dpr, -1 * dpr); ctx.stroke(); ctx.restore(); }
+  function drawBow(h) { ctx.save(); ctx.translate(-h * 0.30, -h * 0.55); const r = h * 0.32; ctx.strokeStyle = '#8a5a2c'; ctx.lineWidth = 3 * dpr; ctx.beginPath(); ctx.arc(0, 0, r, -1.1, 1.1); ctx.stroke(); ctx.strokeStyle = 'rgba(240,240,220,.6)'; ctx.lineWidth = 1 * dpr; ctx.beginPath(); ctx.moveTo(Math.cos(-1.1) * r, Math.sin(-1.1) * r); ctx.lineTo(Math.cos(1.1) * r, Math.sin(1.1) * r); ctx.stroke(); ctx.restore(); }
   function drawUnit(u) {
     if (u.deadA <= 0.01) return;
-    const fr = frames(u); const walking = Math.abs(u.ox) > 1;
-    const img = fr[walking ? (Math.floor(t * 0.012) % 4) : 0];
-    const th = u.th * dpr; const scl = th / img.height; const w = img.width * scl, h = th;
-    const bob = walking ? 0 : Math.sin(t * 0.004 + (u.foe ? 0 : 1)) * 2 * dpr;
-    const x = (ux(u)) * dpr, y = (uy(u)) * dpr + bob;
+    let img, walking;
+    if (u.foe) { img = turbante(u._atk ? 'atk' : 'idle'); walking = false; }
+    else { const fr = frames(u); walking = Math.abs(u.ox) > 1 && !u._atk; img = fr[walking ? (Math.floor(t * 0.012) % 4) : 0]; }
+    const th = u.th * dpr, scl = th / img.height, w = img.width * scl, h = th;
+    const bob = u._atk ? 0 : Math.sin(t * 0.004 + (u.foe ? 0 : 1)) * 2 * dpr;
+    const x = ux(u) * dpr, y = uy(u) * dpr + bob;
     ctx.save(); ctx.globalAlpha = u.deadA;
-    // sombra
     ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.beginPath(); ctx.ellipse(x, y, w * 0.32, h * 0.06, 0, 0, 6.283); ctx.fill();
-    let filt = '';
-    if (u.flash > 0.02) filt = `brightness(${1 + u.flash * 4})`;
-    else if (u.foe && u.roto) filt = 'grayscale(.65) brightness(.8)';
+    if (!u.foe && u._atk && u._cast) { const rg = ctx.createRadialGradient(x, y - h * 0.5, 0, x, y - h * 0.5, w * 0.95); rg.addColorStop(0, u._cast); rg.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = rg; ctx.beginPath(); ctx.arc(x, y - h * 0.5, w * 0.95, 0, 6.283); ctx.fill(); }
+    const lean = u._atk ? (u.foe ? 0.13 : -0.16) : 0, sc = u._atk ? 1.06 : 1;
+    ctx.translate(x, y); ctx.rotate(lean); ctx.scale(sc, sc);
+    let filt = ''; if (u.flash > 0.02) filt = `brightness(${1 + u.flash * 4})`; else if (u.foe && u.roto) filt = 'grayscale(.65) brightness(.8)';
     if (filt) ctx.filter = filt;
-    ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(img, x - w / 2, y - h, w, h);
-    ctx.filter = 'none'; ctx.restore();
+    ctx.imageSmoothingEnabled = false; ctx.drawImage(img, -w / 2, -h, w, h); ctx.filter = 'none';
+    if (!u.foe && u._atk) { if (u._wcat === 'melee') drawSaber(w); else if (u._wcat === 'arrow') drawBow(h); }
+    ctx.restore();
     u.flash *= 0.82;
   }
   function drawProj(pr, x, y, p) {
@@ -198,10 +260,11 @@ const HacCombate = (function () {
     if (action.sp && u.sp < action.sp) { log(`<b>${u.name}</b> no tiene SP para ${action.name}.`); return; }
     if (action.sp) u.sp -= action.sp;
     if (boost > 0) u.bp = Math.max(0, u.bp - boost);
-    busy = true; u.def = false; renderMenu();
+    busy = true; u.def = false; u._atk = true; renderMenu();
 
-    if (action.defend) { u.def = true; u.sp = Math.min(u.maxSp, u.sp + 4); log(`<b>${u.name}</b> se pone en guardia.`); floater(ux(u), uy(u) - u.th, 'Guardia', '#7fb6e0'); return finTurno(360); }
+    if (action.defend) { u._atk = false; u.def = true; u.sp = Math.min(u.maxSp, u.sp + 4); log(`<b>${u.name}</b> se pone en guardia.`); floater(ux(u), uy(u) - u.th, 'Guardia', '#7fb6e0'); return finTurno(360); }
     if (action.heal) {
+      u._cast = 'rgba(140,210,110,.5)';
       const target = partyAlive().slice().sort((a, b) => (a.hp / a.maxHp) - (b.hp / b.maxHp))[0] || u;
       const heal = Math.round(action.heal * (1 + boost * 0.5));
       tween(260, (p) => { u.oy = -10 * Math.sin(p * 3.14); }, () => { u.oy = 0; });
@@ -212,8 +275,10 @@ const HacCombate = (function () {
     const cat = TIPOS[action.type] ? TIPOS[action.type].cat : 'melee';
     const hits = (action.hits || 1) + boost;
     const t2 = TIPOS[action.type];
+    u._wcat = cat === 'melee' ? 'melee' : (cat === 'arrow' ? 'arrow' : null);
+    if (cat === 'magic') u._cast = (t2 ? t2.col : '#ff8a3c') + '99';
     let totalDmg = 0, rompio = false;
-    const doHit = () => { const r = golpeUno(action.type, action.power); totalDmg += r.dmg; if (r.broke) rompio = true; impactoEnemigo(r); };
+    const doHit = () => { const r = golpeUno(action.type, action.power); totalDmg += r.dmg; if (r.broke) rompio = true; impactoEnemigo(r); if (cat === 'melee') slash(ux(enemy), uy(enemy) - enemy.th * 0.55, r.esDebil ? 'rgba(255,210,110,' : 'rgba(255,255,255,'); };
     const resumen = () => { log(`<b>${u.name}</b> · ${action.name} 〔${t2 ? t2.zh : '·'}〕 → ${totalDmg} de daño${rompio ? ' · <span class="hcb-break">¡ESCUDO ROTO!</span>' : ''}`); renderParty(); };
 
     if (cat === 'melee') {
@@ -231,17 +296,19 @@ const HacCombate = (function () {
     });
     return finTurno(220 + 130 * hits + 300 + 120);
   }
-  function finTurno(ms) { wait(ms + 120, () => { busy = false; avanzar(); }); }
+  function finTurno(ms) { wait(ms + 120, () => { enemy._atk = false; party.forEach(x => { x._atk = false; x._wcat = null; x._cast = null; }); busy = false; avanzar(); }); }
 
   // ── Turno enemigo ────────────────────────────────────────────────────────────
   function turnoEnemigo() {
     busy = true; renderMenu();
     if (enemy.roto) { enemy.rotoTurnos--; log(`<b>${enemy.name}</b> está aturdido y no puede actuar.`); floater(ux(enemy), uy(enemy) - enemy.th, 'Aturdido', '#bcd8ec'); if (enemy.rotoTurnos <= 0) { enemy.roto = false; enemy.shield = enemy.maxShield; } return finTurno(780); }
     const vivos = partyAlive(); const target = vivos[ri(0, vivos.length - 1)];
+    enemy._atk = true;
     const dx = (target.ax - enemy.ax) * 0.7;
     tween(260, (p) => { enemy.ox = dx * easeOut(p); }, () => {
       let dmg = ri(enemy.atk[0], enemy.atk[1]); if (target.def) dmg = Math.round(dmg * 0.5);
       target.hp = Math.max(0, target.hp - dmg); target.flash = 1; shake = Math.max(shake, 5);
+      slash(ux(target), uy(target) - target.th * 0.5, 'rgba(255,180,120,');
       target.ox = 8; tween(240, (p) => { target.ox = 8 * (1 - easeOut(p)); });
       floater(ux(target), uy(target) - target.th, String(dmg), '#ff6a58', true); burst(ux(target), uy(target) - target.th * 0.5, 'rgba(220,80,70,', 8, 1);
       log(`<b>${enemy.name}</b> golpea a <b>${target.name}</b> · ${dmg} de daño${target.def ? ' (en guardia)' : ''}.`);
@@ -331,7 +398,7 @@ const HacCombate = (function () {
 
   function start() {
     party = nuevaParty(); enemy = nuevoEnemigo(); ronda = 1; over = false; busy = false; logLines = []; sel = { boost: 0 };
-    tweens.length = 0; floaters.length = 0; parts.length = 0; projs.length = 0; shake = 0;
+    tweens.length = 0; floaters.length = 0; parts.length = 0; projs.length = 0; slashes.length = 0; shake = 0;
     calcOrden(); resize(); renderAll();
     log('Comienza la escaramuza. Descubre las debilidades del enemigo y rómpele el escudo.');
     const u = actual(); if (u.foe) setTimeout(turnoEnemigo, 700);
