@@ -24,28 +24,18 @@
   .hcb-tl-chip.foe{ background:rgba(178,59,46,.2); border-color:rgba(208,70,59,.5); }
   .hcb-tl-chip.cur{ transform:translateY(-3px) scale(1.08); box-shadow:0 4px 14px rgba(201,168,76,.4); border-color:var(--gold); color:var(--gold); }
 
-  /* Escena */
-  .hcb-scene{ position:relative; border-radius:12px; min-height:280px; padding:14px; overflow:hidden;
-    background:radial-gradient(120% 90% at 50% 8%, #33402f 0%, #232a20 42%, #14150f 100%);
-    box-shadow:inset 0 0 0 1px rgba(201,168,76,.16), inset 0 -60px 80px rgba(0,0,0,.55), inset 0 30px 60px rgba(0,0,0,.4);
-    display:grid; grid-template-columns:1fr 1fr; align-items:end; gap:10px; }
-  .hcb-scene::after{ content:''; position:absolute; left:0; right:0; bottom:0; height:42%; pointer-events:none;
-    background:repeating-linear-gradient(90deg, rgba(0,0,0,.14) 0 2px, transparent 2px 26px), linear-gradient(180deg, transparent, rgba(0,0,0,.35)); opacity:.5; }
-  .hcb-foes{ display:flex; justify-content:flex-start; align-items:flex-end; }
-  .hcb-allies{ display:flex; justify-content:flex-end; align-items:flex-end; gap:2px; position:relative; z-index:2; }
-  .hcb-spr{ image-rendering:pixelated; height:96px; width:auto; filter:drop-shadow(0 6px 6px rgba(0,0,0,.5)); }
-  .hcb-spr.foe{ height:150px; transform:scaleX(-1); }
-  .hcb-spr.foe.broken{ filter:drop-shadow(0 6px 6px rgba(0,0,0,.5)) saturate(.3) brightness(.8); }
-  .hcb-ally{ transition:transform .2s; }
-  .hcb-ally.cur{ transform:translateY(-6px); }
-  .hcb-ally.cur .hcb-spr{ filter:drop-shadow(0 0 10px rgba(201,168,76,.7)) drop-shadow(0 6px 6px rgba(0,0,0,.5)); }
-  .hcb-ally.dead .hcb-spr{ filter:grayscale(1) brightness(.4); opacity:.5; }
-
-  .hcb-foe{ position:relative; z-index:2; max-width:300px; }
-  .hcb-foe-top{ font-size:13px; color:var(--parch); margin-bottom:2px; }
+  /* Escena (canvas animado) */
+  .hcb-scene{ position:relative; border-radius:12px; overflow:hidden;
+    height:clamp(260px, 42vh, 400px);
+    box-shadow:inset 0 0 0 1px rgba(201,168,76,.18); }
+  .hcb-scene canvas{ display:block; width:100%; height:100%; }
+  .hcb-foehud{ position:absolute; left:12px; top:10px; right:12px; max-width:340px; pointer-events:none;
+    text-shadow:0 1px 3px rgba(0,0,0,.9); }
+  .hcb-foe-top{ font-size:14px; color:var(--parch); margin-bottom:4px; }
   .hcb-foe-zh{ font-family:'Noto Serif SC',serif; color:var(--gold); }
-  .hcb-shield{ display:inline-flex; align-items:center; gap:5px; padding:2px 9px; border-radius:999px; margin:2px 0;
-    background:rgba(90,160,208,.16); border:1px solid rgba(90,160,208,.45); font-size:13px; }
+  .hcb-foe-row{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:4px; }
+  .hcb-shield{ display:inline-flex; align-items:center; gap:5px; padding:2px 9px; border-radius:999px;
+    background:rgba(90,160,208,.22); border:1px solid rgba(90,160,208,.5); font-size:13px; }
   .hcb-shield b{ color:#bcd8ec; font-variant-numeric:tabular-nums; }
   .hcb-shield.broken{ background:rgba(208,70,59,.2); border-color:var(--bad); }
   .hcb-shield.broken b{ color:#f0b4ac; }
@@ -60,13 +50,6 @@
   .hcb-bar.sp span{ background:linear-gradient(90deg,#3f7fae,#6fb6e0); }
   .hcb-foe-hp{ font-size:11px; color:var(--parch2); margin-top:3px; font-variant-numeric:tabular-nums; }
 
-  /* fx */
-  .hcb-fx-hit{ animation:hcbHit .4s; } .hcb-fx-break{ animation:hcbBreak .5s; }
-  .hcb-fx-hurt{ animation:hcbHurt .4s; } .hcb-fx-heal .hcb-spr{ animation:hcbHeal .5s; }
-  @keyframes hcbHit{ 25%{ transform:translateX(6px) } 60%{ transform:translateX(-3px) } }
-  @keyframes hcbBreak{ 20%{ transform:translateX(-8px) rotate(-2deg) } 50%{ transform:translateX(8px) } 80%{ transform:translateX(-3px) } }
-  @keyframes hcbHurt{ 30%{ transform:translateX(-6px) } 70%{ transform:translateX(3px) } }
-  @keyframes hcbHeal{ 40%{ filter:drop-shadow(0 0 12px #8ed16f) brightness(1.2) } }
   .hcb-break{ color:var(--br); font-weight:700; }
 
   /* Registro */
@@ -119,9 +102,7 @@
   .hcb-end-btn{ padding:10px 20px; border-radius:9px; cursor:pointer; font-weight:700; background:var(--gold); color:var(--ink); border:none; font-size:14px; }
 
   @media(max-width:620px){
-    .hcb-scene{ min-height:230px; grid-template-columns:1fr; grid-template-rows:auto auto; }
-    .hcb-foes{ justify-content:center; } .hcb-allies{ justify-content:center; }
-    .hcb-spr{ height:78px; } .hcb-spr.foe{ height:118px; }
+    .hcb-scene{ height:clamp(230px, 40vh, 320px); }
     .hcb-party{ grid-template-columns:1fr; }
     .hcb-acts{ grid-template-columns:1fr 1fr; }
   }
@@ -134,7 +115,7 @@
   </div>
   <script src="assets/js/hac-util.js?v=1"></script>
   <script src="assets/js/hac-char.js?v=17"></script>
-  <script src="assets/js/hac-combate.js?v=1"></script>
+  <script src="assets/js/hac-combate.js?v=2"></script>
   <script>HacCombate.init(document.getElementById('hcb-root'));</script>
 </body>
 </html>
