@@ -62,7 +62,8 @@ const HacCombate = (function () {
     huangzhong: { src: 'assets/img/huangzhong-atk.webp?v=1', img: null, cols: 8, count: 61, cellW: 427, cellH: 300, pivotX: 293, feetY: 298, charH: 203, thf: 0.236, play: 54, release: 48, muzzle: [0.34, 0.72] },
   };
   const sheetReady = (u) => !u.foe && u.sprite && SHEETS[u.sprite] && SHEETS[u.sprite].img && SHEETS[u.sprite].img.complete && SHEETS[u.sprite].img.naturalWidth;
-  const tweens = [], floaters = [], parts = [], projs = [], slashes = [];
+  const tweens = [], floaters = [], parts = [], projs = [], slashes = [], auras = [];
+  let taijiImg = null;   // taiji (yin-yang) verde horneado 1 vez → se rota/escala por frame (sin coste)
   const alive = (u) => u.hp > 0;
   const partyAlive = () => party.filter(alive);
   const actual = () => orden[idx];
@@ -261,6 +262,32 @@ const HacCombate = (function () {
     bg._torches = [{ x: w * 0.12, y: h * 0.30 }, { x: w * 0.86, y: h * 0.30 }];
   }
 
+  // ── Taiji (yin-yang) curativo: horneado una vez a alta resolución ─────────────
+  function bakeTaiji() {
+    const S = 256, c = document.createElement('canvas'); c.width = S; c.height = S; const g = c.getContext('2d');
+    const cx = S / 2, cy = S / 2, R = S * 0.30;
+    const LIGHT = '#eaf6c4', DARK = '#245c37';
+    // Halo verde de fondo.
+    let gr = g.createRadialGradient(cx, cy, 0, cx, cy, S * 0.5);
+    gr.addColorStop(0, 'rgba(170,245,160,.55)'); gr.addColorStop(0.42, 'rgba(110,220,120,.32)'); gr.addColorStop(1, 'rgba(90,200,110,0)');
+    g.fillStyle = gr; g.fillRect(0, 0, S, S);
+    // Disco base (mitad clara) + semicírculo oscuro (derecha).
+    g.fillStyle = LIGHT; g.beginPath(); g.arc(cx, cy, R, 0, 6.283); g.fill();
+    g.fillStyle = DARK; g.beginPath(); g.arc(cx, cy, R, -Math.PI / 2, Math.PI / 2); g.closePath(); g.fill();
+    // Lóbulos que forman la S.
+    g.fillStyle = LIGHT; g.beginPath(); g.arc(cx, cy - R / 2, R / 2, 0, 6.283); g.fill();
+    g.fillStyle = DARK; g.beginPath(); g.arc(cx, cy + R / 2, R / 2, 0, 6.283); g.fill();
+    // Ojos.
+    g.fillStyle = DARK; g.beginPath(); g.arc(cx, cy - R / 2, R * 0.15, 0, 6.283); g.fill();
+    g.fillStyle = LIGHT; g.beginPath(); g.arc(cx, cy + R / 2, R * 0.15, 0, 6.283); g.fill();
+    // Aro exterior luminoso.
+    g.lineWidth = S * 0.018; g.strokeStyle = 'rgba(205,255,185,.9)'; g.beginPath(); g.arc(cx, cy, R, 0, 6.283); g.stroke();
+    g.lineWidth = S * 0.006; g.strokeStyle = 'rgba(120,80,40,.35)';   // hilo divisorio sutil
+    g.beginPath(); g.arc(cx, cy - R / 2, R / 2, Math.PI / 2, Math.PI * 1.5); g.arc(cx, cy + R / 2, R / 2, Math.PI * 1.5, Math.PI / 2, true); g.stroke();
+    taijiImg = c;
+  }
+  function sparkle(x, y, r, col) { ctx.strokeStyle = col; ctx.lineCap = 'round'; ctx.lineWidth = Math.max(1, r * 0.35); ctx.beginPath(); ctx.moveTo(x - r, y); ctx.lineTo(x + r, y); ctx.moveTo(x, y - r); ctx.lineTo(x, y + r); ctx.stroke(); }
+
   // ── Partículas / números ─────────────────────────────────────────────────────
   function floater(x, y, text, col, big) { floaters.push({ x: x * dpr, y: y * dpr, vy: -0.55 * dpr, life: 0, max: 1100, text, col, size: (big ? 34 : 24) * dpr }); }
   function burst(x, y, col, n, spd) { for (let i = 0; i < n; i++) { const a = rnd(0, 6.28), s = rnd(0.3, 1) * (spd || 1) * dpr; parts.push({ x: x * dpr, y: y * dpr, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 0.3 * dpr, life: 0, max: rnd(400, 800), col, r: rnd(1.5, 3.5) * dpr }); } }
@@ -299,6 +326,15 @@ const HacCombate = (function () {
     ctx.globalAlpha = 1;
     // unidades: enemigo primero (fondo), luego aliados
     drawUnit(enemy); party.forEach(drawUnit);
+    // taiji curativo (yin-yang que gira junto a la mano del estratega)
+    if (taijiImg) for (let i = auras.length - 1; i >= 0; i--) {
+      const a = auras[i]; const el = tt - a.t0; if (el >= a.dur) { auras.splice(i, 1); continue; }
+      const p = el / a.dur, al = clamp(p < 0.16 ? p / 0.16 : (p > 0.76 ? (1 - p) / 0.24 : 1), 0, 1);
+      const grow = easeOut(clamp(p / 0.16, 0, 1)), pulse = 1 + Math.sin(tt * 0.011) * 0.05;
+      const s = a.size * dpr * grow * pulse, gx = a.x * dpr, gy = a.y * dpr;
+      ctx.save(); ctx.globalAlpha = al; ctx.translate(gx, gy); ctx.rotate(el * 0.0017); ctx.drawImage(taijiImg, -s / 2, -s / 2, s, s); ctx.restore();
+      for (let k = 0; k < 7; k++) { const ang = k * 0.898 + el * 0.0009, rr = s * (0.60 + 0.06 * Math.sin(el * 0.004 + k)); const tw = 0.35 + 0.65 * Math.abs(Math.sin(tt * 0.009 + k * 1.9)); sparkle(gx + Math.cos(ang) * rr, gy + Math.sin(ang) * rr, (1.6 + tw * 2.4) * dpr, 'rgba(216,255,190,' + (al * tw).toFixed(3) + ')'); }
+    }
     // proyectiles
     for (let i = projs.length - 1; i >= 0; i--) { const pr = projs[i]; const p = clamp((tt - pr.t0) / pr.dur, 0, 1); const x = lerp(pr.x0, pr.x1, p) * dpr, y = (lerp(pr.y0, pr.y1, p) - Math.sin(p * 3.14) * 26) * dpr; drawProj(pr, x, y, p); if (p >= 1) { projs.splice(i, 1); if (pr.onHit) pr.onHit(); } }
     // cortes de sable (crescent)
@@ -352,6 +388,7 @@ const HacCombate = (function () {
   function drawProj(pr, x, y, p) {
     ctx.save();
     if (pr.kind === 'arrow') { ctx.strokeStyle = '#e9d9a6'; ctx.lineWidth = 3 * dpr; const dx = (pr.x1 - pr.x0), dy = (pr.y1 - pr.y0), l = Math.hypot(dx, dy) || 1; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - dx / l * 16 * dpr, y - dy / l * 16 * dpr); ctx.stroke(); }
+    else if (pr.kind === 'mote') { const r = 6 * dpr; const rg = ctx.createRadialGradient(x, y, 0, x, y, r); rg.addColorStop(0, '#f0ffd8'); rg.addColorStop(0.5, pr.col || '#9be08a'); rg.addColorStop(1, 'rgba(120,200,110,0)'); ctx.fillStyle = rg; ctx.beginPath(); ctx.arc(x, y, r, 0, 6.283); ctx.fill(); }
     else { const col = pr.col || '#ff8a3c'; const rg = ctx.createRadialGradient(x, y, 0, x, y, 12 * dpr); rg.addColorStop(0, '#fff'); rg.addColorStop(0.4, col); rg.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = rg; ctx.beginPath(); ctx.arc(x, y, 12 * dpr, 0, 6.283); ctx.fill(); }
     ctx.restore();
   }
@@ -390,8 +427,17 @@ const HacCombate = (function () {
       const anim = !!u.sprite; if (anim) u._animDur = 950;
       const applyAt = anim ? Math.round(u._animDur * 0.80) : 220;   // el efecto ocurre al final del gesto
       if (!anim) tween(260, (p) => { u.oy = -10 * Math.sin(p * 3.14); }, () => { u.oy = 0; });   // sin saltito si tiene animación propia
-      wait(applyAt, () => { target.hp = Math.min(target.maxHp, target.hp + heal); target.flash = 0.7; burst(ux(target), uy(target) - target.th * 0.5, 'rgba(140,210,110,', 16, 1.4); floater(ux(target), uy(target) - target.th, '+' + heal, '#8ed16f', true); log(`<b>${u.name}</b> cura a <b>${target.name}</b> (+${heal} PV).`); renderParty(); });
-      return finTurno(anim ? applyAt + 240 : 760);
+      // El taiji se forma junto a la mano extendida (mira hacia el enemigo) y gira mientras conjura.
+      const dir = Math.sign(enemy.ax - u.ax) || -1;
+      const hx = ux(u) + dir * u.th * 0.50, hy = uy(u) - u.th * 0.74;
+      auras.push({ x: hx, y: hy, size: u.th * 0.66, t0: now(), dur: applyAt + 360 });
+      wait(applyAt, () => {
+        target.hp = Math.min(target.maxHp, target.hp + heal); target.flash = 0.7;
+        // Motas curativas: del taiji fluyen hacia el aliado herido.
+        for (let m = 0; m < 6; m++) wait(50 * m, () => projs.push({ t0: now(), dur: 300, x0: hx + rnd(-6, 6), y0: hy + rnd(-6, 6), x1: ux(target) + rnd(-10, 10), y1: uy(target) - target.th * (0.4 + Math.random() * 0.4), kind: 'mote', col: '#9be08a', onHit: () => burst(ux(target), uy(target) - target.th * 0.5, 'rgba(150,220,120,', 3, 0.8) }));
+        burst(ux(target), uy(target) - target.th * 0.5, 'rgba(140,210,110,', 16, 1.4); floater(ux(target), uy(target) - target.th, '+' + heal, '#8ed16f', true); log(`<b>${u.name}</b> cura a <b>${target.name}</b> (+${heal} PV).`); renderParty();
+      });
+      return finTurno(anim ? applyAt + 520 : 760);
     }
     // Ataque (melee / flecha / magia)
     const cat = TIPOS[action.type] ? TIPOS[action.type].cat : 'melee';
@@ -532,7 +578,7 @@ const HacCombate = (function () {
 
   function start() {
     party = nuevaParty(); enemy = nuevoEnemigo(); ronda = 1; over = false; busy = false; logLines = []; sel = { boost: 0 };
-    tweens.length = 0; floaters.length = 0; parts.length = 0; projs.length = 0; slashes.length = 0; shake = 0;
+    tweens.length = 0; floaters.length = 0; parts.length = 0; projs.length = 0; slashes.length = 0; auras.length = 0; shake = 0;
     calcOrden(); resize(); renderAll();
     log('Comienza la escaramuza. Descubre las debilidades del enemigo y rómpele el escudo.');
     const u = actual(); if (u.foe) setTimeout(turnoEnemigo, 700);
@@ -540,6 +586,7 @@ const HacCombate = (function () {
 
   function init(container) {
     root = container;
+    bakeTaiji();
     bgImg = new Image(); bgImg.onload = () => { if (cv) bakeBg(); }; bgImg.src = 'assets/img/bg-turbantes.jpg?v=1';
     Object.values(SHEETS).forEach(s => { s.img = new Image(); s.img.src = s.src; });
     root.innerHTML = `<div class="hcb">
