@@ -31,7 +31,7 @@ const HacCombate = (function () {
       { id: 'g', name: 'Guan Yu', rol: 'Guerrero', aptitud: 'militar', sprite: 'guanyu', aspecto: { robe: '#7a3b34', piel: 1, pelo: 0 },
         maxHp: 130, hp: 130, maxSp: 22, sp: 22, spd: 9, bp: 1, wpn: 'espada', def: false,
         skills: [ { name: 'Tajo doble', type: 'espada', sp: 6, hits: 2, power: 15 }, { name: 'Estocada', type: 'lanza', sp: 8, hits: 1, power: 30 } ] },
-      { id: 'a', name: 'Huang Zhong', rol: 'Arquero', aptitud: 'militar', aspecto: { robe: '#4e6f8f', piel: 0, pelo: 2 },
+      { id: 'a', name: 'Huang Zhong', rol: 'Arquero', aptitud: 'militar', sprite: 'huangzhong', aspecto: { robe: '#4e6f8f', piel: 0, pelo: 2 },
         maxHp: 98, hp: 98, maxSp: 26, sp: 26, spd: 12, bp: 1, wpn: 'arco', def: false,
         skills: [ { name: 'Andanada', type: 'arco', sp: 7, hits: 3, power: 10 }, { name: 'Flecha ígnea', type: 'fuego', sp: 10, hits: 1, power: 26 } ] },
       { id: 'm', name: 'Zhuge Liang', rol: 'Estratega', aptitud: 'cultural', sprite: 'zhugeliang', aspecto: { robe: '#7f9e6a', piel: 0, pelo: 0 },
@@ -57,6 +57,7 @@ const HacCombate = (function () {
   const SHEETS = {
     guanyu:     { src: 'assets/img/guanyu-atk.webp?v=1',     img: null, cols: 8, count: 61, cellW: 361, cellH: 300, pivotX: 233, feetY: 285, charH: 199, thf: 0.300 },
     zhugeliang: { src: 'assets/img/zhugeliang-atk.webp?v=1', img: null, cols: 8, count: 61, cellW: 392, cellH: 300, pivotX: 245, feetY: 293, charH: 275, thf: 0.226 },
+    huangzhong: { src: 'assets/img/huangzhong-atk.webp?v=1', img: null, cols: 8, count: 61, cellW: 427, cellH: 300, pivotX: 293, feetY: 298, charH: 203, thf: 0.236 },
   };
   const sheetReady = (u) => !u.foe && u.sprite && SHEETS[u.sprite] && SHEETS[u.sprite].img && SHEETS[u.sprite].img.complete && SHEETS[u.sprite].img.naturalWidth;
   const tweens = [], floaters = [], parts = [], projs = [], slashes = [];
