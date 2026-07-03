@@ -34,7 +34,7 @@ const HacCombate = (function () {
       { id: 'a', name: 'Huang Zhong', rol: 'Arquero', aptitud: 'militar', sprite: 'huangzhong', aspecto: { robe: '#4e6f8f', piel: 0, pelo: 2 },
         maxHp: 98, hp: 98, maxSp: 26, sp: 26, spd: 12, bp: 1, wpn: 'arco', def: false,
         skills: [ { name: 'Andanada', type: 'arco', sp: 7, hits: 3, power: 10 }, { name: 'Flecha ígnea', type: 'fuego', sp: 10, hits: 1, power: 26 } ] },
-      { id: 'm', name: 'Zhuge Liang', rol: 'Estratega', aptitud: 'cultural', sprite: 'zhugeliang', aspecto: { robe: '#7f9e6a', piel: 0, pelo: 0 },
+      { id: 'm', name: 'Zhuge Liang', rol: 'Estratega', aptitud: 'cultural', sprite: 'zhugeliang', aspecto: { robe: '#7f9e6a', piel: 0, pelo: 0 }, conjuro: true,
         maxHp: 84, hp: 84, maxSp: 38, sp: 38, spd: 8, bp: 1, wpn: 'viento', def: false,
         skills: [ { name: 'Llamarada', type: 'fuego', sp: 9, hits: 1, power: 30 }, { name: 'Ventisca', type: 'viento', sp: 9, hits: 2, power: 15 }, { name: 'Vendaval curativo', type: 'cura', sp: 10, heal: 55 } ] },
     ];
@@ -62,7 +62,7 @@ const HacCombate = (function () {
     huangzhong: { src: 'assets/img/huangzhong-atk.webp?v=1', img: null, cols: 8, count: 61, cellW: 427, cellH: 300, pivotX: 293, feetY: 298, charH: 203, thf: 0.236, play: 54, release: 48, muzzle: [0.34, 0.72] },
   };
   const sheetReady = (u) => !u.foe && u.sprite && SHEETS[u.sprite] && SHEETS[u.sprite].img && SHEETS[u.sprite].img.complete && SHEETS[u.sprite].img.naturalWidth;
-  const tweens = [], floaters = [], parts = [], projs = [], slashes = [], auras = [];
+  const tweens = [], floaters = [], parts = [], partsF = [], projs = [], slashes = [], auras = [], blooms = [];
   let taijiImg = null;   // taiji (yin-yang) verde horneado 1 vez → se rota/escala por frame (sin coste)
   const alive = (u) => u.hp > 0;
   const partyAlive = () => party.filter(alive);
@@ -293,6 +293,17 @@ const HacCombate = (function () {
   function burst(x, y, col, n, spd) { for (let i = 0; i < n; i++) { const a = rnd(0, 6.28), s = rnd(0.3, 1) * (spd || 1) * dpr; parts.push({ x: x * dpr, y: y * dpr, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 0.3 * dpr, life: 0, max: rnd(400, 800), col, r: rnd(1.5, 3.5) * dpr }); } }
   function ember() { parts.push({ x: rnd(0, W) * dpr, y: H * dpr, vx: rnd(-0.1, 0.1) * dpr, vy: rnd(-0.35, -0.15) * dpr, life: 0, max: rnd(2200, 4200), col: 'rgba(230,150,60,', r: rnd(1, 2.2) * dpr, ember: true }); }
   function slash(x, y, col) { slashes.push({ x: x * dpr, y: y * dpr, t0: now(), dur: 260, col: col || 'rgba(255,255,255,' }); }
+  // Anillo elemental que se expande (magia que estalla en el objetivo).
+  function bloom(x, y, col, r0, r1, dur) { blooms.push({ x: x * dpr, y: y * dpr, t0: now(), dur: dur || 360, col, r0: r0 * dpr, r1: r1 * dpr }); }
+  // Llamas ascendentes (fuego) y remolino (viento) sobre el objetivo, con las partículas ya existentes.
+  function flames(x, y, n) { for (let i = 0; i < n; i++) partsF.push({ x: (x + rnd(-18, 18)) * dpr, y: (y + rnd(-4, 14)) * dpr, vx: rnd(-0.2, 0.2) * dpr, vy: -rnd(0.4, 1.15) * dpr, life: 0, max: rnd(360, 720), col: 'rgba(255,' + ri(120, 185) + ',55,', r: rnd(2.4, 4.8) * dpr, ember: true }); }
+  function swirl(x, y, n, col) { for (let i = 0; i < n; i++) { const a = rnd(0, 6.28), r = rnd(8, 30); partsF.push({ x: (x + Math.cos(a) * r) * dpr, y: (y + Math.sin(a) * r) * dpr, vx: Math.cos(a + 1.57) * rnd(0.4, 1.1) * dpr, vy: Math.sin(a + 1.57) * rnd(0.4, 1.1) * dpr - 0.2 * dpr, life: 0, max: rnd(300, 560), col, r: rnd(1.5, 3) * dpr }); } }
+  // Magia del estratega manifestada SOBRE el enemigo (sin proyectil).
+  function magiaEnObjetivo(type, x, y) {
+    if (type === 'fuego') { shake = Math.max(shake, 7); bloom(x, y, 'rgba(255,150,60,', 8, 46, 380); bloom(x, y - 6, 'rgba(255,90,40,', 4, 34, 300); flames(x, y + 6, 22); flames(x, y - 8, 16); burst(x, y, 'rgba(255,170,70,', 10, 1.6); }
+    else if (type === 'viento') { shake = Math.max(shake, 4); bloom(x, y, 'rgba(160,240,215,', 10, 44, 340); slash(x, y, 'rgba(150,235,210,'); swirl(x, y, 22, 'rgba(170,240,215,'); }
+    else burst(x, y, 'rgba(255,255,255,', 12, 1.4);
+  }
 
   // ── Tween sencillo ───────────────────────────────────────────────────────────
   function tween(dur, on, done) { tweens.push({ t0: now(), dur, on, done }); }
@@ -321,11 +332,12 @@ const HacCombate = (function () {
       ctx.fillStyle = rg; ctx.beginPath(); ctx.arc(gx, gy, r, 0, 6.283); ctx.fill();
       if (!bg._photo) { ctx.fillStyle = 'rgba(255,190,90,.9)'; ctx.beginPath(); ctx.ellipse(gx, gy, 4 * dpr, (9 + Math.sin(tt * 0.02 + k) * 2) * dpr, 0, 0, 6.283); ctx.fill(); }
     });
-    // partículas por detrás
-    for (let i = parts.length - 1; i >= 0; i--) { const p = parts[i]; p.life += dt; if (p.life >= p.max) { parts.splice(i, 1); continue; } p.x += p.vx * dt * 0.06; p.y += p.vy * dt * 0.06; const a = 1 - p.life / p.max; ctx.fillStyle = p.ember ? (p.col + (a * 0.8) + ')') : p.col; ctx.globalAlpha = p.ember ? 1 : a; ctx.beginPath(); ctx.arc(p.x, p.y, p.r * (p.ember ? 1 : a + 0.3), 0, 6.283); ctx.fill(); }
-    ctx.globalAlpha = 1;
+    // partículas por detrás (ambiente, ascuas, impactos)
+    drawParts(parts, dt);
     // unidades: enemigo primero (fondo), luego aliados
     drawUnit(enemy); party.forEach(drawUnit);
+    // partículas por delante (magia elemental que envuelve al objetivo)
+    drawParts(partsF, dt);
     // taiji curativo (yin-yang que gira junto a la mano del estratega)
     if (taijiImg) for (let i = auras.length - 1; i >= 0; i--) {
       const a = auras[i]; const el = tt - a.t0; if (el >= a.dur) { auras.splice(i, 1); continue; }
@@ -339,10 +351,16 @@ const HacCombate = (function () {
     for (let i = projs.length - 1; i >= 0; i--) { const pr = projs[i]; const p = clamp((tt - pr.t0) / pr.dur, 0, 1); const x = lerp(pr.x0, pr.x1, p) * dpr, y = (lerp(pr.y0, pr.y1, p) - Math.sin(p * 3.14) * 26) * dpr; drawProj(pr, x, y, p); if (p >= 1) { projs.splice(i, 1); if (pr.onHit) pr.onHit(); } }
     // cortes de sable (crescent)
     for (let i = slashes.length - 1; i >= 0; i--) { const s = slashes[i]; const p = clamp((tt - s.t0) / s.dur, 0, 1); if (p >= 1) { slashes.splice(i, 1); continue; } ctx.save(); ctx.globalAlpha = 1 - p; ctx.strokeStyle = s.col + (1 - p) + ')'; ctx.lineWidth = (7 - 5 * p) * dpr; ctx.lineCap = 'round'; const r = (18 + p * 30) * dpr, a0 = -1.0 + p * 0.5; ctx.beginPath(); ctx.arc(s.x, s.y, r, a0, a0 + 1.7); ctx.stroke(); ctx.restore(); }
+    // anillos elementales (magia que estalla en el objetivo)
+    for (let i = blooms.length - 1; i >= 0; i--) { const bl = blooms[i]; const p = clamp((tt - bl.t0) / bl.dur, 0, 1); if (p >= 1) { blooms.splice(i, 1); continue; } ctx.save(); ctx.globalAlpha = 1 - p; ctx.strokeStyle = bl.col + (1 - p).toFixed(3) + ')'; ctx.lineWidth = (6 - 4 * p) * dpr; ctx.beginPath(); ctx.arc(bl.x, bl.y, lerp(bl.r0, bl.r1, easeOut(p)), 0, 6.283); ctx.stroke(); ctx.restore(); }
     // números flotantes (encima de todo)
     for (let i = floaters.length - 1; i >= 0; i--) { const f = floaters[i]; f.life += dt; if (f.life >= f.max) { floaters.splice(i, 1); continue; } f.y += f.vy * dt * 0.06; f.vy += 0.004 * dpr * dt * 0.06; const a = f.life > f.max * 0.7 ? 1 - (f.life - f.max * 0.7) / (f.max * 0.3) : 1; ctx.globalAlpha = a; ctx.font = `900 ${f.size}px 'Cinzel Decorative',serif`; ctx.textAlign = 'center'; ctx.lineWidth = 4 * dpr; ctx.strokeStyle = 'rgba(0,0,0,.8)'; ctx.strokeText(f.text, f.x, f.y); ctx.fillStyle = f.col; ctx.fillText(f.text, f.x, f.y); }
     ctx.globalAlpha = 1;
     raf = requestAnimationFrame(frame);
+  }
+  function drawParts(arr, dt) {
+    for (let i = arr.length - 1; i >= 0; i--) { const p = arr[i]; p.life += dt; if (p.life >= p.max) { arr.splice(i, 1); continue; } p.x += p.vx * dt * 0.06; p.y += p.vy * dt * 0.06; const a = 1 - p.life / p.max; ctx.fillStyle = p.ember ? (p.col + (a * 0.8) + ')') : p.col; ctx.globalAlpha = p.ember ? 1 : a; ctx.beginPath(); ctx.arc(p.x, p.y, p.r * (p.ember ? 1 : a + 0.3), 0, 6.283); ctx.fill(); }
+    ctx.globalAlpha = 1;
   }
   function drawSaber(w) { ctx.save(); ctx.translate(-w * 0.30, -w * 0.9); ctx.rotate(-0.5); ctx.fillStyle = '#d8b24a'; ctx.fillRect(-2 * dpr, -2 * dpr, 6 * dpr, 4 * dpr); ctx.strokeStyle = '#eef1f6'; ctx.lineWidth = 3 * dpr; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(2 * dpr, 0); ctx.quadraticCurveTo(-16 * dpr, -7 * dpr, -32 * dpr, -1 * dpr); ctx.stroke(); ctx.restore(); }
   function drawBow(h) { ctx.save(); ctx.translate(-h * 0.30, -h * 0.55); const r = h * 0.32; ctx.strokeStyle = '#8a5a2c'; ctx.lineWidth = 3 * dpr; ctx.beginPath(); ctx.arc(0, 0, r, -1.1, 1.1); ctx.stroke(); ctx.strokeStyle = 'rgba(240,240,220,.6)'; ctx.lineWidth = 1 * dpr; ctx.beginPath(); ctx.moveTo(Math.cos(-1.1) * r, Math.sin(-1.1) * r); ctx.lineTo(Math.cos(1.1) * r, Math.sin(1.1) * r); ctx.stroke(); ctx.restore(); }
@@ -457,13 +475,21 @@ const HacCombate = (function () {
       });
       return finTurno(230 + 150 * hits + 340);
     }
-    // ranged / magic: proyectil(es). Con animación propia NO hay saltito (se queda en el sitio) y el
-    // disparo se retrasa para que salga en el barrido final y el impacto coincida con el fin del clip.
     const anim = !!u.sprite, A2 = SHEETS[u.sprite];
     if (!anim) tween(220, (p) => { u.oy = -8 * Math.sin(p * 3.14); }, () => { u.oy = 0; });
     if (anim) u._animDur = 950;
     const play = A2 ? (A2.play || A2.count) : 0;
     const relFrac = A2 ? (A2.release ? A2.release / play : 0.80) : 0;   // el disparo sale en el frame de soltar
+    // Conjurador (estratega): la magia NO vuela como proyectil; se manifiesta sobre el enemigo
+    // al cerrar el gesto (llamarada que brota, ventisca que lo envuelve).
+    if (u.conjuro && cat === 'magic') {
+      const hitT = anim ? Math.round(u._animDur * relFrac) : 300, gap2 = 170;
+      let doneC = 0;
+      for (let i = 0; i < hits; i++) wait(hitT + gap2 * i, () => { magiaEnObjetivo(action.type, ux(enemy), uy(enemy) - enemy.th * 0.55); doHit(); if (++doneC === hits) resumen(); });
+      return finTurno(hitT + gap2 * (hits - 1) + 340);
+    }
+    // ranged / magic: proyectil(es). Con animación propia NO hay saltito (se queda en el sitio) y el
+    // disparo se retrasa para que salga en el barrido final y el impacto coincida con el fin del clip.
     const projDur = anim ? 200 : 300;
     const launch = anim ? Math.round(u._animDur * relFrac) : 0;
     const gap = anim ? 110 : 130;
@@ -578,7 +604,7 @@ const HacCombate = (function () {
 
   function start() {
     party = nuevaParty(); enemy = nuevoEnemigo(); ronda = 1; over = false; busy = false; logLines = []; sel = { boost: 0 };
-    tweens.length = 0; floaters.length = 0; parts.length = 0; projs.length = 0; slashes.length = 0; auras.length = 0; shake = 0;
+    tweens.length = 0; floaters.length = 0; parts.length = 0; partsF.length = 0; projs.length = 0; slashes.length = 0; auras.length = 0; blooms.length = 0; shake = 0;
     calcOrden(); resize(); renderAll();
     log('Comienza la escaramuza. Descubre las debilidades del enemigo y rómpele el escudo.');
     const u = actual(); if (u.foe) setTimeout(turnoEnemigo, 700);
