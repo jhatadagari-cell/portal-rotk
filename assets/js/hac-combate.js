@@ -50,7 +50,7 @@ const HacCombate = (function () {
   let root = null, party = [], enemy = null, orden = [], idx = 0, ronda = 1, busy = false, over = false, sel = { boost: 0 };
   let elScene, elParty, elMenu, elLog, elTimeline, logLines = [];
   // Canvas / animación
-  let cv, ctx, bg, W = 0, H = 0, dpr = 1, raf = 0, t = 0, shake = 0;
+  let cv, ctx, bg, bgImg = null, W = 0, H = 0, dpr = 1, raf = 0, t = 0, shake = 0;
   const tweens = [], floaters = [], parts = [], projs = [], slashes = [];
   const alive = (u) => u.hp > 0;
   const partyAlive = () => party.filter(alive);
@@ -207,10 +207,26 @@ const HacCombate = (function () {
     party.forEach((u, i) => { u.ax = W * 0.66 + i * (W * 0.11); u.ay = gy - i * (H * 0.015); u.th = H * (u.sprite === 'guanyu' ? 0.36 : 0.26); u.ox = 0; u.oy = 0; u.flash = 0; u.deadA = 1; u.hitT = 0; });
   }
 
-  // ── Fondo (mazmorra) horneado una vez ────────────────────────────────────────
+  // ── Fondo horneado una vez ───────────────────────────────────────────────────
   function bakeBg() {
     bg = document.createElement('canvas'); bg.width = cv.width; bg.height = cv.height;
     const g = bg.getContext('2d'); const w = bg.width, h = bg.height;
+    // Fondo pintado: campamento Turbante Amarillo (si ya cargó la imagen).
+    if (bgImg && bgImg.complete && bgImg.naturalWidth) {
+      const ir = bgImg.naturalWidth / bgImg.naturalHeight, cr = w / h; let dw, dh, dx, dy;
+      if (cr > ir) { dw = w; dh = w / ir; dx = 0; dy = (h - dh) * 0.5; } else { dh = h; dw = h * ir; dy = 0; dx = (w - dw) * 0.5; }
+      g.imageSmoothingEnabled = true; g.drawImage(bgImg, dx, dy, dw, dh);
+      g.fillStyle = 'rgba(10,8,4,.14)'; g.fillRect(0, 0, w, h);                                  // leve oscurecido
+      let gr = g.createRadialGradient(w / 2, h * 0.46, h * 0.28, w / 2, h * 0.55, h * 0.95);      // viñeta
+      gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(1, 'rgba(0,0,0,.5)'); g.fillStyle = gr; g.fillRect(0, 0, w, h);
+      gr = g.createLinearGradient(0, h * 0.62, 0, h); gr.addColorStop(0, 'rgba(6,5,2,0)'); gr.addColorStop(1, 'rgba(6,5,2,.42)');
+      g.fillStyle = gr; g.fillRect(0, h * 0.62, w, h * 0.38);                                     // penumbra al pie
+      bg._photo = true;
+      bg._torches = [{ x: (dx + dw * 0.365) / dpr, y: (dy + dh * 0.665) / dpr }, { x: (dx + dw * 0.605) / dpr, y: (dy + dh * 0.665) / dpr }];
+      return;
+    }
+    // Fallback procedural (mazmorra) mientras carga / si falla la imagen.
+    bg._photo = false;
     let grad = g.createLinearGradient(0, 0, 0, h);
     grad.addColorStop(0, '#2b3527'); grad.addColorStop(0.45, '#20281d'); grad.addColorStop(1, '#0e0f0a');
     g.fillStyle = grad; g.fillRect(0, 0, w, h);
@@ -262,10 +278,10 @@ const HacCombate = (function () {
     // antorchas (llama parpadeante)
     bg._torches.forEach((to, k) => {
       const fl = 0.7 + Math.sin(tt * 0.01 + k) * 0.15 + Math.random() * 0.1;
-      const gx = to.x * dpr, gy = to.y * dpr, r = 60 * dpr * fl;
+      const gx = to.x * dpr, gy = to.y * dpr, r = (bg._photo ? 44 : 60) * dpr * fl;
       const rg = ctx.createRadialGradient(gx, gy, 0, gx, gy, r); rg.addColorStop(0, 'rgba(255,170,70,.5)'); rg.addColorStop(1, 'rgba(255,150,60,0)');
       ctx.fillStyle = rg; ctx.beginPath(); ctx.arc(gx, gy, r, 0, 6.283); ctx.fill();
-      ctx.fillStyle = 'rgba(255,190,90,.9)'; ctx.beginPath(); ctx.ellipse(gx, gy, 4 * dpr, (9 + Math.sin(tt * 0.02 + k) * 2) * dpr, 0, 0, 6.283); ctx.fill();
+      if (!bg._photo) { ctx.fillStyle = 'rgba(255,190,90,.9)'; ctx.beginPath(); ctx.ellipse(gx, gy, 4 * dpr, (9 + Math.sin(tt * 0.02 + k) * 2) * dpr, 0, 0, 6.283); ctx.fill(); }
     });
     // partículas por detrás
     for (let i = parts.length - 1; i >= 0; i--) { const p = parts[i]; p.life += dt; if (p.life >= p.max) { parts.splice(i, 1); continue; } p.x += p.vx * dt * 0.06; p.y += p.vy * dt * 0.06; const a = 1 - p.life / p.max; ctx.fillStyle = p.ember ? (p.col + (a * 0.8) + ')') : p.col; ctx.globalAlpha = p.ember ? 1 : a; ctx.beginPath(); ctx.arc(p.x, p.y, p.r * (p.ember ? 1 : a + 0.3), 0, 6.283); ctx.fill(); }
@@ -481,6 +497,7 @@ const HacCombate = (function () {
 
   function init(container) {
     root = container;
+    bgImg = new Image(); bgImg.onload = () => { if (cv) bakeBg(); }; bgImg.src = 'assets/img/bg-turbantes.jpg?v=1';
     root.innerHTML = `<div class="hcb">
       <div class="hcb-timeline" data-tl></div>
       <div class="hcb-scene" data-scene><canvas data-cv></canvas><div class="hcb-foehud" data-foehud></div></div>
