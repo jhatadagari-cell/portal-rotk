@@ -1163,32 +1163,11 @@ const HacFolk = (function () {
   };
   const HORSE_VIEW = { E: 'SE', SE: 'SE', S: 'SE', SW: 'SW', W: 'SW', NW: 'NW', N: 'NW', NE: 'NE' };
   const horseImg = {}; let horseReady = false, horseLoadStarted = false;
-  // Carga DIFERIDA: los 28 frames del caballo solo se piden la primera vez que de
-  // verdad se necesita una montura (no en cada finca aunque nadie vaya montado).
-  function ensureHorses() {
-    if (horseLoadStarted || typeof Image === 'undefined') return;
-    horseLoadStarted = true;
-    let n = 0; const need = 4 * HORSE_NF;
-    ['SW', 'SE', 'NW', 'NE'].forEach(v => {
-      horseImg[v] = [];
-      for (let i = 0; i < HORSE_NF; i++) {
-        const im = new Image(); im.onload = () => { if (++n >= need) horseReady = true; };
-        im.src = 'assets/img/iso/horse-' + v + '-' + i + '.png?v=2'; horseImg[v].push(im);
-      }
-    });
-  }
-  // ¿Va montado este walker? (de momento solo un flag de depuración global para
-  // previsualizar; el disparador real —p.ej. expediciones militares— vendrá luego.)
-  if (typeof window !== 'undefined' && /[?&]mount=1/.test(window.location.search || '')) window.__HAC_MOUNT_ALL = true;   // previsualización
-  // Estados en los que el mecenas está de VIAJE (sale/vuelve de expedición o escaramuza):
-  // si tiene caballo, los recorre MONTADO (usa su propio corcel, que deja de rondar).
-  const MOUNT_STATES = { 'exped-out': 1, 'exped-in': 1, 'esc-cheer': 1 };
-  function montaSuCaballo(w) { return !!(w && caballos[w.id] && MOUNT_STATES[w.state]); }
-  function isMounted(w) {
-    const want = !!(w && (w.mounted || montaSuCaballo(w) || (typeof window !== 'undefined' && window.__HAC_MOUNT_ALL)));
-    if (want) ensureHorses();
-    return want && horseReady;
-  }
+  // TEMPORAL: el caballo se dibuja como un círculo rojo (placeholder) y la montura
+  // está desactivada hasta tener un asset mejor. No se cargan los sprites del caballo.
+  function ensureHorses() { /* no-op: placeholder de círculo, sin sprites */ }
+  // Montar DESACTIVADO por ahora (fuera animaciones de montar y jinete sobre silla).
+  function isMounted(w) { return false; }
   // Dibuja el caballo (frame del ciclo según el paso) bajo el jinete sentado en la silla.
   function drawMount(g, lx, ly, w, moving) {
     const v = HORSE_VIEW[w.dir || 'S'] || 'SW', m = HORSE_META[v];
@@ -1231,14 +1210,14 @@ const HacFolk = (function () {
     }
     return cv;
   }
-  // Dibuja un caballo SUELTO (sin jinete) rondando el campo exterior.
+  // Dibuja un caballo SUELTO. TEMPORAL: círculo rojo (placeholder) hasta tener un
+  // asset de caballo mejor.
+  const HORSE_R = 10;   // radio en px lógicos del placeholder
   function drawHorse(g, lx, ly, h) {
-    const v = HORSE_VIEW[h.dir || 'SE'] || 'SE', m = HORSE_META[v];
-    const fi = h.moving ? (Math.floor(h.phase * 1.6) % HORSE_NF) : 0;
-    const img = horseFrame(h.variante || 'caballo', v, fi); if (!img) return;
-    const fx = lx * SCALE, fy = ly * SCALE;
-    g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.imageSmoothingEnabled = false;
-    g.drawImage(img, Math.round(fx - m.ax), Math.round(fy - m.ay), m.w, m.h);
+    const fx = lx * SCALE, fy = ly * SCALE, r = HORSE_R * SCALE;
+    g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.imageSmoothingEnabled = true;
+    g.fillStyle = '#c0392b'; g.strokeStyle = 'rgba(0,0,0,.45)'; g.lineWidth = 1.5 * SCALE;
+    g.beginPath(); g.arc(fx, fy - r, r, 0, 6.2832); g.fill(); g.stroke();
     g.restore();
   }
   // Crea la encarnación de un caballo: hogar ESTABLE (semilla por dueño) en el campo
@@ -1635,13 +1614,10 @@ const HacFolk = (function () {
     });
     // Caballos sueltos: sprite como actor (con oclusión/profundidad) + su nombre encima.
     // Si su dueño está de VIAJE (lo va montando), el corcel no ronda: viaja con él.
-    if (horses.length && horseReady) {
-      const enViaje = {};
-      walkers.forEach(w => { if (w.state === 'exped-out' || w.state === 'exped-in' || w.state === 'esc-cheer' || w.state === 'fuera') enViaje[w.id] = 1; });
+    if (horses.length) {                               // placeholder de círculo rojo (sin sprites)
       horses.forEach(h => {
-        if (enViaje[h.id]) return;                     // lo lleva su jinete
         actors.push({ fx: h.fx, fy: h.fy, draw: (g, lx, ly) => drawHorse(g, lx, ly, h) });
-        overlays.push({ draw: (g) => { const p = logic(h.fx, h.fy); const m = HORSE_META[HORSE_VIEW[h.dir || 'SE'] || 'SE']; npcBanner(g, p[0], p[1] - (Math.round(m.h * SPRITE_DISP / SCALE) - 1), h.nombre, '🐎'); } });
+        overlays.push({ draw: (g) => { const p = logic(h.fx, h.fy); npcBanner(g, p[0], p[1] - (HORSE_R * 2 + 4), h.nombre, '🐎'); } });
       });
     }
     // Mecenas visibles: el sprite va como actor (con oclusión); el NOMBRE va aparte.

@@ -494,6 +494,10 @@ const HacChar = (function () {
   //   · Maestros 300×520 (pies y=496, eje x=150). Se HORNEAN una vez a tamaño de
   //     juego y se cachean; nunca se reprocesan por frame (cf. FPS de la finca).
   // ══════════════════════════════════════════════════════════════════════
+  // INTERRUPTOR: mecenas con sprites PNG de alta resolución (capa nítida) vs el
+  // personaje PROCEDURAL pixel-art clásico (con su bobbing). Desactivado por
+  // decisión de diseño → se usa el procedural; poner true para recuperar el HD.
+  const PNG_ENABLED = false;
   const PNG_DIRS  = ['SW', 'SE', 'NW', 'NE'];
   const PNG_VIEW  = { E: 'SE', SE: 'SE', S: 'SE', SW: 'SW', W: 'SW', NW: 'NW', N: 'NW', NE: 'NE' };
   const PNG_NF    = 8;
@@ -546,11 +550,11 @@ const HacChar = (function () {
     if (pose === 'walk') { const a = (im.walk || []).filter(Boolean); return a.length ? a[(((frame | 0) % a.length) + a.length) % a.length] : im.idle; }
     return im.idle;
   }
-  pngLoad();
+  if (PNG_ENABLED) pngLoad();   // desactivado → no se cargan los maestros HD
 
   return {
     draw, DIRS, FRAMES, W, H, palette, OUTFIT, SKINS, HAIRS,
-    sprite, imgFor, pngReady: () => pngReadyFlag, PNG_W, PNG_H, PNG_FEET, PNG_NF,
+    sprite, imgFor, pngReady: () => PNG_ENABLED && pngReadyFlag, PNG_W, PNG_H, PNG_FEET, PNG_NF,
     // Fracciones del MAESTRO (para la capa de personajes nítida, que dibuja el
     // maestro de alta resolución directamente): pies y ancho relativos a su alto.
     feetFrac: M_FEET / M_H, aspect: M_W / M_H
