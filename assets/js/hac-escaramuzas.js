@@ -34,6 +34,7 @@ const HacEscaramuzas = (function () {
       inicioMs: Number(r.inicio_ms) || 0, finMs: Number(r.fin_ms) || 0, exito: r.exito,
       botin: arr(r.botin), elecciones: obj(r.elecciones), lootHasta: Number(r.loot_hasta) || 0,
       doctrina: r.doctrina || '', sucesos: obj(r.sucesos), relacionesHechas: !!r.relaciones_hechas,
+      escenario: r.escenario || '',
     };
   }
   async function load() {
@@ -65,11 +66,15 @@ const HacEscaramuzas = (function () {
     return o;
   }
   // Todas las mutaciones van por funciones SECURITY DEFINER (atómicas en BD).
-  async function crear({ haciendaId, hostId, hostNombre, plazas, dificultad, coste }) {
+  async function crear({ haciendaId, hostId, hostNombre, plazas, dificultad, coste, escenario }) {
     const c = await sb();
-    const { data, error } = await c.rpc('escaramuza_crear', {
-      p_hac: haciendaId, p_host: hostId, p_nombre: hostNombre || '', p_plazas: plazas || 3, p_dif: dificultad || 4, p_coste: coste || 0,
-    });
+    const base = { p_hac: haciendaId, p_host: hostId, p_nombre: hostNombre || '', p_plazas: plazas || 3, p_dif: dificultad || 4, p_coste: coste || 0 };
+    let { data, error } = await c.rpc('escaramuza_crear', Object.assign({ p_escenario: escenario || '' }, base));
+    // Si aún no se ejecutó escaramuzas_escenarios.sql, la RPC no acepta p_escenario:
+    // reintenta con la firma antigua (la banda queda sin escenario → eventos genéricos).
+    if (error && /escenario|schema cache|does not exist|function|argument/i.test(error.message || '')) {
+      ({ data, error } = await c.rpc('escaramuza_crear', base));
+    }
     if (error) throw new Error(error.message || 'No se pudo montar la banda');
     return upsertCache(data);
   }

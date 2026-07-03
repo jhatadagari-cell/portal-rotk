@@ -975,14 +975,99 @@
       { id: 'aldea',     txt: 'Una aldea aliada',            ok: { share: 12, loot: 1 },   fail: {} },
       { id: 'fortin',    txt: 'Un fortín abandonado',        ok: { loot: 1, pMod: 0.04 },  fail: { pMod: -0.08 } },
       { id: 'desertor',  txt: 'Un desertor enemigo',         ok: { pMod: 0.08, share: 8 }, fail: { pMod: -0.10 } },
+      { id: 'tormenta',  txt: 'Se desata un temporal',       ok: { pMod: 0.04 },           fail: { pMod: -0.10 } },
+      { id: 'puente',    txt: 'Un puente en ruinas',         ok: { pMod: 0.06, loot: 1 },  fail: { pMod: -0.10 } },
+      { id: 'hambre',    txt: 'Las provisiones escasean',    ok: { share: 10 },            fail: { pMod: -0.08, share: -8 } },
+      { id: 'refuerzos', txt: 'Refuerzos enemigos',          ok: { pMod: 0.06 },           fail: { pMod: -0.14, loot: -1 } },
+      { id: 'cabecilla', txt: 'El cabecilla enemigo',        ok: { loot: 1, share: 10 },   fail: { pMod: -0.12 } },
+      { id: 'niebla',    txt: 'Una niebla espesa',           ok: { pMod: 0.05 },           fail: { pMod: -0.10 } },
+      { id: 'tributo',   txt: 'Un tributo en disputa',       ok: { share: 14 },            fail: { share: -8 } },
+      { id: 'espia',     txt: 'Un espía en las filas',       ok: { pMod: 0.08 },           fail: { pMod: -0.10, loot: -1 } },
     ];
     const doctrinaDef = (id) => DOCTRINAS.find(d => d.id === id) || null;
+
+    // ── POOL de 12 ESCARAMUZAS (con sus eventos + requisitos de stats) ──────────
+    // Cada día se ofrecen 3 (rotación determinista por fecha, igual para todos, con
+    // un abanico bajo/medio/alto). `rating` 1..5 = espadas mostradas; la dificultad
+    // MECÁNICA (band.dificultad) = rating + 2. `req` = suma de niveles de dominio
+    // que la banda debe alcanzar ENTRE sus integrantes para poder LANZAR (武 militar,
+    // 文 cultural, 政 administrativo). `eventos` = ids de SUCESOS_COOP de esta gesta.
+    const ESCARAMUZAS_POOL = [
+      { id: 'turbantes',  nombre: 'Turbantes Amarillos',        zh: '黃巾', rating: 1, enemigo: 'Rebeldes campesinos',      eventos: ['aldea'],                    req: {} },
+      { id: 'frontera',   nombre: 'Patrulla en la frontera',    zh: '邊患', rating: 1, enemigo: 'Jinetes Wuhuan',           eventos: ['rio'],                      req: {} },
+      { id: 'taihang',    nombre: 'Bandidos de Taihang',        zh: '太行', rating: 2, enemigo: 'Forajidos de la montaña',  eventos: ['fortin'],                   req: {} },
+      { id: 'nanyang',    nombre: 'Pacificar Nanyang',          zh: '南陽', rating: 2, enemigo: 'Restos de Zhang Xiu',      eventos: ['desertor'],                 req: {} },
+      { id: 'escolta',    nombre: 'Escolta de grano a Guandu',  zh: '官渡', rating: 3, enemigo: 'Incursores de Cao',        eventos: ['hambre', 'emboscada'],      req: { administrativo: 5 } },
+      { id: 'nanman',     nombre: 'Tratar con los Nanman',      zh: '南蠻', rating: 3, enemigo: 'Guerreros Nanman',         eventos: ['tributo'],                  req: { administrativo: 6 } },
+      { id: 'hulao',      nombre: 'Emboscada en Hu Lao',        zh: '虎牢', rating: 4, enemigo: 'Caballería de Dong Zhuo',   eventos: ['emboscada', 'cabecilla'],   req: { militar: 5 } },
+      { id: 'changban',   nombre: 'Persecución en Changban',    zh: '長坂', rating: 4, enemigo: 'Élite de tigres de Cao',   eventos: ['puente', 'refuerzos'],      req: { militar: 6 } },
+      { id: 'chibi',      nombre: 'La niebla de Chibi',         zh: '赤壁', rating: 4, enemigo: 'Flota de Cao Cao',         eventos: ['niebla', 'espia'],          req: { cultural: 12 } },
+      { id: 'vado',       nombre: 'Asalto al Vado Amarillo',    zh: '黃河', rating: 5, enemigo: 'Vanguardia de Yuan Shao',  eventos: ['rio', 'refuerzos'],         req: { militar: 8 } },
+      { id: 'jieting',    nombre: 'Tomar el fortín de Jieting', zh: '街亭', rating: 5, enemigo: 'Ejército de Zhang He',     eventos: ['fortin', 'cabecilla', 'refuerzos'], req: { militar: 10 } },
+      { id: 'wuchao',     nombre: 'Incursión en Wuchao',        zh: '烏巢', rating: 5, enemigo: 'Depósitos de Yuan Shao',   eventos: ['espia', 'fortin'],          req: { cultural: 8, militar: 6 } },
+    ];
+    const escenarioDef = (id) => ESCARAMUZAS_POOL.find(s => s.id === id) || null;
+    const DOM_GLY = { militar: '武', cultural: '文', administrativo: '政' };
+    const DOM_NOM = { militar: 'militar', cultural: 'cultura', administrativo: 'administración' };
+    // rating 1..5 → espadas + etiqueta + color (verde→rojo).
+    const DIF_META = [
+      { lbl: 'Escaramuza',    col: '#6fae5f' },
+      { lbl: 'Refriega',      col: '#a7bd4e' },
+      { lbl: 'Refriega dura', col: '#e2a04a' },
+      { lbl: 'Batalla',       col: '#e07b3e' },
+      { lbl: 'Carnicería',    col: '#d0463b' },
+    ];
+    function difMeta(rating) { const r = Math.max(1, Math.min(5, rating || 1)); const m = DIF_META[r - 1]; return { rating: r, lbl: m.lbl, col: m.col }; }
+    // rating del escenario de una banda (por id; fallback: dificultad-2 en bandas viejas).
+    function bandRating(band) { const s = escenarioDef(band.escenario); return s ? s.rating : Math.max(1, Math.min(5, (band.dificultad || 4) - 2)); }
+    // Badge de dificultad: N espadas llenas / 5, color por nivel + etiqueta.
+    function difBadgeHTML(rating, opts) {
+      const m = difMeta(rating), o = opts || {};
+      let sw = ''; for (let i = 0; i < 5; i++) sw += `<span class="hacp-dif-sw${i < m.rating ? ' on' : ''}">⚔</span>`;
+      return `<span class="hacp-dif" style="--dc:${m.col}"><span class="hacp-dif-sws">${sw}</span>${o.noLabel ? '' : `<span class="hacp-dif-lbl">${m.lbl}</span>`}</span>`;
+    }
+    // Las 3 escaramuzas de HOY (determinista por día compartido; abanico bajo/medio/alto).
+    function escaramuzasDelDia() {
+      const bajas = ESCARAMUZAS_POOL.filter(s => s.rating <= 2);
+      const medias = ESCARAMUZAS_POOL.filter(s => s.rating === 3);
+      const altas = ESCARAMUZAS_POOL.filter(s => s.rating >= 4);
+      const ms = (window.HacClock && HacClock.now) ? HacClock.now() : Date.now();
+      const dia = Math.floor(ms / 86400000);
+      const R = window.HacRand ? HacRand.make('escdia#' + dia) : null;
+      const pick = (arr) => arr.length ? arr[R ? R.int(arr.length) : 0] : null;
+      return [pick(bajas), pick(medias), pick(altas)].filter(Boolean);
+    }
+    // Suma de niveles de un dominio ENTRE los integrantes (para los requisitos).
+    function bandStatSum(band, dom) { let s = 0; (band.miembros || []).forEach(m => { s += (window.HacStats && HacStats.nivelTotal) ? HacStats.nivelTotal(m.id, dom) : 1; }); return s; }
+    // Estado del requisito de un escenario para una banda: { ok, partes:[{dom, need, have}] }.
+    function reqInfo(band, scn) {
+      const req = (scn && scn.req) || {}; const partes = [];
+      Object.keys(req).forEach(dom => partes.push({ dom, need: req[dom], have: bandStatSum(band, dom) }));
+      return { ok: partes.every(p => p.have >= p.need), partes };
+    }
+    // Chips de requisito (武 5 · 文 12), coloreados según se cumplan (con banda o sin ella).
+    function reqChipsHTML(scn, band) {
+      const req = (scn && scn.req) || {}; const keys = Object.keys(req);
+      if (!keys.length) return '<span class="hacp-req none">Sin requisito</span>';
+      return keys.map(dom => {
+        const have = band ? bandStatSum(band, dom) : null, need = req[dom];
+        const ok = have != null && have >= need;
+        const prog = have != null ? ` <b>${have}/${need}</b>` : ` ${need}`;
+        return `<span class="hacp-req${have != null ? (ok ? ' ok' : ' no') : ''}" title="${esc(DOM_NOM[dom])}">${DOM_GLY[dom]}${prog}</span>`;
+      }).join('');
+    }
     // Nivel de la banda en un dominio = el del mejor miembro (un especialista lidera).
     function bandStat(band, dom) { let best = 0; (band.miembros || []).forEach(m => { const n = (window.HacStats && HacStats.nivelTotal) ? HacStats.nivelTotal(m.id, dom) : 1; if (n > best) best = n; }); return best || 1; }
     // ¿algún miembro de la banda tiene un talento? (efectos de banda: 虎將, 軍師…)
     const bandTiene = (band, id) => (band.miembros || []).some(m => window.HacStats && HacStats.tieneTalento && HacStats.tieneTalento(m.id, id));
     // Plan determinista de sucesos de una escaramuza (mismo para todos los clientes).
     function escPlan(band) {
+      // Escenario del pool → sus eventos AUTORADOS (mismos para todos).
+      const scn = escenarioDef(band.escenario);
+      if (scn && scn.eventos && scn.eventos.length) {
+        return scn.eventos.map((sid, i) => ({ i: i, sucesoId: sid }));
+      }
+      // Fallback (bandas viejas / sin escenario): muestreo determinista por id.
       if (!window.HacRand) return [];
       const R = HacRand.make('escsuc#' + band.id);
       const n = (band.dificultad || 4) >= 5 ? 2 : 1;
@@ -1133,6 +1218,18 @@
       }
       return out;
     }
+    // Probabilidad de ÉXITO estimada (DETERMINISTA): base por dificultad + sucesos
+    // (que dependen de las APTITUDES de los integrantes) + relaciones + talento del
+    // capitán. Es EXACTA: la resolución solo añade la tirada final contra este número.
+    // `doctrina` opcional simula la postura antes de fijarla (para la vista previa).
+    function escProb(band, doctrina) {
+      const b = (doctrina != null) ? Object.assign({}, band, { doctrina: doctrina }) : band;
+      const dif = b.dificultad || 4;
+      const sc = escSucesos(b), rb = relBonos(b);
+      const capBonus = (window.HacStats && HacStats.tieneTalento && b.hostId && HacStats.tieneTalento(b.hostId, 'oficial')) ? 0.05 : 0;
+      const baseP = Math.max(0.35, 0.72 - (dif - 4) * 0.08);
+      return Math.max(0.1, Math.min(0.95, baseP + sc.pMod + rb.pMod + capBonus));
+    }
     function resolverEscaramuzaSiToca() {
       if (!myId || !window.HacEscaramuzas) return;
       const band = HacEscaramuzas.miBanda(h.id, myId);
@@ -1140,10 +1237,7 @@
       const dif = band.dificultad || 4;
       // SUCESOS (doctrina) + RELACIONES pliegan prob. de éxito, botín y dinero por miembro.
       const sc = escSucesos(band), rb = relBonos(band);
-      // 校尉 Oficial: si el capitán tiene el talento, +5% éxito (liderazgo).
-      const capBonus = (window.HacStats && HacStats.tieneTalento && band.hostId && HacStats.tieneTalento(band.hostId, 'oficial')) ? 0.05 : 0;
-      const baseP = Math.max(0.35, 0.72 - (dif - 4) * 0.08);
-      const exito = Math.random() < Math.max(0.1, Math.min(0.95, baseP + sc.pMod + rb.pMod + capBonus));
+      const exito = Math.random() < escProb(band);   // misma prob. que se muestra en el panel
       const share = Math.max(0, 20 + dif * 10 + sc.share), hostBonus = Math.round((band.coste || 0) * 0.5);   // el host recupera coste +50%
       // +% dinero: EQUIPO (sellos) + efectos de relaciones → mapa {id: fracción}.
       const bonosPct = {};
@@ -1189,52 +1283,78 @@
         return;
       }
       const dinero = window.HacStats ? HacStats.dinero(myId) : 0;
-      const coste = COSTE_BANDA(escPlazas), sinDinero = dinero < coste;
       const cd = (window.HacStats && HacStats.escaramuzaCd) ? HacStats.escaramuzaCd(myId) : 0;
       const enCd = !ESC_FAST && cd > clock();
       const malherido = !!(window.HacStats && HacStats.malherido && HacStats.malherido(myId));
       const bloqueado = enCd || malherido;
       const cdAviso = malherido ? `<div class="hacp-esc-note" style="color:#e2a06a">✚ Tu mecenas está malherido (3/3) · cúralo en su panel antes de salir.</div>`
         : enCd ? `<div class="hacp-esc-note" style="color:#e2a06a">⏳ En cooldown · podrás unirte o montar banda en ${fmtClock((cd - clock()) / 1000)}.</div>` : '';
+      // Coste de montar una escaramuza: plazas + su dificultad (rating).
+      const costeEsc = (scn) => COSTE_BANDA(escPlazas) + (scn.rating || 1) * 20;
+      const dia = escaramuzasDelDia();
+      const cards = dia.map(scn => {
+        const cst = costeEsc(scn), falta = dinero < cst;
+        return `<div class="hacp-esc-scn" style="--dc:${difMeta(scn.rating).col}">
+          <div class="hacp-esc-scn-top">
+            <div class="hacp-esc-scn-id"><span class="hacp-esc-scn-zh">${esc(scn.zh)}</span> <b>${esc(scn.nombre)}</b></div>
+            ${difBadgeHTML(scn.rating)}
+          </div>
+          <div class="hacp-esc-scn-en">contra ${esc(scn.enemigo)}</div>
+          <div class="hacp-esc-scn-meta"><span class="hacp-esc-req-lbl">Requiere</span> ${reqChipsHTML(scn, null)}</div>
+          <button class="hacp-cp-btn hacp-esc-crear" data-crear-scn="${esc(scn.id)}"${(falta || bloqueado) ? ' disabled' : ''}>Montar · 💰 ${cst}${falta ? ' (te falta)' : ''}</button>
+        </div>`;
+      }).join('');
       const abiertas = HacEscaramuzas.abiertas(h.id).filter(b => b.miembros.length < b.plazas);
-      const lista = abiertas.map(b => `
-        <div class="hacp-mrow"><div class="hacp-mrow-main"><b>Banda de ${esc(b.hostNombre || 'un mecenas')}</b>
-          <span>${b.miembros.length}/${b.plazas} · dif. ${b.dificultad}</span></div>
-          <button class="hacp-cp-btn" data-unir="${esc(b.id)}"${bloqueado ? ' disabled' : ''}>Unirse</button></div>`).join('')
-        || '<div class="hacp-inv-note">No hay bandas abiertas. ¡Monta la tuya!</div>';
+      const lista = abiertas.map(b => {
+        const scn = escenarioDef(b.escenario);
+        return `<div class="hacp-mrow"><div class="hacp-mrow-main"><b>${esc(scn ? scn.nombre : 'Expedición militar')}</b>
+          <span>${difBadgeHTML(bandRating(b), { noLabel: true })} · ${b.miembros.length}/${b.plazas} · cap. ${esc(b.hostNombre || '—')}</span></div>
+          <button class="hacp-cp-btn" data-unir="${esc(b.id)}"${bloqueado ? ' disabled' : ''}>Unirse</button></div>`;
+      }).join('') || '<div class="hacp-inv-note">No hay bandas abiertas. ¡Monta una de las de hoy!</div>';
       body.innerHTML = `
         <div class="hacp-esc-h">兵 Escaramuzas <span class="hacp-esc-sub">expediciones cooperativas</span></div>
         ${cdAviso}
-        <div class="hacp-esc-card">
-          <div class="hacp-esc-ttl">Montar una banda</div>
-          <div class="hacp-esc-note">Salís varios mecenas a una expedición militar más dura. Pagas por montarla; si volvéis con éxito recuperas el coste +50% y tu parte. Si fracasáis, vuestros mecenas reciben una herida.</div>
-          <div class="hacp-esc-plazas">${[2, 3, 4].map(p => `<button class="hacp-esc-p${p === escPlazas ? ' on' : ''}" data-plazas="${p}">${p} plazas</button>`).join('')}</div>
-          <button class="hacp-cp-btn hacp-esc-crear" data-crear${(sinDinero || bloqueado) ? ' disabled' : ''}>Montar banda · 💰 ${coste}${sinDinero ? ' (te falta)' : ''}</button>
-        </div>
+        <div class="hacp-esc-ttl">Escaramuzas de hoy <span class="hacp-esc-sub">cambian cada día</span></div>
+        <div class="hacp-esc-note">Elige una gesta y monta la banda; recluta mecenas para cumplir su requisito de aptitudes. Si volvéis con éxito recuperáis el coste +50% y vuestra parte; si fracasáis, vuestros mecenas reciben una herida.</div>
+        <div class="hacp-esc-plazas">${[2, 3, 4].map(p => `<button class="hacp-esc-p${p === escPlazas ? ' on' : ''}" data-plazas="${p}">${p} plazas</button>`).join('')}</div>
+        <div class="hacp-esc-day">${cards}</div>
         <div class="hacp-esc-ttl2">Bandas abiertas</div>${lista}`;
       body.querySelectorAll('[data-plazas]').forEach(b => b.addEventListener('click', () => { escPlazas = +b.dataset.plazas; renderEscaramuzas(); }));
-      const cr = body.querySelector('[data-crear]'); if (cr && !cr.disabled) cr.addEventListener('click', crearBanda);
+      body.querySelectorAll('[data-crear-scn]').forEach(b => { if (!b.disabled) b.addEventListener('click', () => crearBanda(b.dataset.crearScn)); });
       body.querySelectorAll('[data-unir]').forEach(b => { if (!b.disabled) b.addEventListener('click', () => unirBanda(b.dataset.unir)); });
     }
     function bandaPropiaHTML(b) {
       const esHost = b.hostId === myId;
       const roster = b.miembros.map(m => `<li class="hacp-esc-m${m.id === b.hostId ? ' host' : ''}">${esc(m.nombre || 'mecenas')}${m.id === b.hostId ? ' · capitán' : ''}${m.id === myId ? ' (tú)' : ''}</li>`).join('');
+      const scn = escenarioDef(b.escenario);
+      const rating = bandRating(b);
+      const rq = scn ? reqInfo(b, scn) : { ok: true, partes: [] };
+      const probPct = Math.round(escProb(b, b.doctrina || escDoctrina) * 100);
+      const probCls = probPct >= 65 ? 'hi' : (probPct >= 45 ? 'mid' : 'lo');
+      const difN = b.dificultad || 4, scNow = escSucesos(b);
+      const sharePrev = Math.max(0, 20 + difN * 10 + scNow.share);
+      const probHTML = `<div class="hacp-esc-prob ${probCls}">Éxito estimado <b>${probPct}%</b></div>`;
+      const rewardHTML = `<div class="hacp-esc-reward">Botín si vencéis: <b>~${sharePrev}💰</b>/mecenas · <b>1 objeto</b> c/u</div>`;
+      const reqHTML = (scn && rq.partes.length) ? `<div class="hacp-esc-scn-meta"><span class="hacp-esc-req-lbl">Requisito</span> ${reqChipsHTML(scn, b)}</div>` : '';
       let accion = '';
       if (b.estado === 'abierta') {
-        const puede = b.miembros.length >= 2;
+        const faltaReq = scn && !rq.ok;
+        const puede = b.miembros.length >= 2 && rq.ok;
         if (esHost) {
           const docPick = `<div class="hacp-esc-doc-pick"><div class="hacp-esc-doc-lbl">Doctrina de la banda</div>
             <div class="hacp-esc-doc-row">${DOCTRINAS.map(d => `<button type="button" class="hacp-esc-doc-b${escDoctrina === d.id ? ' on' : ''}" data-doc="${d.id}"><b>〔${d.gly}〕</b> ${esc(d.nom)}</button>`).join('')}</div>
             <div class="hacp-esc-doc-desc">${esc((doctrinaDef(escDoctrina) || {}).desc || '')}</div></div>`;
-          accion = docPick + `<button class="hacp-cp-btn hacp-esc-lanzar" data-lanzar${puede ? '' : ' disabled'}>⚔ Lanzar expedición</button>
-            <div class="hacp-esc-note">${puede ? 'Al lanzar, la banda parte 30 min con la doctrina elegida. El desenlace y el botín se resuelven al volver.' : 'Hacen falta al menos 2 mecenas para partir.'}</div>`;
+          accion = reqHTML + probHTML + docPick + `<button class="hacp-cp-btn hacp-esc-lanzar" data-lanzar${puede ? '' : ' disabled'}>⚔ Lanzar expedición</button>
+            <div class="hacp-esc-note">${b.miembros.length < 2 ? 'Hacen falta al menos 2 mecenas para partir.' : faltaReq ? 'Recluta mecenas con más aptitud hasta cumplir el requisito.' : 'Al lanzar, la banda parte 30 min con la doctrina elegida. El desenlace y el botín se resuelven al volver.'}</div>`;
         } else {
-          accion = `<div class="hacp-esc-note">Esperando a que el capitán lance la expedición${puede ? '' : ' (faltan mecenas)'}.</div>`;
+          accion = reqHTML + probHTML + `<div class="hacp-esc-note">Esperando a que el capitán lance la expedición${b.miembros.length < 2 ? ' (faltan mecenas)' : faltaReq ? ' (faltan aptitudes)' : ''}.</div>`;
         }
         accion += `<button class="hacp-cp-btn hacp-esc-salir" data-salir>${esHost ? 'Disolver la banda' : 'Salir de la banda'}</button>`;
       } else if (b.estado === 'en_curso') {
         const dd = doctrinaDef(b.doctrina);
-        accion = `<canvas class="hacp-esc-march" data-esc-march></canvas>
+        // Sobre la animación de marcha: % de éxito + recompensas, visible para TODA la banda.
+        accion = `<div class="hacp-esc-march-wrap"><canvas class="hacp-esc-march" data-esc-march></canvas>
+            <div class="hacp-esc-march-hud">${probHTML}${rewardHTML}</div></div>
           ${dd ? `<div class="hacp-esc-doc">Doctrina: 〔${dd.gly}〕 ${esc(dd.nom)}</div>` : ''}
           <div class="hacp-esc-timer" data-esc-timer="${b.finMs}">En la expedición…</div>
           <div class="hacp-esc-note">La banda avanza unida por el camino. Cuando regrese se repartirán recompensas y botín.</div>
@@ -1270,21 +1390,28 @@
           <button class="hacp-cp-btn hacp-esc-salir" data-salir>Cerrar</button>`;
       }
       return `<div class="hacp-esc-h">兵 Tu banda <span class="hacp-esc-sub">${b.miembros.length}/${b.plazas}</span></div>
-        <div class="hacp-esc-card"><div class="hacp-esc-ttl">Expedición militar · dif. ${b.dificultad}</div>
+        <div class="hacp-esc-card" style="--dc:${difMeta(rating).col}">
+          <div class="hacp-esc-scn-top">
+            <div class="hacp-esc-scn-id">${scn ? `<span class="hacp-esc-scn-zh">${esc(scn.zh)}</span> ` : ''}<b>${scn ? esc(scn.nombre) : 'Expedición militar'}</b></div>
+            ${difBadgeHTML(rating)}
+          </div>
+          ${scn ? `<div class="hacp-esc-scn-en">contra ${esc(scn.enemigo)}</div>` : ''}
           <ul class="hacp-esc-roster">${roster}</ul>${accion}</div>`;
     }
-    async function crearBanda() {
+    async function crearBanda(scnId) {
       if (escBusy) return;
+      const scn = escenarioDef(scnId);
+      if (!scn) { toast('Esa escaramuza ya no está disponible'); return; }
       if (window.HacStats && HacStats.malherido && HacStats.malherido(myId)) { toast('Tu mecenas está malherido · cúralo antes de salir'); return; }
       if (!ESC_FAST && window.HacStats && HacStats.escaramuzaCd && HacStats.escaramuzaCd(myId) > clock()) { toast('Escaramuza en cooldown'); return; }
-      const coste = COSTE_BANDA(escPlazas);
+      const coste = COSTE_BANDA(escPlazas) + (scn.rating || 1) * 20;
       if (!window.HacStats || HacStats.dinero(myId) < coste) { toast('No tienes suficiente dinero'); return; }
       escBusy = true; let pagado = false;
       try {
         await HacStats.award(myId, { dinero: -coste }); pagado = true;
-        await HacEscaramuzas.crear({ haciendaId: h.id, hostId: myId, hostNombre: myName, plazas: escPlazas, dificultad: 4 + (escPlazas - 2), coste });
+        await HacEscaramuzas.crear({ haciendaId: h.id, hostId: myId, hostNombre: myName, plazas: escPlazas, dificultad: (scn.rating || 1) + 2, coste, escenario: scn.id });
         toast('⚔ Banda montada · esperando mecenas');
-        if (window.HacBitacora) HacBitacora.log(myId, 'escaramuza', `⚔ Montaste una banda de ${escPlazas} plazas (−${coste}💰)`);
+        if (window.HacBitacora) HacBitacora.log(myId, 'escaramuza', `⚔ Montaste «${scn.nombre}» (${escPlazas} plazas · −${coste}💰)`);
       } catch (e) {
         if (pagado && window.HacStats) await HacStats.award(myId, { dinero: coste });
         toast((e && e.message) || 'No se pudo montar'); await HacEscaramuzas.reload();
@@ -1311,7 +1438,11 @@
       finally { escBusy = false; renderEscaramuzas(); if (charId) buildCharPanel(charId); }
     }
     async function lanzarBanda(id) {
-      if (escBusy) return; escBusy = true;
+      if (escBusy) return;
+      // Requisito de aptitudes: la suma de la banda debe alcanzar el umbral del escenario.
+      const band = HacEscaramuzas.miBanda(h.id, myId), scn = band && escenarioDef(band.escenario);
+      if (band && scn) { const rq = reqInfo(band, scn); if (!rq.ok) { const f = rq.partes.filter(p => p.have < p.need).map(p => `${DOM_GLY[p.dom]} ${p.have}/${p.need}`).join(' · '); toast('Faltan aptitudes: ' + f); return; } }
+      escBusy = true;
       try {
         await HacEscaramuzas.lanzar(id, myId, clock(), ESC_FAST ? 60000 : 0, escDoctrina);
         const dd = doctrinaDef(escDoctrina);
