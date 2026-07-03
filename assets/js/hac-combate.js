@@ -384,9 +384,11 @@ const HacCombate = (function () {
       u._cast = 'rgba(140,210,110,.5)';
       const target = partyAlive().slice().sort((a, b) => (a.hp / a.maxHp) - (b.hp / b.maxHp))[0] || u;
       const heal = Math.round(action.heal * (1 + boost * 0.5));
-      if (!u.sprite) tween(260, (p) => { u.oy = -10 * Math.sin(p * 3.14); }, () => { u.oy = 0; });   // sin saltito si tiene animación propia
-      wait(220, () => { target.hp = Math.min(target.maxHp, target.hp + heal); target.flash = 0.7; burst(ux(target), uy(target) - target.th * 0.5, 'rgba(140,210,110,', 16, 1.4); floater(ux(target), uy(target) - target.th, '+' + heal, '#8ed16f', true); log(`<b>${u.name}</b> cura a <b>${target.name}</b> (+${heal} PV).`); renderParty(); });
-      return finTurno(760);
+      const anim = !!u.sprite; if (anim) u._animDur = 950;
+      const applyAt = anim ? Math.round(u._animDur * 0.80) : 220;   // el efecto ocurre al final del gesto
+      if (!anim) tween(260, (p) => { u.oy = -10 * Math.sin(p * 3.14); }, () => { u.oy = 0; });   // sin saltito si tiene animación propia
+      wait(applyAt, () => { target.hp = Math.min(target.maxHp, target.hp + heal); target.flash = 0.7; burst(ux(target), uy(target) - target.th * 0.5, 'rgba(140,210,110,', 16, 1.4); floater(ux(target), uy(target) - target.th, '+' + heal, '#8ed16f', true); log(`<b>${u.name}</b> cura a <b>${target.name}</b> (+${heal} PV).`); renderParty(); });
+      return finTurno(anim ? applyAt + 240 : 760);
     }
     // Ataque (melee / flecha / magia)
     const cat = TIPOS[action.type] ? TIPOS[action.type].cat : 'melee';
@@ -406,13 +408,19 @@ const HacCombate = (function () {
       });
       return finTurno(230 + 150 * hits + 340);
     }
-    // ranged / magic: proyectil(es); saltito solo si NO tiene animación propia (se queda en el sitio)
-    if (!u.sprite) tween(220, (p) => { u.oy = -8 * Math.sin(p * 3.14); }, () => { u.oy = 0; });
+    // ranged / magic: proyectil(es). Con animación propia NO hay saltito (se queda en el sitio) y el
+    // disparo se retrasa para que salga en el barrido final y el impacto coincida con el fin del clip.
+    const anim = !!u.sprite;
+    if (!anim) tween(220, (p) => { u.oy = -8 * Math.sin(p * 3.14); }, () => { u.oy = 0; });
+    if (anim) u._animDur = 950;
+    const projDur = anim ? 200 : 300;
+    const launch = anim ? Math.round(u._animDur * 0.80) : 0;   // ~frame 49: momento del conjuro
+    const gap = anim ? 110 : 130;
     let done = 0;
-    for (let i = 0; i < hits; i++) wait(130 * i, () => {
-      projs.push({ t0: now(), dur: 300, x0: ux(u), y0: uy(u) - u.th * 0.55, x1: ux(enemy), y1: uy(enemy) - enemy.th * 0.55, kind: cat === 'arrow' ? 'arrow' : 'orb', col: t2 ? t2.col : '#ff8a3c', onHit: () => { doHit(); if (++done === hits) resumen(); } });
+    for (let i = 0; i < hits; i++) wait(launch + gap * i, () => {
+      projs.push({ t0: now(), dur: projDur, x0: ux(u), y0: uy(u) - u.th * 0.55, x1: ux(enemy), y1: uy(enemy) - enemy.th * 0.55, kind: cat === 'arrow' ? 'arrow' : 'orb', col: t2 ? t2.col : '#ff8a3c', onHit: () => { doHit(); if (++done === hits) resumen(); } });
     });
-    return finTurno(220 + 130 * hits + 300 + 120);
+    return finTurno(launch + gap * (hits - 1) + projDur + 140);
   }
   function finTurno(ms) { wait(ms + 120, () => { enemy._atk = false; party.forEach(x => { x._atk = false; x._wcat = null; x._cast = null; x._animT0 = 0; }); busy = false; avanzar(); }); }
 
