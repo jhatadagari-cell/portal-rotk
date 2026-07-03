@@ -1238,7 +1238,9 @@
       // SUCESOS (doctrina) + RELACIONES pliegan prob. de éxito, botín y dinero por miembro.
       const sc = escSucesos(band), rb = relBonos(band);
       const exito = Math.random() < escProb(band);   // misma prob. que se muestra en el panel
-      const share = Math.max(0, 20 + dif * 10 + sc.share), hostBonus = Math.round((band.coste || 0) * 0.5);   // el host recupera coste +50%
+      const rtg = bandRating(band);
+      const share = Math.max(0, shareRating(rtg) + sc.share);                                  // reparto por mecenas (escala con rating)
+      const hostBonus = Math.round((band.coste || 0) * 0.5) + rtg * 15;                          // el host recupera coste +50% + prima por rating
       // +% dinero: EQUIPO (sellos) + efectos de relaciones → mapa {id: fracción}.
       const bonosPct = {};
       (band.miembros || []).forEach(mm => {
@@ -1249,7 +1251,7 @@
       // hay que anularla (=0): así la resolución NORMAL usa la firma antigua y no depende
       // de talentos_c2.sql (que puede no estar ejecutado). null → se omite el parámetro.
       const wounds = bandTiene(band, 'tigre') ? 0 : null;
-      HacEscaramuzas.resolver(band.id, clock(), exito, exito ? generarBotin(band, sc.loot + (bonos.escBotin || 0) + rb.loot) : [], share, hostBonus, ESC_FAST ? 30000 : 0, bonosPct, wounds)
+      HacEscaramuzas.resolver(band.id, clock(), exito, exito ? generarBotin(band, sc.loot + lootRating(rtg) + (bonos.escBotin || 0) + rb.loot) : [], share, hostBonus, ESC_FAST ? 30000 : 0, bonosPct, wounds)
         .then(() => { if (window.HacStats) HacStats.reload().then(() => { if (charId) buildCharPanel(charId); }); })
         .catch(e => console.warn('[escaramuza] resolver', e));
     }
@@ -1257,7 +1259,15 @@
     // ── ESCARAMUZAS — UI compartida (móvil: sección; escritorio: overlay) ───────
     // Renderiza en `escHost` (lo fija quien la muestra). `escVisible` gobierna el
     // refresco por poll. Toda la lógica vive aquí para servir a ambas plataformas.
-    const COSTE_BANDA = (plazas) => plazas * 40;     // 2→80, 3→120, 4→160
+    // Coste de montar = base por plazas + prima por dificultad (rating). El coste es
+    // sobre todo una APUESTA del capitán: al vencer recupera coste +50% (+ prima de
+    // rating); al fracasar lo pierde. Reparto/botín escalan fuerte con el rating.
+    const COSTE_BANDA = (plazas) => plazas * 20;           // 2→40, 3→60, 4→80 (base)
+    const costeRating = (plazas, rating) => COSTE_BANDA(plazas) + (rating || 1) * 30;   // r1..r5: +30..+150
+    // Reparto de dinero por mecenas al vencer (antes de mods de sucesos).
+    const shareRating = (rating) => 20 + (rating || 1) * 24;      // r1=44 … r5=140
+    // Objetos de botín EXTRA (además de 1 garantizado por mecenas) según rating.
+    const lootRating = (rating) => (rating >= 4 ? rating - 3 : 0); // r4:+1, r5:+2
     const COSTE_CURA = 45 + (tier || 1) * 10;        // curar 1 herida (enfermería), escala con el tier
     const SUC_WINDOW = (/[?&]escfast=1/.test(location.search || '')) ? 12000 : 22000;   // ventana para decidir un suceso
     const myName = ((h.miembros || []).find(m => m.personajeId === myId) || {}).nombre || 'Tú';
@@ -1290,7 +1300,7 @@
       const cdAviso = malherido ? `<div class="hacp-esc-note" style="color:#e2a06a">✚ Tu mecenas está malherido (3/3) · cúralo en su panel antes de salir.</div>`
         : enCd ? `<div class="hacp-esc-note" style="color:#e2a06a">⏳ En cooldown · podrás unirte o montar banda en ${fmtClock((cd - clock()) / 1000)}.</div>` : '';
       // Coste de montar una escaramuza: plazas + su dificultad (rating).
-      const costeEsc = (scn) => COSTE_BANDA(escPlazas) + (scn.rating || 1) * 20;
+      const costeEsc = (scn) => costeRating(escPlazas, scn.rating);
       const dia = escaramuzasDelDia();
       const cards = dia.map(scn => {
         const cst = costeEsc(scn), falta = dinero < cst;
@@ -1331,10 +1341,11 @@
       const rq = scn ? reqInfo(b, scn) : { ok: true, partes: [] };
       const probPct = Math.round(escProb(b, b.doctrina || escDoctrina) * 100);
       const probCls = probPct >= 65 ? 'hi' : (probPct >= 45 ? 'mid' : 'lo');
-      const difN = b.dificultad || 4, scNow = escSucesos(b);
-      const sharePrev = Math.max(0, 20 + difN * 10 + scNow.share);
+      const scNow = escSucesos(b);
+      const sharePrev = Math.max(0, shareRating(rating) + scNow.share);
+      const lootBonus = lootRating(rating);
       const probHTML = `<div class="hacp-esc-prob ${probCls}">Éxito estimado <b>${probPct}%</b></div>`;
-      const rewardHTML = `<div class="hacp-esc-reward">Botín si vencéis: <b>~${sharePrev}💰</b>/mecenas · <b>1 objeto</b> c/u</div>`;
+      const rewardHTML = `<div class="hacp-esc-reward">Botín si vencéis: <b>~${sharePrev}💰</b>/mecenas · <b>1 objeto</b> c/u${lootBonus ? ` · <b>+${lootBonus}</b> de botín común` : ''}</div>`;
       const reqHTML = (scn && rq.partes.length) ? `<div class="hacp-esc-scn-meta"><span class="hacp-esc-req-lbl">Requisito</span> ${reqChipsHTML(scn, b)}</div>` : '';
       let accion = '';
       if (b.estado === 'abierta') {
@@ -1404,7 +1415,7 @@
       if (!scn) { toast('Esa escaramuza ya no está disponible'); return; }
       if (window.HacStats && HacStats.malherido && HacStats.malherido(myId)) { toast('Tu mecenas está malherido · cúralo antes de salir'); return; }
       if (!ESC_FAST && window.HacStats && HacStats.escaramuzaCd && HacStats.escaramuzaCd(myId) > clock()) { toast('Escaramuza en cooldown'); return; }
-      const coste = COSTE_BANDA(escPlazas) + (scn.rating || 1) * 20;
+      const coste = costeRating(escPlazas, scn.rating);
       if (!window.HacStats || HacStats.dinero(myId) < coste) { toast('No tienes suficiente dinero'); return; }
       escBusy = true; let pagado = false;
       try {
