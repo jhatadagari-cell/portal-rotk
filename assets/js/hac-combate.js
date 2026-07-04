@@ -213,10 +213,17 @@ const HacCombate = (function () {
 
   // ── Layout de la escena ──────────────────────────────────────────────────────
   function layout() {
-    const gy = H * 0.80;
-    enemy.ax = W * 0.24; enemy.ay = gy; enemy.th = H * 0.42;
+    // Enemigo grande a la izquierda; banda a la derecha en formación ESCALONADA (JRPG /
+    // Octopath): uno atrás-arriba, uno al medio más a la izquierda, uno delante-abajo.
+    enemy.ax = W * 0.28; enemy.ay = H * 0.66; enemy.th = H * 0.50;
     enemy.ox = 0; enemy.oy = 0; enemy.flash = 0; enemy.deadA = 1; enemy.hitT = 0;
-    party.forEach((u, i) => { u.ax = W * 0.66 + i * (W * 0.11); u.ay = gy - i * (H * 0.015); u.th = H * (SHEETS[u.sprite] ? SHEETS[u.sprite].thf : 0.26); u.ox = 0; u.oy = 0; u.flash = 0; u.deadA = 1; u.hitT = 0; });
+    const spots = [ { x: 0.78, y: 0.50 }, { x: 0.63, y: 0.63 }, { x: 0.82, y: 0.77 } ];
+    party.forEach((u, i) => {
+      const sp = spots[i] || spots[spots.length - 1];
+      u.ax = W * sp.x; u.ay = H * sp.y;
+      u.th = H * (SHEETS[u.sprite] ? SHEETS[u.sprite].thf : 0.26) * 1.06;
+      u.ox = 0; u.oy = 0; u.flash = 0; u.deadA = 1; u.hitT = 0;
+    });
   }
 
   // ── Fondo horneado una vez ───────────────────────────────────────────────────
@@ -370,8 +377,7 @@ const HacCombate = (function () {
     if (u._atk && u._animT0) { const p = clamp((now() - u._animT0) / (u._animDur || 800), 0, 1); fi = Math.min(play - 1, Math.floor(p * play)); }
     const col = fi % A.cols, row = Math.floor(fi / A.cols);
     const k = (u.th * dpr) / A.charH;
-    const bob = u._atk ? 0 : Math.sin(t * 0.004 + 1) * 2 * dpr;
-    const fx = ux(u) * dpr, fy = uy(u) * dpr + bob;
+    const fx = ux(u) * dpr, fy = uy(u) * dpr;   // sin bob: los aliados no levitan
     const dW = A.cellW * k, dH = A.cellH * k, dx = fx - A.pivotX * k, dy = fy - A.feetY * k;
     ctx.save(); ctx.globalAlpha = u.deadA;
     ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.beginPath(); ctx.ellipse(fx, fy, dW * 0.20, dH * 0.028, 0, 0, 6.283); ctx.fill();
@@ -389,8 +395,7 @@ const HacCombate = (function () {
     else if (u.sprite === 'guanyu') { img = guanyu(u._atk ? 'atk' : 'idle'); walking = false; }
     else { const fr = frames(u); walking = Math.abs(u.ox) > 1 && !u._atk; img = fr[walking ? (Math.floor(t * 0.012) % 4) : 0]; }
     const th = u.th * dpr, scl = th / img.height, w = img.width * scl, h = th;
-    const bob = u._atk ? 0 : Math.sin(t * 0.004 + (u.foe ? 0 : 1)) * 2 * dpr;
-    const x = ux(u) * dpr, y = uy(u) * dpr + bob;
+    const x = ux(u) * dpr, y = uy(u) * dpr;   // sin bob: nadie levita en reposo
     ctx.save(); ctx.globalAlpha = u.deadA;
     ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.beginPath(); ctx.ellipse(x, y, w * 0.32, h * 0.06, 0, 0, 6.283); ctx.fill();
     if (!u.foe && u._atk && u._cast) { const rg = ctx.createRadialGradient(x, y - h * 0.5, 0, x, y - h * 0.5, w * 0.95); rg.addColorStop(0, u._cast); rg.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = rg; ctx.beginPath(); ctx.arc(x, y - h * 0.5, w * 0.95, 0, 6.283); ctx.fill(); }
@@ -564,6 +569,7 @@ const HacCombate = (function () {
   }
   function renderMenu() {
     const u = actual();
+    const waiting = over || u.foe || busy; if (elMenu) elMenu.classList.toggle('waiting', !!waiting);
     if (over) { elMenu.innerHTML = ''; return; }
     if (u.foe) { elMenu.innerHTML = `<div class="hcb-menu-wait">Turno de <b>${enemy.name}</b>…</div>`; return; }
     if (busy) { elMenu.innerHTML = `<div class="hcb-menu-wait">…</div>`; return; }
@@ -615,12 +621,20 @@ const HacCombate = (function () {
     bakeTaiji();
     bgImg = new Image(); bgImg.onload = () => { if (cv) bakeBg(); }; bgImg.src = 'assets/img/bg-turbantes.jpg?v=1';
     Object.values(SHEETS).forEach(s => { s.img = new Image(); s.img.src = s.src; });
+    // Todo el HUD va DENTRO de la escena (overlays integrados, estilo JRPG), no en cajas fuera.
     root.innerHTML = `<div class="hcb">
-      <div class="hcb-timeline" data-tl></div>
-      <div class="hcb-scene" data-scene><canvas data-cv></canvas><div class="hcb-foehud" data-foehud></div></div>
-      <div class="hcb-log" data-log></div>
-      <div class="hcb-party" data-party></div>
-      <div class="hcb-menu" data-menu></div>
+      <div class="hcb-scene" data-scene>
+        <canvas data-cv></canvas>
+        <div class="hcb-foehud" data-foehud></div>
+        <div class="hcb-timeline" data-tl></div>
+        <div class="hcb-hud">
+          <div class="hcb-log" data-log></div>
+          <div class="hcb-hud-row">
+            <div class="hcb-party" data-party></div>
+            <div class="hcb-menu" data-menu></div>
+          </div>
+        </div>
+      </div>
     </div>`;
     elTimeline = root.querySelector('[data-tl]'); elScene = root.querySelector('[data-scene]');
     elParty = root.querySelector('[data-party]'); elMenu = root.querySelector('[data-menu]'); elLog = root.querySelector('[data-log]');
