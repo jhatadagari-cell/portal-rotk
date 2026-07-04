@@ -48,7 +48,8 @@ const HacCombate = (function () {
 
   // ── Estado ─────────────────────────────────────────────────────────────────
   let root = null, party = [], enemy = null, orden = [], idx = 0, ronda = 1, busy = false, over = false, sel = { boost: 0 };
-  let elScene, elParty, elMenu, elLog, elTimeline, logLines = [];
+  let elScene, elParty, elMenu, elLog, elTimeline, elHud, logLines = [];
+  let hudReserve = 0;   // alto del HUD inferior (px) reservado en vertical para no tapar a la banda
   // Canvas / animación
   let cv, ctx, bg, bgImg = null, W = 0, H = 0, dpr = 1, raf = 0, t = 0, shake = 0;
   // Spritesheets de ataque (frame 0 = reposo; 0→60 = ataque). Anclados por los pies.
@@ -213,8 +214,9 @@ const HacCombate = (function () {
 
   // ── Layout de la escena ──────────────────────────────────────────────────────
   function layout() {
-    // Enemigo grande a la izquierda; banda a la derecha en formación ESCALONADA (JRPG /
-    // Octopath): uno atrás-arriba, uno al medio más a la izquierda, uno delante-abajo.
+    if (H > W * 1.15) return layoutPortrait();
+    // ── Apaisado ── Enemigo grande a la izquierda; banda a la derecha en formación
+    // ESCALONADA (JRPG / Octopath): uno atrás-arriba, uno al medio, uno delante-abajo.
     enemy.ax = W * 0.28; enemy.ay = H * 0.66; enemy.th = H * 0.50;
     enemy.ox = 0; enemy.oy = 0; enemy.flash = 0; enemy.deadA = 1; enemy.hitT = 0;
     const spots = [ { x: 0.78, y: 0.50 }, { x: 0.63, y: 0.63 }, { x: 0.82, y: 0.77 } ];
@@ -224,6 +226,32 @@ const HacCombate = (function () {
       u.th = H * (SHEETS[u.sprite] ? SHEETS[u.sprite].thf : 0.26) * 1.06;
       u.ox = 0; u.oy = 0; u.flash = 0; u.deadA = 1; u.hitT = 0;
     });
+  }
+
+  // Vertical (móvil): enemigo arriba-centro, banda en diagonal en la franja baja,
+  // con los pies SIEMPRE por encima del HUD inferior (hudReserve).
+  function layoutPortrait() {
+    const top = Math.max(88, H * 0.11);                 // hueco para la ficha del enemigo
+    const bot = H - (hudReserve || H * 0.42);           // hueco para el HUD inferior
+    const availH = Math.max(180, bot - top);
+    enemy.th = Math.min(availH * 0.5, W * 0.78);
+    enemy.ax = W * 0.5; enemy.ay = top + availH * 0.5;
+    enemy.ox = 0; enemy.oy = 0; enemy.flash = 0; enemy.deadA = 1; enemy.hitT = 0;
+    const spots = [ { x: 0.25, y: 0.99 }, { x: 0.52, y: 0.86 }, { x: 0.77, y: 1.0 } ];
+    party.forEach((u, i) => {
+      const sp = spots[i] || spots[spots.length - 1];
+      u.ax = W * sp.x; u.ay = top + availH * sp.y;
+      u.th = availH * (SHEETS[u.sprite] ? SHEETS[u.sprite].thf : 0.26) * 1.12;
+      u.ox = 0; u.oy = 0; u.flash = 0; u.deadA = 1; u.hitT = 0;
+    });
+  }
+
+  // Mide el alto real del HUD y, en vertical, reserva ese espacio para recolocar la banda.
+  // Solo re-coloca cuando crece y en reposo, para no cortar una animación en curso.
+  function measureHud() {
+    if (!elHud || H <= W * 1.15) return;
+    const h = Math.min(H * 0.5, elHud.getBoundingClientRect().height + 6);
+    if (h > hudReserve + 4 && !busy) { hudReserve = h; layout(); }
   }
 
   // ── Fondo horneado una vez ───────────────────────────────────────────────────
@@ -580,7 +608,7 @@ const HacCombate = (function () {
       .concat([`<button class="hcb-act def" data-act="defend">Defender<small>−50% daño</small></button>`]);
     elMenu.innerHTML = `<div class="hcb-menu-who">Actúa <b>${u.name}</b></div>${boostRow}<div class="hcb-acts">${btns.join('')}</div>`;
   }
-  function renderAll() { renderTimeline(); renderFoeHud(); renderParty(); renderMenu(); }
+  function renderAll() { renderTimeline(); renderFoeHud(); renderParty(); renderMenu(); measureHud(); }
 
   function finPantalla(win) {
     setTimeout(() => {
@@ -605,7 +633,7 @@ const HacCombate = (function () {
     const r = elScene.getBoundingClientRect(); dpr = Math.min(2, window.devicePixelRatio || 1);
     W = r.width; H = r.height || 300; cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
     cv.style.width = W + 'px'; cv.style.height = H + 'px';
-    layout(); bakeBg();
+    hudReserve = 0; layout(); bakeBg(); measureHud();
   }
 
   function start() {
@@ -627,7 +655,7 @@ const HacCombate = (function () {
         <canvas data-cv></canvas>
         <div class="hcb-foehud" data-foehud></div>
         <div class="hcb-timeline" data-tl></div>
-        <div class="hcb-hud">
+        <div class="hcb-hud" data-hud>
           <div class="hcb-log" data-log></div>
           <div class="hcb-hud-row">
             <div class="hcb-party" data-party></div>
@@ -638,6 +666,7 @@ const HacCombate = (function () {
     </div>`;
     elTimeline = root.querySelector('[data-tl]'); elScene = root.querySelector('[data-scene]');
     elParty = root.querySelector('[data-party]'); elMenu = root.querySelector('[data-menu]'); elLog = root.querySelector('[data-log]');
+    elHud = root.querySelector('[data-hud]');
     cv = root.querySelector('[data-cv]'); ctx = cv.getContext('2d');
     root.addEventListener('click', onClick);
     window.addEventListener('resize', () => { if (cv) { const keep = bg; resize(); } });
