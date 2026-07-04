@@ -1218,17 +1218,51 @@
       }
       return out;
     }
-    // Probabilidad de ÉXITO estimada (DETERMINISTA): base por dificultad + sucesos
-    // (que dependen de las APTITUDES de los integrantes) + relaciones + talento del
-    // capitán. Es EXACTA: la resolución solo añade la tirada final contra este número.
-    // `doctrina` opcional simula la postura antes de fijarla (para la vista previa).
-    function escProb(band, doctrina) {
+    // Fuerza agregada de la banda frente al REQUISITO del escenario (1.0 = justo el
+    // umbral). Suma los niveles de TODOS los miembros en los dominios exigidos, así que
+    // reclutar más mecenas (o más fuertes) eleva la fuerza y, con ella, el éxito.
+    function bandFuerza(band) {
+      const scn = escenarioDef(band.escenario);
+      const req = (scn && scn.req) || {};
+      const keys = Object.keys(req);
+      if (keys.length) {
+        let acc = 0; keys.forEach(dom => { acc += bandStatSum(band, dom) / Math.max(1, req[dom]); });
+        return acc / keys.length;
+      }
+      // Sin requisito conocido (bandas viejas): suma total de niveles vs umbral por dificultad.
+      let tot = 0; (band.miembros || []).forEach(m => { ['militar', 'cultural', 'administrativo'].forEach(d => { tot += (window.HacStats && HacStats.nivelTotal) ? HacStats.nivelTotal(m.id, d) : 1; }); });
+      return tot / Math.max(1, (band.dificultad || 4) * 3);
+    }
+    // Probabilidad de ÉXITO estimada (DETERMINISTA) con su DESGLOSE (para explicarla):
+    // base(dificultad) + fuerza de la banda (aptitudes vs objetivo) + compañía (nº de
+    // mecenas) + sucesos(doctrina) + vínculos + talento del capitán. Es EXACTA: la
+    // resolución solo tira el dado final contra este número.
+    function escProbParts(band, doctrina) {
       const b = (doctrina != null) ? Object.assign({}, band, { doctrina: doctrina }) : band;
       const dif = b.dificultad || 4;
       const sc = escSucesos(b), rb = relBonos(b);
       const capBonus = (window.HacStats && HacStats.tieneTalento && b.hostId && HacStats.tieneTalento(b.hostId, 'oficial')) ? 0.05 : 0;
-      const baseP = Math.max(0.35, 0.72 - (dif - 4) * 0.08);
-      return Math.max(0.1, Math.min(0.95, baseP + sc.pMod + rb.pMod + capBonus));
+      const base = Math.max(0.35, 0.72 - (dif - 4) * 0.08);
+      const nM = (b.miembros || []).length;
+      const stat = Math.max(-0.18, Math.min(0.26, (bandFuerza(b) - 1) * 0.28));   // aptitudes de la banda vs objetivo
+      const compania = Math.min(0.08, Math.max(0, nM - 2) * 0.03);                 // más mecenas = más manos
+      const raw = base + stat + compania + sc.pMod + rb.pMod + capBonus;
+      return { pct: Math.max(0.1, Math.min(0.95, raw)), base: base, stat: stat, compania: compania, suc: sc.pMod, rel: rb.pMod, cap: capBonus, nM: nM };
+    }
+    // `doctrina` opcional simula la postura antes de fijarla (para la vista previa).
+    function escProb(band, doctrina) { return escProbParts(band, doctrina).pct; }
+    // Desglose legible del % (qué lo sube/baja). Deja claro que reclutar mecenas lo mejora.
+    function probDesgloseHTML(band, doctrina) {
+      const p = escProbParts(band, doctrina);
+      const mod = (v) => `${v > 0 ? '+' : ''}${Math.round(v * 100)} pts`;
+      const cls = (v) => v < 0 ? 'neg' : (v > 0 ? 'pos' : 'nil');
+      const rows = [`<li><span>Base · dificultad</span><b>${Math.round(p.base * 100)}%</b></li>`,
+        `<li><span>Aptitudes de la banda</span><b class="${cls(p.stat)}">${mod(p.stat)}</b></li>`];
+      if (p.compania) rows.push(`<li><span>Compañía · ${p.nM} mecenas</span><b class="pos">${mod(p.compania)}</b></li>`);
+      if (p.suc) rows.push(`<li><span>Doctrina y sucesos</span><b class="${cls(p.suc)}">${mod(p.suc)}</b></li>`);
+      if (p.rel) rows.push(`<li><span>Vínculos entre mecenas</span><b class="${cls(p.rel)}">${mod(p.rel)}</b></li>`);
+      if (p.cap) rows.push(`<li><span>Talento del capitán</span><b class="pos">${mod(p.cap)}</b></li>`);
+      return `<details class="hacp-esc-desglose"><summary>¿Cómo se calcula el éxito?</summary><ul>${rows.join('')}<li class="hacp-esc-desglose-tip">Recluta mecenas con la aptitud pedida para subir «aptitudes de la banda».</li></ul></details>`;
     }
     function resolverEscaramuzaSiToca() {
       if (!myId || !window.HacEscaramuzas) return;
@@ -1345,6 +1379,7 @@
       const sharePrev = Math.max(0, shareRating(rating) + scNow.share);
       const lootBonus = lootRating(rating);
       const probHTML = `<div class="hacp-esc-prob ${probCls}">Éxito estimado <b>${probPct}%</b></div>`;
+      const desgloseHTML = probDesgloseHTML(b, b.doctrina || escDoctrina);
       const rewardHTML = `<div class="hacp-esc-reward">Botín si vencéis: <b>~${sharePrev}💰</b>/mecenas · <b>1 objeto</b> c/u${lootBonus ? ` · <b>+${lootBonus}</b> de botín común` : ''}</div>`;
       const reqHTML = (scn && rq.partes.length) ? `<div class="hacp-esc-scn-meta"><span class="hacp-esc-req-lbl">Requisito</span> ${reqChipsHTML(scn, b)}</div>` : '';
       let accion = '';
@@ -1355,19 +1390,20 @@
           const docPick = `<div class="hacp-esc-doc-pick"><div class="hacp-esc-doc-lbl">Doctrina de la banda</div>
             <div class="hacp-esc-doc-row">${DOCTRINAS.map(d => `<button type="button" class="hacp-esc-doc-b${escDoctrina === d.id ? ' on' : ''}" data-doc="${d.id}"><b>〔${d.gly}〕</b> ${esc(d.nom)}</button>`).join('')}</div>
             <div class="hacp-esc-doc-desc">${esc((doctrinaDef(escDoctrina) || {}).desc || '')}</div></div>`;
-          accion = reqHTML + probHTML + docPick + `<button class="hacp-cp-btn hacp-esc-lanzar" data-lanzar${puede ? '' : ' disabled'}>⚔ Lanzar expedición</button>
+          accion = reqHTML + probHTML + desgloseHTML + rewardHTML + docPick + `<button class="hacp-cp-btn hacp-esc-lanzar" data-lanzar${puede ? '' : ' disabled'}>⚔ Lanzar expedición</button>
             <div class="hacp-esc-note">${b.miembros.length < 2 ? 'Hacen falta al menos 2 mecenas para partir.' : faltaReq ? 'Recluta mecenas con más aptitud hasta cumplir el requisito.' : 'Al lanzar, la banda parte 30 min con la doctrina elegida. El desenlace y el botín se resuelven al volver.'}</div>`;
         } else {
-          accion = reqHTML + probHTML + `<div class="hacp-esc-note">Esperando a que el capitán lance la expedición${b.miembros.length < 2 ? ' (faltan mecenas)' : faltaReq ? ' (faltan aptitudes)' : ''}.</div>`;
+          accion = reqHTML + probHTML + desgloseHTML + rewardHTML + `<div class="hacp-esc-note">Esperando a que el capitán lance la expedición${b.miembros.length < 2 ? ' (faltan mecenas)' : faltaReq ? ' (faltan aptitudes)' : ''}.</div>`;
         }
         accion += `<button class="hacp-cp-btn hacp-esc-salir" data-salir>${esHost ? 'Disolver la banda' : 'Salir de la banda'}</button>`;
       } else if (b.estado === 'en_curso') {
         const dd = doctrinaDef(b.doctrina);
-        // Sobre la animación de marcha: % de éxito + recompensas, visible para TODA la banda.
-        accion = `<div class="hacp-esc-march-wrap"><canvas class="hacp-esc-march" data-esc-march></canvas>
-            <div class="hacp-esc-march-hud">${probHTML}${rewardHTML}</div></div>
-          ${dd ? `<div class="hacp-esc-doc">Doctrina: 〔${dd.gly}〕 ${esc(dd.nom)}</div>` : ''}
+        // La animación de marcha va SOLA; la info (éxito + recompensas + desglose) va DEBAJO,
+        // nunca superpuesta. Visible para TODA la banda.
+        accion = `<canvas class="hacp-esc-march" data-esc-march></canvas>
           <div class="hacp-esc-timer" data-esc-timer="${b.finMs}">En la expedición…</div>
+          ${probHTML}${desgloseHTML}${rewardHTML}
+          ${dd ? `<div class="hacp-esc-doc">Doctrina: 〔${dd.gly}〕 ${esc(dd.nom)}</div>` : ''}
           <div class="hacp-esc-note">La banda avanza unida por el camino. Cuando regrese se repartirán recompensas y botín.</div>
           ${esHost ? `<button type="button" class="hacp-cp-btn hacp-esc-abort" data-abort>Abortar expedición</button>` : ''}`;
       } else if (b.estado === 'abortando') {
