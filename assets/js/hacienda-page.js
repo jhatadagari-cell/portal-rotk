@@ -1410,6 +1410,7 @@
         body.innerHTML = bandaPeregrinajeHTML(mine);
         const sl = body.querySelector('[data-salir]'); if (sl) sl.addEventListener('click', () => salirBanda(mine.id));
         const lp = body.querySelector('[data-lanzar-pereg]'); if (lp && !lp.disabled) lp.addEventListener('click', () => lanzarPeregrinaje(mine.id));
+        const ph = body.querySelector('[data-pereg-help]'); if (ph) ph.addEventListener('click', openPeregInfo);
         const ab = body.querySelector('[data-abort]'); if (ab) ab.addEventListener('click', abortarEscaramuza);
         const march = body.querySelector('[data-esc-march]'); if (march) startMarch(march, mine);
         escTick();
@@ -1436,7 +1437,10 @@
       // CTA del peregrinaje: alternativa de curación cuando estás malherido (3/3).
       const peregCTA = malherido ? `
         <div class="hacp-esc-scn hacp-pereg-cta" style="--dc:#6b9bd1">
-          <div class="hacp-esc-scn-top"><div class="hacp-esc-scn-id"><span class="hacp-esc-scn-zh">華佗</span> <b>En busca del legendario curandero</b></div></div>
+          <div class="hacp-esc-scn-top">
+            <div class="hacp-esc-scn-id"><span class="hacp-esc-scn-zh">華佗</span> <b>En busca del legendario curandero</b></div>
+            <button type="button" class="hacp-pereg-help" data-pereg-help aria-label="¿Qué es el peregrinaje?" title="¿Qué es el peregrinaje?">?</button>
+          </div>
           <div class="hacp-esc-scn-en">Peregrina a la montaña de Hua Tuo · si llegáis, curará 1-3 heridas al azar</div>
           <div class="hacp-esc-scn-meta"><span class="hacp-esc-req-lbl">Riesgo</span> <span class="hacp-req">25% · baja con escoltas</span></div>
           <button class="hacp-cp-btn hacp-esc-crear" data-montar-pereg${enCd ? ' disabled' : ''}>⛰ Organizar peregrinaje${enCd ? ' (en cooldown)' : ''}</button>
@@ -1480,6 +1484,7 @@
         <div class="hacp-esc-ttl2">Bandas abiertas</div>${lista}`;
       body.querySelectorAll('[data-plazas]').forEach(b => b.addEventListener('click', () => { escPlazas = +b.dataset.plazas; renderEscaramuzas(); }));
       const mpb = body.querySelector('[data-montar-pereg]'); if (mpb && !mpb.disabled) mpb.addEventListener('click', montarPeregrinaje);
+      const phb = body.querySelector('[data-pereg-help]'); if (phb) phb.addEventListener('click', openPeregInfo);
       body.querySelectorAll('[data-crear-scn]').forEach(b => { if (!b.disabled) b.addEventListener('click', () => crearBanda(b.dataset.crearScn)); });
       body.querySelectorAll('[data-unir]').forEach(b => { if (!b.disabled) b.addEventListener('click', () => unirBanda(b.dataset.unir)); });
     }
@@ -1608,6 +1613,7 @@
         <div class="hacp-esc-card" style="--dc:#6b9bd1">
           <div class="hacp-esc-scn-top">
             <div class="hacp-esc-scn-id"><span class="hacp-esc-scn-zh">華佗</span> <b>En busca del legendario curandero</b></div>
+            <button type="button" class="hacp-pereg-help" data-pereg-help aria-label="¿Qué es el peregrinaje?" title="¿Qué es el peregrinaje?">?</button>
           </div>
           <div class="hacp-esc-scn-en">hacia la montaña de Hua Tuo</div>
           <ul class="hacp-esc-roster">${roster}</ul>${accion}</div>`;
@@ -1635,6 +1641,33 @@
         syncEscaramuzaOrder(); syncEscaramuzaFolk();
       } catch (e) { toast((e && e.message) || 'No se pudo partir'); await HacEscaramuzas.reload(); }
       finally { escBusy = false; renderEscaramuzas(); }
+    }
+    // Explicación del peregrinaje (overlay), abierta desde el «?» de la tarjeta/panel.
+    let peregInfoEl = null;
+    function ensurePeregInfoEl() {
+      if (peregInfoEl) return peregInfoEl;
+      peregInfoEl = document.createElement('div'); peregInfoEl.className = 'hacp-shop hacp-pereg-info-ov'; peregInfoEl.hidden = true; overlayHost().appendChild(peregInfoEl);
+      ['pointerdown', 'pointerup', 'wheel', 'click'].forEach(ev => peregInfoEl.addEventListener(ev, (e) => e.stopPropagation(), { passive: false }));
+      peregInfoEl.addEventListener('click', (e) => { if (e.target === peregInfoEl) peregInfoEl.hidden = true; });
+      return peregInfoEl;
+    }
+    function openPeregInfo() {
+      const el = ensurePeregInfoEl();
+      el.innerHTML = `<div class="hacp-shop-box hacp-pereg-info">
+        <button type="button" class="hacp-shop-x" data-pi-x aria-label="Cerrar">✕</button>
+        <div class="hacp-esc-h">華佗 En busca del legendario curandero</div>
+        <p class="hacp-pereg-info-p">Cuando tu mecenas cae <b>malherido</b> (3/3) y no puedes —o no quieres— pagar la enfermería, aún queda una salida: <b>peregrinar</b> a la montaña del gran sabio <b>Hua Tuo</b>.</p>
+        <ul class="hacp-pereg-info-list">
+          <li>⛰ <b>Viaje exterior cooperativo</b>: lo organizas gratis y otros mecenas de la hacienda pueden unirse para <b>escoltarte</b>.</li>
+          <li>⏳ Dura <b>1 hora</b>. Al volver, 1 h de descanso antes de poder salir de nuevo.</li>
+          <li>🎲 <b>Riesgo del camino: 25%</b>, que baja según la <b>calidad de tus escoltas</b> (mecenas más fuertes protegen mejor; mínimo 5%). Puedes ir solo, a riesgo pleno.</li>
+          <li>✚ <b>Si llegáis</b>: el sabio cura <b>1-3 heridas</b> al azar.</li>
+          <li>✘ <b>Si el camino se tuerce</b>: curas solo 1 herida y vuelves con una <b>secuela permanente</b> (manco, tuerto…) —de por vida, no se cura— y algún escolta puede volver herido.</li>
+        </ul>
+        <button type="button" class="hacp-cp-btn" data-pi-x>Entendido</button>
+      </div>`;
+      el.querySelectorAll('[data-pi-x]').forEach(b => b.addEventListener('click', () => { el.hidden = true; }));
+      el.hidden = false;
     }
     async function crearBanda(scnId) {
       if (escBusy) return;
@@ -2227,12 +2260,12 @@
       const pen = Math.round(Math.min(0.45, n * 0.15) * 100);
       const txt = !n ? 'ileso' : (n >= 3 ? 'malherido · no puede salir' : `${n}/3 · −${pen}% recompensa · +riesgo`);
       const cura = (d.mine && n > 0) ? `<button type="button" class="hacp-cp-btn hacp-cp-cura" data-act="cura"${d.money < COSTE_CURA ? ' disabled' : ''}>✚ Curar 1 herida · 💰 ${COSTE_CURA}${d.money < COSTE_CURA ? ' (te falta)' : ''}</button>` : '';
-      // A 3/3: método ALTERNATIVO de curación → peregrinaje al gran sabio (abre Escaramuzas).
-      const pereg = (d.mine && n >= 3) ? `<button type="button" class="hacp-cp-btn hacp-cp-pereg" data-act="peregrinaje" data-tip="Peregrina a la montaña de Hua Tuo con escoltas. Si llegáis, cura 1-3 heridas; si el viaje falla, vuelves con una secuela permanente.">⛰ En busca del legendario curandero →</button>` : '';
+      // A 3/3: el aviso del peregrinaje va en el botón «Escaramuzas» (parpadeo rojo), no aquí.
+      const pistaPereg = (d.mine && n >= 3) ? `<div class="hacp-cp-secuelas">⛰ ¿Sin salida? Busca al <b>legendario curandero</b> en 兵 Escaramuzas.</div>` : '';
       // Secuelas permanentes (cosméticas, de por vida) ganadas en peregrinajes fallidos.
       const secs = (d.secuelas && d.secuelas.length) ? `<div class="hacp-cp-secuelas" data-tip="Secuelas permanentes de peregrinajes fallidos. Son cicatrices de por vida: no se curan.">Secuelas: ${d.secuelas.map(id => { const s = secuelaDef(id); return s ? esc(s.nom) : esc(id); }).join(' · ')}</div>` : '';
       return `<div class="hacp-cp-wounds${n ? ' hurt' : ''}${n >= 3 ? ' bad' : ''}" data-tip="Heridas ${n}/3. Reducen la recompensa (−15% por herida) y suben el riesgo de las expediciones; a 3/3 tu mecenas queda malherido y no puede salir hasta curarse.">
-        <span class="hacp-wound-h">Heridas</span><span class="hacp-wound-slots">${slots}</span><span class="hacp-wound-txt">${txt}</span></div>${secs}${cura}${pereg}`;
+        <span class="hacp-wound-h">Heridas</span><span class="hacp-wound-slots">${slots}</span><span class="hacp-wound-txt">${txt}</span></div>${secs}${cura}${pistaPereg}`;
     }
     // Cura 1 herida pagando en la enfermería (decisión: gastar dinero vs. seguir herido).
     function curarHerida() {
@@ -2414,8 +2447,6 @@
       if (lvb) lvb.addEventListener('click', openLeave);
       const cub = charEl.querySelector('[data-act="cura"]');
       if (cub && !cub.disabled) cub.addEventListener('click', curarHerida);
-      const pgb = charEl.querySelector('[data-act="peregrinaje"]');
-      if (pgb) pgb.addEventListener('click', openEscOverlay);   // abre Escaramuzas, donde está la CTA del peregrinaje
       const bh = charEl.querySelector('[data-act="buyhome"]');
       if (bh && !bh.disabled) bh.addEventListener('click', () => {
         if (!myId || !window.HacStats) return;
@@ -3047,11 +3078,26 @@
       const enMuster = !!(band && band.estado === 'en_curso' && clock() < (band.inicioMs + 26000));
       btn.classList.toggle('pulse', enMuster && !btn.classList.contains('on'));   // deja de parpadear si ya estás en Hacienda
     }
-    // Parpadeo del botón Escaramuzas cuando el capitán tiene una decisión de maniobra
-    // pendiente y NO está en esa sección (dentro, la carta ya se abre sola).
+    // ¿Puede tu mecenas EMPRENDER el peregrinaje AHORA? (malherido 3/3, sin banda ya
+    // montada y sin cooldown). Es lo que dispara el parpadeo ROJO de «Escaramuzas».
+    function peregDisponible() {
+      if (!myId || !window.HacStats || !window.HacEscaramuzas) return false;
+      if (!(HacStats.malherido && HacStats.malherido(myId))) return false;
+      if (HacEscaramuzas.miBanda(h.id, myId)) return false;                  // ya tiene banda/peregrinaje en marcha
+      if (!ESC_FAST && HacStats.escaramuzaCd && HacStats.escaramuzaCd(myId) > clock()) return false;   // en cooldown: aún no puede
+      return true;
+    }
+    // Parpadeo del botón Escaramuzas: ROJO si el peregrinaje está disponible (última
+    // salida al estar malherido); DORADO si el capitán tiene una decisión de maniobra
+    // pendiente. En ambos casos, solo si NO estás ya dentro de la sección.
     function pulseEscNav() {
-      const btn = document.querySelector('#hacp-mnav [data-sec="escaramuzas"]'); if (!btn) return;
-      btn.classList.toggle('pulse', !!escSucesoPend() && !btn.classList.contains('on'));
+      const pereg = peregDisponible();
+      const suceso = !pereg && !!escSucesoPend();
+      const nav = document.querySelector('#hacp-mnav [data-sec="escaramuzas"]');
+      if (nav) { const dentro = nav.classList.contains('on'); nav.classList.toggle('pulse-red', pereg && !dentro); nav.classList.toggle('pulse', suceso && !dentro); }
+      // Escritorio: el mismo aviso en el botón «Escaramuzas» de la barra del panel.
+      const tool = charEl ? charEl.querySelector('.hacp-cp-esc') : null;
+      if (tool) { tool.classList.toggle('pulse-red', pereg); tool.classList.toggle('pulse', suceso); }
     }
     // Tic de 1 s: refresca SOLO el panel del personaje (cuenta atrás de expedición y
     // energía/regeneración se derivan del reloj de servidor → tienen que verse vivos).

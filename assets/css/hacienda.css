@@ -318,6 +318,11 @@ html.hacp-pseudofs, html.hacp-pseudofs body{ overflow:hidden; }
 .hacp-cp-tool .ic{ display:flex; align-items:center; justify-content:center; height:24px; font:400 20px 'Noto Serif SC',serif; line-height:1; }
 .hacp-cp-tool .lb{ font-size:9.5px; color:var(--parch2); text-align:center; line-height:1.1; }
 .hacp-cp-tool:hover .lb, .hacp-cp-tool.on .lb{ color:var(--parch); }
+/* Aviso en el tool «Escaramuzas» (escritorio): rojo = peregrinaje disponible; dorado = maniobra. */
+.hacp-cp-tool.pulse{ color:var(--gold); animation:hacpToolPulse 1s ease-in-out infinite; }
+.hacp-cp-tool.pulse-red{ color:#f0857a; animation:hacpToolPulseRed .9s ease-in-out infinite; }
+@keyframes hacpToolPulse{ 0%,100%{ background:rgba(201,168,76,.12); box-shadow:0 0 0 0 rgba(201,168,76,0); } 50%{ background:rgba(201,168,76,.34); box-shadow:0 0 10px 2px rgba(201,168,76,.5); } }
+@keyframes hacpToolPulseRed{ 0%,100%{ background:rgba(200,52,42,.14); box-shadow:0 0 0 0 rgba(200,52,42,0); } 50%{ background:rgba(200,52,42,.42); box-shadow:0 0 12px 3px rgba(200,52,42,.6); } }
 .hacp-cp-badge{ position:absolute; top:-5px; right:-5px; min-width:16px; height:16px; padding:0 4px; box-sizing:border-box; border-radius:8px;
   background:#b23b2e; color:#fff; font:700 10px 'Noto Sans SC',sans-serif; display:flex; align-items:center; justify-content:center; z-index:2; }
 .hacp-cp-flag{ color:#e0b85a; font-size:12px; }
@@ -416,6 +421,9 @@ html.hacp-pseudofs, html.hacp-pseudofs body{ overflow:hidden; }
   .hacp-nav-btn:active{ transform:scale(.95); }
   .hacp-nav-btn.pulse{ color:var(--gold); animation:hacpNavPulse 1s ease-in-out infinite; }
   @keyframes hacpNavPulse{ 0%,100%{ background:rgba(201,168,76,.1); box-shadow:0 0 0 0 rgba(201,168,76,0); } 50%{ background:rgba(201,168,76,.34); box-shadow:0 0 11px 2px rgba(201,168,76,.45); } }
+  /* Peregrinaje disponible (malherido, última salida) → parpadeo ROJO más urgente. */
+  .hacp-nav-btn.pulse-red{ color:#f0857a; animation:hacpNavPulseRed .9s ease-in-out infinite; }
+  @keyframes hacpNavPulseRed{ 0%,100%{ background:rgba(200,52,42,.12); box-shadow:0 0 0 0 rgba(200,52,42,0); } 50%{ background:rgba(200,52,42,.42); box-shadow:0 0 13px 3px rgba(200,52,42,.6); } }
 
   /* Host de secciones (todo menos Hacienda): panel opaco sobre el visor. */
   #hacp-msec{ position:fixed; left:0; right:0; top:0; bottom:62px; z-index:8000; overflow-y:auto;
@@ -533,6 +541,17 @@ button.hacp-slot.manual:hover{ background:rgba(201,168,76,.24); }
 .hacp-cp-pereg:not(:disabled):hover{ background:rgba(107,155,209,.3)!important; color:#fff!important; }
 .hacp-cp-secuelas{ margin-top:5px; font-size:10.5px; color:#caa6cf; letter-spacing:.02em; font-style:italic; }
 .hacp-pereg-cta{ border-color:rgba(107,155,209,.55)!important; background:linear-gradient(180deg, rgba(107,155,209,.14), rgba(107,155,209,.04))!important; }
+/* Botón «?» de ayuda del peregrinaje (círculo pulsable). */
+.hacp-pereg-help{ flex:0 0 auto; width:20px; height:20px; border-radius:50%; padding:0; cursor:pointer;
+  border:1px solid rgba(107,155,209,.6); background:rgba(107,155,209,.16); color:#bcd4ef;
+  font:800 12px 'Cinzel',serif; line-height:1; display:flex; align-items:center; justify-content:center; }
+.hacp-pereg-help:hover{ background:rgba(107,155,209,.34); color:#fff; }
+/* Overlay de explicación del peregrinaje. */
+.hacp-pereg-info{ max-width:440px; }
+.hacp-pereg-info-p{ margin:6px 0 10px; color:var(--parch); font-size:12.5px; line-height:1.5; }
+.hacp-pereg-info-list{ list-style:none; margin:0 0 12px; padding:0; display:flex; flex-direction:column; gap:8px; }
+.hacp-pereg-info-list li{ color:var(--parch2); font-size:12px; line-height:1.5; padding-left:2px; }
+.hacp-pereg-info-list b{ color:var(--parch); }
 .hacp-wound-h{ font:700 10px 'Cinzel Decorative',serif; letter-spacing:.06em; text-transform:uppercase; color:var(--hac,var(--gold)); opacity:.85; }
 .hacp-wound-slots{ display:flex; gap:3px; }
 .hacp-wound{ width:17px; height:17px; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700;
