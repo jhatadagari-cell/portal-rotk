@@ -64,7 +64,7 @@ const HacCombate = (function () {
     // ya no se sobreescala en pantallas retina.
     guanyu:     { src: 'assets/img/guanyu-atk.webp?v=2',     img: null, cols: 8, count: 61, cellW: 794, cellH: 660, pivotX: 481, feetY: 626, charH: 322, thf: 0.244, headY: 0.27 },
     zhugeliang: { src: 'assets/img/zhugeliang-atk.webp?v=1', img: null, cols: 8, count: 61, cellW: 392, cellH: 300, pivotX: 245, feetY: 293, charH: 275, thf: 0.224, headY: 0.19, muzzle: [0.42, 0.72] },
-    huangzhong: { src: 'assets/img/huangzhong-atk.webp?v=1', img: null, cols: 8, count: 61, cellW: 427, cellH: 300, pivotX: 293, feetY: 298, charH: 203, thf: 0.232, headY: 0.25, play: 54, release: 48, muzzle: [0.34, 0.72] },
+    huangzhong: { src: 'assets/img/huangzhong-atk.webp?v=1', img: null, cols: 8, count: 61, cellW: 427, cellH: 300, pivotX: 293, feetY: 298, charH: 203, thf: 0.232, headY: 0.25, play: 54, release: 48, muzzle: [0.34, 0.72], shot: [14, 50] },
     // Enemigo (general Turbante Amarillo): idle = frames parado con la capa al viento (ping-pong 0..15);
     // ataque = torbellino de sable desde atkStart hasta el final (16..60).
     turbante:   { src: 'assets/img/turbante-atk.webp?v=1',   img: null, cols: 8, count: 61, cellW: 886, cellH: 865, pivotX: 331, feetY: 841, charH: 351, thf: 0.34, headY: 0.13, foe: true, idle: [0, 14], atkStart: 16 },
@@ -503,7 +503,13 @@ const HacCombate = (function () {
   // Aliado animado desde spritesheet (reposo = frame 0; ataque = clip 0→60 estirado a la duración de la acción).
   function drawSheet(u) {
     const A = SHEETS[u.sprite]; const play = A.play || A.count; const a0 = A.atkStart || 0; let fi = A.idle ? A.idle[0] : 0;
-    if (u._atk && u._animT0) {
+    if (u._atk && u._shotN && A.shot) {
+      // Ráfaga de flechas: repite el gesto de tensar→soltar (shot[0]→shot[1]) una vez por
+      // disparo y, tras el último, reproduce la recuperación (shot[1]→final).
+      const [d0, rel] = A.shot, e = now() - u._shotT0, cyclesEnd = u._shotN * u._shotCad;
+      if (e < cyclesEnd) { const lt = e % u._shotCad; fi = d0 + Math.min(rel - d0, Math.floor((lt / u._shotCad) * (rel - d0))); }
+      else { const rp = clamp((e - cyclesEnd) / (u._shotRecov || 260), 0, 1); fi = rel + Math.floor(rp * (play - 1 - rel)); }
+    } else if (u._atk && u._animT0) {
       // El ataque reproduce desde atkStart hasta el final, estirado a la duración de la acción.
       const p = clamp((now() - u._animT0) / (u._animDur || 800), 0, 1);
       fi = a0 + Math.min((play - a0) - 1, Math.floor(p * (play - a0)));
@@ -610,7 +616,7 @@ const HacCombate = (function () {
     if (action.sp && u.sp < action.sp) { log(`<b>${u.name}</b> no tiene SP para ${action.name}.`); return; }
     if (action.sp) u.sp -= action.sp;
     if (boost > 0) u.bp = Math.max(0, u.bp - boost);
-    busy = true; u.def = false; u._atk = true; u._animT0 = now(); u._animDur = 800; renderMenu();
+    busy = true; u.def = false; u._atk = true; u._animT0 = now(); u._animDur = 800; u._shotN = 0; renderMenu();
 
     if (action.defend) { u._atk = false; u.def = true; u.sp = Math.min(u.maxSp, u.sp + 4); log(`<b>${u.name}</b> se pone en guardia.`); floater(ux(u), uy(u) - u.th, 'Guardia', '#7fb6e0'); return finTurno(360); }
     if (action.heal) {
@@ -684,8 +690,18 @@ const HacCombate = (function () {
     // ranged / magic: proyectil(es). Con animación propia NO hay saltito (se queda en el sitio) y el
     // disparo se retrasa para que salga en el barrido final y el impacto coincida con el fin del clip.
     const projDur = anim ? 200 : 300;
-    const launch = anim ? Math.round(u._animDur * relFrac) : 0;
-    const gap = anim ? 110 : 130;
+    // Ráfaga con arco (varias flechas): se ve tensar y soltar una vez por disparo.
+    const multiShot = anim && cat === 'arrow' && hits > 1 && A2 && A2.shot;
+    let launch, gap;
+    if (multiShot) {
+      const cad = 200;                                   // cadencia entre disparos (ms)
+      u._shotN = hits; u._shotCad = cad; u._shotT0 = now(); u._shotRecov = 260;
+      u._animDur = cad * hits + u._shotRecov;
+      launch = Math.round(cad * 0.82); gap = cad;         // la flecha sale al soltar en cada ciclo
+    } else {
+      launch = anim ? Math.round(u._animDur * relFrac) : 0;
+      gap = anim ? 110 : 130;
+    }
     // Origen del disparo: la "boca" del arma (arco/abanico), no el pecho.
     let mx = ux(u), my = uy(u) - u.th * 0.55;
     if (A2 && A2.muzzle) { const dir = Math.sign(enemy.ax - u.ax) || -1; mx = ux(u) + dir * u.th * A2.muzzle[0]; my = uy(u) - u.th * A2.muzzle[1]; }
@@ -693,9 +709,9 @@ const HacCombate = (function () {
     for (let i = 0; i < hits; i++) wait(launch + gap * i, () => {
       projs.push({ t0: now(), dur: projDur, x0: mx, y0: my, x1: ux(enemy), y1: uy(enemy) - enemy.th * 0.55, kind: cat === 'arrow' ? 'arrow' : 'orb', col: t2 ? t2.col : '#ff8a3c', onHit: () => { doHit(); if (++done === hits) resumen(); } });
     });
-    return finTurno(launch + gap * (hits - 1) + projDur + 140);
+    return finTurno((multiShot ? u._animDur : launch + gap * (hits - 1) + projDur) + 140);
   }
-  function finTurno(ms) { wait(ms + 120, () => { enemy._atk = false; party.forEach(x => { x._atk = false; x._wcat = null; x._cast = null; x._animT0 = 0; }); busy = false; avanzar(); }); }
+  function finTurno(ms) { wait(ms + 120, () => { enemy._atk = false; party.forEach(x => { x._atk = false; x._wcat = null; x._cast = null; x._animT0 = 0; x._shotN = 0; }); busy = false; avanzar(); }); }
 
   // ── Turno enemigo ────────────────────────────────────────────────────────────
   function turnoEnemigo() {
