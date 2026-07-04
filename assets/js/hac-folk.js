@@ -32,7 +32,7 @@ const HacFolk = (function () {
   const TW = (window.HacIso && HacIso.TILE_W) || 36;
   const TH = (window.HacIso && HacIso.TILE_H) || 18;
 
-  let raf = null, iso = null, opts = null, walkers = [], wk = null, names = {};
+  let raf = null, iso = null, opts = null, walkers = [], wk = null, names = {}, curTier = 1;
   let running = false, visible = true, onScreen = true, io = null;
   let selectedId = null, stateSig = '', hailCd = 20;
   // Capa de personajes NÍTIDA: los mecenas/mercaderes/escribanos se dibujan en un
@@ -347,6 +347,7 @@ const HacFolk = (function () {
   }
 
   function spawn(mapa, tier, miembros, color) {
+    curTier = tier;
     wk = build(mapa, tier);
     names = {}; (miembros || []).forEach(m => { names[m.id] = m.nombre || ''; });
     if (!wk.cells.length) return [];
@@ -374,6 +375,7 @@ const HacFolk = (function () {
         // competencias y verificable en RLS). Fallback al id de miembro si no hay
         // personaje vinculado (mecenas sin cuenta, no controlable por un jugador).
         id: m.personajeId || m.id, name: m.nombre || '', color, aptitud, aspecto,
+        basePuntos: Number(m.puntos) || 0,   // puntos base (admin); el ganado se suma al vuelo en refreshCargos
         cargoIcon: cargo ? (cargo.icon || '') : '', cargoNombre: cargo ? cargo.nombre : '', cargoTier: cargo ? (cargo.tier || 1) : 0, rankIdx,
         aptIcon: aptDef ? (aptDef.icon || '') : '', dominios: aptDef ? (aptDef.dominios || []) : [],
         fx: start[0], fy: start[1], tx: start[0], ty: start[1], moving: false, dir: 'S',
@@ -459,6 +461,27 @@ const HacFolk = (function () {
   // ¿está mi mecenas plantado esperando en el tablón? (para abrir al pulsarlo)
   function consultando(id) { const w = walkers.find(x => x.id === id); return !!(w && w.state === 'consultando'); }
   function dejarConsulta(id) { const w = walkers.find(x => x.id === id); if (w && (w.state === 'consultando' || w.state === 'a-consultar')) { w.state = 'paseando'; w.strollTimer = 1; w.speech = null; w.consultFace = null; } }
+
+  // Recalcula el cargo de cada mecenas con su prestigio TOTAL (base + ganado en
+  // misiones/escaramuzas). El prestigio se carga async y crece al jugar, así que la
+  // página llama a esto tras cargar/actualizar HacPuntos. El banner del nombre se
+  // cachea por (icono, cargoTier, …): al cambiar esos campos, se re-hornea solo en
+  // el siguiente frame; no hace falta forzar repintado.
+  function refreshCargos() {
+    if (!walkers.length || !window.HacCalc || !HacCalc.rangoDePuntos) return false;
+    let changed = false;
+    walkers.forEach(w => {
+      const ganado = (window.HacPuntos && HacPuntos.deMiembro && haciendaId) ? (Number(HacPuntos.deMiembro(haciendaId, w.id)) || 0) : 0;
+      const tot = (Number(w.basePuntos) || 0) + ganado;
+      const cargo = HacCalc.rangoDePuntos(tot, curTier);
+      const ci = cargo ? (cargo.icon || '') : '', cn = cargo ? cargo.nombre : '', ct = cargo ? (cargo.tier || 1) : 0;
+      const ri = HacCalc.rangoIndex ? HacCalc.rangoIndex(tot, curTier) : -1;
+      if (ci !== w.cargoIcon || cn !== w.cargoNombre || ct !== w.cargoTier || ri !== w.rankIdx) {
+        w.cargoIcon = ci; w.cargoNombre = cn; w.cargoTier = ct; w.rankIdx = ri; changed = true;
+      }
+    });
+    return changed;
+  }
 
   // Visita FORZADA por una misión: la orden lleva una TAREA (taskId); vamos al
   // edificio de SU tipo MÁS CERCANO al mecenas (determinista). Si no hay, deambula.
@@ -1937,6 +1960,6 @@ const HacFolk = (function () {
   }
 
   function mainBuildingId() { return wk ? (wk.mainBid || null) : null; }
-  return { start, stop, list, select, selected, position, buildings, buildingTypes, setOrders, setEscaramuzas, setCaballos, drawAvatar, goHome, consultar, consultando, dejarConsulta, mainBuildingId, repaintOverlay };
+  return { start, stop, list, select, selected, position, buildings, buildingTypes, setOrders, setEscaramuzas, setCaballos, drawAvatar, goHome, consultar, consultando, dejarConsulta, mainBuildingId, repaintOverlay, refreshCargos };
 })();
 if (typeof window !== 'undefined') window.HacFolk = HacFolk;

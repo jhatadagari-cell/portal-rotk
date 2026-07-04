@@ -911,7 +911,7 @@
       const det = document.querySelector('.hacp-detail');
       if (det && window.HacRender) det.innerHTML = HacRender.panelHTML(h);
     }
-    const refresh = () => { renderList(); refreshCharPanel(); syncCaballosFolk(); updatePrestige(); updateDetail(); };
+    const refresh = () => { renderList(); refreshCharPanel(); syncCaballosFolk(); updatePrestige(); updateDetail(); if (window.HacFolk && HacFolk.refreshCargos) HacFolk.refreshCargos(); };
     let lastOrdersSig = '';
 
     function applyOrders() {
