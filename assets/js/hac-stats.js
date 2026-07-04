@@ -90,11 +90,15 @@ const HacStats = (function () {
   function equipados(mid) { const r = row(mid); return r ? r.equipado.slice() : []; }
   function ocupadas(mid) { const r = row(mid); return r ? r.inv.reduce((s, it) => s + (it.n || 1), 0) : 0; }
   const MAX_EQUIP = 3;
-  // Bono total de un dominio por los objetos EQUIPADOS (武/文/政).
+  // Bono total de un dominio por los objetos EQUIPADOS (武/文/政), CAPADO a +3 por
+  // dominio: el equipo ayuda pero no trivializa (antes apilar 3 libros daba +6/+9 y
+  // dejaba un dominio entero al riesgo mínimo). Con el tope, conviene repartir los 3
+  // huecos entre dominios en vez de amontonarlos en uno.
+  const CAP_EQUIP_DOM = 3;
   function bonus(mid, dom) {
     const r = row(mid); if (!r || !window.HacTienda) return 0;
     let s = 0; r.equipado.forEach(id => { const b = HacTienda.equipBonus(id); if (b && b[dom]) s += b[dom]; });
-    return s;
+    return Math.min(CAP_EQUIP_DOM, s);
   }
   // Bono % del equipo: dinero (suma de dineroPct) y ahorro de tiempo de expedición
   // (suma de expedPct, tope 0.6 para no llegar a 0). Fracciones (0.05 = 5%).

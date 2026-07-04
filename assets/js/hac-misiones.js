@@ -50,13 +50,31 @@ const HacMisiones = (function () {
   const durSeg = (m) => 90 + m.dif * 15;                       // 105 s … 180 s
   const disponibles = (tier) => POOL.filter(m => m.dif <= (tier || 1) + 1);
 
-  // Riesgo de fracaso: base 8 %, +13 % por cada nivel de dificultad por ENCIMA de
-  // tu nivel efectivo (y baja si lo superas). Acotado a [3 %, 85 %].
+  // Riesgo de fracaso en función del MARGEN = tu nivel efectivo − dificultad.
+  //   · A tu nivel (margen 0): ~40 % → una misión pareja es una apuesta real.
+  //   · Superarla ayuda con RENDIMIENTOS DECRECIENTES y nunca baja del 12 %:
+  //       margen  0→40 %  1→30 %  2→22 %  3→16 %  4→12 %  5+→12 %
+  //     (antes bastaba con superar la dif. para caer al 3 %; ya no: ni sobrada
+  //      una misión es "gratis").
+  //   · Ir por debajo dispara el riesgo (barrera de dificultad):
+  //       −1→56 %  −2→72 %  −3→88 %  (tope 93 %).
   function riesgo(nivelEf, dif) {
-    return Math.max(0.03, Math.min(0.85, 0.08 + (dif - (nivelEf || 0)) * 0.13));
+    const m = (nivelEf || 0) - dif;
+    return (m >= 0) ? Math.max(0.12, 0.40 * Math.pow(0.74, m))
+                    : Math.min(0.93, 0.40 + (-m) * 0.16);
   }
+  // Recompensa BASE por dificultad. El multiplicador por "reto" (misiones muy por
+  // debajo de tu nivel rinden menos) lo aplica la página, que conoce tu nivel.
   function recompensa(m) {
     return { dom: m.dom, dinero: 6 + m.dif * 9, xp: 8 + m.dif * 9 };
+  }
+  // Multiplicador de recompensa por MARGEN: a tu nivel (o por encima de la misión)
+  // rinde full; muy por debajo de tu nivel es "rutina" y rinde progresivamente menos.
+  // Empuja a variar: sobre-subir un dominio hace que sus misiones fáciles paguen poco.
+  //   margen ≤1 → ×1 · 2 → ×0.86 · 3 → ×0.72 · 4 → ×0.58 · 5 → ×0.44 · 6+ → ×0.30
+  function retoMult(nivelEf, dif) {
+    const margen = (nivelEf || 0) - dif;
+    return (margen <= 1) ? 1 : Math.max(0.30, 1 - (margen - 1) * 0.14);
   }
   const nivelColor = (pct) => pct < 0.20 ? 'baja' : (pct < 0.45 ? 'media' : 'alta');
 
@@ -82,6 +100,6 @@ const HacMisiones = (function () {
     return pool[Math.floor(Math.random() * pool.length)];
   }
 
-  return { POOL, get, disponibles, durSeg, riesgo, recompensa, nivelColor, coste, lootChance, botin };
+  return { POOL, get, disponibles, durSeg, riesgo, recompensa, retoMult, nivelColor, coste, lootChance, botin };
 })();
 if (typeof window !== 'undefined') window.HacMisiones = HacMisiones;

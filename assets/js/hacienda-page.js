@@ -604,7 +604,12 @@
       const base = (window.HacMisiones) ? HacMisiones.riesgo(nivelEf(m.dom), m.dif) : 0.3;
       const her = (window.HacStats && HacStats.heridas) ? HacStats.heridas(myId) : 0;
       const soldado = (window.HacStats && HacStats.tieneTalento && HacStats.tieneTalento(myId, 'soldado')) ? 0.06 : 0;   // 武士: aguante
-      return Math.max(0.02, Math.min(0.9, base + her * 0.08 - soldado));
+      return Math.max(0.05, Math.min(0.92, base + her * 0.08 - soldado));
+    }
+    // Multiplicador de recompensa por reto: una misión muy por debajo de tu nivel es
+    // "rutina" y rinde menos (dinero y XP). Empuja a variar y a afrontar retos reales.
+    function retoMultMision(m) {
+      return (window.HacMisiones && HacMisiones.retoMult) ? HacMisiones.retoMult(nivelEf(m.dom), m.dif) : 1;
     }
     const fmtDur = (s) => (s < 60) ? Math.round(s) + 's' : Math.round(s / 60) + ' min';
     // Cuenta atrás legible: «1m 45s» / «45s».
@@ -667,7 +672,8 @@
             + (tieneT('gobernador') ? 0.10 : 0);                             // 太守 Gobernador (senda)
           // Las HERIDAS merman lo que traes a casa (dinero + XP): −15 % por herida.
           const hurt = 1 - (HacStats.penHerida ? HacStats.penHerida(myId) : 0);
-          let dinB = Math.round(conBono(rec.dinero, dinPct) * hurt), xpB = Math.round(conBono(rec.xp, xpFracMision(rec.dom)) * hurt);
+          const rm = retoMultMision(mis);   // misiones muy por debajo de tu nivel rinden menos (rutina)
+          let dinB = Math.round(conBono(rec.dinero, dinPct) * hurt * rm), xpB = Math.round(conBono(rec.xp, xpFracMision(rec.dom)) * hurt * rm);
           // SUCESOS del viaje: resuelve los que falten (opción segura) y aplica sus mods.
           const em = finalizeSucesos(o, mis);
           if (em.din) dinB = Math.max(0, Math.round(dinB * (1 + em.din)));
@@ -2763,11 +2769,13 @@
       const rows = list.slice().sort((a, b) => (a.dom < b.dom ? -1 : a.dom > b.dom ? 1 : a.dif - b.dif)).map(m => {
         const risk = riesgoMision(m), rc = HacMisiones.nivelColor(risk), rec = HacMisiones.recompensa(m);
         const en = costeExped(m), sinEn = energia < en, loot = Math.round(HacMisiones.lootChance(m.dif) * 100);
-        const dinB = conBono(rec.dinero, bonos.dinero), xpB = conBono(rec.xp, xpFracMision(m.dom));   // ya con bonos de pabellón
+        const rm = retoMultMision(m);                                             // rutina si va muy por debajo de tu nivel
+        const dinB = Math.round(conBono(rec.dinero, bonos.dinero) * rm), xpB = Math.round(conBono(rec.xp, xpFracMision(m.dom)) * rm);   // ya con bonos de pabellón
+        const rutina = rm < 1 ? ` <span class="hacp-mis-rutina" title="Rutina: muy por debajo de tu nivel, rinde ${Math.round(rm * 100)}%">rutina</span>` : '';
         return `<div class="hacp-mis t-${m.dom}">
           <span class="hacp-mis-g" style="color:${DOM_COLOR[m.dom]}">${DOM_GLYPH[m.dom]}</span>
           <div class="hacp-mis-main">
-            <div class="hacp-mis-name">${esc(m.nombre)} <span class="hacp-mis-dif">dif. ${m.dif}</span></div>
+            <div class="hacp-mis-name">${esc(m.nombre)} <span class="hacp-mis-dif">dif. ${m.dif}</span>${rutina}</div>
             <div class="hacp-mis-meta">⏱ ${fmtClock(durExped(m))}${durExped(m) < HacMisiones.durSeg(m) ? '<sup class="hacp-bono">↓</sup>' : ''} · <span class="${sinEn ? 'hacp-mis-noen' : ''}">−${en}⚡</span> · +${dinB}💰${bonos.dinero ? '<sup class="hacp-bono">↑</sup>' : ''} · +${xpB} XP${xpFracMision(m.dom) > 0 ? '<sup class="hacp-bono">↑</sup>' : ''} ${DOM_GLYPH[m.dom]} · 🎁 ${loot}%</div>
           </div>
           <span class="hacp-mis-risk r-${rc}" title="Riesgo de fracaso (baja con tu nivel ${DOM_GLYPH[m.dom]} y el equipo)">⚠ ${Math.round(risk * 100)}%</span>
@@ -2778,7 +2786,7 @@
         <div class="hacp-shop-box">
           <button type="button" class="hacp-shop-x" data-act="board-close" aria-label="Cerrar">✕</button>
           <div class="hacp-shop-h"><span class="hacp-shop-zh">📜</span> Tablón de misiones <span class="hacp-shop-money">⚡ <b>${Math.round(energia)}</b></span></div>
-          <div class="hacp-shop-sub">El riesgo baja con tu nivel del dominio (XP) y el equipo. Las difíciles cuestan más energía y tienen más probabilidad de 🎁 botín al volver.${ocupado ? ' <b>Tu mecenas ya está en una misión.</b>' : ''}</div>
+          <div class="hacp-shop-sub">A tu nivel una misión es una apuesta real; superarla baja el riesgo con rendimientos decrecientes (nunca es gratis). Las muy por debajo de tu nivel son <b>rutina</b> y pagan menos: conviene variar de dominio y buscar retos. Las difíciles cuestan más energía y dan más 🎁 botín.${ocupado ? ' <b>Tu mecenas ya está en una misión.</b>' : ''}</div>
           ${hayBonos() ? `<div class="hacp-shop-note">Bonos de los pabellones de la finca: ${bonosTexto()}</div>` : ''}
           <div class="hacp-board-list">${rows || '<div class="hacp-inv-note">No hay misiones disponibles.</div>'}</div>
         </div>`;

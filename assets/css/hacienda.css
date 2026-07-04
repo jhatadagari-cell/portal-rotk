@@ -277,6 +277,7 @@ html.hacp-pseudofs, html.hacp-pseudofs body{ overflow:hidden; }
 .hacp-mis-main{ flex:1; min-width:0; }
 .hacp-mis-name{ font:700 12.5px/1.2 'Noto Sans SC',sans-serif; color:var(--parch); }
 .hacp-mis-dif{ font-weight:400; color:var(--parch2); font-size:10.5px; }
+.hacp-mis-rutina{ font:700 8.5px 'Cinzel Decorative',serif; letter-spacing:.04em; text-transform:uppercase; color:#b9a888; background:rgba(120,110,90,.18); border:1px solid rgba(160,150,120,.35); border-radius:5px; padding:1px 5px; margin-left:4px; vertical-align:1px; }
 .hacp-mis-meta{ font-size:10.5px; color:var(--parch2); margin-top:2px; }
 .hacp-mis-risk{ flex:0 0 auto; font:700 11px 'Noto Sans SC',sans-serif; font-variant-numeric:tabular-nums; white-space:nowrap; }
 .hacp-mis-risk.r-baja{ color:#7fc9a0; } .hacp-mis-risk.r-media{ color:#e0b85a; } .hacp-mis-risk.r-alta{ color:#e0907a; }
