@@ -41,12 +41,17 @@
     // (null si ya está en el máximo) → barra superpuesta en el visor iso.
     const ledger = window.HacPuntos ? HacPuntos.totalHacienda(h.id) : 0;
     const prest  = HacCalc.prestigio(h, ledger);
-    const prog   = HacCalc.progresoHacia(prest, tInfo);
+    // El progreso se mide contra el tier REAL del prestigio (no el nivel confirmado
+    // de la finca, que es un trinquete y puede ir por detrás). Si anclásemos al nivel
+    // confirmado, al cruzar el umbral siguiente antes de confirmarlo la barra se
+    // quedaría clavada al 100% con «faltan 0».
+    const prestTier = HacCalc.tierDePuntos(prest);
+    const prog   = HacCalc.progresoHacia(prest, prestTier);
     const prestBar = `
       <div class="hacp-iso-prestige" aria-hidden="true">
-        <span class="hacp-isop-zh">${esc(tInfo.zh)}</span>
+        <span class="hacp-isop-zh">${esc(prestTier.zh)}</span>
         <div class="hacp-isop-body">
-          <div class="hacp-isop-top"><b>${prest.toLocaleString('es')}</b> prestigio · <span>Nivel ${tier} · ${esc(tInfo.nombre)}</span></div>
+          <div class="hacp-isop-top"><b>${prest.toLocaleString('es')}</b> prestigio · <span>Nivel ${prestTier.nivel} · ${esc(prestTier.nombre)}</span></div>
           <div class="hacp-isop-bar"><span style="width:${prog ? prog.pct : 100}%;background:${esc(color)}"></span></div>
           <div class="hacp-isop-lbl">${prog
             ? `Faltan <b>${prog.faltan.toLocaleString('es')}</b> para ${esc(prog.sig.zh)} ${esc(prog.sig.nombre)}`
@@ -879,7 +884,27 @@
       if (sucOpenIdx !== ev.i) openSucCard(o, mis, ev, dl);
     }
 
-    const refresh = () => { renderList(); refreshCharPanel(); syncCaballosFolk(); };
+    // Repinta la caja de prestigio in situ (el prestigio se carga async tras el
+    // primer render y crece al completar misiones: hay que refrescarla, no dejarla
+    // clavada con el valor del primer pintado).
+    function updatePrestige() {
+      const box = host.querySelector('.hacp-iso-prestige'); if (!box) return;
+      const led = window.HacPuntos ? HacPuntos.totalHacienda(h.id) : 0;
+      const pr = HacCalc.prestigio(h, led);
+      const pT = HacCalc.tierDePuntos(pr);
+      const pg = HacCalc.progresoHacia(pr, pT);
+      const zh = box.querySelector('.hacp-isop-zh');
+      const top = box.querySelector('.hacp-isop-top');
+      const span = box.querySelector('.hacp-isop-bar span');
+      const lbl = box.querySelector('.hacp-isop-lbl');
+      if (zh) zh.textContent = pT.zh || '';
+      if (top) top.innerHTML = `<b>${pr.toLocaleString('es')}</b> prestigio · <span>Nivel ${pT.nivel} · ${esc(pT.nombre)}</span>`;
+      if (span) span.style.width = (pg ? pg.pct : 100) + '%';
+      if (lbl) lbl.innerHTML = pg
+        ? `Faltan <b>${pg.faltan.toLocaleString('es')}</b> para ${esc(pg.sig.zh)} ${esc(pg.sig.nombre)}`
+        : '★ Nivel máximo alcanzado';
+    }
+    const refresh = () => { renderList(); refreshCharPanel(); syncCaballosFolk(); updatePrestige(); };
     let lastOrdersSig = '';
 
     function applyOrders() {
