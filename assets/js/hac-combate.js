@@ -87,23 +87,27 @@ const HacCombate = (function () {
   // ── Retrato (cara) para la columna de orden de turnos ────────────────────────
   // Recorta la cabeza del sprite real (webp) si está cargado; si no, del pixel-art.
   // Se cachea en u._face solo cuando la fuente es estable (enemigo o sheet lista).
+  function mkFace(S, pixel, draw) {
+    const c = document.createElement('canvas'); c.width = S; c.height = S; const g = c.getContext('2d');
+    g.fillStyle = '#2a1d10'; g.fillRect(0, 0, S, S);
+    g.imageSmoothingEnabled = !pixel; if (!pixel) g.imageSmoothingQuality = 'high';
+    draw(g, S); return c.toDataURL();
+  }
   function faceURL(u) {
     if (u._face) return u._face;
-    const S = 128, c = document.createElement('canvas'); c.width = S; c.height = S; const g = c.getContext('2d');
-    g.fillStyle = '#2a1d10'; g.fillRect(0, 0, S, S);
     if (u.foe) {
       const im = turbante('idle'), sz = 30, sx = (48 - sz) / 2, sy = 5;
-      g.imageSmoothingEnabled = false; g.drawImage(im, sx, sy, sz, sz, 0, 0, S, S);
-      return (u._face = c.toDataURL());
+      return (u._face = mkFace(128, true, (g, S) => g.drawImage(im, sx, sy, sz, sz, 0, 0, S, S)));
     }
     if (sheetReady(u)) {
       const A = SHEETS[u.sprite], topY = A.feetY - A.charH, sz = A.charH * 0.46;
       const cy = topY + A.charH * (A.headY != null ? A.headY : 0.26);   // centro de la cara
-      g.imageSmoothingEnabled = true; g.drawImage(A.img, A.pivotX - sz / 2, cy - sz / 2, sz, sz, 0, 0, S, S);
-      return (u._face = c.toDataURL());
+      // Lienzo a resolución NATIVA del recorte (evita el doble reescalado que emborronaba).
+      const S = Math.round(sz);
+      return (u._face = mkFace(S, false, (g, s) => g.drawImage(A.img, A.pivotX - sz / 2, cy - sz / 2, sz, sz, 0, 0, s, s)));
     }
     const fr = (u._frames ? u._frames : frames(u))[0];
-    if (fr && fr.width) { const sz = fr.width * 0.62; g.imageSmoothingEnabled = false; g.drawImage(fr, (fr.width - sz) / 2, fr.height * 0.02, sz, sz, 0, 0, S, S); return c.toDataURL(); }
+    if (fr && fr.width) { const sz = fr.width * 0.62; return mkFace(Math.round(sz), true, (g, s) => g.drawImage(fr, (fr.width - sz) / 2, fr.height * 0.02, sz, sz, 0, 0, s, s)); }
     return null;
   }
 

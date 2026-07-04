@@ -67,21 +67,26 @@
   .hcb-foe-hp{ font-size:11px; color:var(--paper); opacity:.85; margin-top:4px; font-variant-numeric:tabular-nums; }
   .hcb-break{ color:var(--bronze-hi); font-weight:700; }
 
-  /* ── Orden de turnos (columna derecha): retratos con vida debajo; el que actúa crece ── */
-  .hcb-order{ position:absolute; right:14px; top:50%; transform:translateY(-50%); z-index:6;
-    display:flex; flex-direction:column; align-items:center; gap:12px; pointer-events:none; }
-  .hcb-ord{ display:flex; flex-direction:column; align-items:center; gap:3px; width:60px;
-    opacity:.92; transition:transform .22s cubic-bezier(.34,1.4,.5,1), opacity .22s; }
-  .hcb-ord.cur{ transform:scale(1.24); opacity:1; }
+  /* ── Orden de turnos (columna derecha): retratos ensartados en un hilo vertical ── */
+  .hcb-order{ position:absolute; right:16px; top:50%; transform:translateY(-50%); z-index:6;
+    display:flex; flex-direction:column; align-items:center; gap:16px; pointer-events:none; }
+  /* Hilo/varilla que atraviesa los retratos */
+  .hcb-order::before{ content:''; position:absolute; top:18px; bottom:18px; left:50%; width:3px; transform:translateX(-50%);
+    background:linear-gradient(180deg, transparent, var(--bronze-d) 6%, var(--bronze) 50%, var(--bronze-d) 94%, transparent);
+    box-shadow:0 0 5px rgba(0,0,0,.6); border-radius:2px; z-index:0; }
+  .hcb-ord{ position:relative; z-index:1; display:flex; flex-direction:column; align-items:center; gap:3px; width:64px;
+    opacity:.9; transition:transform .22s cubic-bezier(.34,1.4,.5,1), opacity .22s; }
+  .hcb-ord.cur{ transform:scale(1.15); opacity:1; z-index:2; }
   .hcb-ord.dead{ opacity:.4; filter:grayscale(.65) sepia(.15); }
   .hcb-face{ width:50px; height:50px; border-radius:50%; object-fit:cover; display:grid; place-items:center;
     background:var(--wood-face); color:var(--paper); font:700 20px 'Noto Serif SC',serif;
-    border:2px solid var(--wood2); box-shadow:inset 0 0 0 2px var(--bronze), 0 3px 9px rgba(0,0,0,.55); }
-  .hcb-ord.cur .hcb-face{ border-color:var(--bronze-hi); box-shadow:inset 0 0 0 2px var(--bronze-hi), 0 0 0 3px rgba(168,52,36,.5), 0 5px 16px rgba(168,52,36,.5); }
+    border:2px solid var(--wood2); box-shadow:inset 0 0 0 2px var(--bronze), 0 3px 9px rgba(0,0,0,.55);
+    transition:width .22s cubic-bezier(.34,1.4,.5,1), height .22s cubic-bezier(.34,1.4,.5,1); }
+  .hcb-ord.cur .hcb-face{ width:78px; height:78px; border-color:var(--bronze-hi); box-shadow:inset 0 0 0 2px var(--bronze-hi), 0 0 0 3px rgba(168,52,36,.55), 0 6px 18px rgba(168,52,36,.55); }
   .hcb-ord.foe .hcb-face{ border-color:var(--cinnabar-d); box-shadow:inset 0 0 0 2px var(--cinnabar-s), 0 3px 9px rgba(0,0,0,.55); }
-  .hcb-ord.foe.cur .hcb-face{ box-shadow:inset 0 0 0 2px var(--bronze-hi), 0 0 0 3px rgba(168,52,36,.6), 0 5px 16px rgba(168,52,36,.6); }
+  .hcb-ord.foe.cur .hcb-face{ box-shadow:inset 0 0 0 2px var(--bronze-hi), 0 0 0 3px rgba(168,52,36,.6), 0 6px 18px rgba(168,52,36,.6); }
   .hcb-ord-hp{ width:52px; height:6px; }
-  .hcb-ord-n{ font:700 8.5px 'Noto Serif SC',serif; color:var(--paper); opacity:.9; font-variant-numeric:tabular-nums; text-shadow:0 1px 2px #000; }
+  .hcb-ord-n{ font:700 8.5px 'Noto Serif SC',serif; color:var(--paper); opacity:.9; font-variant-numeric:tabular-nums; text-shadow:0 1px 2px #000, 0 0 4px #000; }
   .hcb-ord-sp{ width:38px; height:3px; }
   .hcb-ord-bp{ display:flex; gap:3px; margin-top:1px; }
   .hcb-ord-bp .hcb-bp{ width:6px; height:6px; }
@@ -107,19 +112,33 @@
     background:linear-gradient(90deg,var(--wood),var(--wood2) 45%,var(--wood)); box-shadow:inset 0 0 0 1px var(--bronze-d), 0 4px 9px rgba(0,0,0,.5); }
   .hcb-menu::before{ left:-10px; } .hcb-menu::after{ right:-10px; }
   .hcb-menu.waiting{ filter:saturate(.85) brightness(.97); }
-  /* Flotando junto a quien actúa (escritorio): globo compacto con cola apuntando al personaje */
-  .hcb-menu.floating{ width:300px; max-width:38vw; z-index:9; padding:11px 13px; border-radius:6px;
-    box-shadow:var(--frame), 0 12px 30px rgba(0,0,0,.5);
+  /* Flotando junto a quien actúa (escritorio): panel OSCURO translúcido (madera lacada),
+     que se funde con la escena en vez de destacar como una caja beige. */
+  .hcb-menu.floating{ width:296px; max-width:38vw; z-index:9; padding:11px 13px; border-radius:7px;
+    background:linear-gradient(158deg, rgba(38,26,13,.86), rgba(24,16,8,.9)); color:var(--paper);
+    border:1px solid var(--bronze-d); -webkit-backdrop-filter:blur(7px); backdrop-filter:blur(7px);
+    box-shadow:inset 0 0 0 1px rgba(230,200,138,.12), 0 14px 34px rgba(0,0,0,.55);
     transition:left .26s cubic-bezier(.4,.9,.3,1), top .26s cubic-bezier(.4,.9,.3,1); }
   .hcb-menu.floating::before, .hcb-menu.floating::after{ display:none; }   /* sin rodillos al flotar */
   .hcb-menu.floating .hcb-boost-hint{ display:none; }
+  .hcb-menu.floating .hcb-menu-who{ color:var(--paper); border-bottom-color:rgba(230,200,138,.22); }
+  .hcb-menu.floating .hcb-menu-who b{ color:var(--bronze-hi); }
+  .hcb-menu.floating .hcb-boost-lbl{ color:rgba(230,200,138,.75); }
+  .hcb-menu.floating .hcb-menu-wait{ color:var(--paper); } .hcb-menu.floating .hcb-menu-wait b{ color:var(--bronze-hi); }
+  /* Acciones sobre fondo oscuro: tablillas tenues con lomo de color */
+  .hcb-menu.floating .hcb-act{ background:rgba(232,215,172,.07); color:var(--paper);
+    border:1px solid rgba(169,128,63,.45); border-left:4px solid var(--bronze); box-shadow:none; }
+  .hcb-menu.floating .hcb-act small{ color:rgba(230,215,180,.7); }
+  .hcb-menu.floating .hcb-act:hover:not(.dis){ background:rgba(232,215,172,.15); box-shadow:0 3px 8px rgba(0,0,0,.35); }
+  .hcb-menu.floating .hcb-act.atk{ border-left-color:var(--cinnabar-s); } .hcb-menu.floating .hcb-act.atk:hover{ background:rgba(168,52,36,.22); }
+  .hcb-menu.floating .hcb-act.def{ border-left-color:var(--jade); }
   .hcb-menu.floating.waiting{ width:auto; min-width:170px; text-align:center; }
-  /* Cola (triángulo) que conecta el globo con el personaje */
+  /* Cola (triángulo) que conecta el panel con el personaje */
   .hcb-tail{ position:absolute; bottom:-8px; width:17px; height:17px; transform:translateX(-50%) rotate(45deg);
-    background:var(--paper2); border-right:1px solid var(--bronze-d); border-bottom:1px solid var(--bronze-d);
-    box-shadow:3px 3px 6px rgba(0,0,0,.28); z-index:-1; }
+    background:rgba(28,19,9,.9); border-right:1px solid var(--bronze-d); border-bottom:1px solid var(--bronze-d);
+    box-shadow:3px 3px 6px rgba(0,0,0,.35); z-index:-1; }
   .hcb-tail.up{ bottom:auto; top:-8px; border-right:none; border-bottom:none;
-    border-left:1px solid var(--bronze-d); border-top:1px solid var(--bronze-d); box-shadow:-3px -3px 6px rgba(0,0,0,.22); }
+    border-left:1px solid var(--bronze-d); border-top:1px solid var(--bronze-d); box-shadow:-3px -3px 6px rgba(0,0,0,.3); }
   .hcb-menu-who{ font:400 12px 'Noto Serif SC',serif; color:var(--ink2); margin-bottom:9px; padding-bottom:7px; border-bottom:1px solid rgba(106,74,36,.4); }
   .hcb-menu-who b{ color:var(--cinnabar-d); font-weight:700; }
   .hcb-menu-wait{ text-align:center; color:var(--ink2); padding:14px 0; font:400 13px 'Noto Serif SC',serif; } .hcb-menu-wait b{ color:var(--cinnabar-d); }
@@ -195,7 +214,7 @@
   <div id="hcb-root"></div>
   <script src="assets/js/hac-util.js?v=1"></script>
   <script src="assets/js/hac-char.js?v=17"></script>
-  <script src="assets/js/hac-combate.js?v=19"></script>
+  <script src="assets/js/hac-combate.js?v=20"></script>
   <script>HacCombate.init(document.getElementById('hcb-root'));</script>
 </body>
 </html>
