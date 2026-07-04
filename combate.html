@@ -67,17 +67,26 @@
   .hcb-foe-hp{ font-size:11px; color:var(--paper); opacity:.85; margin-top:4px; font-variant-numeric:tabular-nums; }
   .hcb-break{ color:var(--bronze-hi); font-weight:700; }
 
-  /* ── Orden de turnos (arriba-derecha): tarjas de madera colgadas ── */
-  .hcb-timeline{ position:absolute; top:16px; right:18px; z-index:6; text-align:right; }
-  .hcb-tl-lbl{ font:700 9.5px 'Noto Serif SC',serif; letter-spacing:.1em; text-transform:uppercase; color:var(--paper); opacity:.9; margin-bottom:7px; text-shadow:0 1px 3px #000; }
-  .hcb-tl-row{ display:flex; gap:7px; align-items:center; justify-content:flex-end; flex-wrap:wrap; max-width:60vw; }
-  .hcb-tl-chip{ width:34px; height:38px; border-radius:3px; display:grid; place-items:center;
-    background:var(--wood-face); color:var(--paper); box-shadow:inset 0 0 0 1px var(--bronze), 0 0 0 2px var(--wood), 0 3px 8px rgba(0,0,0,.5);
-    font-family:'Noto Serif SC',serif; font-size:16px; transition:transform .15s, box-shadow .15s; }
-  .hcb-tl-chip.foe{ background:repeating-linear-gradient(91deg,rgba(0,0,0,.18) 0 1px,transparent 1px 6px),linear-gradient(158deg,#5a2018,#3a130d); color:#f0c0b6; }
-  .hcb-tl-chip.cur{ transform:translateY(3px) scale(1.1); box-shadow:inset 0 0 0 1px var(--bronze-hi), 0 0 0 2px var(--wood), 0 5px 14px rgba(168,52,36,.5); color:var(--bronze-hi); }
+  /* ── Orden de turnos (columna derecha): retratos con vida debajo; el que actúa crece ── */
+  .hcb-order{ position:absolute; right:14px; top:50%; transform:translateY(-50%); z-index:6;
+    display:flex; flex-direction:column; align-items:center; gap:12px; pointer-events:none; }
+  .hcb-ord{ display:flex; flex-direction:column; align-items:center; gap:3px; width:60px;
+    opacity:.92; transition:transform .22s cubic-bezier(.34,1.4,.5,1), opacity .22s; }
+  .hcb-ord.cur{ transform:scale(1.24); opacity:1; }
+  .hcb-ord.dead{ opacity:.4; filter:grayscale(.65) sepia(.15); }
+  .hcb-face{ width:50px; height:50px; border-radius:50%; object-fit:cover; display:grid; place-items:center;
+    background:var(--wood-face); color:var(--paper); font:700 20px 'Noto Serif SC',serif;
+    border:2px solid var(--wood2); box-shadow:inset 0 0 0 2px var(--bronze), 0 3px 9px rgba(0,0,0,.55); }
+  .hcb-ord.cur .hcb-face{ border-color:var(--bronze-hi); box-shadow:inset 0 0 0 2px var(--bronze-hi), 0 0 0 3px rgba(168,52,36,.5), 0 5px 16px rgba(168,52,36,.5); }
+  .hcb-ord.foe .hcb-face{ border-color:var(--cinnabar-d); box-shadow:inset 0 0 0 2px var(--cinnabar-s), 0 3px 9px rgba(0,0,0,.55); }
+  .hcb-ord.foe.cur .hcb-face{ box-shadow:inset 0 0 0 2px var(--bronze-hi), 0 0 0 3px rgba(168,52,36,.6), 0 5px 16px rgba(168,52,36,.6); }
+  .hcb-ord-hp{ width:52px; height:6px; }
+  .hcb-ord-n{ font:700 8.5px 'Noto Serif SC',serif; color:var(--paper); opacity:.9; font-variant-numeric:tabular-nums; text-shadow:0 1px 2px #000; }
+  .hcb-ord-sp{ width:38px; height:3px; }
+  .hcb-ord-bp{ display:flex; gap:3px; margin-top:1px; }
+  .hcb-ord-bp .hcb-bp{ width:6px; height:6px; }
 
-  /* ── HUD inferior integrado (registro + banda + menú) ── */
+  /* ── HUD inferior integrado (registro + menú) ── */
   .hcb-hud{ position:absolute; left:0; right:0; bottom:0; z-index:7; padding:0 18px 18px;
     display:flex; flex-direction:column; gap:10px; pointer-events:none;
     background:linear-gradient(0deg,rgba(6,5,2,.62),rgba(6,5,2,0)); padding-top:44px; }
@@ -86,24 +95,7 @@
     background:radial-gradient(60% 100% at 50% 50%, rgba(20,14,6,.62), rgba(20,14,6,0) 78%);
     text-shadow:0 1px 3px #000, 0 0 10px rgba(0,0,0,.7); }
   .hcb-log-l b{ color:var(--bronze-hi); }
-  .hcb-hud-row{ display:flex; align-items:flex-end; justify-content:space-between; gap:14px; }
-
-  /* Placas de la banda (abajo-izquierda): tablillas de nombre en pergamino */
-  .hcb-party{ display:flex; gap:10px; align-items:flex-end; flex:1 1 auto; min-width:0; }
-  .hcb-pc{ flex:1 1 0; min-width:0; max-width:190px; pointer-events:auto;
-    background:var(--paper-face); color:var(--ink); border-radius:4px; padding:8px 10px;
-    box-shadow:var(--frame); transition:transform .16s, box-shadow .16s; }
-  .hcb-pc.cur{ transform:translateY(-7px); box-shadow:var(--frame), 0 0 0 6px rgba(168,52,36,.22), 0 0 18px rgba(168,52,36,.35); }
-  .hcb-pc.cur .hcb-pc-h{ color:var(--cinnabar-d); }
-  .hcb-pc.dead{ opacity:.5; filter:grayscale(.55) sepia(.2); }
-  .hcb-pc-h{ font:700 12.5px 'Noto Serif SC',serif; color:var(--ink); margin-bottom:5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .hcb-pc-rol{ font-weight:400; font-size:9.5px; color:var(--ink2); }
-  .hcb-guard{ font-size:9.5px; color:var(--jade); font-weight:700; }
-  .hcb-pc-row{ display:flex; align-items:center; gap:6px; margin:3px 0; }
-  .hcb-pc-k{ font:700 8.5px 'Noto Serif SC',serif; color:var(--ink2); width:16px; }
-  .hcb-pc-row .hcb-bar{ flex:1; height:8px; }
-  .hcb-pc-v{ font-size:9.5px; color:var(--ink2); font-variant-numeric:tabular-nums; min-width:48px; text-align:right; }
-  .hcb-pc-bp{ font:700 9px 'Noto Serif SC',serif; letter-spacing:.04em; color:var(--ink2); margin-top:5px; display:flex; align-items:center; gap:4px; }
+  /* BP (fichas) — usados por la columna de orden */
   .hcb-bp{ width:9px; height:9px; border-radius:50%; background:rgba(60,42,20,.25); box-shadow:inset 0 0 0 1px var(--bronze-d); }
   .hcb-bp.on{ background:radial-gradient(circle at 35% 30%, var(--bronze-hi), var(--bronze) 70%); box-shadow:0 0 5px rgba(181,138,62,.7), inset 0 0 0 1px var(--bronze-d); }
 
@@ -115,10 +107,19 @@
     background:linear-gradient(90deg,var(--wood),var(--wood2) 45%,var(--wood)); box-shadow:inset 0 0 0 1px var(--bronze-d), 0 4px 9px rgba(0,0,0,.5); }
   .hcb-menu::before{ left:-10px; } .hcb-menu::after{ right:-10px; }
   .hcb-menu.waiting{ filter:saturate(.85) brightness(.97); }
-  /* Flotando junto a quien actúa (escritorio): compacto y se desliza al siguiente actor */
-  .hcb-menu.floating{ width:340px; max-width:44vw; z-index:9;
-    transition:left .28s cubic-bezier(.4,.9,.3,1), top .28s cubic-bezier(.4,.9,.3,1); }
-  .hcb-menu.floating.waiting{ width:auto; min-width:180px; }
+  /* Flotando junto a quien actúa (escritorio): globo compacto con cola apuntando al personaje */
+  .hcb-menu.floating{ width:300px; max-width:38vw; z-index:9; padding:11px 13px; border-radius:6px;
+    box-shadow:var(--frame), 0 12px 30px rgba(0,0,0,.5);
+    transition:left .26s cubic-bezier(.4,.9,.3,1), top .26s cubic-bezier(.4,.9,.3,1); }
+  .hcb-menu.floating::before, .hcb-menu.floating::after{ display:none; }   /* sin rodillos al flotar */
+  .hcb-menu.floating .hcb-boost-hint{ display:none; }
+  .hcb-menu.floating.waiting{ width:auto; min-width:170px; text-align:center; }
+  /* Cola (triángulo) que conecta el globo con el personaje */
+  .hcb-tail{ position:absolute; bottom:-8px; width:17px; height:17px; transform:translateX(-50%) rotate(45deg);
+    background:var(--paper2); border-right:1px solid var(--bronze-d); border-bottom:1px solid var(--bronze-d);
+    box-shadow:3px 3px 6px rgba(0,0,0,.28); z-index:-1; }
+  .hcb-tail.up{ bottom:auto; top:-8px; border-right:none; border-bottom:none;
+    border-left:1px solid var(--bronze-d); border-top:1px solid var(--bronze-d); box-shadow:-3px -3px 6px rgba(0,0,0,.22); }
   .hcb-menu-who{ font:400 12px 'Noto Serif SC',serif; color:var(--ink2); margin-bottom:9px; padding-bottom:7px; border-bottom:1px solid rgba(106,74,36,.4); }
   .hcb-menu-who b{ color:var(--cinnabar-d); font-weight:700; }
   .hcb-menu-wait{ text-align:center; color:var(--ink2); padding:14px 0; font:400 13px 'Noto Serif SC',serif; } .hcb-menu-wait b{ color:var(--cinnabar-d); }
@@ -163,8 +164,7 @@
   @media(max-aspect-ratio:87/100){
     .hcb-hud{ padding:24px 10px calc(10px + env(safe-area-inset-bottom)); gap:6px; }
     .hcb-log{ width:96%; font-size:11.5px; line-height:1.4; min-height:16px; }
-    .hcb-hud-row{ flex-direction:column; align-items:stretch; gap:7px; }
-    .hcb-menu{ width:100%; order:1; padding:9px 10px; border-radius:12px; }
+    .hcb-menu{ width:100%; padding:9px 10px; border-radius:12px; }
     .hcb-menu-who{ margin-bottom:6px; font-size:11.5px; }
     .hcb-boost{ margin-bottom:7px; gap:5px; }
     .hcb-boost-b{ min-width:30px; padding:4px 7px; }
@@ -176,23 +176,18 @@
     .hcb-act-tx{ display:none; }
     .hcb-act-ic{ display:block; font:700 26px 'Noto Serif SC',serif; color:var(--ink); line-height:1; }
 
-    /* Banda: tira compacta de 3 fichas bajo el menú */
-    .hcb-party{ order:2; gap:6px; }
-    .hcb-pc{ max-width:none; padding:5px 7px; border-radius:9px; }
-    .hcb-pc.cur{ transform:translateY(-3px); }
-    .hcb-pc-h{ font-size:10.5px; margin-bottom:3px; }
-    .hcb-pc-rol,.hcb-guard{ display:none; }
-    .hcb-pc-row{ margin:2px 0; gap:4px; }
-    .hcb-pc-row .hcb-bar{ height:6px; }
-    .hcb-pc-k{ font-size:8px; width:13px; }
-    .hcb-pc-v{ font-size:9px; min-width:40px; }
-    .hcb-pc-bp{ display:none; }
+    /* Columna de orden: caras más pequeñas pegadas a la derecha (solo vida) */
+    .hcb-order{ right:6px; gap:8px; }
+    .hcb-ord{ width:44px; gap:2px; }
+    .hcb-face{ width:38px; height:38px; font-size:16px; }
+    .hcb-ord.cur{ transform:scale(1.2); }
+    .hcb-ord-hp{ width:40px; height:5px; }
+    .hcb-ord-n{ font-size:8px; }
+    .hcb-ord-sp, .hcb-ord-bp{ display:none; }
 
-    /* Cabecera del enemigo y orden de turno, más contenidos arriba */
+    /* Cabecera del enemigo, más contenida arriba */
     .hcb-foehud{ width:min(300px,66vw); top:10px; left:12px; }
     .hcb-foe-top{ font-size:14px; }
-    .hcb-timeline{ top:10px; right:12px; }
-    .hcb-tl-chip{ width:30px; height:30px; border-radius:8px; font-size:14px; }
   }
 </style>
 </head>
@@ -200,7 +195,7 @@
   <div id="hcb-root"></div>
   <script src="assets/js/hac-util.js?v=1"></script>
   <script src="assets/js/hac-char.js?v=17"></script>
-  <script src="assets/js/hac-combate.js?v=18"></script>
+  <script src="assets/js/hac-combate.js?v=19"></script>
   <script>HacCombate.init(document.getElementById('hcb-root'));</script>
 </body>
 </html>

@@ -48,7 +48,7 @@ const HacCombate = (function () {
 
   // ── Estado ─────────────────────────────────────────────────────────────────
   let root = null, party = [], enemy = null, orden = [], idx = 0, ronda = 1, busy = false, over = false, sel = { boost: 0 };
-  let elScene, elParty, elMenu, elLog, elTimeline, elHud, elTip, logLines = [];
+  let elScene, elOrder, elMenu, elLog, elHud, elTip, logLines = [];
   let tipTimer = null, tipHeld = false;   // tap-and-hold (móvil): mostrar descripción/coste de una acción
   let hudReserve = 0;   // alto del HUD inferior (px) reservado en vertical para no tapar a la banda
   // Canvas / animación
@@ -59,9 +59,10 @@ const HacCombate = (function () {
   const SHEETS = {
     // play = nº de frames a reproducir (recorta la recuperación frontal sobrante); release = frame en el que
     // sale el proyectil; muzzle = [frac hacia el enemigo, frac de altura] desde los pies para el origen del disparo.
-    guanyu:     { src: 'assets/img/guanyu-atk.webp?v=1',     img: null, cols: 8, count: 61, cellW: 361, cellH: 300, pivotX: 233, feetY: 285, charH: 199, thf: 0.300 },
-    zhugeliang: { src: 'assets/img/zhugeliang-atk.webp?v=1', img: null, cols: 8, count: 61, cellW: 392, cellH: 300, pivotX: 245, feetY: 293, charH: 275, thf: 0.226, muzzle: [0.42, 0.72] },
-    huangzhong: { src: 'assets/img/huangzhong-atk.webp?v=1', img: null, cols: 8, count: 61, cellW: 427, cellH: 300, pivotX: 293, feetY: 298, charH: 203, thf: 0.236, play: 54, release: 48, muzzle: [0.34, 0.72] },
+    // headY = fracción de charH (desde arriba) donde está el centro de la CARA (para el retrato).
+    guanyu:     { src: 'assets/img/guanyu-atk.webp?v=1',     img: null, cols: 8, count: 61, cellW: 361, cellH: 300, pivotX: 233, feetY: 285, charH: 199, thf: 0.300, headY: 0.33 },
+    zhugeliang: { src: 'assets/img/zhugeliang-atk.webp?v=1', img: null, cols: 8, count: 61, cellW: 392, cellH: 300, pivotX: 245, feetY: 293, charH: 275, thf: 0.226, headY: 0.19, muzzle: [0.42, 0.72] },
+    huangzhong: { src: 'assets/img/huangzhong-atk.webp?v=1', img: null, cols: 8, count: 61, cellW: 427, cellH: 300, pivotX: 293, feetY: 298, charH: 203, thf: 0.236, headY: 0.25, play: 54, release: 48, muzzle: [0.34, 0.72] },
   };
   const sheetReady = (u) => !u.foe && u.sprite && SHEETS[u.sprite] && SHEETS[u.sprite].img && SHEETS[u.sprite].img.complete && SHEETS[u.sprite].img.naturalWidth;
   const tweens = [], floaters = [], parts = [], partsF = [], projs = [], slashes = [], auras = [], blooms = [];
@@ -81,6 +82,29 @@ const HacCombate = (function () {
     const arr = [];
     for (let f = 0; f < 4; f++) { const c = document.createElement('canvas'); if (window.HacChar) HacChar.draw(c, { aptitud: u.aptitud, aspecto: u.aspecto, dir: dir, frame: f, scale: 4 }); arr.push(c); }
     u._frames = arr; return arr;
+  }
+
+  // ── Retrato (cara) para la columna de orden de turnos ────────────────────────
+  // Recorta la cabeza del sprite real (webp) si está cargado; si no, del pixel-art.
+  // Se cachea en u._face solo cuando la fuente es estable (enemigo o sheet lista).
+  function faceURL(u) {
+    if (u._face) return u._face;
+    const S = 128, c = document.createElement('canvas'); c.width = S; c.height = S; const g = c.getContext('2d');
+    g.fillStyle = '#2a1d10'; g.fillRect(0, 0, S, S);
+    if (u.foe) {
+      const im = turbante('idle'), sz = 30, sx = (48 - sz) / 2, sy = 5;
+      g.imageSmoothingEnabled = false; g.drawImage(im, sx, sy, sz, sz, 0, 0, S, S);
+      return (u._face = c.toDataURL());
+    }
+    if (sheetReady(u)) {
+      const A = SHEETS[u.sprite], topY = A.feetY - A.charH, sz = A.charH * 0.46;
+      const cy = topY + A.charH * (A.headY != null ? A.headY : 0.26);   // centro de la cara
+      g.imageSmoothingEnabled = true; g.drawImage(A.img, A.pivotX - sz / 2, cy - sz / 2, sz, sz, 0, 0, S, S);
+      return (u._face = c.toDataURL());
+    }
+    const fr = (u._frames ? u._frames : frames(u))[0];
+    if (fr && fr.width) { const sz = fr.width * 0.62; g.imageSmoothingEnabled = false; g.drawImage(fr, (fr.width - sz) / 2, fr.height * 0.02, sz, sz, 0, 0, S, S); return c.toDataURL(); }
+    return null;
   }
 
   // ── Enemigo BESPOKE: general Turbante Amarillo (pixel-art propio) ────────────
@@ -377,6 +401,16 @@ const HacCombate = (function () {
     drawParts(parts, dt);
     // unidades: enemigo primero (fondo), luego aliados
     drawUnit(enemy); party.forEach(drawUnit);
+    // flecha de turno: chevron que bota sobre quien actúa (oculto durante su acción)
+    if (!over && !busy) { const u = actual(); if (u && alive(u)) {
+      const bob = Math.sin(tt * 0.006) * 5, s = 13 * dpr;
+      const ax = ux(u) * dpr, ay = (uy(u) - u.th - 24 + bob) * dpr;
+      ctx.save(); ctx.fillStyle = u.foe ? '#e0554a' : '#f2d489';
+      ctx.strokeStyle = 'rgba(38,24,10,.85)'; ctx.lineWidth = 2 * dpr; ctx.lineJoin = 'round';
+      ctx.shadowColor = 'rgba(0,0,0,.55)'; ctx.shadowBlur = 6 * dpr; ctx.shadowOffsetY = 2 * dpr;
+      ctx.beginPath(); ctx.moveTo(ax - s, ay - s * 0.72); ctx.lineTo(ax + s, ay - s * 0.72); ctx.lineTo(ax, ay + s * 0.62); ctx.closePath();
+      ctx.fill(); ctx.stroke(); ctx.restore();
+    } }
     // partículas por delante (magia elemental que envuelve al objetivo)
     drawParts(partsF, dt);
     // taiji curativo (yin-yang que gira junto a la mano del estratega)
@@ -499,7 +533,7 @@ const HacCombate = (function () {
         target.hp = Math.min(target.maxHp, target.hp + heal); target.flash = 0.7;
         // Motas curativas: del taiji fluyen hacia el aliado herido.
         for (let m = 0; m < 6; m++) wait(50 * m, () => projs.push({ t0: now(), dur: 300, x0: hx + rnd(-6, 6), y0: hy + rnd(-6, 6), x1: ux(target) + rnd(-10, 10), y1: uy(target) - target.th * (0.4 + Math.random() * 0.4), kind: 'mote', col: '#9be08a', onHit: () => burst(ux(target), uy(target) - target.th * 0.5, 'rgba(150,220,120,', 3, 0.8) }));
-        burst(ux(target), uy(target) - target.th * 0.5, 'rgba(140,210,110,', 16, 1.4); floater(ux(target), uy(target) - target.th, '+' + heal, '#8ed16f', true); log(`<b>${u.name}</b> cura a <b>${target.name}</b> (+${heal} PV).`); renderParty();
+        burst(ux(target), uy(target) - target.th * 0.5, 'rgba(140,210,110,', 16, 1.4); floater(ux(target), uy(target) - target.th, '+' + heal, '#8ed16f', true); log(`<b>${u.name}</b> cura a <b>${target.name}</b> (+${heal} PV).`); renderOrder();
       });
       return finTurno(anim ? applyAt + 520 : 760);
     }
@@ -511,7 +545,7 @@ const HacCombate = (function () {
     if (cat === 'magic') u._cast = (t2 ? t2.col : '#ff8a3c') + '99';
     let totalDmg = 0, rompio = false;
     const doHit = () => { const r = golpeUno(action.type, action.power); totalDmg += r.dmg; if (r.broke) rompio = true; impactoEnemigo(r); if (cat === 'melee') slash(ux(enemy), uy(enemy) - enemy.th * 0.55, r.esDebil ? 'rgba(255,210,110,' : 'rgba(255,255,255,'); };
-    const resumen = () => { log(`<b>${u.name}</b> · ${action.name} 〔${t2 ? t2.zh : '·'}〕 → ${totalDmg} de daño${rompio ? ' · <span class="hcb-break">¡ESCUDO ROTO!</span>' : ''}`); renderParty(); };
+    const resumen = () => { log(`<b>${u.name}</b> · ${action.name} 〔${t2 ? t2.zh : '·'}〕 → ${totalDmg} de daño${rompio ? ' · <span class="hcb-break">¡ESCUDO ROTO!</span>' : ''}`); renderOrder(); };
 
     if (cat === 'melee') {
       u._animDur = 230 + 150 * hits + 340;
@@ -565,7 +599,7 @@ const HacCombate = (function () {
       floater(ux(target), uy(target) - target.th, String(dmg), '#ff6a58', true); burst(ux(target), uy(target) - target.th * 0.5, 'rgba(220,80,70,', 8, 1);
       log(`<b>${enemy.name}</b> golpea a <b>${target.name}</b> · ${dmg} de daño${target.def ? ' (en guardia)' : ''}.`);
       if (!alive(target)) { target.deadA = 1; tween(500, (p) => { target.deadA = 1 - p; }); }
-      renderParty(); tween(320, (p) => { enemy.ox = dx * (1 - easeInOut(p)); }, () => { enemy.ox = 0; });
+      renderOrder(); tween(320, (p) => { enemy.ox = dx * (1 - easeInOut(p)); }, () => { enemy.ox = 0; });
     });
     finTurno(260 + 340);
   }
@@ -588,9 +622,21 @@ const HacCombate = (function () {
   // ── UI DOM (timeline / party / menú / registro) ──────────────────────────────
   function bar(v, mx, cls) { return `<div class="hcb-bar ${cls}"><span style="width:${clamp(v / mx * 100, 0, 100)}%"></span></div>`; }
   function bpPips(n) { let s = ''; for (let i = 0; i < 5; i++) s += `<i class="hcb-bp${i < n ? ' on' : ''}"></i>`; return s; }
-  function renderTimeline() {
-    const chip = (u) => `<div class="hcb-tl-chip${u === actual() ? ' cur' : ''}${u.foe ? ' foe' : ''}" title="${u.name}"><span>${u.foe ? '賊' : u.name[0]}</span></div>`;
-    elTimeline.innerHTML = `<div class="hcb-tl-lbl">Ronda ${ronda} · orden</div><div class="hcb-tl-row">${orden.map(chip).join('')}</div>`;
+  // Columna de orden de turnos (derecha): cara de cada combatiente en orden, con su
+  // vida debajo. El que actúa se agranda. Aliados muestran además SP y BP.
+  function renderOrder() {
+    if (!elOrder) return;
+    const card = (u) => {
+      const cur = u === actual(), url = faceURL(u);
+      const face = url ? `<img class="hcb-face" src="${url}" alt="">` : `<div class="hcb-face hcb-face-ph">${u.foe ? '賊' : u.name[0]}</div>`;
+      const hp = `<div class="hcb-bar hp hcb-ord-hp"><span style="width:${clamp(u.hp / u.maxHp * 100, 0, 100)}%"></span></div>`;
+      const num = `<div class="hcb-ord-n">${Math.max(0, u.hp)}/${u.maxHp}</div>`;
+      const extra = u.foe ? '' :
+        `<div class="hcb-bar sp hcb-ord-sp"><span style="width:${clamp(u.sp / u.maxSp * 100, 0, 100)}%"></span></div>
+         <div class="hcb-ord-bp">${bpPips(u.bp)}</div>`;
+      return `<div class="hcb-ord${cur ? ' cur' : ''}${u.foe ? ' foe' : ''}${!alive(u) ? ' dead' : ''}" title="${u.name}">${face}${hp}${num}${extra}</div>`;
+    };
+    elOrder.innerHTML = orden.map(card).join('');
   }
   function weakPips() { return enemy.weak.map(t2 => enemy.revelado[t2] ? `<span class="hcb-wk on" title="${TIPOS[t2].es}">${TIPOS[t2].zh}</span>` : `<span class="hcb-wk">?</span>`).join(''); }
   function renderFoeHud() {
@@ -599,14 +645,6 @@ const HacCombate = (function () {
       <div class="hcb-foe-row"><span class="hcb-shield${enemy.roto ? ' broken' : ''}"><span class="hcb-shield-ic">🛡</span><b>${enemy.roto ? '¡ROTO!' : enemy.shield}</b></span>
       <span class="hcb-weak"><span class="hcb-weak-lbl">Debilidades</span> ${weakPips()}</span></div>
       ${bar(enemy.hp, enemy.maxHp, 'hp')}<div class="hcb-foe-hp">${enemy.hp}/${enemy.maxHp}</div>`;
-  }
-  function renderParty() {
-    if (!elParty) return;
-    elParty.innerHTML = party.map(u => `<div class="hcb-pc${!alive(u) ? ' dead' : ''}${u === actual() ? ' cur' : ''}">
-      <div class="hcb-pc-h"><b>${u.name}</b> <span class="hcb-pc-rol">${u.rol}</span>${u.def ? ' <span class="hcb-guard">guardia</span>' : ''}</div>
-      <div class="hcb-pc-row"><span class="hcb-pc-k">PV</span>${bar(u.hp, u.maxHp, 'hp')}<span class="hcb-pc-v">${u.hp}/${u.maxHp}</span></div>
-      <div class="hcb-pc-row"><span class="hcb-pc-k">SP</span>${bar(u.sp, u.maxSp, 'sp')}<span class="hcb-pc-v">${u.sp}/${u.maxSp}</span></div>
-      <div class="hcb-pc-bp">BP ${bpPips(u.bp)}</div></div>`).join('');
   }
   function renderMenu() {
     const u = actual();
@@ -630,29 +668,42 @@ const HacCombate = (function () {
   // Coloca el menú FLOTANDO junto a quien actúa (escritorio): encima suyo y hacia el
   // lado con más hueco, para no tapar a los personajes. En vertical (móvil) se queda
   // apilado abajo (se limpian los estilos en línea y manda el CSS).
+  function setTail(x, up) {
+    let tail = elMenu.querySelector('.hcb-tail');
+    if (x == null) { if (tail) tail.remove(); return; }
+    if (!tail) { tail = document.createElement('div'); tail.className = 'hcb-tail'; elMenu.appendChild(tail); }
+    tail.style.left = Math.round(x) + 'px'; tail.classList.toggle('up', !!up);
+  }
+  function clearMenuPos() {
+    elMenu.classList.remove('floating');
+    elMenu.style.position = ''; elMenu.style.left = ''; elMenu.style.top = ''; elMenu.style.right = ''; elMenu.style.width = '';
+    setTail(null);
+  }
   function placeMenu() {
     if (!elMenu) return;
     const portrait = H > W * 1.15;
-    if (portrait || over) {
-      elMenu.classList.remove('floating');
-      elMenu.style.position = ''; elMenu.style.left = ''; elMenu.style.top = ''; elMenu.style.right = ''; elMenu.style.width = '';
-      return;
-    }
-    const u = actual(); if (!u) return;
+    const u = actual();
+    if (portrait || over || !u) { clearMenuPos(); return; }   // vertical/fin: manda el CSS (apilado abajo)
     elMenu.classList.add('floating');
     elMenu.style.position = 'fixed'; elMenu.style.right = 'auto';
     const Wm = elMenu.offsetWidth, Hm = elMenu.offsetHeight;
-    const fx = ux(u), fy = uy(u), th = u.th;
-    const openLeft = fx > W * 0.5;              // si está a la derecha, el menú abre hacia la izquierda
-    const overlap = th * 0.18;                  // puede solaparse un pelín con el personaje
-    let mx = openLeft ? (fx - Wm + overlap) : (fx - overlap);
-    let my = (fy - th * 0.55) - Hm;             // borde inferior a la altura del pecho → queda "encima suyo"
-    mx = Math.max(10, Math.min(W - Wm - 10, mx));
-    my = Math.max(10, Math.min(H - Hm - 10, my));
-    elMenu.style.left = Math.round(mx) + 'px';
-    elMenu.style.top = Math.round(my) + 'px';
+    // En espera (turno enemigo / animación): cartelito centrado abajo, sin cola.
+    if (u.foe || busy) {
+      elMenu.style.left = Math.round(W / 2 - Wm / 2) + 'px';
+      elMenu.style.top = Math.round(H - Hm - 74) + 'px';
+      setTail(null); return;
+    }
+    // Turno de un aliado: globo de acciones ENCIMA de su cabeza, con cola apuntándole.
+    const rLimit = W - 92;                       // no invadir la columna de orden (derecha)
+    const fx = clamp(ux(u), 24, rLimit - 24), fy = uy(u), th = u.th;
+    let mx = clamp(fx - Wm / 2, 12, rLimit - Wm);
+    let my = (fy - th) - Hm - 20;               // encima de la cabeza (deja hueco para la cola)
+    let up = false;
+    if (my < 12) { my = Math.min(fy - th * 0.2 + 20, H - Hm - 12); up = true; }  // sin sitio arriba → debajo
+    elMenu.style.left = Math.round(mx) + 'px'; elMenu.style.top = Math.round(my) + 'px';
+    setTail(clamp(fx - mx, 20, Wm - 20), up);
   }
-  function renderAll() { renderTimeline(); renderFoeHud(); renderParty(); renderMenu(); measureHud(); }
+  function renderAll() { renderOrder(); renderFoeHud(); renderMenu(); measureHud(); }
 
   function finPantalla(win) {
     setTimeout(() => {
@@ -716,25 +767,22 @@ const HacCombate = (function () {
     root = container;
     bakeTaiji();
     bgImg = new Image(); bgImg.onload = () => { if (cv) bakeBg(); }; bgImg.src = 'assets/img/bg-turbantes.jpg?v=1';
-    Object.values(SHEETS).forEach(s => { s.img = new Image(); s.img.src = s.src; });
+    Object.values(SHEETS).forEach(s => { s.img = new Image(); s.img.onload = () => { if (elOrder) renderOrder(); }; s.img.src = s.src; });
     // Todo el HUD va DENTRO de la escena (overlays integrados, estilo JRPG), no en cajas fuera.
     root.innerHTML = `<div class="hcb">
       <div class="hcb-scene" data-scene>
         <canvas data-cv></canvas>
         <div class="hcb-foehud" data-foehud></div>
-        <div class="hcb-timeline" data-tl></div>
+        <div class="hcb-order" data-order></div>
         <div class="hcb-hud" data-hud>
           <div class="hcb-log" data-log></div>
-          <div class="hcb-hud-row">
-            <div class="hcb-party" data-party></div>
-            <div class="hcb-menu" data-menu></div>
-          </div>
+          <div class="hcb-menu" data-menu></div>
         </div>
         <div class="hcb-tip" data-tip hidden></div>
       </div>
     </div>`;
-    elTimeline = root.querySelector('[data-tl]'); elScene = root.querySelector('[data-scene]');
-    elParty = root.querySelector('[data-party]'); elMenu = root.querySelector('[data-menu]'); elLog = root.querySelector('[data-log]');
+    elScene = root.querySelector('[data-scene]');
+    elOrder = root.querySelector('[data-order]'); elMenu = root.querySelector('[data-menu]'); elLog = root.querySelector('[data-log]');
     elHud = root.querySelector('[data-hud]'); elTip = root.querySelector('[data-tip]');
     cv = root.querySelector('[data-cv]'); ctx = cv.getContext('2d');
     root.addEventListener('click', onClick);
