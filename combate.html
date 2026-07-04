@@ -6,9 +6,33 @@
 <title>Escaramuza · Combate (prototipo) · Portal ROTK</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700;900&family=Cinzel+Decorative:wght@400;700&family=Noto+Sans+SC:wght@300;400;700&display=swap" rel="stylesheet">
 <style>
-  :root{ --gold:#c9a84c; --parch:#e8dcc0; --parch2:#b9a97f; --ink:#141009; --hp:#7fc76a; --sp:#5aa0d0; --bad:#d0463b; --br:#e2a04a; }
+  /* ── Paleta DIEGÉTICA (campaña Han): pergamino, madera lacada, bronce, cinabrio ── */
+  :root{
+    --paper:#e8d7ac; --paper2:#d3ba82;          /* pergamino envejecido */
+    --ink:#3a2a15; --ink2:#6b5836;              /* tinta / tinta desvaída */
+    --wood:#2b1d10; --wood2:#4a3117;            /* madera lacada */
+    --bronze:#a9803f; --bronze-d:#6a4a24; --bronze-hi:#e6c88a;
+    --cinnabar-s:#a83424; --cinnabar-d:#7a2216;  /* sello rojo (cinabrio) */
+    --jade:#537f5b;
+    /* Cara de pergamino con marco de madera + filo de bronce (tablilla enmarcada) */
+    --paper-face:
+      radial-gradient(90% 75% at 16% 12%, rgba(255,250,226,.55), transparent 62%),
+      radial-gradient(85% 85% at 88% 92%, rgba(110,80,40,.32), transparent 58%),
+      linear-gradient(158deg, var(--paper) 0%, var(--paper2) 100%);
+    --wood-face:
+      repeating-linear-gradient(91deg, rgba(0,0,0,.18) 0 1px, transparent 1px 6px),
+      linear-gradient(158deg, var(--wood2), var(--wood));
+    --frame:
+      inset 0 0 0 1px rgba(255,248,224,.4),
+      inset 0 0 26px rgba(110,78,38,.30),
+      0 0 0 4px var(--wood), 0 0 0 5px var(--bronze-d),
+      0 10px 22px rgba(0,0,0,.55);
+    --frame-dark:
+      inset 0 0 0 1px var(--bronze), inset 0 0 24px rgba(0,0,0,.45),
+      0 0 0 3px var(--wood), 0 0 0 4px var(--bronze-d), 0 8px 20px rgba(0,0,0,.55);
+  }
   *{ box-sizing:border-box; }
-  html,body{ margin:0; height:100%; background:#000; color:var(--parch); overflow:hidden;
+  html,body{ margin:0; height:100%; background:#000; color:var(--ink); overflow:hidden;
     font-family:'Noto Sans SC',system-ui,sans-serif; -webkit-font-smoothing:antialiased; }
 
   /* La escena OCUPA toda la pantalla; el HUD se dibuja integrado encima del lienzo. */
@@ -18,100 +42,110 @@
   .hcb-shadow-top{ position:absolute; left:0; right:0; top:0; height:120px; pointer-events:none; z-index:2;
     background:linear-gradient(180deg,rgba(6,5,2,.55),rgba(6,5,2,0)); }
 
-  /* ── Enemigo (arriba-izquierda, integrado, sin caja dura) ── */
-  .hcb-foehud{ position:absolute; top:14px; left:16px; width:min(360px,46vw); z-index:6; pointer-events:none;
-    text-shadow:0 1px 3px #000, 0 0 14px rgba(0,0,0,.7); }
-  .hcb-foe-top{ font-size:15px; color:var(--parch); margin-bottom:5px; letter-spacing:.01em; }
-  .hcb-foe-top b{ font-weight:700; }
-  .hcb-foe-zh{ font-family:'Noto Serif SC',serif; color:var(--gold); }
-  .hcb-foe-row{ display:flex; align-items:center; gap:9px; flex-wrap:wrap; margin-bottom:6px; }
-  .hcb-shield{ display:inline-flex; align-items:center; gap:5px; padding:2px 10px; border-radius:999px;
-    background:rgba(90,160,208,.24); border:1px solid rgba(90,160,208,.55); font-size:13px; }
-  .hcb-shield b{ color:#bcd8ec; font-variant-numeric:tabular-nums; }
-  .hcb-shield.broken{ background:rgba(208,70,59,.24); border-color:var(--bad); }
-  .hcb-shield.broken b{ color:#f0b4ac; }
+  /* ── Enemigo (arriba-izquierda): tablilla de guerra en madera lacada ── */
+  .hcb-foehud{ position:absolute; top:16px; left:18px; width:min(360px,46vw); z-index:6; pointer-events:none;
+    background:var(--wood-face); color:var(--paper); border-radius:4px; padding:9px 13px 11px;
+    box-shadow:var(--frame-dark); }
+  .hcb-foe-top{ font:700 15px 'Noto Serif SC',serif; color:var(--paper); margin-bottom:6px; letter-spacing:.01em; }
+  .hcb-foe-zh{ font-family:'Noto Serif SC',serif; color:var(--bronze-hi); }
+  .hcb-foe-row{ display:flex; align-items:center; gap:9px; flex-wrap:wrap; margin-bottom:7px; }
+  .hcb-shield{ display:inline-flex; align-items:center; gap:5px; padding:2px 10px; border-radius:4px;
+    background:linear-gradient(180deg,rgba(83,127,91,.4),rgba(40,64,44,.5)); border:1px solid var(--jade); font-size:13px; box-shadow:inset 0 0 0 1px rgba(255,255,255,.08); }
+  .hcb-shield b{ color:#cfe6cf; font-variant-numeric:tabular-nums; }
+  .hcb-shield.broken{ background:linear-gradient(180deg,rgba(168,52,36,.45),rgba(90,24,16,.55)); border-color:var(--cinnabar-s); }
+  .hcb-shield.broken b{ color:#f0c0b6; }
   .hcb-weak{ display:flex; align-items:center; gap:4px; flex-wrap:wrap; }
-  .hcb-weak-lbl{ font:700 9px 'Cinzel Decorative',serif; letter-spacing:.05em; text-transform:uppercase; color:var(--parch2); opacity:.82; }
-  .hcb-wk{ display:inline-grid; place-items:center; min-width:24px; height:24px; padding:0 5px; border-radius:6px;
-    background:rgba(0,0,0,.35); border:1px dashed rgba(201,168,76,.45); color:var(--parch2); font-family:'Noto Serif SC',serif; font-size:14px; }
-  .hcb-wk.on{ background:rgba(224,160,74,.28); border:1px solid var(--br); color:#ffe6b8; border-style:solid; box-shadow:0 0 9px rgba(224,160,74,.5); }
-  .hcb-bar{ height:8px; border-radius:5px; background:rgba(0,0,0,.55); overflow:hidden; box-shadow:inset 0 0 0 1px rgba(255,255,255,.1); }
-  .hcb-bar span{ display:block; height:100%; border-radius:5px; transition:width .35s ease; }
-  .hcb-bar.hp span{ background:linear-gradient(90deg,#5f9e4e,#8ed16f); }
-  .hcb-bar.sp span{ background:linear-gradient(90deg,#3f7fae,#6fb6e0); }
-  .hcb-foe-hp{ font-size:11px; color:var(--parch2); margin-top:3px; font-variant-numeric:tabular-nums; }
-  .hcb-break{ color:var(--br); font-weight:700; }
+  .hcb-weak-lbl{ font:700 9px 'Noto Serif SC',serif; letter-spacing:.05em; text-transform:uppercase; color:var(--bronze-hi); opacity:.85; }
+  .hcb-wk{ display:inline-grid; place-items:center; min-width:24px; height:24px; padding:0 5px; border-radius:3px;
+    background:rgba(0,0,0,.3); border:1px dashed var(--bronze); color:var(--bronze-hi); font-family:'Noto Serif SC',serif; font-size:14px; }
+  .hcb-wk.on{ background:linear-gradient(180deg,var(--cinnabar-s),var(--cinnabar-d)); border:1px solid var(--bronze-hi); color:#ffe9d8; border-style:solid; box-shadow:0 0 8px rgba(168,52,36,.6), inset 0 0 0 1px rgba(255,255,255,.15); }
+  /* Barra = ranura tallada con filo de bronce */
+  .hcb-bar{ height:9px; border-radius:2px; background:rgba(20,12,4,.7); overflow:hidden; box-shadow:inset 0 1px 3px rgba(0,0,0,.6), 0 0 0 1px var(--bronze-d); }
+  .hcb-bar span{ display:block; height:100%; transition:width .35s ease; box-shadow:inset 0 1px 0 rgba(255,255,255,.25); }
+  .hcb-bar.hp span{ background:linear-gradient(180deg,#8ec062,#5f8f3e); }
+  .hcb-bar.sp span{ background:linear-gradient(180deg,#77aed6,#3f6f9e); }
+  .hcb-foe-hp{ font-size:11px; color:var(--paper); opacity:.85; margin-top:4px; font-variant-numeric:tabular-nums; }
+  .hcb-break{ color:var(--bronze-hi); font-weight:700; }
 
-  /* ── Orden de turnos (arriba-derecha) ── */
-  .hcb-timeline{ position:absolute; top:14px; right:16px; z-index:6; text-align:right; text-shadow:0 1px 3px #000; }
-  .hcb-tl-lbl{ font:700 9.5px 'Cinzel Decorative',serif; letter-spacing:.08em; text-transform:uppercase; color:var(--parch2); opacity:.85; margin-bottom:6px; }
-  .hcb-tl-row{ display:flex; gap:6px; align-items:center; justify-content:flex-end; flex-wrap:wrap; max-width:60vw; }
-  .hcb-tl-chip{ width:34px; height:34px; border-radius:9px; display:grid; place-items:center;
-    background:rgba(30,24,14,.66); border:1px solid rgba(201,168,76,.3); -webkit-backdrop-filter:blur(3px); backdrop-filter:blur(3px);
-    font-family:'Noto Serif SC',serif; font-size:15px; color:var(--parch); transition:transform .15s, box-shadow .15s; }
-  .hcb-tl-chip.foe{ background:rgba(120,40,32,.6); border-color:rgba(208,70,59,.55); }
-  .hcb-tl-chip.cur{ transform:translateY(3px) scale(1.1); box-shadow:0 5px 16px rgba(201,168,76,.5); border-color:var(--gold); color:var(--gold); }
+  /* ── Orden de turnos (arriba-derecha): tarjas de madera colgadas ── */
+  .hcb-timeline{ position:absolute; top:16px; right:18px; z-index:6; text-align:right; }
+  .hcb-tl-lbl{ font:700 9.5px 'Noto Serif SC',serif; letter-spacing:.1em; text-transform:uppercase; color:var(--paper); opacity:.9; margin-bottom:7px; text-shadow:0 1px 3px #000; }
+  .hcb-tl-row{ display:flex; gap:7px; align-items:center; justify-content:flex-end; flex-wrap:wrap; max-width:60vw; }
+  .hcb-tl-chip{ width:34px; height:38px; border-radius:3px; display:grid; place-items:center;
+    background:var(--wood-face); color:var(--paper); box-shadow:inset 0 0 0 1px var(--bronze), 0 0 0 2px var(--wood), 0 3px 8px rgba(0,0,0,.5);
+    font-family:'Noto Serif SC',serif; font-size:16px; transition:transform .15s, box-shadow .15s; }
+  .hcb-tl-chip.foe{ background:repeating-linear-gradient(91deg,rgba(0,0,0,.18) 0 1px,transparent 1px 6px),linear-gradient(158deg,#5a2018,#3a130d); color:#f0c0b6; }
+  .hcb-tl-chip.cur{ transform:translateY(3px) scale(1.1); box-shadow:inset 0 0 0 1px var(--bronze-hi), 0 0 0 2px var(--wood), 0 5px 14px rgba(168,52,36,.5); color:var(--bronze-hi); }
 
   /* ── HUD inferior integrado (registro + banda + menú) ── */
-  .hcb-hud{ position:absolute; left:0; right:0; bottom:0; z-index:7; padding:0 16px 16px;
-    display:flex; flex-direction:column; gap:9px; pointer-events:none;
-    background:linear-gradient(0deg,rgba(6,5,2,.6),rgba(6,5,2,0)); padding-top:40px; }
-  .hcb-log{ align-self:center; width:min(620px,92%); text-align:center; min-height:20px;
-    font-size:12.5px; line-height:1.5; color:var(--parch); text-shadow:0 1px 3px #000, 0 0 10px rgba(0,0,0,.6); }
-  .hcb-log-l b{ color:var(--gold); }
-  .hcb-hud-row{ display:flex; align-items:flex-end; justify-content:space-between; gap:12px; }
+  .hcb-hud{ position:absolute; left:0; right:0; bottom:0; z-index:7; padding:0 18px 18px;
+    display:flex; flex-direction:column; gap:10px; pointer-events:none;
+    background:linear-gradient(0deg,rgba(6,5,2,.62),rgba(6,5,2,0)); padding-top:44px; }
+  .hcb-log{ align-self:center; max-width:min(640px,92%); text-align:center; min-height:20px;
+    font:400 12.5px/1.5 'Noto Serif SC',serif; color:var(--paper); padding:5px 20px;
+    background:radial-gradient(60% 100% at 50% 50%, rgba(20,14,6,.62), rgba(20,14,6,0) 78%);
+    text-shadow:0 1px 3px #000, 0 0 10px rgba(0,0,0,.7); }
+  .hcb-log-l b{ color:var(--bronze-hi); }
+  .hcb-hud-row{ display:flex; align-items:flex-end; justify-content:space-between; gap:14px; }
 
-  /* Placas de la banda (abajo-izquierda) */
-  .hcb-party{ display:flex; gap:8px; align-items:flex-end; flex:1 1 auto; min-width:0; }
+  /* Placas de la banda (abajo-izquierda): tablillas de nombre en pergamino */
+  .hcb-party{ display:flex; gap:10px; align-items:flex-end; flex:1 1 auto; min-width:0; }
   .hcb-pc{ flex:1 1 0; min-width:0; max-width:190px; pointer-events:auto;
-    background:linear-gradient(180deg,rgba(24,19,11,.72),rgba(12,10,6,.82)); border:1px solid rgba(201,168,76,.26);
-    -webkit-backdrop-filter:blur(5px); backdrop-filter:blur(5px); border-radius:11px; padding:7px 9px;
-    box-shadow:0 6px 20px rgba(0,0,0,.45); transition:transform .16s, box-shadow .16s, border-color .16s; }
-  .hcb-pc.cur{ border-color:var(--gold); transform:translateY(-6px); box-shadow:0 10px 26px rgba(0,0,0,.5), 0 0 0 1px rgba(201,168,76,.4), 0 0 22px rgba(201,168,76,.25); }
-  .hcb-pc.dead{ opacity:.45; filter:grayscale(.5); }
-  .hcb-pc-h{ font-size:12px; color:var(--parch); margin-bottom:5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .hcb-pc-rol{ font-size:9.5px; color:var(--parch2); }
-  .hcb-guard{ font-size:9.5px; color:#6fb6e0; }
+    background:var(--paper-face); color:var(--ink); border-radius:4px; padding:8px 10px;
+    box-shadow:var(--frame); transition:transform .16s, box-shadow .16s; }
+  .hcb-pc.cur{ transform:translateY(-7px); box-shadow:var(--frame), 0 0 0 6px rgba(168,52,36,.22), 0 0 18px rgba(168,52,36,.35); }
+  .hcb-pc.cur .hcb-pc-h{ color:var(--cinnabar-d); }
+  .hcb-pc.dead{ opacity:.5; filter:grayscale(.55) sepia(.2); }
+  .hcb-pc-h{ font:700 12.5px 'Noto Serif SC',serif; color:var(--ink); margin-bottom:5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .hcb-pc-rol{ font-weight:400; font-size:9.5px; color:var(--ink2); }
+  .hcb-guard{ font-size:9.5px; color:var(--jade); font-weight:700; }
   .hcb-pc-row{ display:flex; align-items:center; gap:6px; margin:3px 0; }
-  .hcb-pc-k{ font:700 8.5px 'Cinzel Decorative',serif; color:var(--parch2); width:15px; }
-  .hcb-pc-row .hcb-bar{ flex:1; height:7px; }
-  .hcb-pc-v{ font-size:9.5px; color:var(--parch2); font-variant-numeric:tabular-nums; min-width:48px; text-align:right; }
-  .hcb-pc-bp{ font:700 9px 'Cinzel Decorative',serif; letter-spacing:.05em; color:var(--parch2); margin-top:5px; display:flex; align-items:center; gap:4px; }
-  .hcb-bp{ width:9px; height:9px; border-radius:50%; background:rgba(201,168,76,.18); box-shadow:inset 0 0 0 1px rgba(201,168,76,.35); }
-  .hcb-bp.on{ background:var(--gold); box-shadow:0 0 6px rgba(201,168,76,.7); }
+  .hcb-pc-k{ font:700 8.5px 'Noto Serif SC',serif; color:var(--ink2); width:16px; }
+  .hcb-pc-row .hcb-bar{ flex:1; height:8px; }
+  .hcb-pc-v{ font-size:9.5px; color:var(--ink2); font-variant-numeric:tabular-nums; min-width:48px; text-align:right; }
+  .hcb-pc-bp{ font:700 9px 'Noto Serif SC',serif; letter-spacing:.04em; color:var(--ink2); margin-top:5px; display:flex; align-items:center; gap:4px; }
+  .hcb-bp{ width:9px; height:9px; border-radius:50%; background:rgba(60,42,20,.25); box-shadow:inset 0 0 0 1px var(--bronze-d); }
+  .hcb-bp.on{ background:radial-gradient(circle at 35% 30%, var(--bronze-hi), var(--bronze) 70%); box-shadow:0 0 5px rgba(181,138,62,.7), inset 0 0 0 1px var(--bronze-d); }
 
-  /* Menú de acción (abajo-derecha) */
-  .hcb-menu{ flex:0 0 auto; width:min(460px,52%); pointer-events:auto;
-    background:linear-gradient(180deg,rgba(24,19,11,.78),rgba(12,10,6,.88)); border:1px solid rgba(201,168,76,.3);
-    -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px); border-radius:13px; padding:11px 12px;
-    box-shadow:0 10px 30px rgba(0,0,0,.5); }
-  .hcb-menu.waiting{ background:rgba(12,10,6,.55); border-color:rgba(201,168,76,.16); }
-  .hcb-menu-who{ font-size:12px; color:var(--parch2); margin-bottom:8px; } .hcb-menu-who b{ color:var(--gold); }
-  .hcb-menu-wait{ text-align:center; color:var(--parch2); padding:14px 0; font-size:13px; } .hcb-menu-wait b{ color:#f0b4ac; }
-  .hcb-boost{ display:flex; align-items:center; gap:6px; margin-bottom:9px; flex-wrap:wrap; }
-  .hcb-boost-lbl{ font:700 9px 'Cinzel Decorative',serif; letter-spacing:.06em; text-transform:uppercase; color:var(--parch2); }
-  .hcb-boost-b{ min-width:32px; padding:5px 8px; border-radius:7px; cursor:pointer; font-weight:700;
-    background:rgba(201,168,76,.1); border:1px solid rgba(201,168,76,.32); color:var(--parch); }
-  .hcb-boost-b.on{ background:var(--gold); color:var(--ink); }
-  .hcb-boost-b.dis{ opacity:.3; cursor:not-allowed; }
-  .hcb-boost-hint{ font-size:10px; color:var(--parch2); opacity:.8; }
-  .hcb-acts{ display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:7px; }
-  .hcb-act{ display:flex; flex-direction:column; align-items:flex-start; gap:2px; cursor:pointer; text-align:left;
-    padding:9px 11px; border-radius:9px; background:rgba(255,255,255,.05); border:1px solid rgba(201,168,76,.3); color:var(--parch); font-size:13px; font-weight:700;
-    transition:background .12s, transform .1s, border-color .12s; }
-  .hcb-act small{ font-weight:400; font-size:10.5px; color:var(--parch2); }
-  .hcb-act:hover:not(.dis){ background:rgba(201,168,76,.18); transform:translateY(-1px); }
-  .hcb-act.atk{ border-color:rgba(178,59,46,.55); } .hcb-act.atk:hover{ background:rgba(178,59,46,.24); }
-  .hcb-act.def{ border-color:rgba(90,160,208,.5); }
-  .hcb-act.dis{ opacity:.4; cursor:not-allowed; }
+  /* Menú de acción (abajo-derecha): pergamino desplegado con rodillos de madera */
+  .hcb-menu{ position:relative; flex:0 0 auto; width:min(460px,52%); pointer-events:auto;
+    background:var(--paper-face); color:var(--ink); border-radius:3px; padding:12px 14px;
+    box-shadow:var(--frame); }
+  .hcb-menu::before, .hcb-menu::after{ content:''; position:absolute; top:-5px; bottom:-5px; width:11px; border-radius:6px;
+    background:linear-gradient(90deg,var(--wood),var(--wood2) 45%,var(--wood)); box-shadow:inset 0 0 0 1px var(--bronze-d), 0 4px 9px rgba(0,0,0,.5); }
+  .hcb-menu::before{ left:-10px; } .hcb-menu::after{ right:-10px; }
+  .hcb-menu.waiting{ filter:saturate(.85) brightness(.97); }
+  .hcb-menu-who{ font:400 12px 'Noto Serif SC',serif; color:var(--ink2); margin-bottom:9px; padding-bottom:7px; border-bottom:1px solid rgba(106,74,36,.4); }
+  .hcb-menu-who b{ color:var(--cinnabar-d); font-weight:700; }
+  .hcb-menu-wait{ text-align:center; color:var(--ink2); padding:14px 0; font:400 13px 'Noto Serif SC',serif; } .hcb-menu-wait b{ color:var(--cinnabar-d); }
+  .hcb-boost{ display:flex; align-items:center; gap:7px; margin-bottom:10px; flex-wrap:wrap; }
+  .hcb-boost-lbl{ font:700 9px 'Noto Serif SC',serif; letter-spacing:.06em; text-transform:uppercase; color:var(--ink2); }
+  /* Fichas de boost = monedas de bronce; activa = sello de cinabrio */
+  .hcb-boost-b{ min-width:32px; padding:5px 9px; border-radius:50px; cursor:pointer; font:700 13px 'Noto Serif SC',serif;
+    background:radial-gradient(circle at 35% 30%, #f0d79c, var(--bronze) 75%); border:1px solid var(--bronze-d); color:var(--wood); box-shadow:0 1px 2px rgba(0,0,0,.35); }
+  .hcb-boost-b.on{ background:radial-gradient(circle at 35% 30%, var(--cinnabar-s), var(--cinnabar-d) 80%); color:#ffe9d8; border-color:var(--cinnabar-d); box-shadow:0 0 8px rgba(168,52,36,.55); }
+  .hcb-boost-b.dis{ opacity:.35; cursor:not-allowed; }
+  .hcb-boost-hint{ font-size:10px; color:var(--ink2); opacity:.85; }
+  .hcb-acts{ display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:8px; }
+  /* Acción = tablilla/listón con lomo de bronce a la izquierda (cinabrio si es ataque) */
+  .hcb-act{ position:relative; display:flex; flex-direction:column; align-items:flex-start; gap:2px; cursor:pointer; text-align:left;
+    padding:8px 11px 8px 14px; border-radius:3px; background:linear-gradient(158deg, rgba(255,250,230,.5), rgba(196,172,124,.42));
+    border:1px solid var(--bronze-d); border-left:4px solid var(--bronze); color:var(--ink); font:700 13px 'Noto Serif SC',serif;
+    box-shadow:inset 0 0 0 1px rgba(255,248,224,.35), 0 2px 4px rgba(0,0,0,.25); transition:transform .1s, background .12s, box-shadow .12s; }
+  .hcb-act small{ font-weight:400; font-size:10.5px; color:var(--ink2); }
+  .hcb-act:hover:not(.dis){ transform:translateY(-1px); background:linear-gradient(158deg, rgba(255,252,236,.7), rgba(210,186,138,.55)); box-shadow:inset 0 0 0 1px rgba(255,250,230,.5), 0 4px 9px rgba(0,0,0,.3); }
+  .hcb-act.atk{ border-left-color:var(--cinnabar-s); } .hcb-act.atk:hover{ background:linear-gradient(158deg, rgba(240,210,190,.6), rgba(200,150,130,.5)); }
+  .hcb-act.def{ border-left-color:var(--jade); }
+  .hcb-act.dis{ opacity:.45; cursor:not-allowed; }
 
-  /* ── Fin de combate ── */
-  .hcb-end{ position:fixed; inset:0; z-index:50; display:grid; place-items:center; background:rgba(8,7,5,.72); -webkit-backdrop-filter:blur(3px); backdrop-filter:blur(3px); }
-  .hcb-end-box{ text-align:center; padding:28px 34px; border-radius:16px; background:linear-gradient(180deg,#241d15,#1b1610); border:1px solid rgba(201,168,76,.5); box-shadow:0 20px 60px rgba(0,0,0,.6); }
-  .hcb-end-t{ font-family:'Cinzel Decorative',serif; font-size:30px; margin-bottom:6px; }
-  .hcb-end-box.win .hcb-end-t{ color:var(--gold); } .hcb-end-box.lose .hcb-end-t{ color:#e0685a; }
-  .hcb-end-s{ color:var(--parch2); font-size:13px; margin-bottom:16px; }
-  .hcb-end-btn{ padding:10px 20px; border-radius:9px; cursor:pointer; font-weight:700; background:var(--gold); color:var(--ink); border:none; font-size:14px; }
+  /* ── Fin de combate: gran pergamino colgado ── */
+  .hcb-end{ position:fixed; inset:0; z-index:50; display:grid; place-items:center; background:rgba(8,7,5,.74); -webkit-backdrop-filter:blur(3px); backdrop-filter:blur(3px); }
+  .hcb-end-box{ text-align:center; padding:30px 40px; border-radius:4px; background:var(--paper-face); color:var(--ink); box-shadow:var(--frame); }
+  .hcb-end-t{ font-family:'Noto Serif SC',serif; font-weight:900; font-size:32px; margin-bottom:6px; }
+  .hcb-end-box.win .hcb-end-t{ color:var(--cinnabar-d); } .hcb-end-box.lose .hcb-end-t{ color:var(--ink2); }
+  .hcb-end-s{ color:var(--ink2); font:400 13px 'Noto Serif SC',serif; margin-bottom:18px; }
+  .hcb-end-btn{ padding:11px 22px; border-radius:3px; cursor:pointer; font:700 14px 'Noto Serif SC',serif;
+    background:radial-gradient(circle at 40% 25%, var(--cinnabar-s), var(--cinnabar-d) 85%); color:#ffe9d8; border:1px solid var(--cinnabar-d); box-shadow:0 3px 10px rgba(168,52,36,.4); }
 
   /* ── Vertical (móvil retrato): interfaz compacta apilada, pensada para una mano ── */
   @media(max-aspect-ratio:87/100){
