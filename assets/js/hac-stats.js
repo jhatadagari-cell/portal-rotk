@@ -44,6 +44,7 @@ const HacStats = (function () {
       cap: Number(r.cap_inventario) || 8, inv: parseInv(r.inventario), ahorro: Number(r.ahorro) || 0,
       casaPos: r.casa_pos || null, casaInv: parseInv(r.casa_inv), equipado: parseInv(r.equipado),
       heridas: Math.max(0, Math.min(3, Number(r.heridas) || 0)),
+      secuelas: parseInv(r.secuelas),
       escaramuzaCd: Number(r.escaramuza_cd) || 0, sendas: parseObj(r.sendas),
       caballo: (r.caballo && typeof r.caballo === 'object') ? r.caballo : (r.caballo ? (function () { try { return JSON.parse(r.caballo); } catch (e) { return null; } })() : null),
     };
@@ -64,7 +65,7 @@ const HacStats = (function () {
   function reload() { readyPromise = load(); return readyPromise; }
 
   function row(mid) { return cache.find(r => r.miembroId === mid) || null; }
-  function ensure(mid) { let r = row(mid); if (!r) { r = { miembroId: mid, dinero: 0, militar: 0, cultural: 0, administrativo: 0, cap: 8, inv: [], ahorro: 0, casaPos: null, casaInv: [], equipado: [], heridas: 0, sendas: {}, caballo: null }; cache.push(r); } if (!r.sendas) r.sendas = {}; return r; }
+  function ensure(mid) { let r = row(mid); if (!r) { r = { miembroId: mid, dinero: 0, militar: 0, cultural: 0, administrativo: 0, cap: 8, inv: [], ahorro: 0, casaPos: null, casaInv: [], equipado: [], heridas: 0, secuelas: [], sendas: {}, caballo: null }; cache.push(r); } if (!r.sendas) r.sendas = {}; return r; }
   // HERIDAS (0..3). Se infligen al fracasar/arriesgar en expediciones y escaramuzas.
   // PESAN: penalizan la recompensa (dinero+XP) y suben el riesgo; a 3 el mecenas
   // está MALHERIDO y no puede salir de la finca hasta curarse.
@@ -73,6 +74,11 @@ const HacStats = (function () {
   function penHerida(mid) { return Math.min(0.45, (heridas(mid) || 0) * 0.15); }
   // Malherido: 3/3 → bloquea salir a expediciones y escaramuzas.
   function malherido(mid) { return heridas(mid) >= 3; }
+  // SECUELAS permanentes (cosméticas): ids ['manco','tuerto',…] de peregrinajes
+  // fallidos. Las escribe la RPC peregrinaje_resolver (server-side); aquí solo se
+  // leen (persist NO las incluye en rowData → nunca las pisa el cliente).
+  function secuelas(mid) { const r = row(mid); return r ? (r.secuelas || []).slice() : []; }
+  function tieneSecuela(mid, t) { return secuelas(mid).indexOf(t) >= 0; }
   function escaramuzaCd(mid) { const r = row(mid); return r ? (r.escaramuzaCd || 0) : 0; }
   function herir(mid, n) { const r = ensure(mid); r.heridas = Math.max(0, Math.min(3, (r.heridas || 0) + (n == null ? 1 : n))); persist(r); return r.heridas; }
   function curar(mid, n) { return herir(mid, -(n == null ? 1 : n)); }
@@ -319,6 +325,6 @@ const HacStats = (function () {
     persist(r); return { ok: true, dinero: r.dinero };
   }
 
-  return { ready, reload, dinero, ahorro, casaPos, casasReclamadas, duenoDeCasa, comprarCasa, liberarCasa, abandonar, heridas, penHerida, malherido, herir, curar, escaramuzaCd, bonusDinero, bonusExped, usarManual, xp, nivel, progresoNivel, bonus, nivelTotal, nivelPersonaje, puntosTalento, talentos, puntosGastados, puntosLibres, tieneTalento, aprenderTalento, equipados, equipar, desequipar, MAX_EQUIP, award, comprar, guardar, sacar, darItem, meterEnCasa, sacarDeCasa, inventario, casaInventario, capInventario, ocupadas, recompensaExped, caballo, tieneCaballo, comprarCaballo, venderItem, DOMS, dbOk: () => ok, TABLE };
+  return { ready, reload, dinero, ahorro, casaPos, casasReclamadas, duenoDeCasa, comprarCasa, liberarCasa, abandonar, heridas, penHerida, malherido, herir, curar, secuelas, tieneSecuela, escaramuzaCd, bonusDinero, bonusExped, usarManual, xp, nivel, progresoNivel, bonus, nivelTotal, nivelPersonaje, puntosTalento, talentos, puntosGastados, puntosLibres, tieneTalento, aprenderTalento, equipados, equipar, desequipar, MAX_EQUIP, award, comprar, guardar, sacar, darItem, meterEnCasa, sacarDeCasa, inventario, casaInventario, capInventario, ocupadas, recompensaExped, caballo, tieneCaballo, comprarCaballo, venderItem, DOMS, dbOk: () => ok, TABLE };
 })();
 if (typeof window !== 'undefined') window.HacStats = HacStats;

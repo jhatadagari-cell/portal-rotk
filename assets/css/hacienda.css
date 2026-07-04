@@ -528,6 +528,11 @@ button.hacp-slot.manual:hover{ background:rgba(201,168,76,.24); }
 .hacp-cp-wounds.bad .hacp-wound-txt{ color:#f0b8ad; font-weight:700; }
 .hacp-cp-cura{ margin-top:6px; background:rgba(122,162,110,.14)!important; border-color:rgba(122,162,110,.5)!important; color:#bfe0b2!important; }
 .hacp-cp-cura:not(:disabled):hover{ background:rgba(122,162,110,.3)!important; color:#fff!important; }
+/* Peregrinaje «En busca del legendario curandero»: CTA azulada (华佗 Hua Tuo) + secuelas. */
+.hacp-cp-pereg{ margin-top:6px; background:rgba(107,155,209,.14)!important; border-color:rgba(107,155,209,.5)!important; color:#bcd4ef!important; }
+.hacp-cp-pereg:not(:disabled):hover{ background:rgba(107,155,209,.3)!important; color:#fff!important; }
+.hacp-cp-secuelas{ margin-top:5px; font-size:10.5px; color:#caa6cf; letter-spacing:.02em; font-style:italic; }
+.hacp-pereg-cta{ border-color:rgba(107,155,209,.55)!important; background:linear-gradient(180deg, rgba(107,155,209,.14), rgba(107,155,209,.04))!important; }
 .hacp-wound-h{ font:700 10px 'Cinzel Decorative',serif; letter-spacing:.06em; text-transform:uppercase; color:var(--hac,var(--gold)); opacity:.85; }
 .hacp-wound-slots{ display:flex; gap:3px; }
 .hacp-wound{ width:17px; height:17px; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700;

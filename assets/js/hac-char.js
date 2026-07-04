@@ -96,22 +96,24 @@ const HacChar = (function () {
     return { baseY, shoulder: baseY - 32, hem: baseY - 1, belt: baseY - 18, hy: baseY - 43 };
   }
 
-  function figure(px, P, base, g, pose) {
+  function figure(px, P, base, g, pose, sec) {
+    sec = sec || {};
     const v = viewOf(base);
-    if (pose === 'sit') { figureSit(px, P, v); return; }
+    if (pose === 'sit') { figureSit(px, P, v, sec); return; }
     if (pose === 'bow') { figureBow(px, P, v); return; }
     shadow(px);
     if (P.cape) cape(px, P, v, g);
     legs(px, P, v, g);
     torso(px, P, v, g);
     backArm(px, P, v, g);     // brazo lejano (detrás del torso)
-    head(px, P, v, g);
-    frontArm(px, P, v, g);    // brazo cercano (delante)
-    prop(px, P, v, g);
+    head(px, P, v, g, sec);
+    // MANCO: falta el brazo cercano (y lo que sostuviera). Se ve el costado desnudo.
+    if (!sec.manco) { frontArm(px, P, v, g); prop(px, P, v, g); }
   }
 
   // Pose SENTADA (descansando en el jardín). Figura compacta apoyada en el suelo.
-  function figureSit(px, P, v) {
+  function figureSit(px, P, v, sec) {
+    sec = sec || {};
     const baseY = BASEY, c = CX + Math.round(v.dx * 0.6);
     shadow(px);
     // Regazo / piernas plegadas: montículo ancho de túnica abajo.
@@ -136,7 +138,7 @@ const HacChar = (function () {
     // Cabeza (más baja que de pie).
     const hy = tTop - 11;
     px(c - 2, tTop - 2, 4, 3, P.skinDk);
-    headFace(px, P, v, c, hy);
+    headFace(px, P, v, c, hy, sec);
     hairAndCap(px, P, v, c, hy);
   }
 
@@ -195,8 +197,23 @@ const HacChar = (function () {
     px(CX - 5, BASEY + 3, 10, 1, 'rgba(0,0,0,0.16)');
   }
 
+  // COJERA: una pierna sana da el paso; la otra se ARRASTRA, rígida y plantada más
+  // baja, sin apenas levantarse. Da la marcha renqueante del herido (peregrinaje).
+  function legsLimp(px, P, v) {
+    const y = BASEY;
+    if (v.side >= 1) {                                   // perfil: pierna buena delante, mala rezagada
+      const fx = CX + 2, bx = CX - 6;
+      px(bx, y - 1, 6, 5, P.boot); px(bx, y - 1, 6, 1, P.bootHi);        // mala: arrastrada, plantada baja
+      px(fx, y - 4, 6, 4, P.bootHi); px(fx, y - 3, 6, 3, P.boot);        // buena: adelantada
+    } else {                                             // frente/espalda: izq buena, der arrastra
+      const lx = CX - 6, rx = CX + 1;
+      px(lx, y - 4, 5, 5, P.boot); px(lx, y - 4, 5, 1, P.bootHi);        // buena: pisa firme
+      px(rx, y - 1, 5, 5, P.boot); px(rx, y - 1, 5, 1, P.bootHi);        // mala: plantada más baja, rígida
+    }
+  }
   // Botas: en perfil zancada en X; de frente/espalda lado a lado alternando.
   function legs(px, P, v, g) {
+    if (g.limp) { legsLimp(px, P, v); return; }
     const y = BASEY + g.bob;
     if (v.side >= 1) {
       const fx = CX + 1 + (g.step > 0 ? 3 : 0), bx = CX - 5 - (g.step < 0 ? 3 : 0);
@@ -327,15 +344,31 @@ const HacChar = (function () {
     px(c + halfW - 2, hy + 1, 1, h - 2, dk);               // sombra lado derecho
   }
 
-  function head(px, P, v, g) {
+  function head(px, P, v, g, sec) {
     const A = anchors(g), top = A.shoulder, hy = A.hy, c = CX + Math.round(v.dx * 0.6);
     px(c - 2, top - 3, 4, 4, P.skinDk);                                        // cuello
-    headFace(px, P, v, c, hy);
+    headFace(px, P, v, c, hy, sec);
     hairAndCap(px, P, v, c, hy);
   }
 
+  // Parche de OJO (secuela 'tuerto'): cuero oscuro sobre un ojo + correa cruzada.
+  // Posición por vista (perfil / frontal / 3-4), encima de los rasgos ya pintados.
+  function eyePatch(px, P, v, c, hy) {
+    const patch = dark(P.boot, 0.10), strap = dark(P.boot, 0.25);
+    if (v.side >= 1) {                                   // perfil: sobre el ojo (c+3)
+      px(c + 2, hy + 4, 3, 3, patch); px(c + 2, hy + 4, 3, 1, light(patch, 0.12));
+      px(c - 1, hy + 3, 8, 1, strap);
+    } else if (v.front) {                                // frontal: tapa el ojo derecho
+      px(c + 1, hy + 5, 3, 3, patch); px(c + 1, hy + 5, 3, 1, light(patch, 0.12));
+      px(c - 4, hy + 4, 9, 1, strap);
+    } else if (!v.back) {                                // 3/4 frontal
+      px(c + 2, hy + 5, 3, 3, patch); px(c + 2, hy + 5, 3, 1, light(patch, 0.12));
+      px(c - 3, hy + 4, 8, 1, strap);
+    }
+  }
+
   // Cara + rasgos + barba en (c, hy). Reutilizado por la pose de pie y la sentada.
-  function headFace(px, P, v, c, hy) {
+  function headFace(px, P, v, c, hy, sec) {
     if (v.side >= 1) {                                                          // PERFIL
       headBlock(px, c + 1, hy, 4, 11, P.skin, P.skinHi, P.skinDk);
       px(c + 5, hy + 5, 1, 2, P.skin); px(c + 5, hy + 5, 1, 1, P.skinHi);       // nariz
@@ -362,6 +395,7 @@ const HacChar = (function () {
         }
       }
     }
+    if (sec && sec.tuerto) eyePatch(px, P, v, c, hy);   // secuela: parche en el ojo
   }
 
   function hairAndCap(px, P, v, c, hy) {
@@ -439,11 +473,11 @@ const HacChar = (function () {
   }
 
   // Dibuja la figura (vista + andar) sobre un contexto a escala lógica 1.
-  function paintFigure(ctx, base, mirror, P, g, pose) {
+  function paintFigure(ctx, base, mirror, P, g, pose, sec) {
     ctx.save();
     if (mirror) { ctx.translate(W, 0); ctx.scale(-1, 1); }
     const px = (x, y, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h)); };
-    figure(px, P, base, g, pose);
+    figure(px, P, base, g, pose, sec);
     ctx.restore();
   }
 
@@ -456,13 +490,17 @@ const HacChar = (function () {
     const scale = Math.max(1, Math.round(opts.scale || 1));
     const P = palette(opts.aptitud, opts.aspecto);
     const g = gait(opts.frame || 0);
+    // SECUELAS permanentes (cosméticas) + pose de COJERA. `secuelas` = ['manco','tuerto',…].
+    const secArr = Array.isArray(opts.secuelas) ? opts.secuelas : [];
+    const sec = { manco: secArr.indexOf('manco') >= 0, tuerto: secArr.indexOf('tuerto') >= 0 };
+    if (opts.pose === 'limp') g.limp = true;   // el herido arrastra una pierna (peregrinaje)
     const wantOutline = opts.outline !== false && typeof document !== 'undefined' && document.createElement;
 
     if (wantOutline) {
       // Render en lienzo lógico (W×H) → contorno → escalado nítido al destino.
       const off = document.createElement('canvas'); off.width = W; off.height = H;
       const o = off.getContext('2d'); o.imageSmoothingEnabled = false;
-      paintFigure(o, base, mirror, P, g, opts.pose);
+      paintFigure(o, base, mirror, P, g, opts.pose, sec);
       outlinePass(o);
       canvas.width = W * scale; canvas.height = H * scale;
       const ctx = canvas.getContext('2d'); if (!ctx) return;
@@ -479,7 +517,7 @@ const HacChar = (function () {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     if (opts.bg) { ctx.fillStyle = opts.bg; ctx.fillRect(0, 0, canvas.width, canvas.height); }
     ctx.save(); ctx.scale(scale, scale);
-    paintFigure(ctx, base, mirror, P, g, opts.pose);
+    paintFigure(ctx, base, mirror, P, g, opts.pose, sec);
     ctx.restore();
   }
 

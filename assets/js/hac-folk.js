@@ -94,12 +94,24 @@ const HacFolk = (function () {
   const ESC_RUSH = 2.3;          // los mecenas ACUDEN al portón a paso ligero (van a la guerra):
                                  // así cruzan incluso una finca grande dentro de la ventana.
   const ESC_CRY = '¡A la batalla!';
+  // PEREGRINAJE «En busca del legendario curandero»: no es un grito de guerra. Lo
+  // anuncia el ESCOLTA (el "ayudante"); el herido va callado, cojeando. Si parte solo,
+  // el propio herido murmura su propósito.
+  const PEREG_CRY = '¡Vamos a por el legendario curandero!';
+  const PEREG_SOLO_CRY = 'Debo llegar hasta el gran sabio de la montaña…';
   // Grito de guerra de un mecenas al partir: si tiene un VÍNCULO con un co-miembro
   // de su banda, dice una frase temática (R1b); si no, el genérico. Los unilaterales
   // (odio/amor no correspondido) solo los "dice" quien SIENTE el vínculo.
   function escCheerFor(w) {
-    if (!window.HacRelaciones || !haciendaId || !escMap[w.id]) return ESC_CRY;
     const mine = escMap[w.id];
+    // ── Peregrinaje: lo canta el ayudante, no el herido ──
+    if (mine && mine.pereg) {
+      const co = Object.keys(escMap).filter(id => escMap[id] && escMap[id].inicioMs === mine.inicioMs);
+      const escoltas = co.filter(id => !escMap[id].hurt).sort((a, b) => escMap[a].idx - escMap[b].idx);
+      if (escoltas.length) return (escoltas[0] === w.id) ? PEREG_CRY : null;   // el ayudante de menor rango habla; el resto (y el herido) callan
+      return mine.hurt ? PEREG_SOLO_CRY : null;                                // sin escolta: el herido murmura
+    }
+    if (!window.HacRelaciones || !haciendaId || !mine) return ESC_CRY;
     const co = Object.keys(escMap).filter(id => id !== w.id && escMap[id] && escMap[id].inicioMs === mine.inicioMs);
     for (let i = 0; i < co.length; i++) {
       const rel = HacRelaciones.get(haciendaId, w.id, co[i]); if (!rel || !rel.tipo) continue;
@@ -148,11 +160,15 @@ const HacFolk = (function () {
       if (png) return png;
     }
     const a = w.aspecto || {};
-    const key = (w.aptitud || '_') + '|' + (a.robe || '') + '|' + (a.piel || 0) + '|' + (a.pelo || 0) + '|' + dir + '|' + frame + '|' + (pose || 's');
+    // SECUELAS permanentes (manco/tuerto…): forman parte del aspecto → entran en la clave
+    // de caché y se dibujan siempre (finca + retrato del panel), no solo en el peregrinaje.
+    const sec = (window.HacStats && HacStats.secuelas) ? HacStats.secuelas(w.id) : [];
+    const secKey = sec.length ? sec.slice().sort().join(',') : '';
+    const key = (w.aptitud || '_') + '|' + (a.robe || '') + '|' + (a.piel || 0) + '|' + (a.pelo || 0) + '|' + dir + '|' + frame + '|' + (pose || 's') + (secKey ? '|' + secKey : '');
     let cv = spriteCache.get(key);
     if (!cv && window.HacChar) {
       cv = document.createElement('canvas');
-      HacChar.draw(cv, { aptitud: w.aptitud, aspecto: a, dir: dir, frame: frame, scale: 1, pose: pose });
+      HacChar.draw(cv, { aptitud: w.aptitud, aspecto: a, dir: dir, frame: frame, scale: 1, pose: pose, secuelas: sec });
       spriteCache.set(key, cv);
     }
     return cv;
@@ -1296,7 +1312,11 @@ const HacFolk = (function () {
     }
     const moving = w.moving && w.state !== 'tarea';
     const frame = moving ? (Math.floor(w.phase * 1.2) % charNF()) : 0;
-    const pose = (w.state === 'tumbado') ? 'sit' : (w.bowing ? 'bow' : (moving ? 'walk' : 'stand'));
+    // PEREGRINAJE: el herido sale COJEANDO y no hace la reverencia marcial (拱手).
+    const em = escMap[w.id];
+    const hurt = !!(em && em.hurt);
+    let pose = (w.state === 'tumbado') ? 'sit' : (w.bowing ? 'bow' : (moving ? 'walk' : 'stand'));
+    if (hurt) pose = moving ? 'limp' : 'stand';
     const cv = window.HacChar ? spriteFor(w, w.dir || 'S', frame, pose) : null;
     const disp = SPRITE_DISP, FEET = charFEET();
     if (isMounted(w)) {
@@ -1858,7 +1878,15 @@ const HacFolk = (function () {
   // ── API para la página ────────────────────────────────────────────────────
   // Texto de lo que está haciendo un mecenas ahora mismo.
   function activityText(w) {
-    const enEsc = !!escMap[w.id];
+    const em = escMap[w.id], enEsc = !!em;
+    // Peregrinaje «En busca del legendario curandero»: textos propios.
+    if (em && em.pereg) {
+      if (w.state === 'esc-cheer') return em.hurt ? 'Aguarda en el portón, dolorido' : 'Reúne al grupo del peregrinaje';
+      if (w.state === 'exped-out') return em.hurt ? 'Parte cojeando hacia la montaña' : 'Escolta al herido hacia la montaña';
+      if (w.state === 'fuera') return 'De peregrinaje hacia el gran sabio';
+      if (w.state === 'exped-in') return 'Regresa del peregrinaje';
+      if (w.state === 'saludo') return 'Se prepara para el peregrinaje';
+    }
     if (w.state === 'esc-cheer') return w.bowing ? '¡A la batalla!' : 'Formando en el portón';
     if (w.state === 'saludo') return enEsc ? 'Se prepara para la escaramuza' : 'Recibe tus órdenes';
     if (w.state === 'fuera') return enEsc ? 'Combatiendo en la escaramuza' : 'En expedición fuera de la finca';

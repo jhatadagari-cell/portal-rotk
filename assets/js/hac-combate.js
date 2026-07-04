@@ -42,7 +42,7 @@ const HacCombate = (function () {
   function nuevoEnemigo() {
     const tipos = Object.keys(TIPOS), pool = tipos.slice(), weak = [];
     for (let i = 0; i < 2; i++) weak.push(pool.splice(ri(0, pool.length - 1), 1)[0]);
-    return { id: 'foe', name: 'Cabecilla Turbante', zh: '黃巾', aptitud: 'militar', aspecto: { robe: '#caa23c', piel: 2, pelo: 1 },
+    return { id: 'foe', name: 'Cabecilla Turbante', zh: '黃巾', aptitud: 'militar', sprite: 'turbante', aspecto: { robe: '#caa23c', piel: 2, pelo: 1 },
       maxHp: 460, hp: 460, maxShield: 4, shield: 4, weak: weak, revelado: {}, roto: false, rotoTurnos: 0, spd: 10, atk: [22, 34], foe: true };
   }
 
@@ -65,8 +65,11 @@ const HacCombate = (function () {
     guanyu:     { src: 'assets/img/guanyu-atk.webp?v=2',     img: null, cols: 8, count: 61, cellW: 794, cellH: 660, pivotX: 481, feetY: 626, charH: 322, thf: 0.244, headY: 0.27 },
     zhugeliang: { src: 'assets/img/zhugeliang-atk.webp?v=1', img: null, cols: 8, count: 61, cellW: 392, cellH: 300, pivotX: 245, feetY: 293, charH: 275, thf: 0.224, headY: 0.19, muzzle: [0.42, 0.72] },
     huangzhong: { src: 'assets/img/huangzhong-atk.webp?v=1', img: null, cols: 8, count: 61, cellW: 427, cellH: 300, pivotX: 293, feetY: 298, charH: 203, thf: 0.232, headY: 0.25, play: 54, release: 48, muzzle: [0.34, 0.72] },
+    // Enemigo (general Turbante Amarillo): idle = frames parado con la capa al viento (ping-pong 0..15);
+    // ataque = torbellino de sable desde atkStart hasta el final (16..60).
+    turbante:   { src: 'assets/img/turbante-atk.webp?v=1',   img: null, cols: 8, count: 61, cellW: 886, cellH: 865, pivotX: 331, feetY: 841, charH: 351, thf: 0.34, headY: 0.13, foe: true, idle: [0, 15], atkStart: 16 },
   };
-  const sheetReady = (u) => !u.foe && u.sprite && SHEETS[u.sprite] && SHEETS[u.sprite].img && SHEETS[u.sprite].img.complete && SHEETS[u.sprite].img.naturalWidth;
+  const sheetReady = (u) => u.sprite && SHEETS[u.sprite] && SHEETS[u.sprite].img && SHEETS[u.sprite].img.complete && SHEETS[u.sprite].img.naturalWidth;
   const tweens = [], floaters = [], parts = [], partsF = [], projs = [], slashes = [], auras = [], blooms = [];
   let taijiImg = null;   // taiji (yin-yang) verde horneado 1 vez → se rota/escala por frame (sin coste)
   let glowImg = null;   // halo de fuego horneado (drawImage escalado por frame, sin gradiente)
@@ -98,7 +101,7 @@ const HacCombate = (function () {
   }
   function faceURL(u) {
     if (u._face) return u._face;
-    if (u.foe) {
+    if (u.foe && !sheetReady(u)) {
       const im = turbante('idle'), sz = 30, sx = (48 - sz) / 2, sy = 5;
       return (u._face = mkFace(128, true, (g, S) => g.drawImage(im, sx, sy, sz, sz, 0, 0, S, S)));
     }
@@ -254,7 +257,7 @@ const HacCombate = (function () {
     // ── Apaisado ── Todos PISAN el patio (banda baja de la escena): el fondo pintado
     // tiene su suelo en la mitad inferior; poner unidades más arriba las hace flotar.
     // Enemigo a la izquierda; banda a la derecha en diagonal corta sobre el suelo.
-    enemy.ay = H * 0.86; enemy.ax = W * 0.23; enemy.th = H * 0.40 * depthAt(enemy.ay);
+    enemy.ay = H * 0.86; enemy.ax = W * 0.23; enemy.th = H * 0.34 * depthAt(enemy.ay);
     enemy.ox = 0; enemy.oy = 0; enemy.flash = 0; enemy.deadA = 1; enemy.hitT = 0;
     // [Guan Yu, Huang Zhong, Zhuge]. Zhuge abajo-izquierda de Huang Zhong, en el
     // patio (antes pisaba las barricadas de la derecha).
@@ -499,8 +502,17 @@ const HacCombate = (function () {
   }
   // Aliado animado desde spritesheet (reposo = frame 0; ataque = clip 0→60 estirado a la duración de la acción).
   function drawSheet(u) {
-    const A = SHEETS[u.sprite]; const play = A.play || A.count; let fi = 0;
-    if (u._atk && u._animT0) { const p = clamp((now() - u._animT0) / (u._animDur || 800), 0, 1); fi = Math.min(play - 1, Math.floor(p * play)); }
+    const A = SHEETS[u.sprite]; const play = A.play || A.count; const a0 = A.atkStart || 0; let fi = A.idle ? A.idle[0] : 0;
+    if (u._atk && u._animT0) {
+      // El ataque reproduce desde atkStart hasta el final, estirado a la duración de la acción.
+      const p = clamp((now() - u._animT0) / (u._animDur || 800), 0, 1);
+      fi = a0 + Math.min((play - a0) - 1, Math.floor(p * (play - a0)));
+    } else if (A.idle) {
+      // Reposo animado (capa al viento): ping-pong por el rango idle para un bucle sin saltos.
+      const [i0, i1] = A.idle, n = i1 - i0 + 1, per = 95;   // ~95 ms por frame
+      const step = Math.floor(now() / per) % (2 * n - 2);
+      fi = i0 + (step < n ? step : (2 * n - 2 - step));
+    }
     const col = fi % A.cols, row = Math.floor(fi / A.cols);
     const k = (u.th * dpr) / A.charH;
     const fx = ux(u) * dpr, fy = uy(u) * dpr;   // sin bob: los aliados no levitan
@@ -509,6 +521,7 @@ const HacCombate = (function () {
     groundShadow(fx, fy, dW * 0.30);
     if (u._atk && u._cast) { const rg = ctx.createRadialGradient(fx, fy - dH * 0.42, 0, fx, fy - dH * 0.42, dW * 0.62); rg.addColorStop(0, u._cast); rg.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = rg; ctx.beginPath(); ctx.arc(fx, fy - dH * 0.42, dW * 0.62, 0, 6.283); ctx.fill(); }
     if (u.flash > 0.02) ctx.filter = `brightness(${1 + u.flash * 4})`;
+    else if (u.foe && u.roto) ctx.filter = 'grayscale(.65) brightness(.8)';
     ctx.imageSmoothingEnabled = true;
     ctx.drawImage(A.img, col * A.cellW, row * A.cellH, A.cellW, A.cellH, dx, dy, dW, dH);
     ctx.filter = 'none'; ctx.restore(); u.flash *= 0.82;
@@ -691,18 +704,22 @@ const HacCombate = (function () {
     if (enemy.roto) { enemy.rotoTurnos--; log(`<b>${enemy.name}</b> está aturdido y no puede actuar.`); floater(ux(enemy), uy(enemy) - enemy.th, 'Aturdido', '#bcd8ec'); if (enemy.rotoTurnos <= 0) { enemy.roto = false; enemy.shield = enemy.maxShield; } return finTurno(780); }
     const vivos = partyAlive(); const target = vivos[ri(0, vivos.length - 1)];
     enemy._atk = true;
-    const dx = (target.ax - enemy.ax) * 0.7;
-    tween(260, (p) => { enemy.ox = dx * easeOut(p); }, () => {
+    // Con spritesheet: gira el torbellino en el sitio (animación 16→60) y golpea en el frame del sablazo.
+    const anim = sheetReady(enemy);
+    if (anim) { enemy._animT0 = now(); enemy._animDur = 1000; }
+    const dx = (target.ax - enemy.ax) * (anim ? 0.34 : 0.7);
+    const windup = anim ? 640 : 260;   // el sable conecta tras completar el giro
+    tween(windup, (p) => { enemy.ox = dx * easeOut(p); }, () => {
       let dmg = ri(enemy.atk[0], enemy.atk[1]); if (target.def) dmg = Math.round(dmg * 0.5);
-      target.hp = Math.max(0, target.hp - dmg); target.flash = 1; shake = Math.max(shake, 5);
+      target.hp = Math.max(0, target.hp - dmg); target.flash = 1; shake = Math.max(shake, anim ? 8 : 5);
       slash(ux(target), uy(target) - target.th * 0.5, 'rgba(255,180,120,');
       target.ox = 8; tween(240, (p) => { target.ox = 8 * (1 - easeOut(p)); });
       floater(ux(target), uy(target) - target.th, String(dmg), '#ff6a58', true); burst(ux(target), uy(target) - target.th * 0.5, 'rgba(220,80,70,', 8, 1);
       log(`<b>${enemy.name}</b> golpea a <b>${target.name}</b> · ${dmg} de daño${target.def ? ' (en guardia)' : ''}.`);
       if (!alive(target)) { target.deadA = 1; tween(500, (p) => { target.deadA = 1 - p; }); }
-      renderOrder(); tween(320, (p) => { enemy.ox = dx * (1 - easeInOut(p)); }, () => { enemy.ox = 0; });
+      renderOrder(); tween(anim ? 360 : 320, (p) => { enemy.ox = dx * (1 - easeInOut(p)); }, () => { enemy.ox = 0; });
     });
-    finTurno(260 + 340);
+    finTurno(anim ? 1000 : 600);
   }
 
   function avanzar() {

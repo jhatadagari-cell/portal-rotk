@@ -987,7 +987,10 @@
       (HacEscaramuzas.all(h.id) || []).forEach(b => {
         if (b.estado !== 'en_curso') return;
         const ms = b.miembros || [];
-        ms.forEach((m, idx) => { map[m.id] = { inicioMs: b.inicioMs, finMs: b.finMs, idx, n: ms.length }; });
+        const pereg = esPereg(b);
+        // `pereg`/`hurt`/`hostId` coreografían el peregrinaje: el herido (host) sale
+        // cojeando y calla; el escolta anuncia el viaje (ver escCheerFor en hac-folk).
+        ms.forEach((m, idx) => { map[m.id] = { inicioMs: b.inicioMs, finMs: b.finMs, idx, n: ms.length, pereg, hostId: b.hostId, hurt: pereg && m.id === b.hostId }; });
       });
       HacFolk.setEscaramuzas(map);
     }
@@ -1045,6 +1048,32 @@
       { id: 'wuchao',     nombre: 'Incursión en Wuchao',        zh: '烏巢', rating: 5, enemigo: 'Depósitos de Yuan Shao',   eventos: ['espia', 'fortin'],          req: { cultural: 8, militar: 6 } },
     ];
     const escenarioDef = (id) => ESCARAMUZAS_POOL.find(s => s.id === id) || null;
+    // ── PEREGRINAJE «En busca del legendario curandero» (华佗 Hua Tuo) ──────────
+    // Método alternativo de curación: se monta como una escaramuza pero con este
+    // escenario reservado (reutiliza portón/animación/cheer). Solo disponible con
+    // 3/3 heridas; cura 1-3 al azar; al fracasar deja una SECUELA permanente.
+    const PEREG_ID = 'peregrinaje-huatuo';
+    const esPereg = (b) => !!(b && b.escenario === PEREG_ID);
+    // Secuelas permanentes (cosméticas, de por vida). El sprite las dibuja (manco →
+    // sin un brazo; tuerto → parche). El cliente elige una al azar entre las que
+    // el herido aún NO tenga cuando el peregrinaje fracasa.
+    const SECUELAS = [
+      { id: 'manco',  nom: 'Manco',  desc: 'perdió un brazo en el camino' },
+      { id: 'tuerto', nom: 'Tuerto', desc: 'perdió un ojo y lleva un parche' },
+    ];
+    const secuelaDef = (id) => SECUELAS.find(s => s.id === id) || null;
+    // Calidad de un escolta = suma de sus niveles de dominio (武+文+政).
+    const escortQuality = (id) => ['militar', 'cultural', 'administrativo'].reduce((s, d) => s + ((window.HacStats && HacStats.nivelTotal) ? HacStats.nivelTotal(id, d) : 1), 0);
+    // Riesgo del peregrinaje: base 25 %, que baja según la CALIDAD de los escoltas
+    // (mecenas más fuertes protegen mejor). Tope de reducción 20 pts → riesgo mín. 5 %.
+    function peregRiskParts(band) {
+      const base = 0.25;
+      let red = 0;
+      (band.miembros || []).forEach(m => { if (m.id === band.hostId) return; red += escortQuality(m.id) * 0.012; });
+      red = Math.min(0.20, red);
+      return { base, red, pct: Math.max(0.05, base - red) };
+    }
+    const peregRisk = (band) => peregRiskParts(band).pct;
     const DOM_GLY = { militar: '武', cultural: '文', administrativo: '政' };
     const DOM_NOM = { militar: 'militar', cultural: 'cultura', administrativo: 'administración' };
     // rating 1..5 → espadas + etiqueta + color (verde→rojo).
@@ -1305,10 +1334,30 @@
       if (p.cap) rows.push(`<li><span>Talento del capitán</span><b class="pos">${mod(p.cap)}</b></li>`);
       return `<details class="hacp-esc-desglose"><summary>¿Cómo se calcula el éxito?</summary><ul>${rows.join('')}<li class="hacp-esc-desglose-tip">Recluta mecenas con la aptitud pedida para subir «aptitudes de la banda».</li></ul></details>`;
     }
+    // Resuelve MI peregrinaje al volver. El cliente tira el dado (mismo patrón que las
+    // escaramuzas); la RPC es idempotente → solo el primero surte efecto. ÉXITO: cura
+    // 1-3 al azar. FRACASO: cura 1 pero deja secuela permanente + escoltas quizá heridos.
+    function resolverPeregrinajeSiToca(band) {
+      const exito = Math.random() >= peregRisk(band);
+      let curadas = 0, perm = '', heridos = [];
+      if (exito) {
+        curadas = 1 + Math.floor(Math.random() * 3);                              // 1..3
+      } else {
+        curadas = 1;                                                              // cura 1 aunque falle
+        const yaTiene = (window.HacStats && HacStats.secuelas) ? HacStats.secuelas(band.hostId) : [];
+        const libres = SECUELAS.map(s => s.id).filter(id => yaTiene.indexOf(id) < 0);
+        perm = libres.length ? libres[Math.floor(Math.random() * libres.length)] : '';   // '' si ya las tiene todas
+        (band.miembros || []).forEach(m => { if (m.id !== band.hostId && Math.random() < 0.5) heridos.push(m.id); });
+      }
+      HacEscaramuzas.resolverPeregrinaje(band.id, clock(), exito, curadas, perm, heridos)
+        .then(() => { if (window.HacStats) HacStats.reload().then(() => { if (charId) buildCharPanel(charId); }); })
+        .catch(e => console.warn('[peregrinaje] resolver', e));
+    }
     function resolverEscaramuzaSiToca() {
       if (!myId || !window.HacEscaramuzas) return;
       const band = HacEscaramuzas.miBanda(h.id, myId);
       if (!band || band.estado !== 'en_curso' || clock() < band.finMs) return;
+      if (esPereg(band)) { resolverPeregrinajeSiToca(band); return; }             // peregrinaje: cura, no botín
       const dif = band.dificultad || 4;
       // SUCESOS (doctrina) + RELACIONES pliegan prob. de éxito, botín y dinero por miembro.
       const sc = escSucesos(band), rb = relBonos(band);
@@ -1356,6 +1405,16 @@
       }
       const mine = HacEscaramuzas.miBanda(h.id, myId);
       stopMarch();
+      if (mine && esPereg(mine)) {
+        // PEREGRINAJE: panel propio (curación, no botín). Reutiliza salir/abortar/marcha.
+        body.innerHTML = bandaPeregrinajeHTML(mine);
+        const sl = body.querySelector('[data-salir]'); if (sl) sl.addEventListener('click', () => salirBanda(mine.id));
+        const lp = body.querySelector('[data-lanzar-pereg]'); if (lp && !lp.disabled) lp.addEventListener('click', () => lanzarPeregrinaje(mine.id));
+        const ab = body.querySelector('[data-abort]'); if (ab) ab.addEventListener('click', abortarEscaramuza);
+        const march = body.querySelector('[data-esc-march]'); if (march) startMarch(march, mine);
+        escTick();
+        return;
+      }
       if (mine) {
         body.innerHTML = bandaPropiaHTML(mine);
         const sl = body.querySelector('[data-salir]'); if (sl) sl.addEventListener('click', () => salirBanda(mine.id));
@@ -1372,8 +1431,16 @@
       const enCd = !ESC_FAST && cd > clock();
       const malherido = !!(window.HacStats && HacStats.malherido && HacStats.malherido(myId));
       const bloqueado = enCd || malherido;
-      const cdAviso = malherido ? `<div class="hacp-esc-note" style="color:#e2a06a">✚ Tu mecenas está malherido (3/3) · cúralo en su panel antes de salir.</div>`
+      const cdAviso = malherido ? `<div class="hacp-esc-note" style="color:#e2a06a">✚ Malherido (3/3) · no puedes montar escaramuzas normales. Organiza el <b>peregrinaje</b> de abajo o cúrate en tu panel.</div>`
         : enCd ? `<div class="hacp-esc-note" style="color:#e2a06a">⏳ En cooldown · podrás unirte o montar banda en ${fmtClock((cd - clock()) / 1000)}.</div>` : '';
+      // CTA del peregrinaje: alternativa de curación cuando estás malherido (3/3).
+      const peregCTA = malherido ? `
+        <div class="hacp-esc-scn hacp-pereg-cta" style="--dc:#6b9bd1">
+          <div class="hacp-esc-scn-top"><div class="hacp-esc-scn-id"><span class="hacp-esc-scn-zh">華佗</span> <b>En busca del legendario curandero</b></div></div>
+          <div class="hacp-esc-scn-en">Peregrina a la montaña de Hua Tuo · si llegáis, curará 1-3 heridas al azar</div>
+          <div class="hacp-esc-scn-meta"><span class="hacp-esc-req-lbl">Riesgo</span> <span class="hacp-req">25% · baja con escoltas</span></div>
+          <button class="hacp-cp-btn hacp-esc-crear" data-montar-pereg${enCd ? ' disabled' : ''}>⛰ Organizar peregrinaje${enCd ? ' (en cooldown)' : ''}</button>
+        </div>` : '';
       // Coste de montar una escaramuza: plazas + su dificultad (rating).
       const costeEsc = (scn) => costeRating(escPlazas, scn.rating);
       const dia = escaramuzasDelDia();
@@ -1391,6 +1458,12 @@
       }).join('');
       const abiertas = HacEscaramuzas.abiertas(h.id).filter(b => b.miembros.length < b.plazas);
       const lista = abiertas.map(b => {
+        if (esPereg(b)) {
+          // Peregrinaje abierto: cualquiera (no malherido / sin cooldown) puede ESCOLTAR.
+          return `<div class="hacp-mrow"><div class="hacp-mrow-main"><b>⛰ En busca del legendario curandero</b>
+            <span>peregrinaje · ${b.miembros.length}/${b.plazas} · con ${esc(b.hostNombre || '—')}</span></div>
+            <button class="hacp-cp-btn" data-unir="${esc(b.id)}"${bloqueado ? ' disabled' : ''}>Escoltar</button></div>`;
+        }
         const scn = escenarioDef(b.escenario);
         return `<div class="hacp-mrow"><div class="hacp-mrow-main"><b>${esc(scn ? scn.nombre : 'Expedición militar')}</b>
           <span>${difBadgeHTML(bandRating(b), { noLabel: true })} · ${b.miembros.length}/${b.plazas} · cap. ${esc(b.hostNombre || '—')}</span></div>
@@ -1399,12 +1472,14 @@
       body.innerHTML = `
         <div class="hacp-esc-h">兵 Escaramuzas <span class="hacp-esc-sub">expediciones cooperativas</span></div>
         ${cdAviso}
+        ${peregCTA}
         <div class="hacp-esc-ttl">Escaramuzas de hoy <span class="hacp-esc-sub">cambian cada día</span></div>
         <div class="hacp-esc-note">Elige una gesta y monta la banda; recluta mecenas para cumplir su requisito de aptitudes. Si volvéis con éxito recuperáis el coste +50% y vuestra parte; si fracasáis, vuestros mecenas reciben una herida.</div>
         <div class="hacp-esc-plazas">${[2, 3, 4].map(p => `<button class="hacp-esc-p${p === escPlazas ? ' on' : ''}" data-plazas="${p}">${p} plazas</button>`).join('')}</div>
         <div class="hacp-esc-day">${cards}</div>
         <div class="hacp-esc-ttl2">Bandas abiertas</div>${lista}`;
       body.querySelectorAll('[data-plazas]').forEach(b => b.addEventListener('click', () => { escPlazas = +b.dataset.plazas; renderEscaramuzas(); }));
+      const mpb = body.querySelector('[data-montar-pereg]'); if (mpb && !mpb.disabled) mpb.addEventListener('click', montarPeregrinaje);
       body.querySelectorAll('[data-crear-scn]').forEach(b => { if (!b.disabled) b.addEventListener('click', () => crearBanda(b.dataset.crearScn)); });
       body.querySelectorAll('[data-unir]').forEach(b => { if (!b.disabled) b.addEventListener('click', () => unirBanda(b.dataset.unir)); });
     }
@@ -1486,6 +1561,81 @@
           ${scn ? `<div class="hacp-esc-scn-en">contra ${esc(scn.enemigo)}</div>` : ''}
           <ul class="hacp-esc-roster">${roster}</ul>${accion}</div>`;
     }
+    // ── PEREGRINAJE «En busca del legendario curandero» — panel + acciones ──────
+    function bandaPeregrinajeHTML(b) {
+      const esHost = b.hostId === myId;
+      const hostNombre = b.hostNombre || 'el herido';
+      const roster = b.miembros.map(m => `<li class="hacp-esc-m${m.id === b.hostId ? ' host' : ''}">${esc(m.nombre || 'mecenas')}${m.id === b.hostId ? ' · el herido' : ' · escolta'}${m.id === myId ? ' (tú)' : ''}</li>`).join('');
+      const rp = peregRiskParts(b);
+      const riskPct = Math.round(rp.pct * 100);
+      const riskCls = riskPct <= 10 ? 'hi' : (riskPct <= 18 ? 'mid' : 'lo');   // menos riesgo = mejor (verde)
+      const riskHTML = `<div class="hacp-esc-prob ${riskCls}">Riesgo del camino <b>${riskPct}%</b></div>`;
+      const redHTML = rp.red > 0
+        ? `<div class="hacp-esc-reward">Los escoltas reducen el riesgo <b>−${Math.round(rp.red * 100)} pts</b> (mecenas más fuertes protegen mejor).</div>`
+        : `<div class="hacp-esc-reward">Sin escolta partes a riesgo pleno. Espera a que alguien se una para bajarlo.</div>`;
+      let accion = '';
+      if (b.estado === 'abierta') {
+        if (esHost) {
+          accion = riskHTML + redHTML + `<button class="hacp-cp-btn hacp-esc-lanzar" data-lanzar-pereg>⛰ Partir en peregrinaje</button>
+            <div class="hacp-esc-note">Puedes partir solo o esperar escoltas: cuantos más y mejores te acompañen, menor será el riesgo. El viaje dura 1 h.</div>
+            <button class="hacp-cp-btn hacp-esc-salir" data-salir>Cancelar el peregrinaje</button>`;
+        } else {
+          accion = riskHTML + redHTML + `<div class="hacp-esc-note">Aguardáis a que ${esc(hostNombre)} decida partir. Tu presencia reduce el riesgo del camino… pero si sale mal, podrías volver herido.</div>
+            <button class="hacp-cp-btn hacp-esc-salir" data-salir>Dejar de escoltar</button>`;
+        }
+      } else if (b.estado === 'en_curso') {
+        accion = `<canvas class="hacp-esc-march" data-esc-march></canvas>
+          <div class="hacp-esc-timer" data-esc-timer="${b.finMs}">Camino a la montaña…</div>
+          ${riskHTML}
+          <div class="hacp-esc-note">El grupo avanza despacio: el herido cojea, los escoltas vigilan. Al llegar sabréis si el sabio os recibe.</div>
+          ${esHost ? `<button type="button" class="hacp-cp-btn hacp-esc-abort" data-abort>Abandonar el peregrinaje</button>` : ''}`;
+      } else if (b.estado === 'abortando') {
+        accion = `<canvas class="hacp-esc-march" data-esc-march data-back></canvas>
+          <div class="hacp-esc-timer" data-esc-timer="${b.finMs}">Regresando…</div>
+          <div class="hacp-esc-note">Se abandona el peregrinaje. El grupo desanda el camino a casa, sin cura.</div>`;
+      } else if (b.exito === true) {   // resuelta con éxito
+        accion = `<div class="hacp-esc-result ok">✚ ¡Hallasteis al gran sabio!</div>
+          <div class="hacp-esc-note">Hua Tuo atendió a ${esc(hostNombre)}: sus heridas han menguado. Compruébalo en su panel.</div>
+          <button class="hacp-cp-btn hacp-esc-salir" data-salir>Cerrar</button>`;
+      } else {   // resuelta con fracaso
+        const secs = (esHost && window.HacStats && HacStats.secuelas) ? HacStats.secuelas(myId) : [];
+        const ultima = secs.length ? secuelaDef(secs[secs.length - 1]) : null;
+        accion = `<div class="hacp-esc-result bad">✘ El camino se torció</div>
+          <div class="hacp-esc-note">No hallasteis al sabio a tiempo. ${esc(hostNombre)} vuelve con una herida menos, pero ${ultima ? `con una secuela de por vida: <b>${esc(ultima.nom)}</b> (${esc(ultima.desc)})` : 'malparado'}. Algún escolta pudo volver herido.</div>
+          <button class="hacp-cp-btn hacp-esc-salir" data-salir>Cerrar</button>`;
+      }
+      return `<div class="hacp-esc-h">⛰ Peregrinaje <span class="hacp-esc-sub">${b.miembros.length} en marcha</span></div>
+        <div class="hacp-esc-card" style="--dc:#6b9bd1">
+          <div class="hacp-esc-scn-top">
+            <div class="hacp-esc-scn-id"><span class="hacp-esc-scn-zh">華佗</span> <b>En busca del legendario curandero</b></div>
+          </div>
+          <div class="hacp-esc-scn-en">hacia la montaña de Hua Tuo</div>
+          <ul class="hacp-esc-roster">${roster}</ul>${accion}</div>`;
+    }
+    // Monta el peregrinaje (solo con 3/3 heridas). Gratis, sin requisitos de aptitud.
+    async function montarPeregrinaje() {
+      if (escBusy) return;
+      if (!(window.HacStats && HacStats.heridas(myId) >= 3)) { toast('El peregrinaje solo se organiza con 3/3 heridas'); return; }
+      if (!ESC_FAST && window.HacStats && HacStats.escaramuzaCd && HacStats.escaramuzaCd(myId) > clock()) { toast('En cooldown · aún no puedes salir'); return; }
+      escBusy = true;
+      try {
+        await HacEscaramuzas.crear({ haciendaId: h.id, hostId: myId, hostNombre: myName, plazas: 4, dificultad: 0, coste: 0, escenario: PEREG_ID });
+        toast('⛰ Peregrinaje organizado · esperando escoltas');
+        if (window.HacBitacora) HacBitacora.log(myId, 'escaramuza', '⛰ Organizaste el peregrinaje «En busca del legendario curandero»');
+      } catch (e) { toast((e && e.message) || 'No se pudo organizar'); await HacEscaramuzas.reload(); }
+      finally { escBusy = false; renderEscaramuzas(); if (charId) buildCharPanel(charId); }
+    }
+    // Parte (admite ir solo). Dura 1 h (o ~1 min en modo test).
+    async function lanzarPeregrinaje(id) {
+      if (escBusy) return; escBusy = true;
+      try {
+        await HacEscaramuzas.lanzarPeregrinaje(id, myId, clock(), ESC_FAST ? 60000 : 3600000);
+        toast(ESC_FAST ? '⛰ ¡En marcha! (modo test · ~1 min)' : '⛰ ¡El grupo parte hacia la montaña!');
+        if (window.HacBitacora) HacBitacora.log(myId, 'escaramuza', '⛰ Partisteis en busca del legendario curandero');
+        syncEscaramuzaOrder(); syncEscaramuzaFolk();
+      } catch (e) { toast((e && e.message) || 'No se pudo partir'); await HacEscaramuzas.reload(); }
+      finally { escBusy = false; renderEscaramuzas(); }
+    }
     async function crearBanda(scnId) {
       if (escBusy) return;
       const scn = escenarioDef(scnId);
@@ -1545,11 +1695,14 @@
       if (!myId || !window.HacEscaramuzas || escBusy) return;
       const band = HacEscaramuzas.miBanda(h.id, myId);
       if (!band || band.hostId !== myId || band.estado !== 'en_curso') return;
-      if (!confirm('¿Abortar la escaramuza? La banda entera volverá a casa en 5 minutos y no habrá recompensas ni botín.')) return;
+      const msgAbort = esPereg(band)
+        ? '¿Abandonar el peregrinaje? El grupo entero volverá a casa en 5 minutos y no habrá cura.'
+        : '¿Abortar la escaramuza? La banda entera volverá a casa en 5 minutos y no habrá recompensas ni botín.';
+      if (!confirm(msgAbort)) return;
       escBusy = true;
       try {
         await HacEscaramuzas.abortar(band.id, myId, clock(), ESC_FAST ? 20000 : 0);
-        toast('↩ Escaramuza abortada · regreso en 5 min');
+        toast(esPereg(band) ? '↩ Peregrinaje abandonado · regreso en 5 min' : '↩ Escaramuza abortada · regreso en 5 min');
         syncEscaramuzaOrder();
       } catch (e) { toast((e && e.message) || 'No se pudo abortar'); await HacEscaramuzas.reload(); }
       finally { escBusy = false; if (charId) buildCharPanel(charId); renderEscaramuzas(); }
@@ -1597,6 +1750,15 @@
       if (!myId || !window.HacBitacora || !window.HacEscaramuzas) return;
       const band = HacEscaramuzas.miBanda(h.id, myId);
       if (!band) return;
+      if (esPereg(band)) {
+        if (band.exito === true && band.estado === 'resuelta')
+          HacBitacora.log(myId, 'escaramuza', '⛰ Peregrinaje: ✔ hallasteis al gran sabio · heridas curadas', { clave: 'per-res:' + band.id });
+        else if (band.exito === false && band.estado === 'resuelta')
+          HacBitacora.log(myId, 'escaramuza', '⛰ Peregrinaje: ✘ el camino se torció · secuela permanente', { clave: 'per-res:' + band.id });
+        else if (band.estado === 'abortando')
+          HacBitacora.log(myId, 'escaramuza', '↩ Peregrinaje abandonado · el grupo regresa', { clave: 'per-abort:' + band.id });
+        return;
+      }
       // Éxito: se registra tanto en 'botin' (botín pendiente) como en 'resuelta' (ya
       // repartido) — antes solo en 'botin', y se perdía si volvías tras cerrarse el reparto.
       const narr = escNarrTexto(band); const suf = narr ? ' · ' + narr : '';
@@ -1708,15 +1870,17 @@
       const back = cv.hasAttribute('data-back');          // 'abortando' → desanda el camino
       const FR = (window.HacChar && HacChar.FRAMES) || 4;
       const dir = back ? 'NW' : 'SE';                     // ida de cara (SE), vuelta de espaldas (NW)
+      const pereg = esPereg(band);
       const members = (band.miembros || []).map(m => {
         const pj = (window.HacPersonajes && HacPersonajes.get) ? HacPersonajes.get(m.id) : null;
-        return { id: m.id, aptitud: pj ? pj.aptitud : '', aspecto: pj ? (pj.aspecto || {}) : { robe: color }, mio: m.id === myId };
+        const sec = (window.HacStats && HacStats.secuelas) ? HacStats.secuelas(m.id) : [];
+        return { id: m.id, aptitud: pj ? pj.aptitud : '', aspecto: pj ? (pj.aspecto || {}) : { robe: color }, mio: m.id === myId, hurt: pereg && m.id === band.hostId, secuelas: sec };
       });
       const sprCache = new Map();
       function spr(mem, frame) {
         const key = mem.id + '|' + frame;
         let c = sprCache.get(key);
-        if (!c && window.HacChar) { c = document.createElement('canvas'); HacChar.draw(c, { aptitud: mem.aptitud, aspecto: mem.aspecto || {}, dir: dir, frame: frame, scale: 2 }); sprCache.set(key, c); }
+        if (!c && window.HacChar) { c = document.createElement('canvas'); HacChar.draw(c, { aptitud: mem.aptitud, aspecto: mem.aspecto || {}, dir: dir, frame: frame, scale: 2, pose: mem.hurt ? 'limp' : undefined, secuelas: mem.secuelas }); sprCache.set(key, c); }
         return c;
       }
       const dpr = Math.min(2, window.devicePixelRatio || 1);
@@ -1970,8 +2134,9 @@
         : null;
       const equipN = (window.HacStats && HacStats.equipados) ? HacStats.equipados(id).length : 0;
       const heridas = (window.HacStats && HacStats.heridas) ? HacStats.heridas(id) : 0;
+      const secuelas = (window.HacStats && HacStats.secuelas) ? HacStats.secuelas(id) : [];
       const cargo = (window.HacCalc && HacCalc.cargoDef) ? HacCalc.cargoDef(((h.miembros || []).find(m => m.personajeId === id) || {}).cargo) : null;
-      return { it, aptId, aptDef, cargo, e, eFull, eRegenMin, activa, enTarea, fuera, exped, escaramuza, rest, mine: id === myId, puntos: puntosTotales(id), earned, money, home, ahorro, stats, equipN, heridas };
+      return { it, aptId, aptDef, cargo, e, eFull, eRegenMin, activa, enTarea, fuera, exped, escaramuza, rest, mine: id === myId, puntos: puntosTotales(id), earned, money, home, ahorro, stats, equipN, heridas, secuelas };
     }
     // Panel de inventario/monedero que se despliega a la derecha del panel del
     // mecenas. Scaffolding: el dinero y los objetos llegarán al jugar misiones
@@ -2062,8 +2227,12 @@
       const pen = Math.round(Math.min(0.45, n * 0.15) * 100);
       const txt = !n ? 'ileso' : (n >= 3 ? 'malherido · no puede salir' : `${n}/3 · −${pen}% recompensa · +riesgo`);
       const cura = (d.mine && n > 0) ? `<button type="button" class="hacp-cp-btn hacp-cp-cura" data-act="cura"${d.money < COSTE_CURA ? ' disabled' : ''}>✚ Curar 1 herida · 💰 ${COSTE_CURA}${d.money < COSTE_CURA ? ' (te falta)' : ''}</button>` : '';
+      // A 3/3: método ALTERNATIVO de curación → peregrinaje al gran sabio (abre Escaramuzas).
+      const pereg = (d.mine && n >= 3) ? `<button type="button" class="hacp-cp-btn hacp-cp-pereg" data-act="peregrinaje" data-tip="Peregrina a la montaña de Hua Tuo con escoltas. Si llegáis, cura 1-3 heridas; si el viaje falla, vuelves con una secuela permanente.">⛰ En busca del legendario curandero →</button>` : '';
+      // Secuelas permanentes (cosméticas, de por vida) ganadas en peregrinajes fallidos.
+      const secs = (d.secuelas && d.secuelas.length) ? `<div class="hacp-cp-secuelas" data-tip="Secuelas permanentes de peregrinajes fallidos. Son cicatrices de por vida: no se curan.">Secuelas: ${d.secuelas.map(id => { const s = secuelaDef(id); return s ? esc(s.nom) : esc(id); }).join(' · ')}</div>` : '';
       return `<div class="hacp-cp-wounds${n ? ' hurt' : ''}${n >= 3 ? ' bad' : ''}" data-tip="Heridas ${n}/3. Reducen la recompensa (−15% por herida) y suben el riesgo de las expediciones; a 3/3 tu mecenas queda malherido y no puede salir hasta curarse.">
-        <span class="hacp-wound-h">Heridas</span><span class="hacp-wound-slots">${slots}</span><span class="hacp-wound-txt">${txt}</span></div>${cura}`;
+        <span class="hacp-wound-h">Heridas</span><span class="hacp-wound-slots">${slots}</span><span class="hacp-wound-txt">${txt}</span></div>${secs}${cura}${pereg}`;
     }
     // Cura 1 herida pagando en la enfermería (decisión: gastar dinero vs. seguir herido).
     function curarHerida() {
@@ -2168,7 +2337,9 @@
           // Escaramuza: NO se puede liberar en solitario. Solo el capitán aborta (vuelta 5 min).
           const band = window.HacEscaramuzas ? HacEscaramuzas.miBanda(h.id, myId) : null;
           const soyHost = !!(band && band.hostId === myId), abortando = !!(band && band.estado === 'abortando');
-          const flag = abortando ? `↩ Escaramuza abortada · vuelta en <b id="hacp-cp-rest">${fmtClock(d.rest)}</b>`
+          const pereg = esPereg(band);
+          const flag = abortando ? `↩ ${pereg ? 'Peregrinaje abandonado' : 'Escaramuza abortada'} · vuelta en <b id="hacp-cp-rest">${fmtClock(d.rest)}</b>`
+            : pereg ? `⛰ En peregrinaje · vuelve en <b id="hacp-cp-rest">${fmtClock(d.rest)}</b>`
             : `⚔ En escaramuza · vuelve en <b id="hacp-cp-rest">${fmtClock(d.rest)}</b>`;
           const ctrl = (soyHost && !abortando) ? `<button type="button" class="hacp-cp-btn hacp-cp-abort" data-act="abort">Abortar</button>`
             : `<span class="hacp-cp-lbl" style="opacity:.7;align-self:center">${abortando ? 'regresando…' : 'solo el capitán aborta'}</span>`;
@@ -2243,6 +2414,8 @@
       if (lvb) lvb.addEventListener('click', openLeave);
       const cub = charEl.querySelector('[data-act="cura"]');
       if (cub && !cub.disabled) cub.addEventListener('click', curarHerida);
+      const pgb = charEl.querySelector('[data-act="peregrinaje"]');
+      if (pgb) pgb.addEventListener('click', openEscOverlay);   // abre Escaramuzas, donde está la CTA del peregrinaje
       const bh = charEl.querySelector('[data-act="buyhome"]');
       if (bh && !bh.disabled) bh.addEventListener('click', () => {
         if (!myId || !window.HacStats) return;
@@ -2259,7 +2432,7 @@
     // cargar/cambiar se re-pinte solo (antes el oro se quedaba a 0 hasta cambiar de pestaña).
     function sigOf(d) {
       return [charId, d.activa ? (d.enTarea ? 't' : 'g') : '-', d.mine ? 'me' : '-',
-        d.money, d.ahorro, d.heridas, d.equipN, d.cargo ? d.cargo.id : '-', d.home ? 1 : 0].join('|');
+        d.money, d.ahorro, d.heridas, (d.secuelas ? d.secuelas.length : 0), d.equipN, d.cargo ? d.cargo.id : '-', d.home ? 1 : 0].join('|');
     }
     // Retrato animado: pinta el sprite ACTUAL del mecenas (dir/andar/sentado) cada
     // frame mientras el panel está abierto. Funciona también a pantalla completa.

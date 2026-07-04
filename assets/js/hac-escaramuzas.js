@@ -140,6 +140,28 @@ const HacEscaramuzas = (function () {
     return upsertCache(data);
   }
 
-  return { ready, reload, all, abiertas, miBanda, crear, unir, salir, lanzar, suceso, resolver, reclamar, abortar, DUR_MS, CD_MS, dbOk: () => ok, TABLE };
+  // ── PEREGRINAJE «En busca del legendario curandero» (escenario especial) ──
+  // Reutiliza la misma tabla/fila (crear/unir/salir/abortar), pero LANZAR admite
+  // ir solo y dura 1 h, y RESOLVER cura heridas (o deja secuela). Ver peregrinaje.sql.
+  async function lanzarPeregrinaje(id, hostId, nowMs, durMs) {
+    if (!nowMs) throw new Error('Reloj no disponible');
+    const c = await sb();
+    const args = { p_id: id, p_host: hostId, p_now: nowMs };
+    if (durMs) args.p_dur_ms = durMs;                         // 1 h (o ~1 min en modo test)
+    const { data, error } = await c.rpc('peregrinaje_lanzar', args);
+    if (error) throw new Error(error.message || 'No se pudo partir');
+    return upsertCache(data);
+  }
+  // Resuelve al volver. Idempotente en BD. El cliente tira el dado: éxito/curadas
+  // (1..3), secuela a añadir al fracasar y qué escoltas vuelven heridos.
+  async function resolverPeregrinaje(id, nowMs, exito, curadas, perm, escoltas) {
+    const c = await sb();
+    const args = { p_id: id, p_now: nowMs, p_exito: !!exito, p_curadas: curadas || 0, p_perm: perm || '', p_escoltas: escoltas || [] };
+    const { data, error } = await c.rpc('peregrinaje_resolver', args);
+    if (error) throw new Error(error.message || 'No se pudo resolver el peregrinaje');
+    return upsertCache(data);
+  }
+
+  return { ready, reload, all, abiertas, miBanda, crear, unir, salir, lanzar, suceso, resolver, reclamar, abortar, lanzarPeregrinaje, resolverPeregrinaje, DUR_MS, CD_MS, dbOk: () => ok, TABLE };
 })();
 if (typeof window !== 'undefined') window.HacEscaramuzas = HacEscaramuzas;
