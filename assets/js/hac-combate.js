@@ -67,7 +67,7 @@ const HacCombate = (function () {
     huangzhong: { src: 'assets/img/huangzhong-atk.webp?v=1', img: null, cols: 8, count: 61, cellW: 427, cellH: 300, pivotX: 293, feetY: 298, charH: 203, thf: 0.232, headY: 0.25, play: 54, release: 48, muzzle: [0.34, 0.72] },
     // Enemigo (general Turbante Amarillo): idle = frames parado con la capa al viento (ping-pong 0..15);
     // ataque = torbellino de sable desde atkStart hasta el final (16..60).
-    turbante:   { src: 'assets/img/turbante-atk.webp?v=1',   img: null, cols: 8, count: 61, cellW: 886, cellH: 865, pivotX: 331, feetY: 841, charH: 351, thf: 0.34, headY: 0.13, foe: true, idle: [0, 15], atkStart: 16 },
+    turbante:   { src: 'assets/img/turbante-atk.webp?v=1',   img: null, cols: 8, count: 61, cellW: 886, cellH: 865, pivotX: 331, feetY: 841, charH: 351, thf: 0.34, headY: 0.13, foe: true, idle: [0, 14], atkStart: 16 },
   };
   const sheetReady = (u) => u.sprite && SHEETS[u.sprite] && SHEETS[u.sprite].img && SHEETS[u.sprite].img.complete && SHEETS[u.sprite].img.naturalWidth;
   const tweens = [], floaters = [], parts = [], partsF = [], projs = [], slashes = [], auras = [], blooms = [];
@@ -508,10 +508,9 @@ const HacCombate = (function () {
       const p = clamp((now() - u._animT0) / (u._animDur || 800), 0, 1);
       fi = a0 + Math.min((play - a0) - 1, Math.floor(p * (play - a0)));
     } else if (A.idle) {
-      // Reposo animado (capa al viento): ping-pong por el rango idle para un bucle sin saltos.
+      // Reposo animado (capa al viento): bucle normal hacia delante por el rango idle.
       const [i0, i1] = A.idle, n = i1 - i0 + 1, per = 95;   // ~95 ms por frame
-      const step = Math.floor(now() / per) % (2 * n - 2);
-      fi = i0 + (step < n ? step : (2 * n - 2 - step));
+      fi = i0 + (Math.floor(now() / per) % n);
     }
     const col = fi % A.cols, row = Math.floor(fi / A.cols);
     const k = (u.th * dpr) / A.charH;
