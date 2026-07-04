@@ -310,7 +310,7 @@ const HacCombate = (function () {
       bg._photo = true;
       // Braseros anclados a fracciones de la imagen fuente → se mantienen sobre los
       // pebeteros pintados a cualquier tamaño de pantalla (la transformada absorbe el recorte).
-      bg._torches = [{ x: (dx + dw * 0.365) / dpr, y: (dy + dh * 0.665) / dpr }, { x: (dx + dw * 0.605) / dpr, y: (dy + dh * 0.665) / dpr }];
+      bg._torches = [{ x: (dx + dw * 0.370) / dpr, y: (dy + dh * 0.648) / dpr }, { x: (dx + dw * 0.622) / dpr, y: (dy + dh * 0.650) / dpr }];
       return;
     }
     // Fallback procedural (mazmorra) mientras carga / si falla la imagen.
