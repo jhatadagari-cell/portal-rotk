@@ -67,8 +67,9 @@ const HacCombate = (function () {
     huangzhong: { src: 'assets/img/huangzhong-atk.webp?v=1', img: null, cols: 8, count: 61, cellW: 427, cellH: 300, pivotX: 293, feetY: 298, charH: 203, thf: 0.232, headY: 0.25, play: 54, release: 48, muzzle: [0.34, 0.72] },
   };
   const sheetReady = (u) => !u.foe && u.sprite && SHEETS[u.sprite] && SHEETS[u.sprite].img && SHEETS[u.sprite].img.complete && SHEETS[u.sprite].img.naturalWidth;
-  const tweens = [], floaters = [], parts = [], partsF = [], projs = [], slashes = [], auras = [], blooms = [];
+  const tweens = [], floaters = [], parts = [], partsF = [], projs = [], slashes = [], auras = [], blooms = [], streaks = [];
   let taijiImg = null;   // taiji (yin-yang) verde horneado 1 vez → se rota/escala por frame (sin coste)
+  let glowImg = null, bandLight = null, bandDark = null, windNow = 0;   // sprites de FX horneados + viento actual
   const alive = (u) => u.hp > 0;
   const partyAlive = () => party.filter(alive);
   const actual = () => orden[idx];
@@ -308,6 +309,14 @@ const HacCombate = (function () {
       g.fillStyle = gr; g.fillRect(0, h * 0.62, w, h * 0.38);                                     // penumbra al pie
       bg._photo = true;
       bg._torches = [{ x: (dx + dw * 0.365) / dpr, y: (dy + dh * 0.665) / dpr }, { x: (dx + dw * 0.605) / dpr, y: (dy + dh * 0.665) / dpr }];
+      // Estandartes 黄 a animar (fracciones sobre la imagen fuente 1698×922). Cada uno
+      // ondea con su propia fase. En CSS px; en el bucle se multiplican por dpr.
+      const BF = [
+        { x0: 0.055, y0: 0.350, x1: 0.150, y1: 0.620, s: 0.0 },   // gran estandarte 黄, izquierda
+        { x0: 0.470, y0: 0.452, x1: 0.520, y1: 0.588, s: 3.1 },   // estandarte 黄 del pabellón
+        { x0: 0.688, y0: 0.360, x1: 0.732, y1: 0.454, s: 4.3 },   // banderín de asta 黄 (derecha)
+      ];
+      bg._banners = BF.map(f => ({ x: (dx + f.x0 * dw) / dpr, y: (dy + f.y0 * dh) / dpr, w: ((f.x1 - f.x0) * dw) / dpr, h: ((f.y1 - f.y0) * dh) / dpr, seed: f.s }));
       return;
     }
     // Fallback procedural (mazmorra) mientras carga / si falla la imagen.
@@ -359,6 +368,79 @@ const HacCombate = (function () {
     g.beginPath(); g.arc(cx, cy - R / 2, R / 2, Math.PI / 2, Math.PI * 1.5); g.arc(cx, cy + R / 2, R / 2, Math.PI * 1.5, Math.PI / 2, true); g.stroke();
     taijiImg = c;
   }
+
+  // ── Viento ambiental: brisa base + rachas (suma de senos). Positivo = sopla a la
+  // derecha (hacia dentro de la escena, como los jirones de los estandartes). ────────
+  function windAt(tt) {
+    return 0.34 * Math.sin(tt * 0.00055) + 0.24 * Math.sin(tt * 0.00017 + 1.3)
+         + 0.16 * Math.sin(tt * 0.00110 + 2.1) + 0.30;   // sesgo +0.30 → predomina hacia la derecha
+  }
+
+  // ── Sprites de FX horneados una sola vez (nada de gradientes por frame) ───────────
+  function bakeFx() {
+    // Halo de fuego (radial cálido).
+    let S = 128, c = document.createElement('canvas'); c.width = S; c.height = S; let g = c.getContext('2d');
+    let gr = g.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2);
+    gr.addColorStop(0, 'rgba(255,205,120,.95)'); gr.addColorStop(0.32, 'rgba(255,150,60,.5)'); gr.addColorStop(0.7, 'rgba(230,110,40,.16)'); gr.addColorStop(1, 'rgba(220,100,40,0)');
+    g.fillStyle = gr; g.fillRect(0, 0, S, S); glowImg = c;
+    // Bandas de tela (pliegue) claras y oscuras, con bordes desvanecidos → ondeo.
+    const band = (col) => {
+      const w = 72, h = 128, cc = document.createElement('canvas'); cc.width = w; cc.height = h; const gg = cc.getContext('2d');
+      let lg = gg.createLinearGradient(0, 0, w, 0); lg.addColorStop(0, 'rgba(0,0,0,0)'); lg.addColorStop(0.5, col); lg.addColorStop(1, 'rgba(0,0,0,0)');
+      gg.fillStyle = lg; gg.fillRect(0, 0, w, h);
+      let vg = gg.createLinearGradient(0, 0, 0, h); vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(0.12, 'rgba(0,0,0,1)'); vg.addColorStop(0.88, 'rgba(0,0,0,1)'); vg.addColorStop(1, 'rgba(0,0,0,0)');
+      gg.globalCompositeOperation = 'destination-in'; gg.fillStyle = vg; gg.fillRect(0, 0, w, h);
+      return cc;
+    };
+    bandLight = band('rgba(255,244,205,1)'); bandDark = band('rgba(18,10,4,1)');
+  }
+
+  // ── Brasero: llama procedural por capas (aditiva) + halo pulsante, inclinándose
+  // con el viento. Coordenadas en px de dispositivo. ────────────────────────────────
+  function drawTongue(h, w, lean, col) {
+    ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(-w, 0);
+    ctx.quadraticCurveTo(-w * 0.7, -h * 0.55, lean * h, -h);
+    ctx.quadraticCurveTo(w * 0.7, -h * 0.55, w, 0);
+    ctx.quadraticCurveTo(0, h * 0.22, -w, 0); ctx.closePath(); ctx.fill();
+  }
+  function drawBrazier(gx, gy, tt, seed) {
+    const s = dpr, wind = windNow;
+    const fl = 0.80 + Math.sin(tt * 0.021 + seed) * 0.10 + Math.sin(tt * 0.057 + seed * 1.7) * 0.05 + Math.random() * 0.05;
+    const lean = wind * 0.5 + Math.sin(tt * 0.013 + seed) * 0.10;
+    const gr = 58 * s * (0.9 + fl * 0.28);
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.globalAlpha = 0.5 + 0.16 * Math.sin(tt * 0.03 + seed) + 0.08 * fl;
+    ctx.drawImage(glowImg, gx - gr, gy - gr * 1.15, gr * 2, gr * 2);
+    ctx.globalAlpha = 1;
+    ctx.save(); ctx.translate(gx, gy); const H0 = 21 * s * fl;
+    drawTongue(H0 * 1.12, 9 * s, lean * 1.35, 'rgba(205,66,18,.5)');
+    drawTongue(H0,        6.6 * s, lean,        'rgba(255,138,44,.8)');
+    drawTongue(H0 * 0.66, 4.1 * s, lean * 0.7,  'rgba(255,214,110,.9)');
+    drawTongue(H0 * 0.38, 2.3 * s, lean * 0.45, 'rgba(255,250,224,.95)');
+    ctx.restore();
+    ctx.globalCompositeOperation = 'source-over';
+    if (Math.random() < 0.5) parts.push({ x: gx + rnd(-3, 3) * s, y: gy - 6 * s, vx: (wind * 0.5 + rnd(-0.15, 0.15)) * s, vy: -rnd(0.35, 0.9) * s, life: 0, max: rnd(700, 1500), col: 'rgba(255,170,70,', r: rnd(1, 2.2) * s, ember: true });
+  }
+
+  // ── Ondeo de tela: pliegues de luz/sombra que recorren cada estandarte (recortados
+  // a su rectángulo). No deforma el arte; la amplitud crece con las rachas de viento. ─
+  function clothRipple(r, tt) {
+    const wind = windNow, amp = r.w * (0.22 + 0.26 * Math.max(0, wind));
+    const bw = r.w * 0.62, bh = r.h * 1.3, N = 3;
+    ctx.save(); ctx.beginPath(); ctx.rect(r.x, r.y, r.w, r.h); ctx.clip();
+    for (let i = 0; i < N; i++) {
+      const ph = r.seed + i * 2.2;
+      const cx = r.x + r.w * 0.5 + Math.sin(tt * 0.0017 + ph) * amp + (i - (N - 1) / 2) * r.w * 0.26;
+      const cy = r.y + r.h * 0.5 + Math.sin(tt * 0.0012 + ph * 1.3) * r.h * 0.05;
+      const a = 0.24 + 0.14 * Math.sin(tt * 0.0023 + ph);
+      ctx.globalCompositeOperation = 'overlay'; ctx.globalAlpha = Math.max(0, a);
+      ctx.drawImage(bandLight, cx - bw / 2, cy - bh / 2, bw, bh);
+      ctx.globalCompositeOperation = 'multiply'; ctx.globalAlpha = Math.max(0, a * 0.7);
+      ctx.drawImage(bandDark, cx - bw / 2 + bw * 0.55, cy - bh / 2, bw, bh);
+    }
+    ctx.restore(); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+  }
+
   function sparkle(x, y, r, col) { ctx.strokeStyle = col; ctx.lineCap = 'round'; ctx.lineWidth = Math.max(1, r * 0.35); ctx.beginPath(); ctx.moveTo(x - r, y); ctx.lineTo(x + r, y); ctx.moveTo(x, y - r); ctx.lineTo(x, y + r); ctx.stroke(); }
 
   // ── Partículas / números ─────────────────────────────────────────────────────
@@ -392,18 +474,25 @@ const HacCombate = (function () {
     // tweens
     for (let i = tweens.length - 1; i >= 0; i--) { const tw = tweens[i]; const p = clamp((tt - tw.t0) / tw.dur, 0, 1); if (tw.on) tw.on(p); if (p >= 1) { tweens.splice(i, 1); if (tw.done) tw.done(); } }
     // ambiente
+    windNow = windAt(tt);
     if (Math.random() < 0.28) ember();
+    if (Math.random() < 0.5) windStreak(tt);
     ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height);
     const sh = shake > 0.3 ? shake : 0; const sx = (Math.random() * 2 - 1) * sh * dpr, sy = (Math.random() * 2 - 1) * sh * dpr; shake *= 0.86;
     ctx.setTransform(1, 0, 0, 1, sx, sy);
     ctx.drawImage(bg, 0, 0);
-    // antorchas (llama parpadeante)
-    bg._torches.forEach((to, k) => {
+    // estandartes ondeando al viento (pliegues de luz/sombra recortados a cada tela)
+    if (bg._banners && glowImg) bg._banners.forEach(b => clothRipple({ x: b.x * dpr, y: b.y * dpr, w: b.w * dpr, h: b.h * dpr, seed: b.seed }, tt));
+    // polvo/ascuas arrastrados por el viento (detrás de las unidades)
+    drawStreaks(dt);
+    // antorchas / braseros
+    if (bg._photo && glowImg) { bg._torches.forEach((to, k) => drawBrazier(to.x * dpr, to.y * dpr, tt, k * 2.6)); }
+    else bg._torches.forEach((to, k) => {
       const fl = 0.7 + Math.sin(tt * 0.01 + k) * 0.15 + Math.random() * 0.1;
-      const gx = to.x * dpr, gy = to.y * dpr, r = (bg._photo ? 44 : 60) * dpr * fl;
+      const gx = to.x * dpr, gy = to.y * dpr, r = 60 * dpr * fl;
       const rg = ctx.createRadialGradient(gx, gy, 0, gx, gy, r); rg.addColorStop(0, 'rgba(255,170,70,.5)'); rg.addColorStop(1, 'rgba(255,150,60,0)');
       ctx.fillStyle = rg; ctx.beginPath(); ctx.arc(gx, gy, r, 0, 6.283); ctx.fill();
-      if (!bg._photo) { ctx.fillStyle = 'rgba(255,190,90,.9)'; ctx.beginPath(); ctx.ellipse(gx, gy, 4 * dpr, (9 + Math.sin(tt * 0.02 + k) * 2) * dpr, 0, 0, 6.283); ctx.fill(); }
+      ctx.fillStyle = 'rgba(255,190,90,.9)'; ctx.beginPath(); ctx.ellipse(gx, gy, 4 * dpr, (9 + Math.sin(tt * 0.02 + k) * 2) * dpr, 0, 0, 6.283); ctx.fill();
     });
     // partículas por detrás (ambiente, ascuas, impactos)
     drawParts(parts, dt);
@@ -445,8 +534,25 @@ const HacCombate = (function () {
     raf = requestAnimationFrame(frame);
   }
   function drawParts(arr, dt) {
-    for (let i = arr.length - 1; i >= 0; i--) { const p = arr[i]; p.life += dt; if (p.life >= p.max) { arr.splice(i, 1); continue; } p.x += p.vx * dt * 0.06; p.y += p.vy * dt * 0.06; const a = 1 - p.life / p.max; ctx.fillStyle = p.ember ? (p.col + (a * 0.8) + ')') : p.col; ctx.globalAlpha = p.ember ? 1 : a; ctx.beginPath(); ctx.arc(p.x, p.y, p.r * (p.ember ? 1 : a + 0.3), 0, 6.283); ctx.fill(); }
+    const wpush = windNow * 0.012 * dpr;   // las ascuas ligeras derivan con el viento
+    for (let i = arr.length - 1; i >= 0; i--) { const p = arr[i]; p.life += dt; if (p.life >= p.max) { arr.splice(i, 1); continue; } if (p.ember) p.vx += wpush * dt * 0.06; p.x += p.vx * dt * 0.06; p.y += p.vy * dt * 0.06; const a = 1 - p.life / p.max; ctx.fillStyle = p.ember ? (p.col + (a * 0.8) + ')') : p.col; ctx.globalAlpha = p.ember ? 1 : a; ctx.beginPath(); ctx.arc(p.x, p.y, p.r * (p.ember ? 1 : a + 0.3), 0, 6.283); ctx.fill(); }
     ctx.globalAlpha = 1;
+  }
+  // Rachas de polvo/ascuas que cruzan la escena; parallax (lejano tenue/lento, cercano
+  // más vivo/rápido). Nacen en el borde a barlovento según el signo del viento.
+  function windStreak(tt) {
+    const dir = windNow >= 0 ? 1 : -1, far = Math.random() < 0.62, sp = (0.7 + Math.abs(windNow) * 2.6) * (far ? 0.6 : 1.15);
+    streaks.push({ x: (dir > 0 ? -14 : W + 14) * dpr, y: rnd(H * 0.10, H * 0.60) * dpr, vx: dir * sp * dpr, len: (far ? 9 : 17) * dpr, a: (far ? 0.09 : 0.17), col: far ? '210,196,164' : '255,224,168', life: 0, max: rnd(2600, 5200) });
+  }
+  function drawStreaks(dt) {
+    ctx.lineCap = 'round';
+    for (let i = streaks.length - 1; i >= 0; i--) {
+      const s = streaks[i]; s.life += dt; s.x += s.vx * dt * 0.06; s.vx += windNow * 0.006 * dpr * dt * 0.06;
+      if (s.life >= s.max || s.x < -30 * dpr || s.x > (W + 30) * dpr) { streaks.splice(i, 1); continue; }
+      const fade = s.life > s.max * 0.8 ? (1 - (s.life - s.max * 0.8) / (s.max * 0.2)) : 1;
+      ctx.strokeStyle = `rgba(${s.col},${(s.a * fade).toFixed(3)})`; ctx.lineWidth = Math.max(1, dpr * 0.9);
+      ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(s.x - Math.sign(s.vx) * s.len, s.y); ctx.stroke();
+    }
   }
   function drawSaber(w) { ctx.save(); ctx.translate(-w * 0.30, -w * 0.9); ctx.rotate(-0.5); ctx.fillStyle = '#d8b24a'; ctx.fillRect(-2 * dpr, -2 * dpr, 6 * dpr, 4 * dpr); ctx.strokeStyle = '#eef1f6'; ctx.lineWidth = 3 * dpr; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(2 * dpr, 0); ctx.quadraticCurveTo(-16 * dpr, -7 * dpr, -32 * dpr, -1 * dpr); ctx.stroke(); ctx.restore(); }
   function drawBow(h) { ctx.save(); ctx.translate(-h * 0.30, -h * 0.55); const r = h * 0.32; ctx.strokeStyle = '#8a5a2c'; ctx.lineWidth = 3 * dpr; ctx.beginPath(); ctx.arc(0, 0, r, -1.1, 1.1); ctx.stroke(); ctx.strokeStyle = 'rgba(240,240,220,.6)'; ctx.lineWidth = 1 * dpr; ctx.beginPath(); ctx.moveTo(Math.cos(-1.1) * r, Math.sin(-1.1) * r); ctx.lineTo(Math.cos(1.1) * r, Math.sin(1.1) * r); ctx.stroke(); ctx.restore(); }
@@ -818,7 +924,7 @@ const HacCombate = (function () {
 
   function start() {
     party = nuevaParty(); enemy = nuevoEnemigo(); ronda = 1; over = false; busy = false; logLines = []; sel = { boost: 0 };
-    tweens.length = 0; floaters.length = 0; parts.length = 0; partsF.length = 0; projs.length = 0; slashes.length = 0; auras.length = 0; blooms.length = 0; shake = 0;
+    tweens.length = 0; floaters.length = 0; parts.length = 0; partsF.length = 0; projs.length = 0; slashes.length = 0; auras.length = 0; blooms.length = 0; streaks.length = 0; shake = 0;
     calcOrden(); resize(); renderAll();
     log('Comienza la escaramuza. Descubre las debilidades del enemigo y rómpele el escudo.');
     const u = actual(); if (u.foe) setTimeout(turnoEnemigo, 700);
@@ -826,7 +932,7 @@ const HacCombate = (function () {
 
   function init(container) {
     root = container;
-    bakeTaiji();
+    bakeTaiji(); bakeFx();
     bgImg = new Image(); bgImg.onload = () => { if (cv) bakeBg(); }; bgImg.src = 'assets/img/bg-turbantes.jpg?v=1';
     Object.values(SHEETS).forEach(s => { s.img = new Image(); s.img.onload = () => { if (elOrder) renderOrder(); }; s.img.src = s.src; });
     // Todo el HUD va DENTRO de la escena (overlays integrados, estilo JRPG), no en cajas fuera.
