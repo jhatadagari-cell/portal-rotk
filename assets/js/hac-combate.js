@@ -30,13 +30,13 @@ const HacCombate = (function () {
     return [
       { id: 'g', name: 'Guan Yu', rol: 'Guerrero', aptitud: 'militar', sprite: 'guanyu', aspecto: { robe: '#7a3b34', piel: 1, pelo: 0 },
         maxHp: 130, hp: 130, maxSp: 22, sp: 22, spd: 9, bp: 1, wpn: 'espada', def: false,
-        skills: [ { name: 'Tajo doble', type: 'espada', sp: 6, hits: 2, power: 15 }, { name: 'Estocada', type: 'lanza', sp: 8, hits: 1, power: 30 } ] },
+        skills: [ { name: 'Tajo doble', type: 'espada', ic: '斬', sp: 6, hits: 2, power: 15 }, { name: 'Estocada', type: 'lanza', ic: '槍', sp: 8, hits: 1, power: 30 } ] },
       { id: 'a', name: 'Huang Zhong', rol: 'Arquero', aptitud: 'militar', sprite: 'huangzhong', aspecto: { robe: '#4e6f8f', piel: 0, pelo: 2 },
         maxHp: 98, hp: 98, maxSp: 26, sp: 26, spd: 12, bp: 1, wpn: 'arco', def: false,
-        skills: [ { name: 'Andanada', type: 'arco', sp: 7, hits: 3, power: 10 }, { name: 'Flecha ígnea', type: 'fuego', sp: 10, hits: 1, power: 26 } ] },
+        skills: [ { name: 'Andanada', type: 'arco', ic: '亂', sp: 7, hits: 3, power: 10 }, { name: 'Flecha ígnea', type: 'fuego', ic: '火', sp: 10, hits: 1, power: 26 } ] },
       { id: 'm', name: 'Zhuge Liang', rol: 'Estratega', aptitud: 'cultural', sprite: 'zhugeliang', aspecto: { robe: '#7f9e6a', piel: 0, pelo: 0 }, conjuro: true,
         maxHp: 84, hp: 84, maxSp: 38, sp: 38, spd: 8, bp: 1, wpn: 'viento', def: false,
-        skills: [ { name: 'Llamarada', type: 'fuego', sp: 9, hits: 1, power: 30 }, { name: 'Ventisca', type: 'viento', sp: 9, hits: 2, power: 15 }, { name: 'Vendaval curativo', type: 'cura', sp: 10, heal: 55 } ] },
+        skills: [ { name: 'Llamarada', type: 'fuego', ic: '火', sp: 9, hits: 1, power: 30 }, { name: 'Ventisca', type: 'viento', ic: '嵐', sp: 9, hits: 2, power: 15 }, { name: 'Vendaval curativo', type: 'cura', ic: '癒', sp: 10, heal: 55 } ] },
     ];
   }
   function nuevoEnemigo() {
@@ -48,7 +48,8 @@ const HacCombate = (function () {
 
   // ── Estado ─────────────────────────────────────────────────────────────────
   let root = null, party = [], enemy = null, orden = [], idx = 0, ronda = 1, busy = false, over = false, sel = { boost: 0 };
-  let elScene, elParty, elMenu, elLog, elTimeline, elHud, logLines = [];
+  let elScene, elParty, elMenu, elLog, elTimeline, elHud, elTip, logLines = [];
+  let tipTimer = null, tipHeld = false;   // tap-and-hold (móvil): mostrar descripción/coste de una acción
   let hudReserve = 0;   // alto del HUD inferior (px) reservado en vertical para no tapar a la banda
   // Canvas / animación
   let cv, ctx, bg, bgImg = null, W = 0, H = 0, dpr = 1, raf = 0, t = 0, shake = 0;
@@ -610,15 +611,46 @@ const HacCombate = (function () {
   function renderMenu() {
     const u = actual();
     const waiting = over || u.foe || busy; if (elMenu) elMenu.classList.toggle('waiting', !!waiting);
-    if (over) { elMenu.innerHTML = ''; return; }
-    if (u.foe) { elMenu.innerHTML = `<div class="hcb-menu-wait">Turno de <b>${enemy.name}</b>…</div>`; return; }
-    if (busy) { elMenu.innerHTML = `<div class="hcb-menu-wait">…</div>`; return; }
-    const maxB = Math.min(3, u.bp), wpn = TIPOS[u.wpn];
-    const boostRow = `<div class="hcb-boost"><span class="hcb-boost-lbl">Boost</span>${[0, 1, 2, 3].map(n => `<button class="hcb-boost-b${sel.boost === n ? ' on' : ''}${n > maxB ? ' dis' : ''}" data-boost="${n}"${n > maxB ? ' disabled' : ''}>${n === 0 ? '—' : '+' + n}</button>`).join('')}<span class="hcb-boost-hint">cada BP = +1 golpe</span></div>`;
-    const btns = [`<button class="hcb-act atk" data-act="basic">Atacar<small>〔${wpn.zh}〕 ${wpn.es}</small></button>`]
-      .concat(u.skills.map((s, i) => { const t2 = s.type === 'cura' ? { es: 'Cura', zh: '癒' } : TIPOS[s.type]; const noSp = u.sp < s.sp; return `<button class="hcb-act${noSp ? ' dis' : ''}" data-skill="${i}"${noSp ? ' disabled' : ''}>${s.name}<small>〔${t2.zh}〕 ${s.heal ? '+PV' : (s.hits > 1 ? s.hits + '× ' : '') + t2.es} · ${s.sp} SP</small></button>`; }))
-      .concat([`<button class="hcb-act def" data-act="defend">Defender<small>−50% daño</small></button>`]);
-    elMenu.innerHTML = `<div class="hcb-menu-who">Actúa <b>${u.name}</b></div>${boostRow}<div class="hcb-acts">${btns.join('')}</div>`;
+    if (over) { elMenu.innerHTML = ''; }
+    else if (u.foe) { elMenu.innerHTML = `<div class="hcb-menu-wait">Turno de <b>${enemy.name}</b>…</div>`; }
+    else if (busy) { elMenu.innerHTML = `<div class="hcb-menu-wait">…</div>`; }
+    else {
+      const maxB = Math.min(3, u.bp), wpn = TIPOS[u.wpn];
+      const boostRow = `<div class="hcb-boost"><span class="hcb-boost-lbl">Boost</span>${[0, 1, 2, 3].map(n => `<button class="hcb-boost-b${sel.boost === n ? ' on' : ''}${n > maxB ? ' dis' : ''}" data-boost="${n}"${n > maxB ? ' disabled' : ''}>${n === 0 ? '—' : '+' + n}</button>`).join('')}<span class="hcb-boost-hint">cada BP = +1 golpe</span></div>`;
+      // Cada acción: ICONO (glifo) + TEXTO. En móvil se muestra solo el icono (cuadro)
+      // y el texto sale al mantener pulsado (tap-and-hold → .hcb-tip).
+      const act = (cls, attr, ic, name, detail) => `<button class="hcb-act ${cls}" ${attr}><span class="hcb-act-ic">${ic}</span><span class="hcb-act-tx"><b>${name}</b><small>${detail}</small></span></button>`;
+      const btns = [act('atk', 'data-act="basic"', wpn.zh, 'Atacar', `〔${wpn.zh}〕 ${wpn.es}`)]
+        .concat(u.skills.map((s, i) => { const t2 = s.type === 'cura' ? { es: 'Cura', zh: '癒' } : TIPOS[s.type]; const noSp = u.sp < s.sp; return act(noSp ? 'dis' : '', `data-skill="${i}"${noSp ? ' disabled' : ''}`, s.ic || t2.zh, s.name, `〔${t2.zh}〕 ${s.heal ? '+PV' : (s.hits > 1 ? s.hits + '× ' : '') + t2.es} · ${s.sp} SP`); }))
+        .concat([act('def', 'data-act="defend"', '盾', 'Defender', '−50% daño')]);
+      elMenu.innerHTML = `<div class="hcb-menu-who">Actúa <b>${u.name}</b></div>${boostRow}<div class="hcb-acts">${btns.join('')}</div>`;
+    }
+    placeMenu();
+  }
+  // Coloca el menú FLOTANDO junto a quien actúa (escritorio): encima suyo y hacia el
+  // lado con más hueco, para no tapar a los personajes. En vertical (móvil) se queda
+  // apilado abajo (se limpian los estilos en línea y manda el CSS).
+  function placeMenu() {
+    if (!elMenu) return;
+    const portrait = H > W * 1.15;
+    if (portrait || over) {
+      elMenu.classList.remove('floating');
+      elMenu.style.position = ''; elMenu.style.left = ''; elMenu.style.top = ''; elMenu.style.right = ''; elMenu.style.width = '';
+      return;
+    }
+    const u = actual(); if (!u) return;
+    elMenu.classList.add('floating');
+    elMenu.style.position = 'fixed'; elMenu.style.right = 'auto';
+    const Wm = elMenu.offsetWidth, Hm = elMenu.offsetHeight;
+    const fx = ux(u), fy = uy(u), th = u.th;
+    const openLeft = fx > W * 0.5;              // si está a la derecha, el menú abre hacia la izquierda
+    const overlap = th * 0.18;                  // puede solaparse un pelín con el personaje
+    let mx = openLeft ? (fx - Wm + overlap) : (fx - overlap);
+    let my = (fy - th * 0.55) - Hm;             // borde inferior a la altura del pecho → queda "encima suyo"
+    mx = Math.max(10, Math.min(W - Wm - 10, mx));
+    my = Math.max(10, Math.min(H - Hm - 10, my));
+    elMenu.style.left = Math.round(mx) + 'px';
+    elMenu.style.top = Math.round(my) + 'px';
   }
   function renderAll() { renderTimeline(); renderFoeHud(); renderParty(); renderMenu(); measureHud(); }
 
@@ -634,6 +666,7 @@ const HacCombate = (function () {
 
   function onClick(e) {
     const b = e.target.closest('button'); if (!b) return;
+    if (tipHeld) { tipHeld = false; hideTip(); return; }   // fue un mantener-pulsado (info), no ejecutar
     if (b.dataset.boost != null) { if (busy || over) return; sel.boost = +b.dataset.boost; renderMenu(); return; }
     if (busy || over) return; const u = actual(); if (!u || u.foe) return;
     if (b.dataset.act === 'basic') return ejecutar(u, { name: 'Atacar', type: u.wpn, hits: 1, power: 13, sp: 0 });
@@ -641,11 +674,34 @@ const HacCombate = (function () {
     if (b.dataset.skill != null) return ejecutar(u, u.skills[+b.dataset.skill]);
   }
 
+  // ── Mantener pulsado (móvil): muestra nombre/coste de la acción ──────────────
+  function hideTip() { if (elTip) elTip.hidden = true; }
+  function showTipFor(b) {
+    if (!elTip) return;
+    const tx = b.querySelector('.hcb-act-tx'); if (!tx) return;
+    elTip.innerHTML = tx.innerHTML; elTip.hidden = false;
+    const r = b.getBoundingClientRect(), tr = elTip.getBoundingClientRect();
+    let x = r.left + r.width / 2 - tr.width / 2;
+    let y = r.top - tr.height - 10;
+    x = Math.max(8, Math.min((window.innerWidth || W) - tr.width - 8, x));
+    if (y < 8) y = r.bottom + 10;
+    elTip.style.left = Math.round(x) + 'px'; elTip.style.top = Math.round(y) + 'px';
+  }
+  function setupHold(el) {
+    el.addEventListener('touchstart', (e) => {
+      const b = e.target.closest('.hcb-act'); if (!b) return;
+      tipHeld = false; clearTimeout(tipTimer);
+      tipTimer = setTimeout(() => { tipHeld = true; showTipFor(b); }, 320);
+    }, { passive: true });
+    el.addEventListener('touchend', () => { clearTimeout(tipTimer); if (tipHeld) setTimeout(hideTip, 1600); }, { passive: true });
+    el.addEventListener('touchmove', () => { clearTimeout(tipTimer); if (tipHeld) { tipHeld = false; hideTip(); } }, { passive: true });
+  }
+
   function resize() {
     const r = elScene.getBoundingClientRect(); dpr = Math.min(2, window.devicePixelRatio || 1);
     W = r.width; H = r.height || 300; cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
     cv.style.width = W + 'px'; cv.style.height = H + 'px';
-    hudReserve = 0; layout(); bakeBg(); measureHud();
+    hudReserve = 0; layout(); bakeBg(); measureHud(); placeMenu();
   }
 
   function start() {
@@ -674,13 +730,15 @@ const HacCombate = (function () {
             <div class="hcb-menu" data-menu></div>
           </div>
         </div>
+        <div class="hcb-tip" data-tip hidden></div>
       </div>
     </div>`;
     elTimeline = root.querySelector('[data-tl]'); elScene = root.querySelector('[data-scene]');
     elParty = root.querySelector('[data-party]'); elMenu = root.querySelector('[data-menu]'); elLog = root.querySelector('[data-log]');
-    elHud = root.querySelector('[data-hud]');
+    elHud = root.querySelector('[data-hud]'); elTip = root.querySelector('[data-tip]');
     cv = root.querySelector('[data-cv]'); ctx = cv.getContext('2d');
     root.addEventListener('click', onClick);
+    setupHold(root);
     window.addEventListener('resize', () => { if (cv) { const keep = bg; resize(); } });
     start();
     if (raf) cancelAnimationFrame(raf); raf = requestAnimationFrame(frame);
