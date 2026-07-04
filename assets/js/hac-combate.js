@@ -60,7 +60,9 @@ const HacCombate = (function () {
     // play = nº de frames a reproducir (recorta la recuperación frontal sobrante); release = frame en el que
     // sale el proyectil; muzzle = [frac hacia el enemigo, frac de altura] desde los pies para el origen del disparo.
     // headY = fracción de charH (desde arriba) donde está el centro de la CARA (para el retrato).
-    guanyu:     { src: 'assets/img/guanyu-atk.webp?v=1',     img: null, cols: 8, count: 61, cellW: 361, cellH: 300, pivotX: 233, feetY: 285, charH: 199, thf: 0.300, headY: 0.33 },
+    // NOTA: el arte de Guan Yu es de menor resolución (199px de alto en celda); si se
+    // dibuja muy grande se ve borroso. thf bajado para no sobreescalarlo tanto.
+    guanyu:     { src: 'assets/img/guanyu-atk.webp?v=1',     img: null, cols: 8, count: 61, cellW: 361, cellH: 300, pivotX: 233, feetY: 285, charH: 199, thf: 0.250, headY: 0.33 },
     zhugeliang: { src: 'assets/img/zhugeliang-atk.webp?v=1', img: null, cols: 8, count: 61, cellW: 392, cellH: 300, pivotX: 245, feetY: 293, charH: 275, thf: 0.226, headY: 0.19, muzzle: [0.42, 0.72] },
     huangzhong: { src: 'assets/img/huangzhong-atk.webp?v=1', img: null, cols: 8, count: 61, cellW: 427, cellH: 300, pivotX: 293, feetY: 298, charH: 203, thf: 0.236, headY: 0.25, play: 54, release: 48, muzzle: [0.34, 0.72] },
   };
@@ -253,7 +255,9 @@ const HacCombate = (function () {
     // Enemigo a la izquierda; banda a la derecha en diagonal corta sobre el suelo.
     enemy.ay = H * 0.86; enemy.ax = W * 0.23; enemy.th = H * 0.40 * depthAt(enemy.ay);
     enemy.ox = 0; enemy.oy = 0; enemy.flash = 0; enemy.deadA = 1; enemy.hitT = 0;
-    const spots = [ { x: 0.58, y: 0.83 }, { x: 0.70, y: 0.79 }, { x: 0.82, y: 0.86 } ];
+    // [Guan Yu, Huang Zhong, Zhuge]. Zhuge abajo-izquierda de Huang Zhong, en el
+    // patio (antes pisaba las barricadas de la derecha).
+    const spots = [ { x: 0.55, y: 0.82 }, { x: 0.70, y: 0.78 }, { x: 0.63, y: 0.91 } ];
     party.forEach((u, i) => {
       const sp = spots[i] || spots[spots.length - 1];
       u.ax = W * sp.x; u.ay = H * sp.y;
