@@ -109,7 +109,10 @@
     // Las casas vienen de Supabase: esperamos a la carga inicial.
     const host = document.getElementById('hac-list');
     if (host) host.innerHTML = `<p class="hac-vacia">Cargando haciendas…</p>`;
-    HacStore.ready().then(renderHaciendas);
+    // Esperamos también al prestigio ganado (HacPuntos) para que los cargos y las
+    // barras reflejen lo jugado, no solo los puntos base del admin.
+    const puntosListos = (window.HacPuntos && HacPuntos.ready) ? HacPuntos.ready().catch(() => {}) : Promise.resolve();
+    Promise.all([HacStore.ready(), puntosListos]).then(renderHaciendas);
   }
 
   if (document.readyState === 'loading') {

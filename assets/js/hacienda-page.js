@@ -888,7 +888,7 @@
     // primer render y crece al completar misiones: hay que refrescarla, no dejarla
     // clavada con el valor del primer pintado).
     function updatePrestige() {
-      const box = host.querySelector('.hacp-iso-prestige'); if (!box) return;
+      const box = document.querySelector('.hacp-iso-prestige'); if (!box) return;
       const led = window.HacPuntos ? HacPuntos.totalHacienda(h.id) : 0;
       const pr = HacCalc.prestigio(h, led);
       const pT = HacCalc.tierDePuntos(pr);
@@ -904,7 +904,14 @@
         ? `Faltan <b>${pg.faltan.toLocaleString('es')}</b> para ${esc(pg.sig.zh)} ${esc(pg.sig.nombre)}`
         : '★ Nivel máximo alcanzado';
     }
-    const refresh = () => { renderList(); refreshCharPanel(); syncCaballosFolk(); updatePrestige(); };
+    // El panel HacRender (.hacp-detail: cargos por rango + barra de nivel) se pinta
+    // una vez y el prestigio se carga async y crece al jugar: hay que repintarlo para
+    // que los mecenas suban de cargo y la barra avance.
+    function updateDetail() {
+      const det = document.querySelector('.hacp-detail');
+      if (det && window.HacRender) det.innerHTML = HacRender.panelHTML(h);
+    }
+    const refresh = () => { renderList(); refreshCharPanel(); syncCaballosFolk(); updatePrestige(); updateDetail(); };
     let lastOrdersSig = '';
 
     function applyOrders() {

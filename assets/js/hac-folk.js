@@ -362,8 +362,12 @@ const HacFolk = (function () {
       const pj = (m.personajeId && window.HacPersonajes && HacPersonajes.get) ? HacPersonajes.get(m.personajeId) : null;
       const aptitud = pj ? pj.aptitud : '';
       const aspecto = pj ? (pj.aspecto || {}) : { robe: color };
-      const cargo = (window.HacCalc && HacCalc.rangoDePuntos) ? HacCalc.rangoDePuntos(Number(m.puntos) || 0, tier) : null;
-      const rankIdx = (window.HacCalc && HacCalc.rangoIndex) ? HacCalc.rangoIndex(Number(m.puntos) || 0, tier) : -1;
+      // Prestigio TOTAL = base (admin) + ganado en misiones/escaramuzas, para que el
+      // cargo del mecenas que camina por la finca refleje lo jugado, no solo la base.
+      const ganado = (window.HacPuntos && HacPuntos.deMiembro && m.personajeId && haciendaId) ? (Number(HacPuntos.deMiembro(haciendaId, m.personajeId)) || 0) : 0;
+      const totPts = (Number(m.puntos) || 0) + ganado;
+      const cargo = (window.HacCalc && HacCalc.rangoDePuntos) ? HacCalc.rangoDePuntos(totPts, tier) : null;
+      const rankIdx = (window.HacCalc && HacCalc.rangoIndex) ? HacCalc.rangoIndex(totPts, tier) : -1;
       const aptDef = (aptitud && window.HacPersonajeDefs) ? HacPersonajeDefs.aptitud(aptitud) : null;
       return {
         // id del walker = id del PERSONAJE (clave estable para órdenes/energía/

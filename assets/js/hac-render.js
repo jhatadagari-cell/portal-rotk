@@ -42,11 +42,18 @@ const HacRender = (function () {
     const tpn   = tierPorNivel();
     const rangos = RANGOS();
 
-    // Agrupar miembros por cargo deducido de sus puntos.
+    // Prestigio TOTAL de un mecenas = base (admin) + lo ganado en misiones/escaramuzas
+    // (ledger de HacPuntos, indexado por personajeId). Sin esto, el cargo se congela en
+    // los puntos base y el mecenas nunca asciende por jugar.
+    const earnedOf = (m) => (window.HacPuntos && HacPuntos.deMiembro && m && m.personajeId)
+      ? (Number(HacPuntos.deMiembro(h.id, m.personajeId)) || 0) : 0;
+    const puntosDe = (m) => (Number(m.puntos) || 0) + earnedOf(m);
+
+    // Agrupar miembros por cargo deducido de su prestigio TOTAL.
     const grupos = {};
     const sinCargo = [];
     (h.miembros || []).forEach(m => {
-      const r = C.rangoDePuntos(m.puntos, tier);
+      const r = C.rangoDePuntos(puntosDe(m), tier);
       if (!r) { sinCargo.push(m); return; }
       (grupos[r.id] = grupos[r.id] || []).push(m);
     });
@@ -54,7 +61,7 @@ const HacRender = (function () {
     const placaDe = (m) => `
       <li class="placa">
         <span class="placa-nombre">${esc(m.nombre || m.mecenas)}</span>
-        <span class="placa-desde">${Number(m.puntos) || 0} pts${m.desde ? ` · desde ${esc(m.desde)}` : ''}</span>
+        <span class="placa-desde">${puntosDe(m).toLocaleString('es')} pts${m.desde ? ` · desde ${esc(m.desde)}` : ''}</span>
         ${m.nota ? `<p class="placa-nota">${esc(m.nota)}</p>` : ''}
       </li>`;
 
