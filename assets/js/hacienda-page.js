@@ -1242,12 +1242,15 @@
       const dif = b.dificultad || 4;
       const sc = escSucesos(b), rb = relBonos(b);
       const capBonus = (window.HacStats && HacStats.tieneTalento && b.hostId && HacStats.tieneTalento(b.hostId, 'oficial')) ? 0.05 : 0;
-      const base = Math.max(0.35, 0.72 - (dif - 4) * 0.08);
+      // Base BAJA y con fuerte castigo por rating: cumplir el requisito NO garantiza
+      // la victoria (r1≈56%, r5≈24% con la banda justa). Ganar de sobra exige aptitudes
+      // muy por encima del objetivo. Así spammear escaramuzas cuesta heridas y apuesta.
+      const base = Math.max(0.20, 0.56 - (dif - 3) * 0.08);
       const nM = (b.miembros || []).length;
-      const stat = Math.max(-0.18, Math.min(0.26, (bandFuerza(b) - 1) * 0.28));   // aptitudes de la banda vs objetivo
-      const compania = Math.min(0.08, Math.max(0, nM - 2) * 0.03);                 // más mecenas = más manos
+      const stat = Math.max(-0.22, Math.min(0.24, (bandFuerza(b) - 1) * 0.26));   // aptitudes de la banda vs objetivo
+      const compania = Math.min(0.06, Math.max(0, nM - 2) * 0.03);                 // más mecenas = más manos
       const raw = base + stat + compania + sc.pMod + rb.pMod + capBonus;
-      return { pct: Math.max(0.1, Math.min(0.95, raw)), base: base, stat: stat, compania: compania, suc: sc.pMod, rel: rb.pMod, cap: capBonus, nM: nM };
+      return { pct: Math.max(0.05, Math.min(0.90, raw)), base: base, stat: stat, compania: compania, suc: sc.pMod, rel: rb.pMod, cap: capBonus, nM: nM };
     }
     // `doctrina` opcional simula la postura antes de fijarla (para la vista previa).
     function escProb(band, doctrina) { return escProbParts(band, doctrina).pct; }
