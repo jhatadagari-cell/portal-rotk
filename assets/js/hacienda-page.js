@@ -3062,7 +3062,13 @@
             persPane.appendChild(n);
           }
         }
-        if (id === 'misiones') { renderInternas(); }
+        if (id === 'misiones') {
+          // Re-renderiza la sub-pestaña ACTIVA (no siempre internas): al salir de Misiones
+          // el tablón (boardEl) se saca de la pestaña «Expediciones» y la deja vacía, así
+          // que al volver hay que rellenarla de nuevo según cuál estuviera abierta.
+          const at = sec.querySelector('.hacp-mtab.on');
+          if (at && at.dataset.mt === 'exped') renderExped(); else renderInternas();
+        }
         // Escaramuzas: la UI vive en setupFolk; aquí solo fijamos su contenedor (pane).
         escVisible = (id === 'escaramuzas');
         if (!escVisible) stopMarch();
