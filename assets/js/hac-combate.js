@@ -36,7 +36,7 @@ const HacCombate = (function () {
         skills: [ { name: 'Andanada', type: 'arco', ic: '亂', sp: 7, hits: 3, power: 10 }, { name: 'Flecha ígnea', type: 'fuego', ic: '火', sp: 10, hits: 1, power: 26 } ] },
       { id: 'm', name: 'Zhuge Liang', rol: 'Estratega', aptitud: 'cultural', sprite: 'zhugeliang', aspecto: { robe: '#7f9e6a', piel: 0, pelo: 0 }, conjuro: true,
         maxHp: 84, hp: 84, maxSp: 38, sp: 38, spd: 8, bp: 1, wpn: 'viento', def: false,
-        skills: [ { name: 'Llamarada', type: 'fuego', ic: '火', sp: 9, hits: 1, power: 30 }, { name: 'Ventisca', type: 'viento', ic: '嵐', sp: 9, hits: 2, power: 15 }, { name: 'Vendaval curativo', type: 'cura', ic: '癒', sp: 10, heal: 55 } ] },
+        skills: [ { name: 'Volea de fuego', type: 'fuego', ic: '火', sp: 9, hits: 5, power: 8, volley: true }, { name: 'Ventisca', type: 'viento', ic: '嵐', sp: 9, hits: 2, power: 15 }, { name: 'Vendaval curativo', type: 'cura', ic: '癒', sp: 10, heal: 55 } ] },
     ];
   }
   function nuevoEnemigo() {
@@ -60,11 +60,11 @@ const HacCombate = (function () {
     // play = nº de frames a reproducir (recorta la recuperación frontal sobrante); release = frame en el que
     // sale el proyectil; muzzle = [frac hacia el enemigo, frac de altura] desde los pies para el origen del disparo.
     // headY = fracción de charH (desde arriba) donde está el centro de la CARA (para el retrato).
-    // NOTA: el arte de Guan Yu es de menor resolución (199px de alto en celda); si se
-    // dibuja muy grande se ve borroso. thf bajado para no sobreescalarlo tanto.
-    guanyu:     { src: 'assets/img/guanyu-atk.webp?v=1',     img: null, cols: 8, count: 61, cellW: 361, cellH: 300, pivotX: 233, feetY: 285, charH: 199, thf: 0.250, headY: 0.33 },
-    zhugeliang: { src: 'assets/img/zhugeliang-atk.webp?v=1', img: null, cols: 8, count: 61, cellW: 392, cellH: 300, pivotX: 245, feetY: 293, charH: 275, thf: 0.226, headY: 0.19, muzzle: [0.42, 0.72] },
-    huangzhong: { src: 'assets/img/huangzhong-atk.webp?v=1', img: null, cols: 8, count: 61, cellW: 427, cellH: 300, pivotX: 293, feetY: 298, charH: 203, thf: 0.236, headY: 0.25, play: 54, release: 48, muzzle: [0.34, 0.72] },
+    // Guan Yu rehorneado a alta resolución (cuerpo 322px en celda, desde los frames 1440px);
+    // ya no se sobreescala en pantallas retina.
+    guanyu:     { src: 'assets/img/guanyu-atk.webp?v=2',     img: null, cols: 8, count: 61, cellW: 794, cellH: 660, pivotX: 481, feetY: 626, charH: 322, thf: 0.244, headY: 0.27 },
+    zhugeliang: { src: 'assets/img/zhugeliang-atk.webp?v=1', img: null, cols: 8, count: 61, cellW: 392, cellH: 300, pivotX: 245, feetY: 293, charH: 275, thf: 0.224, headY: 0.19, muzzle: [0.42, 0.72] },
+    huangzhong: { src: 'assets/img/huangzhong-atk.webp?v=1', img: null, cols: 8, count: 61, cellW: 427, cellH: 300, pivotX: 293, feetY: 298, charH: 203, thf: 0.232, headY: 0.25, play: 54, release: 48, muzzle: [0.34, 0.72] },
   };
   const sheetReady = (u) => !u.foe && u.sprite && SHEETS[u.sprite] && SHEETS[u.sprite].img && SHEETS[u.sprite].img.complete && SHEETS[u.sprite].img.naturalWidth;
   const tweens = [], floaters = [], parts = [], partsF = [], projs = [], slashes = [], auras = [], blooms = [];
@@ -519,7 +519,16 @@ const HacCombate = (function () {
   }
   function drawProj(pr, x, y, p) {
     ctx.save();
-    if (pr.kind === 'arrow') { ctx.strokeStyle = '#e9d9a6'; ctx.lineWidth = 3 * dpr; const dx = (pr.x1 - pr.x0), dy = (pr.y1 - pr.y0), l = Math.hypot(dx, dy) || 1; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - dx / l * 16 * dpr, y - dy / l * 16 * dpr); ctx.stroke(); }
+    if (pr.kind === 'arrow') {
+      const dx = (pr.x1 - pr.x0), dy = (pr.y1 - pr.y0), l = Math.hypot(dx, dy) || 1, ax = dx / l, ay = dy / l;
+      if (pr.fire) {   // flecha ígnea: estela de llama en tres capas (sin gradiente por frame)
+        ctx.lineCap = 'round';
+        ctx.strokeStyle = 'rgba(210,60,20,.5)';  ctx.lineWidth = 8 * dpr; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - ax * 34 * dpr, y - ay * 34 * dpr); ctx.stroke();
+        ctx.strokeStyle = 'rgba(255,140,45,.85)'; ctx.lineWidth = 4.5 * dpr; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - ax * 22 * dpr, y - ay * 22 * dpr); ctx.stroke();
+        ctx.strokeStyle = 'rgba(255,240,190,.95)'; ctx.lineWidth = 2 * dpr; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - ax * 12 * dpr, y - ay * 12 * dpr); ctx.stroke();
+        ctx.fillStyle = 'rgba(255,235,170,.95)'; ctx.beginPath(); ctx.arc(x, y, 3 * dpr, 0, 6.283); ctx.fill();
+      } else { ctx.strokeStyle = '#e9d9a6'; ctx.lineWidth = 3 * dpr; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - ax * 16 * dpr, y - ay * 16 * dpr); ctx.stroke(); }
+    }
     else if (pr.kind === 'mote') { const r = 6 * dpr; const rg = ctx.createRadialGradient(x, y, 0, x, y, r); rg.addColorStop(0, '#f0ffd8'); rg.addColorStop(0.5, pr.col || '#9be08a'); rg.addColorStop(1, 'rgba(120,200,110,0)'); ctx.fillStyle = rg; ctx.beginPath(); ctx.arc(x, y, r, 0, 6.283); ctx.fill(); }
     else { const col = pr.col || '#ff8a3c'; const rg = ctx.createRadialGradient(x, y, 0, x, y, 12 * dpr); rg.addColorStop(0, '#fff'); rg.addColorStop(0.4, col); rg.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = rg; ctx.beginPath(); ctx.arc(x, y, 12 * dpr, 0, 6.283); ctx.fill(); }
     ctx.restore();
@@ -594,6 +603,24 @@ const HacCombate = (function () {
     if (anim) u._animDur = 950;
     const play = A2 ? (A2.play || A2.count) : 0;
     const relFrac = A2 ? (A2.release ? A2.release / play : 0.80) : 0;   // el disparo sale en el frame de soltar
+    // Volea de fuego: Zhuge da la orden (gesto con el abanico) y una lluvia de flechas
+    // ígneas entra desde FUERA del cuadro por la derecha (arqueros ocultos) y cae sobre
+    // el enemigo, que está al otro extremo. Cada flecha arquea y estalla en brasas.
+    if (action.volley) {
+      u._cast = '#ff8a3c99';
+      const nArr = hits;                                   // hits ya incluye el boost
+      const launch = anim ? Math.round(u._animDur * relFrac) : 260, gap = 85;
+      const tx = ux(enemy), ty = uy(enemy) - enemy.th * 0.55;
+      let done = 0;
+      for (let i = 0; i < nArr; i++) wait(launch + gap * i, () => {
+        const oy = H * (0.08 + Math.random() * 0.34);      // desde arriba-derecha, fuera del lienzo
+        projs.push({ t0: now(), dur: 340, x0: W + 40, y0: oy,
+          x1: tx + rnd(-enemy.th * 0.24, enemy.th * 0.24), y1: ty + rnd(-enemy.th * 0.30, enemy.th * 0.30),
+          kind: 'arrow', fire: true, col: '#ff8a3c',
+          onHit: () => { doHit(); burst(ux(enemy), uy(enemy) - enemy.th * 0.5, 'rgba(255,140,50,', 6, 1.3); if (++done === nArr) resumen(); } });
+      });
+      return finTurno(launch + gap * (nArr - 1) + 340 + 180);
+    }
     // Conjurador (estratega): la magia NO vuela como proyectil; se manifiesta sobre el enemigo
     // al cerrar el gesto (llamarada que brota, ventisca que lo envuelve).
     if (u.conjuro && cat === 'magic') {
