@@ -118,7 +118,7 @@
     background:linear-gradient(158deg, rgba(38,26,13,.86), rgba(24,16,8,.9)); color:var(--paper);
     border:1px solid var(--bronze-d); -webkit-backdrop-filter:blur(7px); backdrop-filter:blur(7px);
     box-shadow:inset 0 0 0 1px rgba(230,200,138,.12), 0 14px 34px rgba(0,0,0,.55);
-    transition:left .26s cubic-bezier(.4,.9,.3,1), top .26s cubic-bezier(.4,.9,.3,1); }
+    transition:opacity .16s ease; }   /* solo funde; NADA de deslizar/estirar posición */
   .hcb-menu.floating::before, .hcb-menu.floating::after{ display:none; }   /* sin rodillos al flotar */
   .hcb-menu.floating .hcb-boost-hint{ display:none; }
   .hcb-menu.floating .hcb-menu-who{ color:var(--paper); border-bottom-color:rgba(230,200,138,.22); }
@@ -214,7 +214,7 @@
   <div id="hcb-root"></div>
   <script src="assets/js/hac-util.js?v=1"></script>
   <script src="assets/js/hac-char.js?v=17"></script>
-  <script src="assets/js/hac-combate.js?v=20"></script>
+  <script src="assets/js/hac-combate.js?v=21"></script>
   <script>HacCombate.init(document.getElementById('hcb-root'));</script>
 </body>
 </html>

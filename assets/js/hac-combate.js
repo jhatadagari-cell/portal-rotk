@@ -405,6 +405,9 @@ const HacCombate = (function () {
     drawParts(parts, dt);
     // unidades: enemigo primero (fondo), luego aliados
     drawUnit(enemy); party.forEach(drawUnit);
+    // vida bajo cada aliado (en la escena, además de la columna). Solo apaisado:
+    // en vertical la banda va pegada al HUD y chocaría con el registro.
+    if (H <= W * 1.15) party.forEach(drawHpTag);
     // flecha de turno: chevron que bota sobre quien actúa (oculto durante su acción)
     if (!over && !busy) { const u = actual(); if (u && alive(u)) {
       const bob = Math.sin(tt * 0.006) * 5, s = 13 * dpr;
@@ -486,6 +489,29 @@ const HacCombate = (function () {
     if (!u.foe && u._atk && !u.sprite) { if (u._wcat === 'melee') drawSaber(w); else if (u._wcat === 'arrow') drawBow(h); }
     ctx.restore();
     u.flash *= 0.82;
+  }
+  // Etiqueta de vida bajo el personaje (nombre + barra). Solo rects/texto (sin gradientes por frame).
+  function drawHpTag(u) {
+    if (u.deadA <= 0.01) return;
+    const cx = ux(u) * dpr, fy = uy(u) * dpr;
+    const w = clamp(u.th * 0.66, 48, 96) * dpr, h = 5 * dpr;
+    const x = cx - w / 2, y = fy + 9 * dpr;
+    ctx.save();
+    ctx.globalAlpha = (u.deadA != null ? u.deadA : 1);
+    // nombre
+    ctx.font = `700 ${10.5 * dpr}px 'Noto Serif SC', serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+    ctx.fillStyle = 'rgba(0,0,0,.7)'; ctx.fillText(u.name, cx + dpr, y - 3 * dpr + dpr);
+    ctx.fillStyle = (u === actual() ? '#f6dc9a' : '#e9dcbb'); ctx.fillText(u.name, cx, y - 3 * dpr);
+    // barra
+    const r = 2.5 * dpr, frac = clamp(u.hp / u.maxHp, 0, 1);
+    ctx.fillStyle = 'rgba(12,8,3,.82)'; ctx.beginPath(); ctx.roundRect(x - dpr, y - dpr, w + 2 * dpr, h + 2 * dpr, r); ctx.fill();
+    if (frac > 0) {
+      const col = frac > 0.5 ? '#6ea043' : (frac > 0.22 ? '#c9a13a' : '#b8432e');
+      ctx.fillStyle = col; ctx.beginPath(); ctx.roundRect(x, y, w * frac, h, r - dpr); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,.28)'; ctx.beginPath(); ctx.roundRect(x, y, w * frac, h * 0.45, r - dpr); ctx.fill();
+    }
+    ctx.strokeStyle = 'rgba(169,128,63,.55)'; ctx.lineWidth = dpr; ctx.beginPath(); ctx.roundRect(x - dpr, y - dpr, w + 2 * dpr, h + 2 * dpr, r); ctx.stroke();
+    ctx.restore();
   }
   function drawProj(pr, x, y, p) {
     ctx.save();
@@ -681,23 +707,23 @@ const HacCombate = (function () {
   function clearMenuPos() {
     elMenu.classList.remove('floating');
     elMenu.style.position = ''; elMenu.style.left = ''; elMenu.style.top = ''; elMenu.style.right = ''; elMenu.style.width = '';
+    elMenu.style.opacity = ''; elMenu.style.pointerEvents = '';
     setTail(null);
   }
   function placeMenu() {
     if (!elMenu) return;
     const portrait = H > W * 1.15;
     const u = actual();
-    if (portrait || over || !u) { clearMenuPos(); return; }   // vertical/fin: manda el CSS (apilado abajo)
+    if (portrait) { clearMenuPos(); return; }   // vertical: manda el CSS (apilado abajo)
     elMenu.classList.add('floating');
     elMenu.style.position = 'fixed'; elMenu.style.right = 'auto';
+    // En escritorio el menú SOLO aparece cuando te toca actuar. El resto del tiempo
+    // (animación en curso / turno del enemigo / fin) se funde a invisible EN SU SITIO,
+    // sin desplazarse ni encogerse por la pantalla.
+    const canAct = !over && !busy && u && !u.foe;
+    if (!canAct) { elMenu.style.opacity = '0'; elMenu.style.pointerEvents = 'none'; setTail(null); return; }
+    elMenu.style.opacity = '1'; elMenu.style.pointerEvents = 'auto';
     const Wm = elMenu.offsetWidth, Hm = elMenu.offsetHeight;
-    // En espera (turno enemigo / animación): cartelito centrado abajo, sin cola.
-    if (u.foe || busy) {
-      elMenu.style.left = Math.round(W / 2 - Wm / 2) + 'px';
-      elMenu.style.top = Math.round(H - Hm - 74) + 'px';
-      setTail(null); return;
-    }
-    // Turno de un aliado: globo de acciones ENCIMA de su cabeza, con cola apuntándole.
     const rLimit = W - 92;                       // no invadir la columna de orden (derecha)
     const fx = clamp(ux(u), 24, rLimit - 24), fy = uy(u), th = u.th;
     let mx = clamp(fx - Wm / 2, 12, rLimit - Wm);
