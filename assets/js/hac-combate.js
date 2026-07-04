@@ -213,17 +213,22 @@ const HacCombate = (function () {
   }
 
   // ── Layout de la escena ──────────────────────────────────────────────────────
+  // Escala por PROFUNDIDAD según la altura de los pies: cuanto más abajo (más cerca
+  // del espectador), más grande; más arriba (al fondo), más pequeño. Vende la
+  // perspectiva y evita el efecto "gigante flotando en el cielo".
+  function depthAt(fy) { const t = clamp((fy / H - 0.66) / (0.92 - 0.66), 0, 1); return 0.80 + t * 0.24; }
   function layout() {
     if (H > W * 1.15) return layoutPortrait();
-    // ── Apaisado ── Enemigo grande a la izquierda; banda a la derecha en formación
-    // ESCALONADA (JRPG / Octopath): uno atrás-arriba, uno al medio, uno delante-abajo.
-    enemy.ax = W * 0.28; enemy.ay = H * 0.66; enemy.th = H * 0.50;
+    // ── Apaisado ── Todos PISAN el patio (banda baja de la escena): el fondo pintado
+    // tiene su suelo en la mitad inferior; poner unidades más arriba las hace flotar.
+    // Enemigo a la izquierda; banda a la derecha en diagonal corta sobre el suelo.
+    enemy.ay = H * 0.86; enemy.ax = W * 0.23; enemy.th = H * 0.40 * depthAt(enemy.ay);
     enemy.ox = 0; enemy.oy = 0; enemy.flash = 0; enemy.deadA = 1; enemy.hitT = 0;
-    const spots = [ { x: 0.78, y: 0.50 }, { x: 0.63, y: 0.63 }, { x: 0.82, y: 0.77 } ];
+    const spots = [ { x: 0.58, y: 0.83 }, { x: 0.70, y: 0.79 }, { x: 0.82, y: 0.86 } ];
     party.forEach((u, i) => {
       const sp = spots[i] || spots[spots.length - 1];
       u.ax = W * sp.x; u.ay = H * sp.y;
-      u.th = H * (SHEETS[u.sprite] ? SHEETS[u.sprite].thf : 0.26) * 1.06;
+      u.th = H * (SHEETS[u.sprite] ? SHEETS[u.sprite].thf : 0.26) * 1.0 * depthAt(u.ay);
       u.ox = 0; u.oy = 0; u.flash = 0; u.deadA = 1; u.hitT = 0;
     });
   }
@@ -399,6 +404,13 @@ const HacCombate = (function () {
   }
   function drawSaber(w) { ctx.save(); ctx.translate(-w * 0.30, -w * 0.9); ctx.rotate(-0.5); ctx.fillStyle = '#d8b24a'; ctx.fillRect(-2 * dpr, -2 * dpr, 6 * dpr, 4 * dpr); ctx.strokeStyle = '#eef1f6'; ctx.lineWidth = 3 * dpr; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(2 * dpr, 0); ctx.quadraticCurveTo(-16 * dpr, -7 * dpr, -32 * dpr, -1 * dpr); ctx.stroke(); ctx.restore(); }
   function drawBow(h) { ctx.save(); ctx.translate(-h * 0.30, -h * 0.55); const r = h * 0.32; ctx.strokeStyle = '#8a5a2c'; ctx.lineWidth = 3 * dpr; ctx.beginPath(); ctx.arc(0, 0, r, -1.1, 1.1); ctx.stroke(); ctx.strokeStyle = 'rgba(240,240,220,.6)'; ctx.lineWidth = 1 * dpr; ctx.beginPath(); ctx.moveTo(Math.cos(-1.1) * r, Math.sin(-1.1) * r); ctx.lineTo(Math.cos(1.1) * r, Math.sin(1.1) * r); ctx.stroke(); ctx.restore(); }
+  // Sombra de contacto en el suelo: elipses concéntricas (sin gradiente por frame,
+  // para no cargar la animación) que anclan al personaje y matan el efecto "flota".
+  function groundShadow(cx, cy, rw) {
+    ctx.fillStyle = 'rgba(0,0,0,.24)'; ctx.beginPath(); ctx.ellipse(cx, cy, rw, rw * 0.20, 0, 0, 6.283); ctx.fill();
+    ctx.fillStyle = 'rgba(0,0,0,.28)'; ctx.beginPath(); ctx.ellipse(cx, cy, rw * 0.68, rw * 0.14, 0, 0, 6.283); ctx.fill();
+    ctx.fillStyle = 'rgba(0,0,0,.32)'; ctx.beginPath(); ctx.ellipse(cx, cy, rw * 0.38, rw * 0.09, 0, 0, 6.283); ctx.fill();
+  }
   // Aliado animado desde spritesheet (reposo = frame 0; ataque = clip 0→60 estirado a la duración de la acción).
   function drawSheet(u) {
     const A = SHEETS[u.sprite]; const play = A.play || A.count; let fi = 0;
@@ -408,7 +420,7 @@ const HacCombate = (function () {
     const fx = ux(u) * dpr, fy = uy(u) * dpr;   // sin bob: los aliados no levitan
     const dW = A.cellW * k, dH = A.cellH * k, dx = fx - A.pivotX * k, dy = fy - A.feetY * k;
     ctx.save(); ctx.globalAlpha = u.deadA;
-    ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.beginPath(); ctx.ellipse(fx, fy, dW * 0.20, dH * 0.028, 0, 0, 6.283); ctx.fill();
+    groundShadow(fx, fy, dW * 0.30);
     if (u._atk && u._cast) { const rg = ctx.createRadialGradient(fx, fy - dH * 0.42, 0, fx, fy - dH * 0.42, dW * 0.62); rg.addColorStop(0, u._cast); rg.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = rg; ctx.beginPath(); ctx.arc(fx, fy - dH * 0.42, dW * 0.62, 0, 6.283); ctx.fill(); }
     if (u.flash > 0.02) ctx.filter = `brightness(${1 + u.flash * 4})`;
     ctx.imageSmoothingEnabled = true;
@@ -425,7 +437,7 @@ const HacCombate = (function () {
     const th = u.th * dpr, scl = th / img.height, w = img.width * scl, h = th;
     const x = ux(u) * dpr, y = uy(u) * dpr;   // sin bob: nadie levita en reposo
     ctx.save(); ctx.globalAlpha = u.deadA;
-    ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.beginPath(); ctx.ellipse(x, y, w * 0.32, h * 0.06, 0, 0, 6.283); ctx.fill();
+    groundShadow(x, y, w * 0.40);
     if (!u.foe && u._atk && u._cast) { const rg = ctx.createRadialGradient(x, y - h * 0.5, 0, x, y - h * 0.5, w * 0.95); rg.addColorStop(0, u._cast); rg.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = rg; ctx.beginPath(); ctx.arc(x, y - h * 0.5, w * 0.95, 0, 6.283); ctx.fill(); }
     const lean = u._atk ? (u.foe ? 0.13 : -0.16) : 0, sc = u._atk ? 1.06 : 1;
     ctx.translate(x, y); ctx.rotate(lean); ctx.scale(sc, sc);
