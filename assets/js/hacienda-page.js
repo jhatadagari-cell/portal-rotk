@@ -1116,7 +1116,7 @@
         const have = band ? bandStatSum(band, dom) : null, need = req[dom];
         const ok = have != null && have >= need;
         const prog = have != null ? ` <b>${have}/${need}</b>` : ` ${need}`;
-        return `<span class="hacp-req${have != null ? (ok ? ' ok' : ' no') : ''}" title="${esc(DOM_NOM[dom])}">${DOM_GLY[dom]}${prog}</span>`;
+        return `<span class="hacp-req${have != null ? (ok ? ' ok' : ' no') : ''}" title="${esc(DOM_NOMBRE[dom])}">${domIcon(dom)} ${DOM_ABBR[dom]}${prog}</span>`;
       }).join('');
     }
     // Nivel de la banda en un dominio = el del mejor miembro (un especialista lidera).
@@ -1332,7 +1332,7 @@
     }
     function escEncResultCard(enc, ok, op, dom) {
       const s = (ok ? op.ok : op.fail) || {}, p = [];
-      if (s.xp) p.push('+' + s.xp + ' XP ' + (DOM_GLY[dom] || ''));
+      if (s.xp) p.push('+' + s.xp + ' XP de ' + (DOM_NOMBRE[dom] || '').toLowerCase());
       if (s.pMod) p.push((s.pMod > 0 ? '+' : '−') + Math.round(Math.abs(s.pMod) * 100) + '% éxito de la banda');
       if (s.share) p.push((s.share > 0 ? '+' : '−') + Math.abs(s.share) + '💰/mecenas');
       if (s.loot) p.push((s.loot > 0 ? '+' : '') + s.loot + ' botín común');
@@ -1823,7 +1823,7 @@
       if (escBusy) return;
       // Requisito de aptitudes: la suma de la banda debe alcanzar el umbral del escenario.
       const band = HacEscaramuzas.miBanda(h.id, myId), scn = band && escenarioDef(band.escenario);
-      if (band && scn) { const rq = reqInfo(band, scn); if (!rq.ok) { const f = rq.partes.filter(p => p.have < p.need).map(p => `${DOM_GLY[p.dom]} ${p.have}/${p.need}`).join(' · '); toast('Faltan aptitudes: ' + f); return; } }
+      if (band && scn) { const rq = reqInfo(band, scn); if (!rq.ok) { const f = rq.partes.filter(p => p.have < p.need).map(p => `${DOM_ABBR[p.dom]} ${p.have}/${p.need}`).join(' · '); toast('Faltan aptitudes: ' + f); return; } }
       if (band && !escTodosReservados(band)) { toast('Cada mecenas debe reservar su encuentro antes de lanzar'); return; }
       escBusy = true;
       try {
@@ -3106,9 +3106,9 @@
           <span class="hacp-mis-g">${domIcon(m.dom, 'hacp-mis-gi')}</span>
           <div class="hacp-mis-main">
             <div class="hacp-mis-name">${esc(m.nombre)} <span class="hacp-mis-dif">dif. ${m.dif}</span>${enc}${rutina}</div>
-            <div class="hacp-mis-meta">⏱ ${fmtClock(durExped(m))}${durExped(m) < HacMisiones.durSeg(m) ? '<sup class="hacp-bono">↓</sup>' : ''} · <span class="${sinEn ? 'hacp-mis-noen' : ''}">−${en}⚡</span> · +${dinB}💰${bonos.dinero ? '<sup class="hacp-bono">↑</sup>' : ''} · +${xpB} XP${xpFracMision(m.dom) > 0 ? '<sup class="hacp-bono">↑</sup>' : ''} ${DOM_GLYPH[m.dom]} · 🎁 ${loot}%</div>
+            <div class="hacp-mis-meta">⏱ ${fmtClock(durExped(m))}${durExped(m) < HacMisiones.durSeg(m) ? '<sup class="hacp-bono">↓</sup>' : ''} · <span class="${sinEn ? 'hacp-mis-noen' : ''}">−${en}⚡</span> · +${dinB}💰${bonos.dinero ? '<sup class="hacp-bono">↑</sup>' : ''} · +${xpB} XP${xpFracMision(m.dom) > 0 ? '<sup class="hacp-bono">↑</sup>' : ''} · 🎁 ${loot}%</div>
           </div>
-          <span class="hacp-mis-risk r-${rc}" title="Riesgo de fracaso (baja con tu nivel ${DOM_GLYPH[m.dom]} y el equipo)">⚠ ${Math.round(risk * 100)}%</span>
+          <span class="hacp-mis-risk r-${rc}" title="Riesgo de fracaso (baja con tu nivel de ${DOM_NOMBRE[m.dom]} y el equipo)">⚠ ${Math.round(risk * 100)}%</span>
           <button type="button" class="hacp-mis-go" data-mis="${esc(m.id)}"${ocupado || sinEn ? ' disabled' : ''} title="${sinEn ? 'Energía insuficiente' : ''}">Enviar</button>
         </div>`;
       }).join('');
