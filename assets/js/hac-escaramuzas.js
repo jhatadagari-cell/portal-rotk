@@ -35,6 +35,7 @@ const HacEscaramuzas = (function () {
       botin: arr(r.botin), elecciones: obj(r.elecciones), lootHasta: Number(r.loot_hasta) || 0,
       doctrina: r.doctrina || '', sucesos: obj(r.sucesos), relacionesHechas: !!r.relaciones_hechas,
       escenario: r.escenario || '',
+      reservaciones: obj(r.reservaciones), resultados: obj(r.resultados), cdHecho: !!r.cd_hecho,
     };
   }
   async function load() {
@@ -120,6 +121,30 @@ const HacEscaramuzas = (function () {
     if (error) throw new Error(error.message || 'No se pudo abortar');
     return upsertCache(data);
   }
+  // ── ENCUENTROS por participante (rework A-coop) ──────────────────────────────
+  // RESERVAR un encuentro (slot 0..plazas-1) antes de lanzar. Exclusivo; re-reservar
+  // cambia el tuyo. Todos deben reservar para poder lanzar.
+  async function reservar(id, pjId, slot) {
+    const c = await sb();
+    const { data, error } = await c.rpc('escaramuza_reservar', { p_id: id, p_pj: pjId, p_slot: slot });
+    if (error) throw new Error(error.message || 'No se pudo reservar el encuentro');
+    return upsertCache(data);
+  }
+  // RESOLVER MI encuentro (live o al volver, mientras 'en_curso'): ok + opción elegida.
+  async function resolverEncuentro(id, pjId, slot, ok, opt) {
+    const c = await sb();
+    const { data, error } = await c.rpc('escaramuza_resolver_encuentro', { p_id: id, p_pj: pjId, p_slot: slot, p_ok: !!ok, p_opt: opt || 0 });
+    if (error) throw new Error(error.message || 'No se pudo resolver el encuentro');
+    return upsertCache(data);
+  }
+  // Al llegar fin_ms: aplica el cooldown a todos (anti-secuestro). Idempotente en BD.
+  async function cerrarCd(id, nowMs) {
+    if (!nowMs) throw new Error('Reloj no disponible');
+    const c = await sb();
+    const { data, error } = await c.rpc('escaramuza_cerrar_cd', { p_id: id, p_now: nowMs });
+    if (error) throw new Error(error.message || 'No se pudo cerrar el cooldown');
+    return upsertCache(data);
+  }
   // 4d: reclama un objeto del botín (slot). FCFS atómico; un objeto por jugador.
   async function reclamar(id, pjId, slot) {
     const c = await sb();
@@ -162,6 +187,6 @@ const HacEscaramuzas = (function () {
     return upsertCache(data);
   }
 
-  return { ready, reload, all, abiertas, miBanda, crear, unir, salir, lanzar, suceso, resolver, reclamar, abortar, lanzarPeregrinaje, resolverPeregrinaje, DUR_MS, CD_MS, dbOk: () => ok, TABLE };
+  return { ready, reload, all, abiertas, miBanda, crear, unir, salir, lanzar, suceso, resolver, reclamar, abortar, reservar, resolverEncuentro, cerrarCd, lanzarPeregrinaje, resolverPeregrinaje, DUR_MS, CD_MS, dbOk: () => ok, TABLE };
 })();
 if (typeof window !== 'undefined') window.HacEscaramuzas = HacEscaramuzas;

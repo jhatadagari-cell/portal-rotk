@@ -419,7 +419,7 @@
       return b;
     };
     if (myId) mobar.appendChild(moBtn('士', 'Tu mecenas', () => gotoMember(myId)));
-    if (myId && hasMain) mobar.appendChild(moBtn('檄', 'Misiones', goConsultBoard));
+    if (myId && hasMain) { const bMis = moBtn('檄', 'Misiones', goConsultBoard); bMis.classList.add('hacp-mo-mis'); mobar.appendChild(bMis); }
     if (myId && hasMarket) mobar.appendChild(moBtn('市', 'Mercado', openShop));
     mobar.appendChild(moBtn('众', 'Mecenas', () => folkCollapse(false)));
     ['pointerdown', 'pointerup', 'wheel', 'click'].forEach(ev => mobar.addEventListener(ev, (e) => e.stopPropagation(), { passive: false }));
@@ -637,17 +637,24 @@
         }
         let dom = null;
         const mis = (o.tipo === 'expedicion') ? (window.HacMisiones && HacMisiones.get(String(o.targetId || '').replace('mis:', ''))) : null;
+        // EXPEDICIÓN con encuentros SIN resolver: el mecenas ha VUELTO pero NO cobra ni
+        // regresa a la finca hasta que los atiendas (bloqueo). El botón «Misiones»
+        // parpadea; la orden NO se limpia → sigue "ocupado" y no puede salir de nuevo.
+        if (mis && encPend(o, mis)) { _wasOnMission = false; return; }
         if (mis) dom = mis.dom;
         else if (o.tipo !== 'expedicion') { const task = (window.HacTareas && HacTareas.get) ? HacTareas.get(o.targetId) : null; dom = (task && window.HacBuild) ? (HacBuild.tipo(task.tipo) || {}).dominio : null; }
-        // Las MISIONES del tablón (fuera) pueden FALLAR: el riesgo depende de tu nivel
-        // efectivo vs la dificultad. Al fallar pierdes la mitad del MONEDERO (el ahorro
-        // de casa está a salvo) y no traes botín ni prestigio. Las tareas DENTRO no fallan.
-        if (mis && Math.random() < riesgoMision(mis)) {
+        // Efectos ACUMULADOS de los encuentros ya resueltos (0 si no es expedición).
+        const em = mis ? encTotales(o, mis) : { din: 0, xp: 0, loot: 0, heridas: 0, robo: 0, riesgo: 0 };
+        const roboDin = mis ? roboMonedas(em.robo, mis.dif) : 0;
+        // Las MISIONES del tablón (fuera) pueden FALLAR: el riesgo base sube con los
+        // encuentros FALLADOS (em.riesgo). Al fallar pierdes la mitad del monedero + lo
+        // robado; las heridas de los encuentros se aplican igual (ya ocurrieron).
+        if (mis && Math.random() < Math.min(0.97, riesgoMision(mis) + em.riesgo)) {
           let lost = 0;
-          if (window.HacStats) { const wallet = HacStats.dinero(myId); lost = Math.round(wallet * 0.5); if (lost > 0) HacStats.award(myId, { dinero: -lost }); }
-          const emF = finalizeSucesos(o, mis); if (emF.heridas > 0 && HacStats.herir) HacStats.herir(myId, emF.heridas); sucClear(o);
+          if (window.HacStats) { const wallet = HacStats.dinero(myId); lost = Math.min(wallet, Math.round(wallet * 0.5) + roboDin); if (lost > 0) HacStats.award(myId, { dinero: -lost }); }
+          if (em.heridas > 0 && HacStats.herir) HacStats.herir(myId, em.heridas); sucClear(o);
           HacOrdenes.clear(h.id, myId);
-          toast(lost > 0 ? `❌ Misión fallida · perdiste ${lost} 💰 del monedero` : '❌ Misión fallida · sin botín');
+          toast(lost > 0 ? `❌ Misión fallida · perdiste ${lost} 💰` : '❌ Misión fallida · sin botín');
           if (window.HacBitacora) HacBitacora.log(myId, 'expedicion', '🧭 ' + (mis.nombre || 'Expedición') + ': ✘ fracaso' + (lost > 0 ? ` · −${lost}💰` : ''));
           _wasOnMission = false; applyOrders();
           return;
@@ -674,8 +681,7 @@
           const hurt = 1 - (HacStats.penHerida ? HacStats.penHerida(myId) : 0);
           const rm = retoMultMision(mis);   // misiones muy por debajo de tu nivel rinden menos (rutina)
           let dinB = Math.round(conBono(rec.dinero, dinPct) * hurt * rm), xpB = Math.round(conBono(rec.xp, xpFracMision(rec.dom)) * hurt * rm);
-          // SUCESOS del viaje: resuelve los que falten (opción segura) y aplica sus mods.
-          const em = finalizeSucesos(o, mis);
+          // ENCUENTROS del viaje: modifican la recompensa (din/xp %).
           if (em.din) dinB = Math.max(0, Math.round(dinB * (1 + em.din)));
           if (em.xp) xpB = Math.max(0, Math.round(xpB * (1 + em.xp)));
           const nivAntes = (rec.dom && HacStats.nivel) ? HacStats.nivel(myId, rec.dom) : 0;
@@ -692,12 +698,14 @@
             if (loot.efecto && loot.efecto.energia) { if (window.HacEnergia) HacEnergia.add(h.id, myId, loot.efecto.energia); extra += ` · 🎁 ${loot.icon} ${loot.nombre}`; }
             else { const r2 = HacStats.darItem(myId, lootId); extra += r2.ok ? ` · 🎁 ${loot.icon} ${loot.nombre}` : ' · 🎁 (mochila llena)'; }
           }
-          // Botín EXTRA de sucesos + heridas sufridas por el camino.
+          // Botín EXTRA de los encuentros superados.
           for (let k = 0; k < (em.loot || 0); k++) {
             const xid = HacTienda.botinAleatorio ? HacTienda.botinAleatorio(tier) : null;
             const xit = xid ? HacTienda.get(xid) : null;
             if (xit) { if (xit.efecto && xit.efecto.energia) { if (window.HacEnergia) HacEnergia.add(h.id, myId, xit.efecto.energia); } else HacStats.darItem(myId, xid); extra += ` · 🎁 ${xit.icon} ${xit.nombre}`; }
           }
+          // Robo (encuentros fallados) + heridas.
+          if (roboDin > 0) { const w = HacStats.dinero(myId), take = Math.min(roboDin, w); if (take > 0) { HacStats.award(myId, { dinero: -take }); extra += ` · −${take}💰 robados`; } }
           if (em.heridas > 0 && HacStats.herir) { HacStats.herir(myId, em.heridas); extra += ' · ✚ herido'; }
           sucClear(o);
         }
@@ -714,180 +722,167 @@
       _wasOnMission = onM;
     }
 
-    // ════════ SUCESOS (capa A) — decisiones EN VIVO durante una expedición ═══════
-    // Solo expediciones EN SOLITARIO (las escaramuzas irán aparte). Deterministas por
-    // semilla del id de orden; la elección se guarda en localStorage (a prueba de
-    // refresco). Si no respondes a tiempo (o no miras), se auto-elige la opción SEGURA.
-    // Los efectos (mods) se aplican al VOLVER, en maybeRewardMyMission.
-    const SUCESOS = [
-      { id: 'emboscada', txt: '¡Emboscada en el desfiladero!', desc: 'Unos bandidos os cortan el paso entre las rocas.',
-        op: [{ t: 'Cargar de frente', dom: 'militar', ok: { loot: 1, xp: 0.3 }, fail: { herida: 1 } },
-             { t: 'Buscar un flanco', dom: 'cultural', ok: { din: 0.25 }, fail: { din: -0.15 } },
-             { t: 'Retirada ordenada', safe: true, res: {} }] },
-      { id: 'aldea', txt: 'Una aldea pide ayuda', desc: 'Los aldeanos sufren el acoso de unos forajidos y ofrecen recompensa.',
-        op: [{ t: 'Expulsarlos por la fuerza', dom: 'militar', ok: { din: 0.3, xp: 0.2 }, fail: { herida: 1 } },
-             { t: 'Mediar y negociar', dom: 'administrativo', ok: { din: 0.3 }, fail: { din: -0.1 } },
-             { t: 'Seguir camino', safe: true, res: {} }] },
-      { id: 'reliquia', txt: 'Un santuario en ruinas', desc: 'Entre las columnas caídas asoma una reliquia y unas inscripciones antiguas.',
-        op: [{ t: 'Descifrar las inscripciones', dom: 'cultural', ok: { xp: 0.4, loot: 1 }, fail: {} },
-             { t: 'Llevarse lo de valor', dom: 'militar', ok: { din: 0.35 }, fail: { herida: 1 } },
-             { t: 'Respetar el lugar', safe: true, res: { xp: 0.05 } }] },
-      { id: 'mercader', txt: 'Un mercader varado', desc: 'Un carro volcado bloquea el vado; su dueño ofrece trato a quien le ayude.',
-        op: [{ t: 'Reparar y escoltar', dom: 'administrativo', ok: { din: 0.3, loot: 1 }, fail: { din: -0.1 } },
-             { t: 'Cargar el carro a pulso', dom: 'militar', ok: { din: 0.2 }, fail: { herida: 1 } },
-             { t: 'Rodear el vado', safe: true, res: {} }] },
-      { id: 'temporal', txt: 'Se desata un temporal', desc: 'La lluvia embarra el camino y amenaza con retrasaros.',
-        op: [{ t: 'Forzar la marcha', dom: 'militar', ok: { din: 0.15 }, fail: { herida: 1 } },
-             { t: 'Refugiaros y esperar', dom: 'cultural', ok: { xp: 0.2 }, fail: {} },
-             { t: 'Buscar un atajo', safe: true, res: {} }] },
-    ];
+    // ════════ ENCUENTROS (capa A) — retos por el camino de una EXPEDICIÓN ═════════
+    // Cada misión declara en su POOL una lista de APTITUDES (mis.enc), visibles como
+    // iconos en el tablón ANTES de aceptarla. Por el camino aparece un encuentro por
+    // cada una: una TIRADA ÚNICA contra tu nivel en ese dominio. Si sale bien, extra de
+    // recompensa; si sale mal, menos botín, más riesgo del objetivo, robo o (raro) una
+    // herida. Deterministas por semilla del id de orden; el resultado se guarda en
+    // localStorage (a prueba de refresco). Si NO los atiendes en vivo, quedan PENDIENTES
+    // y BLOQUEAN el cobro de la misión hasta que los resuelvas al volver.
+    // Efectos: din/xp (% sobre la recompensa), loot (nº objetos extra), heridas (nº),
+    // robo (nº → monedas según dificultad), riesgo (suma al % de fracaso del objetivo).
+    const ENCUENTROS = {
+      militar: [
+        { id: 'emboscada', txt: '¡Emboscada en el desfiladero!', desc: 'Unos forajidos os cortan el paso entre las rocas.', ok: { loot: 1, xp: 0.25 }, fail: { heridas: 1, riesgo: 0.08 } },
+        { id: 'duelo',     txt: 'Un oficial os reta a duelo',     desc: 'Un guerrero enemigo os desafía en singular combate.', ok: { din: 0.30, xp: 0.20 }, fail: { riesgo: 0.12 } },
+        { id: 'fiera',     txt: 'Una fiera cierra el sendero',    desc: 'Un tigre hambriento ronda el camino, inquieto.', ok: { loot: 1, din: 0.10 }, fail: { heridas: 1 } },
+        { id: 'patrulla',  txt: 'Una patrulla hostil os detecta', desc: 'Soldados enemigos os cierran el paso, lanza en mano.', ok: { din: 0.25 }, fail: { robo: 1, riesgo: 0.10 } },
+      ],
+      cultural: [
+        { id: 'inscripciones', txt: 'Un santuario en ruinas',      desc: 'Entre las columnas caídas asoman inscripciones antiguas.', ok: { xp: 0.40, loot: 1 }, fail: {} },
+        { id: 'poeta',         txt: 'Un poeta errante os desafía',  desc: 'Os reta a un duelo de versos ante testigos.', ok: { xp: 0.30, din: 0.15 }, fail: { din: -0.10 } },
+        { id: 'rumor',         txt: 'Corre un rumor aprovechable',  desc: 'En una posada oís algo que podríais usar a vuestro favor.', ok: { din: 0.25 }, fail: { riesgo: 0.08 } },
+        { id: 'copista',       txt: 'Un templo pide copiar textos', desc: 'Los monjes ofrecen recompensa por reproducir sus escritos.', ok: { xp: 0.35 }, fail: { din: -0.05 } },
+      ],
+      administrativo: [
+        { id: 'mercader', txt: 'Un mercader varado ofrece trato',     desc: 'Un carro volcado bloquea el vado; su dueño ofrece recompensa.', ok: { din: 0.30, loot: 1 }, fail: { din: -0.10 } },
+        { id: 'peaje',    txt: 'Un funcionario corrupto exige peaje', desc: 'Un magistrado local quiere mojar en vuestro paso.', ok: { din: 0.20 }, fail: { robo: 1, riesgo: 0.06 } },
+        { id: 'disputa',  txt: 'Dos aldeanos os piden mediar',        desc: 'Un pleito de lindes amenaza con acabar a golpes.', ok: { din: 0.25, xp: 0.15 }, fail: { din: -0.10 } },
+        { id: 'contrato', txt: 'Ocasión de un buen contrato',         desc: 'Se puede cerrar un trato ventajoso para la casa.', ok: { din: 0.35 }, fail: { robo: 1 } },
+      ],
+    };
+    const encById = (dom, id) => (ENCUENTROS[dom] || []).find(e => e.id === id) || null;
     const sucKey = (o) => myId + '|' + o.inicioMs + '|' + o.targetId;
-    // Prob. de éxito de un chequeo de dominio: tu nivel efectivo vs la dificultad.
-    function pSuceso(dom, dif) { return Math.max(0.12, Math.min(0.9, 0.42 + 0.13 * (nivelEf(dom) - (dif || 3)))); }
-    function safeIdx(s) { const i = s.op.findIndex(o => o.safe || !o.dom); return i >= 0 ? i : s.op.length - 1; }
-    function opMods(op, ok) {
-      const src = op.dom ? (ok ? op.ok : op.fail) : (op.res || {});
-      const m = { din: 0, xp: 0, loot: 0, heridas: 0 }; if (!src) return m;
-      if (src.din) m.din += src.din; if (src.xp) m.xp += src.xp; if (src.loot) m.loot += src.loot; if (src.herida) m.heridas += src.herida;
-      return m;
-    }
-    function accumMods(a, b) { a = a || {}; return { din: (a.din || 0) + (b.din || 0), xp: (a.xp || 0) + (b.xp || 0), loot: (a.loot || 0) + (b.loot || 0), heridas: (a.heridas || 0) + (b.heridas || 0) }; }
-    // Plan determinista de sucesos para una orden (mismos para todos, estable al refrescar).
-    function sucPlan(o, mis) {
+    // Prob. de ÉXITO de un encuentro: tu nivel efectivo en ese dominio vs la dificultad.
+    function pEncuentro(dom, dif) { return Math.max(0.12, Math.min(0.9, 0.42 + 0.13 * (nivelEf(dom) - (dif || 3)))); }
+    const pSuceso = pEncuentro;   // alias: lo usan los SUCESOS cooperativos de las escaramuzas (A2b)
+    // Monedas perdidas por un "robo" (escala con la dificultad de la misión).
+    const roboMonedas = (n, dif) => Math.round((n || 0) * (8 + (dif || 1) * 4));
+    // Plan DETERMINISTA de encuentros: uno por aptitud de mis.enc, repartidos por el
+    // viaje (mismos para todos, estable al refrescar).
+    function encPlan(o, mis) {
+      const enc = (mis && mis.enc) || [];
+      if (!enc.length || !window.HacRand) return [];
       const durMs = (o.duracionSeg || 60) * 1000, startMs = o.inicioMs;
-      const R = HacRand.make('suc#' + sucKey(o));
-      const n = ((mis.dif || 3) >= 5 || durMs >= 200000) ? 2 : 1;
-      const frac = n === 2 ? [0.38, 0.72] : [0.5];
-      const pool = SUCESOS.slice(), plan = [];
-      for (let i = 0; i < n; i++) { const idx = R.int(pool.length); const s = pool.splice(idx, 1)[0]; plan.push({ i: i, sucesoId: s.id, atMs: startMs + Math.round(durMs * frac[i]) }); }
-      return plan;
+      const R = HacRand.make('enc#' + sucKey(o));
+      const frac = enc.length >= 2 ? [0.38, 0.72] : [0.5];
+      return enc.map((dom, i) => {
+        const pool = ENCUENTROS[dom] || [];
+        const pick = pool.length ? pool[R.int(pool.length)] : null;
+        return { i: i, dom: dom, encId: pick ? pick.id : null, atMs: startMs + Math.round(durMs * (frac[i] || 0.5)) };
+      });
     }
-    const sucDeadline = (o, ev) => Math.min(ev.atMs + SUC_WINDOW, o.inicioMs + (o.duracionSeg || 60) * 1000 - 1500);
-    // Estado de sucesos: EN MEMORIA (fuente de verdad de la sesión) + espejo en
-    // localStorage (para sobrevivir a refrescos). Si localStorage falla (Safari
-    // privado / iOS), el mapa en memoria evita que la carta se reabra en bucle.
+    // Estado de encuentros: EN MEMORIA (verdad de sesión) + espejo en localStorage
+    // (sobrevive a refrescos). resolved[i] = { ok:bool }.
     const sucMem = {};
-    const sucLsKey = (o) => 'rotk.suc.' + sucKey(o);
+    const sucLsKey = (o) => 'rotk.enc.' + sucKey(o);
     function sucLoad(o) {
       const k = sucLsKey(o);
       if (sucMem[k]) return sucMem[k];
       try { const v = JSON.parse(localStorage.getItem(k)); if (v) { sucMem[k] = v; return v; } } catch (e) {}
-      const def = { resolved: {}, mods: {} }; sucMem[k] = def; return def;
+      const def = { resolved: {} }; sucMem[k] = def; return def;
     }
     function sucSave(o, st) { const k = sucLsKey(o); sucMem[k] = st; try { localStorage.setItem(k, JSON.stringify(st)); } catch (e) {} }
     function sucClear(o) { const k = sucLsKey(o); delete sucMem[k]; try { localStorage.removeItem(k); } catch (e) {} }
-    // Resuelve al VOLVER los sucesos no atendidos (opción segura) y devuelve los mods totales.
-    function finalizeSucesos(o, mis) {
-      if (!window.HacRand) return { din: 0, xp: 0, loot: 0, heridas: 0 };
-      const plan = sucPlan(o, mis), st = sucLoad(o); st.resolved = st.resolved || {}; st.mods = st.mods || {};
-      plan.forEach(ev => { if (st.resolved[ev.i] == null) { const s = SUCESOS.find(x => x.id === ev.sucesoId); const idx = safeIdx(s); st.resolved[ev.i] = { c: idx, ok: true, auto: true }; st.mods = accumMods(st.mods, opMods(s.op[idx], true)); } });
-      sucSave(o, st);
-      return { din: st.mods.din || 0, xp: st.mods.xp || 0, loot: st.mods.loot || 0, heridas: st.mods.heridas || 0 };
+    // ¿Quedan encuentros SIN resolver en esta orden? (bloquea el cobro al volver).
+    function encPend(o, mis) { const rez = (sucLoad(o).resolved) || {}; return encPlan(o, mis).some(ev => rez[ev.i] == null); }
+    // Primer encuentro RESOLUBLE ahora (ya llegó su momento) y sin resolver. null si no hay.
+    function encResolvible(o, mis) {
+      const now = clock(), rez = (sucLoad(o).resolved) || {};
+      return encPlan(o, mis).find(ev => now >= ev.atMs && rez[ev.i] == null) || null;
     }
-    // Aplica una decisión (manual o auto): tira el dado sembrado, acumula mods, registra.
-    let sucEl = null, sucTimer = 0, sucOpenIdx = null, sucDl0 = 0, sucSel = null, sucResultOpen = false;
-    // Resumen legible del efecto (se aplica al VOLVER de la expedición).
-    function sucEffTxt(op, ok) {
-      const m = opMods(op, ok), p = [];
-      if (m.din) p.push((m.din > 0 ? '+' : '−') + Math.round(Math.abs(m.din) * 100) + '% dinero');
-      if (m.xp) p.push('+' + Math.round(m.xp * 100) + '% XP');
-      if (m.loot) p.push('+' + m.loot + ' botín');
-      if (m.heridas) p.push('herido');
-      return p.length ? p.join(' · ') : 'sin novedad';
+    // Suma de efectos de los encuentros YA resueltos (se aplican al cobrar).
+    function encTotales(o, mis) {
+      const rez = (sucLoad(o).resolved) || {}, t = { din: 0, xp: 0, loot: 0, heridas: 0, robo: 0, riesgo: 0 };
+      encPlan(o, mis).forEach(ev => {
+        const r = rez[ev.i]; if (!r) return;
+        const enc = encById(ev.dom, ev.encId); if (!enc) return;
+        const s = (r.ok ? enc.ok : enc.fail) || {};
+        t.din += s.din || 0; t.xp += s.xp || 0; t.loot += s.loot || 0; t.heridas += s.heridas || 0; t.robo += s.robo || 0; t.riesgo += s.riesgo || 0;
+      });
+      return t;
     }
-    function applyResolve(o, mis, ev, choiceIdx, auto) {
-      const s = SUCESOS.find(x => x.id === ev.sucesoId); if (!s) return;
-      const st = sucLoad(o); st.resolved = st.resolved || {};
-      if (st.resolved[ev.i] != null) { closeSuc(); return; }   // ya resuelto (evita doble aplicación)
-      const op = s.op[choiceIdx] || s.op[safeIdx(s)];
-      let ok = true;
-      if (op.dom) { const R = HacRand.make('sucr#' + sucKey(o) + '#' + ev.i); ok = R.next() < pSuceso(op.dom, mis.dif); }
-      if (op.cost && window.HacStats) HacStats.award(myId, { dinero: -op.cost });
-      st.mods = accumMods(st.mods || {}, opMods(op, ok));
-      st.resolved[ev.i] = { c: choiceIdx, ok: ok, auto: !!auto }; sucSave(o, st);
-      if (window.HacBitacora) HacBitacora.log(myId, 'expedicion', `⚔ ${s.txt} → ${op.t}${op.dom ? (ok ? ' ✔' : ' ✘') : ''}`, { clave: 'suc:' + sucKey(o) + ':' + ev.i });
-      if (charId) buildCharPanel(charId);
-      if (auto) { closeSuc(); return; }   // auto/segura: cierra sin pantalla de resultado
-      // Manual: enseña el RESULTADO en la carta (no un toast fugaz) hasta que confirmes.
-      if (sucTimer) { clearInterval(sucTimer); sucTimer = 0; }
-      sucResultOpen = true;
-      const el = ensureSucEl(); el.hidden = false;
-      el.innerHTML = `<div class="hacp-suc-box">
-        <div class="hacp-suc-eyebrow">⚔ Suceso · ${esc(mis.nombre || 'Expedición')}</div>
-        <div class="hacp-suc-ttl">${esc(s.txt)}</div>
-        <div class="hacp-suc-verdict ${op.dom ? (ok ? 'ok' : 'bad') : 'neutral'}">${op.dom ? (ok ? '✔ Éxito' : '✘ Ha salido mal') : '· Hecho'}</div>
-        <div class="hacp-suc-eff"><b>${esc(op.t)}</b> — al volver: ${esc(sucEffTxt(op, ok))}</div>
-        <button type="button" class="hacp-cp-btn hacp-suc-done" data-suc-done>Continuar</button></div>`;
-      el.querySelector('[data-suc-done]').addEventListener('click', closeSuc);
-    }
-    function autoResolveSafe(o, mis, ev) { const s = SUCESOS.find(x => x.id === ev.sucesoId); if (s) applyResolve(o, mis, ev, safeIdx(s), true); }
+    // ── Carta de ENCUENTRO (modal): narrativa + una TIRADA ÚNICA «Afrontar» ─────────
+    let sucEl = null;
     function ensureSucEl() {
       if (sucEl) return sucEl;
       sucEl = document.createElement('div'); sucEl.className = 'hacp-suc-ov'; sucEl.hidden = true; document.body.appendChild(sucEl);
       ['pointerdown', 'pointerup', 'wheel', 'click'].forEach(ev => sucEl.addEventListener(ev, e => e.stopPropagation(), { passive: false }));
       return sucEl;
     }
-    function closeSuc() { if (sucTimer) { clearInterval(sucTimer); sucTimer = 0; } sucOpenIdx = null; sucSel = null; sucResultOpen = false; if (sucEl) sucEl.hidden = true; }
-    // Cuerpo de la carta: se elige una opción (queda MARCADA) y luego se confirma con
-    // Aceptar/Cancelar — el toque no resuelve por sí solo (evita decisiones por error).
-    function sucBoxHTML(s, mis) {
-      const opts = s.op.map((op, ix) => {
-        const on = (sucSel === ix) ? ' on' : '';
-        const meta = op.dom ? `<span class="hacp-suc-chk">〔${DOM_GLYPH[op.dom]} ${nivelEf(op.dom)}〕</span>` : '';
-        const tag = op.dom ? `<span class="hacp-suc-pct">${Math.round(pSuceso(op.dom, mis.dif) * 100)}%</span>` : `<span class="hacp-suc-pct">segura</span>`;
-        return `<button type="button" class="hacp-suc-op${op.dom ? '' : ' safe'}${on}" data-op="${ix}">${meta}<span class="hacp-suc-opt">${esc(op.t)}</span>${tag}</button>`;
-      }).join('');
-      const footer = (sucSel != null)
-        ? `<div class="hacp-suc-confirm"><button type="button" class="hacp-cp-btn hacp-suc-cancel" data-suc-cancel>Cancelar</button><button type="button" class="hacp-cp-btn hacp-suc-ok" data-suc-ok>Aceptar</button></div>`
-        : '';
-      return `<div class="hacp-suc-box">
-        <div class="hacp-suc-eyebrow">⚔ Suceso · ${esc(mis.nombre || 'Expedición')}</div>
-        <div class="hacp-suc-ttl">${esc(s.txt)}</div>
-        <div class="hacp-suc-desc">${esc(s.desc || '')}</div>
-        <div class="hacp-suc-ops">${opts}</div>
-        ${footer}
-        <div class="hacp-suc-bar"><i data-suc-bar></i></div>
-        <div class="hacp-suc-hint" data-suc-hint></div></div>`;
+    function closeSuc() { if (sucEl) sucEl.hidden = true; }
+    // Resumen legible del efecto de un encuentro (se aplica al VOLVER, al cobrar).
+    function encEffTxt(enc, ok, dif) {
+      const s = (ok ? enc.ok : enc.fail) || {}, p = [];
+      if (s.din) p.push((s.din > 0 ? '+' : '−') + Math.round(Math.abs(s.din) * 100) + '% recompensa');
+      if (s.xp) p.push('+' + Math.round(s.xp * 100) + '% XP');
+      if (s.loot) p.push('+' + s.loot + ' botín');
+      if (s.riesgo) p.push('+' + Math.round(s.riesgo * 100) + '% riesgo del objetivo');
+      if (s.robo) p.push('−' + roboMonedas(s.robo, dif) + '💰 robados');
+      if (s.heridas) p.push('herido');
+      return p.length ? p.join(' · ') : 'sin consecuencias';
     }
-    function renderSucBody(o, mis, ev) {
-      const s = SUCESOS.find(x => x.id === ev.sucesoId); if (!s || !sucEl) return;
-      sucEl.innerHTML = sucBoxHTML(s, mis);
-      sucEl.querySelectorAll('[data-op]').forEach(b => b.addEventListener('click', () => { sucSel = +b.dataset.op; renderSucBody(o, mis, ev); }));
-      const ok = sucEl.querySelector('[data-suc-ok]'); if (ok) ok.addEventListener('click', () => { if (sucSel != null) applyResolve(o, mis, ev, sucSel, false); });
-      const cc = sucEl.querySelector('[data-suc-cancel]'); if (cc) cc.addEventListener('click', () => { sucSel = null; renderSucBody(o, mis, ev); });
+    // Tira el dado (sembrado → estable al refrescar) de un encuentro y guarda el resultado.
+    function encAfrontar(o, mis, ev) {
+      const enc = encById(ev.dom, ev.encId); if (!enc) return;
+      const st = sucLoad(o); st.resolved = st.resolved || {};
+      if (st.resolved[ev.i] != null) { encAbrir(o, mis); return; }   // ya resuelto: pasa al siguiente
+      const R = HacRand.make('encr#' + sucKey(o) + '#' + ev.i);
+      const ok = R.next() < pEncuentro(ev.dom, mis.dif);
+      st.resolved[ev.i] = { ok: ok }; sucSave(o, st);
+      if (window.HacBitacora) HacBitacora.log(myId, 'expedicion', `${DOM_GLYPH[ev.dom] || '⚔'} ${enc.txt} → ${ok ? '✔ superado' : '✘ fallado'}`, { clave: 'enc:' + sucKey(o) + ':' + ev.i });
+      if (charId) buildCharPanel(charId);
+      // Pantalla de RESULTADO hasta que confirmes con «Continuar».
+      const el = ensureSucEl(); el.hidden = false;
+      el.innerHTML = `<div class="hacp-suc-box">
+        <div class="hacp-suc-eyebrow">${domIcon(ev.dom)} Encuentro · ${esc(mis.nombre || 'Expedición')}</div>
+        <div class="hacp-suc-ttl">${esc(enc.txt)}</div>
+        <div class="hacp-suc-verdict ${ok ? 'ok' : 'bad'}">${ok ? '✔ Superado' : '✘ Ha salido mal'}</div>
+        <div class="hacp-suc-eff">Al volver: ${esc(encEffTxt(enc, ok, mis.dif))}</div>
+        <button type="button" class="hacp-cp-btn hacp-suc-done" data-enc-done>Continuar</button></div>`;
+      el.querySelector('[data-enc-done]').addEventListener('click', () => encAbrir(o, mis));
     }
-    function openSucCard(o, mis, ev, dl) {
-      const s = SUCESOS.find(x => x.id === ev.sucesoId); if (!s) return;
-      sucOpenIdx = ev.i; sucDl0 = dl; sucSel = null;
-      ensureSucEl(); renderSucBody(o, mis, ev); sucEl.hidden = false;
-      if (sucTimer) clearInterval(sucTimer);
-      sucTimer = setInterval(() => tickSucCard(o, mis, ev), 200); tickSucCard(o, mis, ev);
+    // Abre el encuentro pendiente (si lo hay). Si ya no quedan, cierra e intenta cobrar.
+    function encAbrir(o, mis) {
+      const ev = encResolvible(o, mis);
+      if (!ev) { closeSuc(); applyOrders(); return; }   // no quedan resolubles → cobra/limpia si procede
+      const enc = encById(ev.dom, ev.encId); if (!enc) { closeSuc(); return; }
+      const p = Math.round(pEncuentro(ev.dom, mis.dif) * 100);
+      const el = ensureSucEl(); el.hidden = false;
+      el.innerHTML = `<div class="hacp-suc-box">
+        <div class="hacp-suc-eyebrow">${domIcon(ev.dom)} Encuentro · ${esc(mis.nombre || 'Expedición')}</div>
+        <div class="hacp-suc-ttl">${esc(enc.txt)}</div>
+        <div class="hacp-suc-desc">${esc(enc.desc || '')}</div>
+        <div class="hacp-enc-apt">Se resuelve con tu <b style="color:${DOM_COLOR[ev.dom]}">${DOM_NOMBRE[ev.dom]}</b> · nivel ${nivelEf(ev.dom)}</div>
+        <div class="hacp-suc-ops"><button type="button" class="hacp-suc-op" data-enc-go><span class="hacp-suc-opt">Afrontar el encuentro</span><span class="hacp-suc-pct">${p}%</span></button></div>
+        </div>`;
+      el.querySelector('[data-enc-go]').addEventListener('click', () => encAfrontar(o, mis, ev));
     }
-    function tickSucCard(o, mis, ev) {
-      if (!sucEl || sucEl.hidden) return;
-      const now = clock(), total = Math.max(1, sucDl0 - ev.atMs), rem = Math.max(0, sucDl0 - now);
-      const bar = sucEl.querySelector('[data-suc-bar]'); if (bar) bar.style.width = Math.max(0, Math.min(100, rem / total * 100)) + '%';
-      const hint = sucEl.querySelector('[data-suc-hint]');
-      if (hint) hint.textContent = (sucSel != null) ? `Confirma en ${Math.ceil(rem / 1000)}s` : `Elige en ${Math.ceil(rem / 1000)}s · si no, opción segura`;
-      // Al vencer: si tienes una opción marcada, se aplica esa; si no, la segura.
-      if (now >= sucDl0) { if (sucSel != null) applyResolve(o, mis, ev, sucSel, false); else autoResolveSafe(o, mis, ev); }
+    // MI expedición en curso / recién vuelta (o null). Reutilizado por los puntos de entrada.
+    function miExped() {
+      if (!myId || !window.HacOrdenes || !window.HacMisiones) return null;
+      const o = HacOrdenes.mine(h.id, myId); if (!o || o.tipo !== 'expedicion') return null;
+      if (String(o.targetId || '').indexOf('escaramuza:') === 0) return null;
+      const mis = HacMisiones.get(String(o.targetId || '').replace('mis:', '')); if (!mis) return null;
+      return { o: o, mis: mis };
     }
-    // Se llama cada segundo: abre la carta cuando toca; auto-resuelve pasada la ventana
-    // (aunque no la estés mirando). Solo para MIS expediciones en solitario en curso.
-    function sucesoTick() {
-      if (sucResultOpen) return;   // mostrando el resultado: no abras otra carta hasta Continuar
-      if (!myId || !window.HacOrdenes || !window.HacMisiones || !window.HacRand) return;
-      const o = HacOrdenes.mine(h.id, myId);
-      if (!o || o.tipo !== 'expedicion' || String(o.targetId || '').indexOf('escaramuza:') === 0) { if (sucOpenIdx != null) closeSuc(); return; }
-      const mis = HacMisiones.get(String(o.targetId || '').replace('mis:', '')); if (!mis) return;
-      const now = clock(), endMs = o.inicioMs + (o.duracionSeg || 60) * 1000;
-      if (now >= endMs) { if (sucOpenIdx != null) closeSuc(); return; }
-      const plan = sucPlan(o, mis), rez = (sucLoad(o).resolved) || {};
-      const ev = plan.find(p => now >= p.atMs && rez[p.i] == null);
-      if (!ev) { if (sucOpenIdx != null) closeSuc(); return; }
-      const dl = sucDeadline(o, ev);
-      if (now >= dl) { autoResolveSafe(o, mis, ev); return; }
-      if (sucOpenIdx !== ev.i) openSucCard(o, mis, ev, dl);
+    // Punto de entrada desde «Misiones»: abre los encuentros resolubles. true si había algo.
+    function abrirEncuentrosPend() {
+      const e = miExped(); if (!e || !encResolvible(e.o, e.mis)) return false;
+      encAbrir(e.o, e.mis); return true;
+    }
+    // ¿Hay AHORA un encuentro que atender? (dispara el parpadeo del botón «Misiones»).
+    function encAvisoPend() { const e = miExped(); return !!(e && encResolvible(e.o, e.mis)); }
+    // Parpadeo del botón «Misiones» (escritorio + barra móvil + nav de secciones).
+    function pulseMisNav() {
+      const on = encAvisoPend();
+      const tool = charEl ? charEl.querySelector('.hacp-cp-board') : null;
+      if (tool) tool.classList.toggle('pulse', on);
+      const mo = mobar ? mobar.querySelector('.hacp-mo-mis') : null;
+      if (mo) mo.classList.toggle('pulse', on);
+      const nav = document.querySelector('#hacp-mnav [data-sec="misiones"]');
+      if (nav) nav.classList.toggle('pulse', on && !nav.classList.contains('on'));
     }
 
     // Repinta la caja de prestigio in situ (el prestigio se carga async tras el
@@ -1127,6 +1122,104 @@
     function bandStat(band, dom) { let best = 0; (band.miembros || []).forEach(m => { const n = (window.HacStats && HacStats.nivelTotal) ? HacStats.nivelTotal(m.id, dom) : 1; if (n > best) best = n; }); return best || 1; }
     // ¿algún miembro de la banda tiene un talento? (efectos de banda: 虎將, 軍師…)
     const bandTiene = (band, id) => (band.miembros || []).some(m => window.HacStats && HacStats.tieneTalento && HacStats.tieneTalento(m.id, id));
+    // ════════ ENCUENTROS por participante (rework coop) ══════════════════════════
+    // N encuentros = N plazas. Cada uno es de una APTITUD (generada DETERMINISTA por id
+    // de banda → todos ven la misma mezcla) y lo RESUELVE el mecenas que lo reservó, con
+    // opciones (live o al volver). Efectos: pMod/share/loot pliegan el desenlace de la
+    // banda; xp/cura son personales (los auto-aplica quien resuelve, a su mecenas).
+    const ESC_APT = ['militar', 'cultural', 'administrativo'];
+    const ENC_COOP = {
+      militar: [
+        { txt: 'Choque en el desfiladero', desc: 'El enemigo os cierra el paso entre las rocas.',
+          ops: [{ t: 'Cargar de frente', bonus: -0.06, ok: { pMod: 0.08, loot: 1, xp: 30 }, fail: { pMod: -0.12 } },
+                { t: 'Flanquear con cautela', bonus: 0.06, ok: { pMod: 0.05, xp: 18 }, fail: { pMod: -0.06 } }] },
+        { txt: 'Un oficial os reta a duelo', desc: 'Un guerrero enemigo os desafía ante ambas huestes.',
+          ops: [{ t: 'Aceptar el duelo', bonus: -0.04, ok: { share: 12, xp: 28 }, fail: { pMod: -0.10 } },
+                { t: 'Rehuir y hostigar', bonus: 0.05, ok: { pMod: 0.04, xp: 16 }, fail: { share: -6 } }] },
+        { txt: 'Una posición fortificada', desc: 'El objetivo se atrinchera tras empalizadas.',
+          ops: [{ t: 'Asaltar de inmediato', bonus: -0.05, ok: { loot: 1, pMod: 0.06, xp: 26 }, fail: { pMod: -0.10 } },
+                { t: 'Asediar con paciencia', bonus: 0.06, ok: { pMod: 0.05, xp: 16 }, fail: { pMod: -0.05 } }] },
+      ],
+      cultural: [
+        { txt: 'Un enviado enemigo', desc: 'Traen una propuesta de tregua envenenada.',
+          ops: [{ t: 'Debatir con firmeza', bonus: -0.03, ok: { share: 12, xp: 28 }, fail: { share: -6 } },
+                { t: 'Escuchar y ceder algo', bonus: 0.06, ok: { share: 6, xp: 16 }, fail: {} }] },
+        { txt: 'Señales y estandartes', desc: 'Interpretar los movimientos del enemigo a tiempo.',
+          ops: [{ t: 'Descifrar sus señales', bonus: 0.04, ok: { pMod: 0.06, xp: 26 }, fail: { pMod: -0.05 } },
+                { t: 'Arengar a la tropa', bonus: -0.02, ok: { pMod: 0.08, xp: 22 }, fail: { pMod: -0.08 } }] },
+        { txt: 'Rumores en la aldea', desc: 'La población local sabe más de lo que dice.',
+          ops: [{ t: 'Sembrar propaganda', bonus: -0.03, ok: { pMod: 0.06, loot: 1, xp: 24 }, fail: { pMod: -0.08 } },
+                { t: 'Recabar información', bonus: 0.06, ok: { pMod: 0.04, xp: 16 }, fail: {} }] },
+      ],
+      administrativo: [
+        { txt: 'Suministros y rutas', desc: 'Sin abasto la banda flaquea; hay que resolverlo.',
+          ops: [{ t: 'Requisar por la fuerza', bonus: -0.05, ok: { share: 14, xp: 24 }, fail: { pMod: -0.06, share: -6 } },
+                { t: 'Negociar el abasto', bonus: 0.05, ok: { share: 10, xp: 18 }, fail: { share: -4 } }] },
+        { txt: 'Un contrato ventajoso', desc: 'Un mercader ofrece un trato para la casa.',
+          ops: [{ t: 'Cerrar trato agresivo', bonus: -0.04, ok: { share: 16, xp: 26 }, fail: { share: -8 } },
+                { t: 'Trato prudente', bonus: 0.06, ok: { share: 8, xp: 16 }, fail: {} }] },
+        { txt: 'Mediar un pleito local', desc: 'Dos clanes al borde de las manos por unas lindes.',
+          ops: [{ t: 'Imponer un fallo', bonus: -0.03, ok: { share: 10, xp: 22 }, fail: { pMod: -0.05 } },
+                { t: 'Conciliar a las partes', bonus: 0.05, ok: { share: 8, loot: 1, xp: 18 }, fail: {} }] },
+      ],
+    };
+    const encByDomIdx = (dom, idx) => (ENC_COOP[dom] || [])[idx] || null;
+    // Mezcla de encuentros de una banda: [{dom, encIdx}] de longitud = plazas, estable
+    // (semilla = id de banda). Todos los clientes la computan igual.
+    function escEncuentros(band) {
+      const n = band.plazas || (band.miembros || []).length || 2;
+      const R = window.HacRand ? HacRand.make('escenc#' + band.id) : null;
+      const out = [];
+      for (let i = 0; i < n; i++) {
+        const dom = R ? ESC_APT[R.int(ESC_APT.length)] : ESC_APT[i % 3];
+        const pool = ENC_COOP[dom] || [];
+        out.push({ dom: dom, encIdx: pool.length ? (R ? R.int(pool.length) : 0) : 0 });
+      }
+      return out;
+    }
+    // Reservas: reservaciones = { pjId: slot }.
+    const escSlotOwner = (band, slot) => { const r = band.reservaciones || {}; return Object.keys(r).find(pj => Number(r[pj]) === slot) || null; };
+    const escMiSlot = (band) => { const v = (band.reservaciones || {})[myId]; return v == null ? null : Number(v); };
+    const escNReservados = (band) => Object.keys(band.reservaciones || {}).length;
+    const escTodosReservados = (band) => escNReservados(band) >= (band.plazas || (band.miembros || []).length);
+    const escNResueltos = (band) => Object.keys(band.resultados || {}).length;
+    // Suma de efectos de banda (pMod/share/loot) de los encuentros YA resueltos.
+    function escEncTot(band) {
+      const plan = escEncuentros(band), rez = band.resultados || {}, t = { pMod: 0, share: 0, loot: 0 };
+      plan.forEach((e, slot) => {
+        const r = rez[slot]; if (!r) return;
+        const enc = encByDomIdx(e.dom, e.encIdx); if (!enc) return;
+        const op = enc.ops[r.opt] || enc.ops[0]; const s = (r.ok ? op.ok : op.fail) || {};
+        t.pMod += s.pMod || 0; t.share += s.share || 0; t.loot += s.loot || 0;
+      });
+      return t;
+    }
+    // Informe: una línea por encuentro (aptitud + mecenas + ✔/✘/sin resolver).
+    function escEncReportHTML(band) {
+      const plan = escEncuentros(band), rez = band.resultados || {};
+      const li = plan.map((e, slot) => {
+        const owner = escSlotOwner(band, slot);
+        const nm = owner ? ((band.miembros.find(m => m.id === owner) || {}).nombre || 'mecenas') : '—';
+        const r = rez[slot]; const st = r ? (r.ok ? 'ok' : 'bad') : 'skip'; const mk = r ? (r.ok ? '✔' : '✘') : '·';
+        return `<li class="hacp-esc-suc ${st}">${domIcon(e.dom, 'hacp-enc-li')} ${mk} ${esc(nm)}${r ? '' : ' <i>(sin resolver)</i>'}</li>`;
+      }).join('');
+      return `<ul class="hacp-esc-sucs">${li}</ul>`;
+    }
+    // MI banda en curso con un encuentro mío SIN resolver (dispara el aviso/parpadeo).
+    function escEncPendMio() {
+      if (!myId || !window.HacEscaramuzas) return null;
+      const band = HacEscaramuzas.miBanda(h.id, myId);
+      if (!band || band.estado !== 'en_curso' || esPereg(band)) return null;
+      const slot = escMiSlot(band); if (slot == null) return null;
+      if ((band.resultados || {})[slot]) return null;
+      return band;
+    }
+    async function reservarEncuentro(id, slot) {
+      if (escBusy) return; escBusy = true;
+      try { await HacEscaramuzas.reservar(id, myId, slot); }
+      catch (e) { toast((e && e.message) || 'No se pudo reservar'); await HacEscaramuzas.reload(); }
+      finally { escBusy = false; renderEscaramuzas(); }
+    }
     // Plan determinista de sucesos de una escaramuza (mismo para todos los clientes).
     function escPlan(band) {
       // Escenario del pool → sus eventos AUTORADOS (mismos para todos).
@@ -1182,83 +1275,74 @@
     // suceso puede CAMBIAR la maniobra (dominio) de ese trance. Se guarda en la BD
     // (escaramuza_suceso). Si no decide (o no mira), se mantiene la doctrina.
     const ESC_SUC_WINDOW = (/[?&]escfast=1/.test(location.search || '')) ? 12000 : 25000;
-    const escSucFrac = (n) => (n === 2 ? [0.38, 0.72] : [0.5]);
-    let escSucEl = null, escSucTimer = 0, escSucOpen = null, escSucDl = 0, escSucSel = null;
-    const escSucSkipped = new Set();
+    let escSucEl = null;
     function ensureEscSucEl() {
       if (escSucEl) return escSucEl;
       escSucEl = document.createElement('div'); escSucEl.className = 'hacp-suc-ov'; escSucEl.hidden = true; document.body.appendChild(escSucEl);
       ['pointerdown', 'pointerup', 'wheel', 'click'].forEach(ev => escSucEl.addEventListener(ev, e => e.stopPropagation(), { passive: false }));
       return escSucEl;
     }
-    function closeEscSuc() { if (escSucTimer) { clearInterval(escSucTimer); escSucTimer = 0; } escSucOpen = null; escSucSel = null; if (escSucEl) escSucEl.hidden = true; }
-    function escSucBoxHTML(band, ev) {
-      const s = SUCESOS_COOP.find(x => x.id === ev.sucesoId); if (!s) return '';
-      const opts = DOCTRINAS.map((d, ix) => {
-        const on = (escSucSel === ix) ? ' on' : '';
-        const p = Math.round(pSuceso(bandStat(band, d.dom), band.dificultad || 4) * 100);
-        return `<button type="button" class="hacp-suc-op${on}" data-eop="${ix}"><span class="hacp-suc-chk">〔${d.gly}〕</span><span class="hacp-suc-opt">${esc(d.nom)}</span><span class="hacp-suc-pct">${p}%</span></button>`;
+    function closeEscSuc() { if (escSucEl) escSucEl.hidden = true; }
+    // Abre la carta del encuentro que RESERVÉ (con opciones). true si había uno pendiente.
+    function escEncAbrir(band) {
+      band = band || (window.HacEscaramuzas && HacEscaramuzas.miBanda(h.id, myId)); if (!band) return false;
+      if (band.estado !== 'en_curso' || esPereg(band)) return false;
+      const slot = escMiSlot(band); if (slot == null || (band.resultados || {})[slot]) return false;
+      const e = escEncuentros(band)[slot]; if (!e) return false;
+      const enc = encByDomIdx(e.dom, e.encIdx); if (!enc) return false;
+      const dif = band.dificultad || 4;
+      const ops = enc.ops.map((op, ix) => {
+        const p = Math.round(Math.max(0.05, Math.min(0.95, pSuceso(nivelEf(e.dom), dif) + (op.bonus || 0))) * 100);
+        return `<button type="button" class="hacp-suc-op" data-eop="${ix}"><span class="hacp-suc-opt">${esc(op.t)}</span><span class="hacp-suc-pct">${p}%</span></button>`;
       }).join('');
-      const footer = `<div class="hacp-suc-confirm">
-        <button type="button" class="hacp-cp-btn hacp-suc-cancel" data-esuc-skip>Mantener doctrina</button>
-        <button type="button" class="hacp-cp-btn hacp-suc-ok" data-esuc-ok${escSucSel == null ? ' disabled' : ''}>Aceptar</button></div>`;
-      return `<div class="hacp-suc-box">
-        <div class="hacp-suc-eyebrow">⚔ Escaramuza · el capitán decide</div>
-        <div class="hacp-suc-ttl">${esc(s.txt)}</div>
-        <div class="hacp-suc-desc">Elige la maniobra de la banda para este trance. Sin decisión se mantiene la doctrina.</div>
-        <div class="hacp-suc-ops">${opts}</div>${footer}
-        <div class="hacp-suc-bar"><i data-esuc-bar></i></div>
-        <div class="hacp-suc-hint" data-esuc-hint></div></div>`;
+      const el = ensureEscSucEl(); el.hidden = false;
+      el.innerHTML = `<div class="hacp-suc-box">
+        <div class="hacp-suc-eyebrow">${domIcon(e.dom)} Tu encuentro · ${esc((escenarioDef(band.escenario) || {}).nombre || 'Escaramuza')}</div>
+        <div class="hacp-suc-ttl">${esc(enc.txt)}</div>
+        <div class="hacp-suc-desc">${esc(enc.desc || '')}</div>
+        <div class="hacp-enc-apt">Tu <b style="color:${DOM_COLOR[e.dom]}">${DOM_NOMBRE[e.dom]}</b> · nivel ${nivelEf(e.dom)}</div>
+        <div class="hacp-suc-ops">${ops}</div></div>`;
+      el.querySelectorAll('[data-eop]').forEach(b => b.addEventListener('click', () => escEncTirar(band, slot, e.dom, e.encIdx, +b.dataset.eop)));
+      return true;
     }
-    function renderEscSucBody(band, ev) {
-      const el = ensureEscSucEl(); el.innerHTML = escSucBoxHTML(band, ev);
-      el.querySelectorAll('[data-eop]').forEach(b => b.addEventListener('click', () => { escSucSel = +b.dataset.eop; renderEscSucBody(band, ev); }));
-      const ok = el.querySelector('[data-esuc-ok]'); if (ok && !ok.disabled) ok.addEventListener('click', () => { if (escSucSel != null) applyEscOverride(band, ev, escSucSel); });
-      const sk = el.querySelector('[data-esuc-skip]'); if (sk) sk.addEventListener('click', () => { escSucSkipped.add(band.id + ':' + ev.i); closeEscSuc(); });
-    }
-    function openEscSucCard(band, ev, dl) {
-      escSucOpen = ev.i; escSucDl = dl; escSucSel = null;
-      ensureEscSucEl(); renderEscSucBody(band, ev); escSucEl.hidden = false;
-      if (escSucTimer) clearInterval(escSucTimer);
-      escSucTimer = setInterval(() => tickEscSucCard(band, ev), 200); tickEscSucCard(band, ev);
-    }
-    function tickEscSucCard(band, ev) {
-      if (!escSucEl || escSucEl.hidden) return;
-      const now = clock(), atMs = escSucDl - ESC_SUC_WINDOW, total = Math.max(1, escSucDl - atMs), rem = Math.max(0, escSucDl - now);
-      const bar = escSucEl.querySelector('[data-esuc-bar]'); if (bar) bar.style.width = Math.max(0, Math.min(100, rem / total * 100)) + '%';
-      const hint = escSucEl.querySelector('[data-esuc-hint]'); if (hint) hint.textContent = (escSucSel != null) ? `Confirma en ${Math.ceil(rem / 1000)}s` : `Decides en ${Math.ceil(rem / 1000)}s · si no, se mantiene la doctrina`;
-      if (now >= escSucDl) { if (escSucSel != null) applyEscOverride(band, ev, escSucSel); else { escSucSkipped.add(band.id + ':' + ev.i); closeEscSuc(); } }
-    }
-    async function applyEscOverride(band, ev, choiceIdx) {
-      closeEscSuc(); escSucSkipped.add(band.id + ':' + ev.i);
-      try { await HacEscaramuzas.suceso(band.id, myId, ev.i, choiceIdx); const d = DOCTRINAS[choiceIdx]; if (d) toast(`⚔ Maniobra: 〔${d.gly}〕 ${d.nom}`); }
-      catch (e) { escSucSkipped.delete(band.id + ':' + ev.i); toast((e && e.message) || 'No se pudo fijar la maniobra'); }
-    }
-    // Tic (1 s): solo el CAPITÁN y solo mientras mira la escaramuza en curso.
-    // ¿Hay AHORA una decisión de maniobra pendiente para el CAPITÁN? Devuelve
-    // {band, ev, dl} o null. No depende de que el panel esté abierto: lo usan tanto
-    // el tick (que abre la carta) como el parpadeo del botón del nav (que avisa).
-    function escSucesoPend() {
-      if (!myId || !window.HacEscaramuzas || !window.HacRand) return null;
-      const band = HacEscaramuzas.miBanda(h.id, myId);
-      if (!band || band.hostId !== myId || band.estado !== 'en_curso') return null;
-      const plan = escPlan(band); if (!plan.length) return null;
-      const now = clock(), startMs = band.inicioMs, durMs = Math.max(1, band.finMs - band.inicioMs);
-      const fr = escSucFrac(plan.length), ov = band.sucesos || {};
-      for (let k = 0; k < plan.length; k++) {
-        const t = startMs + durMs * fr[k];
-        if (now >= t && ov[plan[k].i] == null && !escSucSkipped.has(band.id + ':' + plan[k].i)) {
-          const deadline = Math.min(t + ESC_SUC_WINDOW, band.finMs - 2000);
-          if (now < deadline) return { band: band, ev: plan[k], dl: deadline };
+    async function escEncTirar(band, slot, dom, encIdx, opt) {
+      if (escBusy) return;
+      const enc = encByDomIdx(dom, encIdx); if (!enc) return;
+      const op = enc.ops[opt] || enc.ops[0], dif = band.dificultad || 4;
+      const R = window.HacRand ? HacRand.make('escencr#' + band.id + '#' + slot) : null;
+      const ok = R ? (R.next() < Math.max(0.05, Math.min(0.95, pSuceso(nivelEf(dom), dif) + (op.bonus || 0)))) : true;
+      escBusy = true;
+      try {
+        await HacEscaramuzas.resolverEncuentro(band.id, myId, slot, ok, opt);
+        // Recompensa PERSONAL (XP/curación), una sola vez por cliente (guarda en localStorage).
+        const gk = 'rotk.escenc.' + band.id + '.' + slot; let ya = false;
+        try { ya = !!localStorage.getItem(gk); } catch (e) {}
+        if (!ya) {
+          const s = (ok ? op.ok : op.fail) || {};
+          if (s.xp && window.HacStats) HacStats.award(myId, { xp: { [dom]: s.xp } });
+          if (s.cura && window.HacStats && HacStats.curar) HacStats.curar(myId, s.cura);
+          try { localStorage.setItem(gk, '1'); } catch (e) {}
         }
-      }
-      return null;
+        if (window.HacBitacora) HacBitacora.log(myId, 'escaramuza', `${DOM_GLY[dom] || '⚔'} ${enc.txt} → ${ok ? '✔' : '✘'}`, { clave: 'escenc:' + band.id + ':' + slot });
+        escEncResultCard(enc, ok, op, dom);
+      } catch (e) { toast((e && e.message) || 'No se pudo resolver'); await HacEscaramuzas.reload(); }
+      finally { escBusy = false; if (charId) buildCharPanel(charId); if (escVisible) renderEscaramuzas(); }
     }
-    function escSucesoTick() {
-      if (!escVisible) { if (escSucOpen != null) closeEscSuc(); return; }   // la carta solo se abre con el panel a la vista
-      const pend = escSucesoPend();
-      if (!pend) { if (escSucOpen != null) closeEscSuc(); return; }
-      if (escSucOpen !== pend.ev.i) openEscSucCard(pend.band, pend.ev, pend.dl);
+    function escEncResultCard(enc, ok, op, dom) {
+      const s = (ok ? op.ok : op.fail) || {}, p = [];
+      if (s.xp) p.push('+' + s.xp + ' XP ' + (DOM_GLY[dom] || ''));
+      if (s.pMod) p.push((s.pMod > 0 ? '+' : '−') + Math.round(Math.abs(s.pMod) * 100) + '% éxito de la banda');
+      if (s.share) p.push((s.share > 0 ? '+' : '−') + Math.abs(s.share) + '💰/mecenas');
+      if (s.loot) p.push((s.loot > 0 ? '+' : '') + s.loot + ' botín común');
+      if (s.cura) p.push('herida curada');
+      const el = ensureEscSucEl(); el.hidden = false;
+      el.innerHTML = `<div class="hacp-suc-box">
+        <div class="hacp-suc-eyebrow">${domIcon(dom)} Tu encuentro</div>
+        <div class="hacp-suc-ttl">${esc(enc.txt)}</div>
+        <div class="hacp-suc-verdict ${ok ? 'ok' : 'bad'}">${ok ? '✔ Superado' : '✘ Ha salido mal'}</div>
+        <div class="hacp-suc-eff">${p.length ? esc(p.join(' · ')) : 'sin consecuencias'}</div>
+        <button type="button" class="hacp-cp-btn hacp-suc-done" data-eenc-done>Continuar</button></div>`;
+      el.querySelector('[data-eenc-done]').addEventListener('click', closeEscSuc);
     }
     // RESOLUCIÓN al volver (≥ fin): cualquier miembro la dispara; la RPC es idempotente
     // (solo la primera surte efecto). Dado de éxito en cliente, como en las expediciones.
@@ -1304,23 +1388,23 @@
     // base(dificultad) + fuerza de la banda (aptitudes vs objetivo) + compañía (nº de
     // mecenas) + sucesos(doctrina) + vínculos + talento del capitán. Es EXACTA: la
     // resolución solo tira el dado final contra este número.
-    function escProbParts(band, doctrina) {
-      const b = (doctrina != null) ? Object.assign({}, band, { doctrina: doctrina }) : band;
+    function escProbParts(band) {
+      const b = band;
       const dif = b.dificultad || 4;
-      const sc = escSucesos(b), rb = relBonos(b);
+      const rb = relBonos(b);
       const capBonus = (window.HacStats && HacStats.tieneTalento && b.hostId && HacStats.tieneTalento(b.hostId, 'oficial')) ? 0.05 : 0;
       // Base BAJA y con fuerte castigo por rating: cumplir el requisito NO garantiza
       // la victoria (r1≈56%, r5≈24% con la banda justa). Ganar de sobra exige aptitudes
       // muy por encima del objetivo. Así spammear escaramuzas cuesta heridas y apuesta.
+      // Los ENCUENTROS resueltos ajustan este número al liquidar (no antes de partir).
       const base = Math.max(0.20, 0.56 - (dif - 3) * 0.08);
       const nM = (b.miembros || []).length;
       const stat = Math.max(-0.22, Math.min(0.24, (bandFuerza(b) - 1) * 0.26));   // aptitudes de la banda vs objetivo
       const compania = Math.min(0.06, Math.max(0, nM - 2) * 0.03);                 // más mecenas = más manos
-      const raw = base + stat + compania + sc.pMod + rb.pMod + capBonus;
-      return { pct: Math.max(0.05, Math.min(0.90, raw)), base: base, stat: stat, compania: compania, suc: sc.pMod, rel: rb.pMod, cap: capBonus, nM: nM };
+      const raw = base + stat + compania + rb.pMod + capBonus;
+      return { pct: Math.max(0.05, Math.min(0.90, raw)), base: base, stat: stat, compania: compania, suc: 0, rel: rb.pMod, cap: capBonus, nM: nM };
     }
-    // `doctrina` opcional simula la postura antes de fijarla (para la vista previa).
-    function escProb(band, doctrina) { return escProbParts(band, doctrina).pct; }
+    function escProb(band) { return escProbParts(band).pct; }
     // Desglose legible del % (qué lo sube/baja). Deja claro que reclutar mecenas lo mejora.
     function probDesgloseHTML(band, doctrina) {
       const p = escProbParts(band, doctrina);
@@ -1358,24 +1442,29 @@
       const band = HacEscaramuzas.miBanda(h.id, myId);
       if (!band || band.estado !== 'en_curso' || clock() < band.finMs) return;
       if (esPereg(band)) { resolverPeregrinajeSiToca(band); return; }             // peregrinaje: cura, no botín
-      const dif = band.dificultad || 4;
-      // SUCESOS (doctrina) + RELACIONES pliegan prob. de éxito, botín y dinero por miembro.
-      const sc = escSucesos(band), rb = relBonos(band);
-      const exito = Math.random() < escProb(band);   // misma prob. que se muestra en el panel
+      // ANTI-SECUESTRO: al llegar el tiempo, cierra el cooldown de todos YA (idempotente).
+      if (!band.cdHecho) { HacEscaramuzas.cerrarCd(band.id, clock()).catch(() => {}); }
+      // LIQUIDACIÓN: espera a que TODOS resuelvan su encuentro, salvo a las 12 h (ignora
+      // los no resueltos). Evita que un ausente secuestre el reparto de la banda.
+      const nTot = band.plazas || (band.miembros || []).length;
+      const doce = clock() >= band.finMs + 43200000;
+      if (escNResueltos(band) < nTot && !doce) return;
+      // Los ENCUENTROS resueltos ajustan prob. de éxito, botín y reparto de la banda.
+      const rb = relBonos(band), et = escEncTot(band);
+      const R = window.HacRand ? HacRand.make('escres#' + band.id) : null;   // determinista → todos coinciden
+      const pFinal = Math.max(0.05, Math.min(0.95, escProb(band) + et.pMod));
+      const exito = R ? (R.next() < pFinal) : (Math.random() < pFinal);
       const rtg = bandRating(band);
-      const share = Math.max(0, shareRating(rtg) + sc.share);                                  // reparto por mecenas (escala con rating)
-      const hostBonus = Math.round((band.coste || 0) * 0.5) + rtg * 15;                          // el host recupera coste +50% + prima por rating
+      const share = Math.max(0, shareRating(rtg) + et.share);
+      const hostBonus = Math.round((band.coste || 0) * 0.5) + rtg * 15;
       // +% dinero: EQUIPO (sellos) + efectos de relaciones → mapa {id: fracción}.
       const bonosPct = {};
       (band.miembros || []).forEach(mm => {
         const eq = (window.HacStats && HacStats.bonusDinero) ? HacStats.bonusDinero(mm.id) : 0;
         const p = eq + (rb.per[mm.id] || 0); if (p) bonosPct[mm.id] = p;
       });
-      // 虎將: la banda ignora la 1ª herida al fracasar. Solo pasamos p_heridas cuando
-      // hay que anularla (=0): así la resolución NORMAL usa la firma antigua y no depende
-      // de talentos_c2.sql (que puede no estar ejecutado). null → se omite el parámetro.
-      const wounds = bandTiene(band, 'tigre') ? 0 : null;
-      HacEscaramuzas.resolver(band.id, clock(), exito, exito ? generarBotin(band, sc.loot + lootRating(rtg) + (bonos.escBotin || 0) + rb.loot) : [], share, hostBonus, ESC_FAST ? 30000 : 0, bonosPct, wounds)
+      const wounds = bandTiene(band, 'tigre') ? 0 : null;   // 虎將: ignora la 1ª herida al fracasar
+      HacEscaramuzas.resolver(band.id, clock(), exito, exito ? generarBotin(band, et.loot + lootRating(rtg) + (bonos.escBotin || 0) + rb.loot) : [], share, hostBonus, ESC_FAST ? 30000 : 0, bonosPct, wounds)
         .then(() => { if (window.HacStats) HacStats.reload().then(() => { if (charId) buildCharPanel(charId); }); })
         .catch(e => console.warn('[escaramuza] resolver', e));
     }
@@ -1421,7 +1510,8 @@
         const sl = body.querySelector('[data-salir]'); if (sl) sl.addEventListener('click', () => salirBanda(mine.id));
         const ln = body.querySelector('[data-lanzar]'); if (ln && !ln.disabled) ln.addEventListener('click', () => lanzarBanda(mine.id));
         const ab = body.querySelector('[data-abort]'); if (ab) ab.addEventListener('click', abortarEscaramuza);
-        body.querySelectorAll('[data-doc]').forEach(b => b.addEventListener('click', () => { escDoctrina = b.dataset.doc; renderEscaramuzas(); }));
+        body.querySelectorAll('[data-resv]').forEach(b => b.addEventListener('click', () => reservarEncuentro(mine.id, +b.dataset.resv)));
+        const rv = body.querySelector('[data-esc-resolver]'); if (rv) rv.addEventListener('click', () => escEncAbrir());
         body.querySelectorAll('[data-loot]').forEach(b => b.addEventListener('click', () => reclamarBotin(mine.id, +b.dataset.loot)));
         const march = body.querySelector('[data-esc-march]'); if (march) startMarch(march, mine);
         escTick();
@@ -1494,38 +1584,48 @@
       const scn = escenarioDef(b.escenario);
       const rating = bandRating(b);
       const rq = scn ? reqInfo(b, scn) : { ok: true, partes: [] };
-      const probPct = Math.round(escProb(b, b.doctrina || escDoctrina) * 100);
+      const probPct = Math.round(escProb(b) * 100);
       const probCls = probPct >= 65 ? 'hi' : (probPct >= 45 ? 'mid' : 'lo');
-      const scNow = escSucesos(b);
-      const sharePrev = Math.max(0, shareRating(rating) + scNow.share);
+      const sharePrev = Math.max(0, shareRating(rating));
       const lootBonus = lootRating(rating);
       const probHTML = `<div class="hacp-esc-prob ${probCls}">Éxito estimado <b>${probPct}%</b></div>`;
-      const desgloseHTML = probDesgloseHTML(b, b.doctrina || escDoctrina);
+      const desgloseHTML = probDesgloseHTML(b);
       const rewardHTML = `<div class="hacp-esc-reward">Botín si vencéis: <b>~${sharePrev}💰</b>/mecenas · <b>1 objeto</b> c/u${lootBonus ? ` · <b>+${lootBonus}</b> de botín común` : ''}</div>`;
       const reqHTML = (scn && rq.partes.length) ? `<div class="hacp-esc-scn-meta"><span class="hacp-esc-req-lbl">Requisito</span> ${reqChipsHTML(scn, b)}</div>` : '';
       let accion = '';
       if (b.estado === 'abierta') {
         const faltaReq = scn && !rq.ok;
-        const puede = b.miembros.length >= 2 && rq.ok;
+        const plan = escEncuentros(b), todos = escTodosReservados(b), miSlot = escMiSlot(b);
+        const slotsHTML = plan.map((e, slot) => {
+          const owner = escSlotOwner(b, slot);
+          const nm = owner ? ((b.miembros.find(m => m.id === owner) || {}).nombre || 'mecenas') : null;
+          const mio = owner === myId, pct = Math.round(pSuceso(nivelEf(e.dom), b.dificultad || 4) * 100);
+          const right = owner
+            ? `<span class="hacp-enc-owner${mio ? ' mio' : ''}">${esc(nm)}${mio ? ' (tú)' : ''}</span>`
+            : `<button type="button" class="hacp-cp-btn hacp-enc-resv" data-resv="${slot}">Reservar · ${pct}%</button>`;
+          return `<div class="hacp-enc-slot${owner ? ' taken' : ''}${mio ? ' mine' : ''}">${domIcon(e.dom, 'hacp-enc-si')}<span class="hacp-enc-slot-nm">${DOM_NOMBRE[e.dom]}</span>${right}</div>`;
+        }).join('');
+        const slotsBox = `<div class="hacp-enc-slots-lbl">Encuentros · elige el tuyo</div><div class="hacp-enc-slots">${slotsHTML}</div>`;
+        accion = reqHTML + probHTML + desgloseHTML + rewardHTML + slotsBox;
         if (esHost) {
-          const docPick = `<div class="hacp-esc-doc-pick"><div class="hacp-esc-doc-lbl">Doctrina de la banda</div>
-            <div class="hacp-esc-doc-row">${DOCTRINAS.map(d => `<button type="button" class="hacp-esc-doc-b${escDoctrina === d.id ? ' on' : ''}" data-doc="${d.id}"><b>〔${d.gly}〕</b> ${esc(d.nom)}</button>`).join('')}</div>
-            <div class="hacp-esc-doc-desc">${esc((doctrinaDef(escDoctrina) || {}).desc || '')}</div></div>`;
-          accion = reqHTML + probHTML + desgloseHTML + rewardHTML + docPick + `<button class="hacp-cp-btn hacp-esc-lanzar" data-lanzar${puede ? '' : ' disabled'}>⚔ Lanzar expedición</button>
-            <div class="hacp-esc-note">${b.miembros.length < 2 ? 'Hacen falta al menos 2 mecenas para partir.' : faltaReq ? 'Recluta mecenas con más aptitud hasta cumplir el requisito.' : 'Al lanzar, la banda parte 30 min con la doctrina elegida. El desenlace y el botín se resuelven al volver.'}</div>`;
+          const puede = todos && rq.ok && b.miembros.length >= 2;
+          accion += `<button class="hacp-cp-btn hacp-esc-lanzar" data-lanzar${puede ? '' : ' disabled'}>⚔ Lanzar expedición</button>
+            <div class="hacp-esc-note">${!todos ? 'Cada mecenas debe reservar su encuentro antes de partir.' : b.miembros.length < 2 ? 'Hacen falta al menos 2 mecenas para partir.' : faltaReq ? 'Recluta mecenas con más aptitud hasta cumplir el requisito.' : 'Al lanzar, la banda parte y cada quien resuelve su encuentro por el camino (o al volver).'}</div>`;
         } else {
-          accion = reqHTML + probHTML + desgloseHTML + rewardHTML + `<div class="hacp-esc-note">Esperando a que el capitán lance la expedición${b.miembros.length < 2 ? ' (faltan mecenas)' : faltaReq ? ' (faltan aptitudes)' : ''}.</div>`;
+          accion += `<div class="hacp-esc-note">${miSlot == null ? '<b>Reserva tu encuentro.</b> ' : ''}Esperando a que el capitán lance${!todos ? ' (faltan reservas)' : faltaReq ? ' (faltan aptitudes)' : ''}.</div>`;
         }
         accion += `<button class="hacp-cp-btn hacp-esc-salir" data-salir>${esHost ? 'Disolver la banda' : 'Salir de la banda'}</button>`;
       } else if (b.estado === 'en_curso') {
-        const dd = doctrinaDef(b.doctrina);
-        // La animación de marcha va SOLA; la info (éxito + recompensas + desglose) va DEBAJO,
-        // nunca superpuesta. Visible para TODA la banda.
+        const nTot = b.plazas || (b.miembros || []).length, nRes = escNResueltos(b);
+        const miSlot = escMiSlot(b), miPend = miSlot != null && !(b.resultados || {})[miSlot];
+        // La marcha va SOLA; debajo: progreso de encuentros + éxito + recompensas. Para TODA la banda.
         accion = `<canvas class="hacp-esc-march" data-esc-march></canvas>
           <div class="hacp-esc-timer" data-esc-timer="${b.finMs}">En la expedición…</div>
+          <div class="hacp-enc-progress">Encuentros resueltos · <b>${nRes}/${nTot}</b></div>
           ${probHTML}${desgloseHTML}${rewardHTML}
-          ${dd ? `<div class="hacp-esc-doc">Doctrina: 〔${dd.gly}〕 ${esc(dd.nom)}</div>` : ''}
-          <div class="hacp-esc-note">La banda avanza unida por el camino. Cuando regrese se repartirán recompensas y botín.</div>
+          ${miPend ? `<button type="button" class="hacp-cp-btn hacp-esc-resolver" data-esc-resolver>⚔ Resolver mi encuentro</button>`
+                   : (miSlot != null ? `<div class="hacp-esc-note">Ya resolviste tu encuentro. Esperando al resto.</div>` : '')}
+          <div class="hacp-esc-note">Cada mecenas resuelve su encuentro (ahora o al volver). Al terminar todos —o pasadas 12 h— se reparten recompensas y botín.</div>
           ${esHost ? `<button type="button" class="hacp-cp-btn hacp-esc-abort" data-abort>Abortar expedición</button>` : ''}`;
       } else if (b.estado === 'abortando') {
         accion = `<canvas class="hacp-esc-march" data-esc-march data-back></canvas>
@@ -1547,13 +1647,13 @@
             <div class="hacp-esc-loot-nm">${it ? esc(it.nombre) : 'objeto'}</div>${accionItem}</div>`;
         }).join('');
         accion = `<div class="hacp-esc-result ok">✔ ¡Volvisteis con éxito!</div>
-          ${escNarrHTML(b)}
+          ${escEncReportHTML(b)}
           <div class="hacp-esc-note">Tu parte del dinero ya está en tu monedero${esHost ? ' (recuperaste el coste +50%)' : ''}. Botín común: <b>elige 1 objeto</b>${yaCogi ? ' — ya recogiste el tuyo.' : ' (hay al menos uno para cada quien).'}</div>
           <div class="hacp-esc-loot-grid">${grid}</div>
           <button class="hacp-cp-btn hacp-esc-salir" data-salir>Cerrar</button>`;
       } else {   // resuelta (fracaso)
         accion = `<div class="hacp-esc-result bad">✘ La expedición fracasó</div>
-          ${escNarrHTML(b)}
+          ${escEncReportHTML(b)}
           <div class="hacp-esc-note">Tu mecenas vuelve con una herida. Podrás volver a intentarlo tras el cooldown.</div>
           <button class="hacp-cp-btn hacp-esc-salir" data-salir>Cerrar</button>`;
       }
@@ -1713,12 +1813,12 @@
       // Requisito de aptitudes: la suma de la banda debe alcanzar el umbral del escenario.
       const band = HacEscaramuzas.miBanda(h.id, myId), scn = band && escenarioDef(band.escenario);
       if (band && scn) { const rq = reqInfo(band, scn); if (!rq.ok) { const f = rq.partes.filter(p => p.have < p.need).map(p => `${DOM_GLY[p.dom]} ${p.have}/${p.need}`).join(' · '); toast('Faltan aptitudes: ' + f); return; } }
+      if (band && !escTodosReservados(band)) { toast('Cada mecenas debe reservar su encuentro antes de lanzar'); return; }
       escBusy = true;
       try {
-        await HacEscaramuzas.lanzar(id, myId, clock(), ESC_FAST ? 60000 : 0, escDoctrina);
-        const dd = doctrinaDef(escDoctrina);
+        await HacEscaramuzas.lanzar(id, myId, clock(), ESC_FAST ? 60000 : 0, '');
         toast(ESC_FAST ? '⚔ ¡Parten! (modo test · ~1 min)' : '⚔ ¡La banda parte a la expedición!');
-        if (window.HacBitacora) HacBitacora.log(myId, 'escaramuza', `⚔ Tu banda partió a la expedición${dd ? ` · doctrina 〔${dd.gly}〕 ${dd.nom}` : ''}`);
+        if (window.HacBitacora) HacBitacora.log(myId, 'escaramuza', `⚔ Tu banda partió a la expedición`);
         syncEscaramuzaOrder(); syncEscaramuzaFolk();
       } catch (e) { toast((e && e.message) || 'No se pudo lanzar'); await HacEscaramuzas.reload(); }
       finally { escBusy = false; renderEscaramuzas(); }
@@ -1794,7 +1894,7 @@
       }
       // Éxito: se registra tanto en 'botin' (botín pendiente) como en 'resuelta' (ya
       // repartido) — antes solo en 'botin', y se perdía si volvías tras cerrarse el reparto.
-      const narr = escNarrTexto(band); const suf = narr ? ' · ' + narr : '';
+      const suf = '';
       if (band.exito === true && (band.estado === 'botin' || band.estado === 'resuelta'))
         HacBitacora.log(myId, 'escaramuza', '⚔ Escaramuza: ✔ éxito · volvisteis con botín' + suf, { clave: 'esc-res:' + band.id });
       else if (band.exito === false && band.estado === 'resuelta')
@@ -2240,6 +2340,18 @@
     const DOM_NOMBRE = { militar: 'Militar', cultural: 'Cultural', administrativo: 'Administrativo' };
     const DOM_ABBR = { militar: 'Militar', cultural: 'Cultural', administrativo: 'Admin.' };
     const DOM_COLOR = { militar: '#b23b2e', cultural: '#3a8a5a', administrativo: '#3a6ea5' };
+    // ICONO unificado de aptitud (pictograma SVG): militar=espada, cultural=pincel,
+    // administrativo=moneda china (agujero cuadrado). Es el icono ACCIONABLE (tablón,
+    // encuentros, reservas); el glifo 武/文/政 se reserva para adorno en texto.
+    const DOM_ICON = {
+      militar: '<path d="M12 2.4 L13.5 6 L13.5 14 L10.5 14 L10.5 6 Z"/><path d="M8 14 h8 v1.9 h-8 Z"/><rect x="11.1" y="15.7" width="1.8" height="3.7"/><circle cx="12" cy="20.6" r="1.5"/>',
+      cultural: '<rect x="10.9" y="2.6" width="2.2" height="8.4" rx="1"/><rect x="9.9" y="10.4" width="4.2" height="1.9" rx=".6"/><path d="M10.2 12.4 Q9.6 17 12 21 Q14.4 17 13.8 12.4 Z"/>',
+      administrativo: '<path fill-rule="evenodd" d="M12 3 A9 9 0 1 0 12 21 A9 9 0 1 0 12 3 Z M8.7 8.7 H15.3 V15.3 H8.7 Z"/>',
+    };
+    function domIcon(dom, cls) {
+      if (!DOM_ICON[dom]) return '';
+      return `<svg class="dom-ic${cls ? ' ' + cls : ''}" viewBox="0 0 24 24" fill="${DOM_COLOR[dom]}" role="img" aria-label="${DOM_NOMBRE[dom] || dom}">${DOM_ICON[dom]}</svg>`;
+    }
     function statsHTML(d) {
       if (!d.stats) return '';
       const chips = d.stats.map(s => {
@@ -2976,25 +3088,44 @@
         const rm = retoMultMision(m);                                             // rutina si va muy por debajo de tu nivel
         const dinB = Math.round(conBono(rec.dinero, bonos.dinero) * rm), xpB = Math.round(conBono(rec.xp, xpFracMision(m.dom)) * rm);   // ya con bonos de pabellón
         const rutina = rm < 1 ? ` <span class="hacp-mis-rutina" title="Rutina: muy por debajo de tu nivel, rinde ${Math.round(rm * 100)}%">rutina</span>` : '';
+        const enc = (m.enc && m.enc.length)
+          ? ` <span class="hacp-mis-enc" title="Encuentros por el camino (${m.enc.map(d => DOM_NOMBRE[d]).join(', ')}): resuélvelos con esa aptitud para ganar recompensa extra">${m.enc.map(d => domIcon(d, 'hacp-mis-eci')).join('')}</span>`
+          : '';
         return `<div class="hacp-mis t-${m.dom}">
-          <span class="hacp-mis-g" style="color:${DOM_COLOR[m.dom]}">${DOM_GLYPH[m.dom]}</span>
+          <span class="hacp-mis-g">${domIcon(m.dom, 'hacp-mis-gi')}</span>
           <div class="hacp-mis-main">
-            <div class="hacp-mis-name">${esc(m.nombre)} <span class="hacp-mis-dif">dif. ${m.dif}</span>${rutina}</div>
+            <div class="hacp-mis-name">${esc(m.nombre)} <span class="hacp-mis-dif">dif. ${m.dif}</span>${enc}${rutina}</div>
             <div class="hacp-mis-meta">⏱ ${fmtClock(durExped(m))}${durExped(m) < HacMisiones.durSeg(m) ? '<sup class="hacp-bono">↓</sup>' : ''} · <span class="${sinEn ? 'hacp-mis-noen' : ''}">−${en}⚡</span> · +${dinB}💰${bonos.dinero ? '<sup class="hacp-bono">↑</sup>' : ''} · +${xpB} XP${xpFracMision(m.dom) > 0 ? '<sup class="hacp-bono">↑</sup>' : ''} ${DOM_GLYPH[m.dom]} · 🎁 ${loot}%</div>
           </div>
           <span class="hacp-mis-risk r-${rc}" title="Riesgo de fracaso (baja con tu nivel ${DOM_GLYPH[m.dom]} y el equipo)">⚠ ${Math.round(risk * 100)}%</span>
           <button type="button" class="hacp-mis-go" data-mis="${esc(m.id)}"${ocupado || sinEn ? ' disabled' : ''} title="${sinEn ? 'Energía insuficiente' : ''}">Enviar</button>
         </div>`;
       }).join('');
+      // Banner de ENCUENTROS pendientes: mientras queden, la misión no cobra y no puedes
+      // enviar otra (el mecenas sigue ocupado). Si ya son resolubles, botón «Atender».
+      const e = miExped();
+      const hayEnc = !!(e && encPend(e.o, e.mis));
+      const encHot = hayEnc && !!encResolvible(e.o, e.mis);
+      const encBanner = hayEnc
+        ? `<div class="hacp-board-encb${encHot ? ' hot' : ''}">
+            <span>${encHot
+              ? `⚑ Tu expedición <b>«${esc(e.mis.nombre)}»</b> tiene un <b>encuentro</b> que atender antes de cobrar.`
+              : `Tu expedición <b>«${esc(e.mis.nombre)}»</b> tendrá encuentros por el camino.`}</span>
+            ${encHot ? '<button type="button" class="hacp-cp-btn" data-act="enc-go">Atender</button>' : ''}
+          </div>`
+        : '';
       el.innerHTML = `
         <div class="hacp-shop-box">
           <button type="button" class="hacp-shop-x" data-act="board-close" aria-label="Cerrar">✕</button>
           <div class="hacp-shop-h"><span class="hacp-shop-zh">📜</span> Tablón de misiones <span class="hacp-shop-money">⚡ <b>${Math.round(energia)}</b></span></div>
           <div class="hacp-shop-sub">A tu nivel una misión es una apuesta real; superarla baja el riesgo con rendimientos decrecientes (nunca es gratis). Las muy por debajo de tu nivel son <b>rutina</b> y pagan menos: conviene variar de dominio y buscar retos. Las difíciles cuestan más energía y dan más 🎁 botín.${ocupado ? ' <b>Tu mecenas ya está en una misión.</b>' : ''}</div>
           ${hayBonos() ? `<div class="hacp-shop-note">Bonos de los pabellones de la finca: ${bonosTexto()}</div>` : ''}
+          ${encBanner}
           <div class="hacp-board-list">${rows || '<div class="hacp-inv-note">No hay misiones disponibles.</div>'}</div>
         </div>`;
       el.querySelector('[data-act="board-close"]').addEventListener('click', closeBoard);
+      const encGo = el.querySelector('[data-act="enc-go"]');
+      if (encGo) encGo.addEventListener('click', abrirEncuentrosPend);
       el.querySelectorAll('[data-mis]').forEach(b => b.addEventListener('click', () => {
         dispatchMision(b.dataset.mis);
         toast('🧭 Tu mecenas parte a la misión'); closeBoard();
@@ -3006,6 +3137,7 @@
     // con el cartelito 📜 y, al pulsarlo, se abre el tablón. Si ya está allí, abre ya.
     function goConsultBoard() {
       if (!myId || !hasMain || !mainBid) return;
+      if (abrirEncuentrosPend()) return;   // hay un encuentro que atender: se resuelve antes que el tablón
       const r = HacFolk.consultar ? HacFolk.consultar(myId, mainBid) : false;
       if (r === 'now') { openMissionBoard(); return; }
       if (!r) { toast('Tu mecenas está ocupado ahora mismo'); return; }
@@ -3092,7 +3224,7 @@
     // pendiente. En ambos casos, solo si NO estás ya dentro de la sección.
     function pulseEscNav() {
       const pereg = peregDisponible();
-      const suceso = !pereg && !!escSucesoPend();
+      const suceso = !pereg && !!escEncPendMio();
       const nav = document.querySelector('#hacp-mnav [data-sec="escaramuzas"]');
       if (nav) { const dentro = nav.classList.contains('on'); nav.classList.toggle('pulse-red', pereg && !dentro); nav.classList.toggle('pulse', suceso && !dentro); }
       // Escritorio: el mismo aviso en el botón «Escaramuzas» de la barra del panel.
@@ -3101,7 +3233,7 @@
     }
     // Tic de 1 s: refresca SOLO el panel del personaje (cuenta atrás de expedición y
     // energía/regeneración se derivan del reloj de servidor → tienen que verse vivos).
-    setInterval(() => { if (charId) refreshCharPanel(); if (escVisible) escTick(); sucesoTick(); escSucesoTick(); pulseHaciendaNav(); pulseEscNav(); }, 1000);
+    setInterval(() => { if (charId) refreshCharPanel(); if (escVisible) escTick(); pulseMisNav(); pulseHaciendaNav(); pulseEscNav(); }, 1000);
 
     // Popup con la gente que hay dentro de un edificio (al pulsar su banner).
     function showPop(x, y, sign) {
@@ -3316,6 +3448,7 @@
         sec.querySelectorAll('.hacp-msec-pane').forEach(p => p.classList.toggle('on', p.dataset.pane === id));
         const isHac = (id === 'hacienda');
         sec.hidden = isHac;
+        if (id === 'misiones') abrirEncuentrosPend();   // encuentro pendiente → carta antes que el tablón
         if (id === 'personaje') {
           if (myId) { charId = myId; buildCharPanel(myId); startAvatar(); }
           else if (!persPane.querySelector('.hacp-msec-soon')) {

@@ -18,31 +18,34 @@
 const HacMisiones = (function () {
   'use strict';
   // dom: militar|cultural|administrativo · dif: 1..6 · dur en segundos
+  // enc: ENCUENTROS de la expedición (0-2 según dificultad). Cada uno exige una APTITUD
+  //   (su icono se ve en el tablón ANTES de aceptar) y se resuelve como una tirada única
+  //   contra tu nivel en ese dominio. A menudo cruzan de dominio para premiar variar.
   const POOL = Object.freeze([
     // 武 Militar
-    { id: 'patrulla',    dom: 'militar', dif: 1, nombre: 'Patrulla fronteriza',        desc: 'Recorrer los lindes de la hacienda.' },
-    { id: 'bandidos',    dom: 'militar', dif: 2, nombre: 'Sofocar a unos bandidos',    desc: 'Una partida hostiga los caminos.' },
-    { id: 'escolta',     dom: 'militar', dif: 3, nombre: 'Escoltar una caravana',      desc: 'Proteger mercancías hasta el mercado vecino.' },
-    { id: 'desertores',  dom: 'militar', dif: 3, nombre: 'Cazar desertores',           desc: 'Dar caza a soldados huidos.' },
-    { id: 'vado',        dom: 'militar', dif: 4, nombre: 'Defender un vado',           desc: 'Impedir el paso del río al enemigo.' },
-    { id: 'fortin',      dom: 'militar', dif: 5, nombre: 'Asaltar un fortín rebelde',  desc: 'Tomar una posición fortificada.' },
-    { id: 'asedio',      dom: 'militar', dif: 6, nombre: 'Romper un asedio',           desc: 'Acudir en auxilio de una plaza sitiada.' },
+    { id: 'patrulla',    dom: 'militar', dif: 1, enc: [],                              nombre: 'Patrulla fronteriza',        desc: 'Recorrer los lindes de la hacienda.' },
+    { id: 'bandidos',    dom: 'militar', dif: 2, enc: ['administrativo'],              nombre: 'Sofocar a unos bandidos',    desc: 'Una partida hostiga los caminos.' },
+    { id: 'escolta',     dom: 'militar', dif: 3, enc: ['administrativo'],              nombre: 'Escoltar una caravana',      desc: 'Proteger mercancías hasta el mercado vecino.' },
+    { id: 'desertores',  dom: 'militar', dif: 3, enc: ['cultural'],                    nombre: 'Cazar desertores',           desc: 'Dar caza a soldados huidos.' },
+    { id: 'vado',        dom: 'militar', dif: 4, enc: ['militar'],                     nombre: 'Defender un vado',           desc: 'Impedir el paso del río al enemigo.' },
+    { id: 'fortin',      dom: 'militar', dif: 5, enc: ['militar', 'administrativo'],   nombre: 'Asaltar un fortín rebelde',  desc: 'Tomar una posición fortificada.' },
+    { id: 'asedio',      dom: 'militar', dif: 6, enc: ['militar', 'cultural'],         nombre: 'Romper un asedio',           desc: 'Acudir en auxilio de una plaza sitiada.' },
     // 文 Cultural
-    { id: 'misiva',      dom: 'cultural', dif: 1, nombre: 'Llevar una misiva',         desc: 'Entregar una carta a una casa amiga.' },
-    { id: 'estudios',    dom: 'cultural', dif: 2, nombre: 'Viaje de estudios',         desc: 'Visitar a un maestro de provincias.' },
-    { id: 'embajada',    dom: 'cultural', dif: 3, nombre: 'Embajada a una casa vecina',desc: 'Negociar cortesías entre señores.' },
-    { id: 'archivos',    dom: 'cultural', dif: 3, nombre: 'Copiar archivos de un templo', desc: 'Reproducir textos antiguos.' },
-    { id: 'disputa',     dom: 'cultural', dif: 4, nombre: 'Mediar en una disputa',     desc: 'Apaciguar a dos clanes enfrentados.' },
-    { id: 'manuscrito',  dom: 'cultural', dif: 5, nombre: 'Recuperar un manuscrito',   desc: 'Rastrear una obra perdida.' },
-    { id: 'corte',       dom: 'cultural', dif: 6, nombre: 'Debatir ante la corte',     desc: 'Defender la casa en un gran debate.' },
+    { id: 'misiva',      dom: 'cultural', dif: 1, enc: [],                             nombre: 'Llevar una misiva',         desc: 'Entregar una carta a una casa amiga.' },
+    { id: 'estudios',    dom: 'cultural', dif: 2, enc: ['cultural'],                   nombre: 'Viaje de estudios',         desc: 'Visitar a un maestro de provincias.' },
+    { id: 'embajada',    dom: 'cultural', dif: 3, enc: ['administrativo'],             nombre: 'Embajada a una casa vecina',desc: 'Negociar cortesías entre señores.' },
+    { id: 'archivos',    dom: 'cultural', dif: 3, enc: ['cultural'],                   nombre: 'Copiar archivos de un templo', desc: 'Reproducir textos antiguos.' },
+    { id: 'disputa',     dom: 'cultural', dif: 4, enc: ['administrativo'],             nombre: 'Mediar en una disputa',     desc: 'Apaciguar a dos clanes enfrentados.' },
+    { id: 'manuscrito',  dom: 'cultural', dif: 5, enc: ['cultural', 'militar'],        nombre: 'Recuperar un manuscrito',   desc: 'Rastrear una obra perdida.' },
+    { id: 'corte',       dom: 'cultural', dif: 6, enc: ['cultural', 'administrativo'], nombre: 'Debatir ante la corte',     desc: 'Defender la casa en un gran debate.' },
     // 政 Administrativo
-    { id: 'censo',       dom: 'administrativo', dif: 1, nombre: 'Censar una aldea',    desc: 'Contar familias y tierras.' },
-    { id: 'tributos',    dom: 'administrativo', dif: 2, nombre: 'Recaudar tributos',   desc: 'Cobrar las rentas del trimestre.' },
-    { id: 'graneros',    dom: 'administrativo', dif: 3, nombre: 'Inspeccionar graneros', desc: 'Revisar reservas de grano.' },
-    { id: 'grano',       dom: 'administrativo', dif: 3, nombre: 'Negociar un contrato de grano', desc: 'Asegurar el abasto del año.' },
-    { id: 'auditar',     dom: 'administrativo', dif: 4, nombre: 'Auditar un distrito', desc: 'Examinar las cuentas de un magistrado.' },
-    { id: 'mercado',     dom: 'administrativo', dif: 5, nombre: 'Reorganizar un mercado', desc: 'Poner orden en una feria caótica.' },
-    { id: 'prefectura',  dom: 'administrativo', dif: 6, nombre: 'Sanear una prefectura', desc: 'Enderezar las finanzas de toda una comarca.' },
+    { id: 'censo',       dom: 'administrativo', dif: 1, enc: [],                            nombre: 'Censar una aldea',    desc: 'Contar familias y tierras.' },
+    { id: 'tributos',    dom: 'administrativo', dif: 2, enc: ['militar'],                   nombre: 'Recaudar tributos',   desc: 'Cobrar las rentas del trimestre.' },
+    { id: 'graneros',    dom: 'administrativo', dif: 3, enc: ['administrativo'],            nombre: 'Inspeccionar graneros', desc: 'Revisar reservas de grano.' },
+    { id: 'grano',       dom: 'administrativo', dif: 3, enc: ['cultural'],                  nombre: 'Negociar un contrato de grano', desc: 'Asegurar el abasto del año.' },
+    { id: 'auditar',     dom: 'administrativo', dif: 4, enc: ['cultural'],                  nombre: 'Auditar un distrito', desc: 'Examinar las cuentas de un magistrado.' },
+    { id: 'mercado',     dom: 'administrativo', dif: 5, enc: ['administrativo', 'militar'], nombre: 'Reorganizar un mercado', desc: 'Poner orden en una feria caótica.' },
+    { id: 'prefectura',  dom: 'administrativo', dif: 6, enc: ['administrativo', 'cultural'],nombre: 'Sanear una prefectura', desc: 'Enderezar las finanzas de toda una comarca.' },
   ]);
 
   const byId = {}; POOL.forEach(m => { byId[m.id] = m; });

@@ -273,9 +273,16 @@ html.hacp-pseudofs, html.hacp-pseudofs body{ overflow:hidden; }
 .hacp-cp-board{ display:block; width:100%; margin-bottom:8px; text-align:center; }
 .hacp-board-list{ display:flex; flex-direction:column; gap:7px; }
 .hacp-mis{ display:flex; align-items:center; gap:9px; padding:8px 10px; background:rgba(255,255,255,.03); border:1px solid rgba(201,168,76,.2); border-radius:7px; }
-.hacp-mis-g{ font:900 18px 'Noto Serif SC',serif; flex:0 0 auto; width:22px; text-align:center; }
+.hacp-mis-g{ flex:0 0 auto; width:22px; display:flex; align-items:center; justify-content:center; }
 .hacp-mis-main{ flex:1; min-width:0; }
 .hacp-mis-name{ font:700 12.5px/1.2 'Noto Sans SC',sans-serif; color:var(--parch); }
+/* Iconos de aptitud (SVG unificado): espada / pincel / moneda china. */
+.dom-ic{ display:inline-block; vertical-align:-0.15em; flex:0 0 auto; }
+.hacp-mis-gi{ width:20px; height:20px; }
+.hacp-mis-enc{ display:inline-flex; align-items:center; gap:2px; margin-left:5px; padding:1px 5px 1px 4px; vertical-align:1px;
+  background:rgba(201,168,76,.10); border:1px solid rgba(201,168,76,.28); border-radius:6px; }
+.hacp-mis-enc::before{ content:'⚑'; font-size:8.5px; color:#b9a888; margin-right:1px; }
+.hacp-mis-eci{ width:13px; height:13px; }
 .hacp-mis-dif{ font-weight:400; color:var(--parch2); font-size:10.5px; }
 .hacp-mis-rutina{ font:700 8.5px 'Cinzel Decorative',serif; letter-spacing:.04em; text-transform:uppercase; color:#b9a888; background:rgba(120,110,90,.18); border:1px solid rgba(160,150,120,.35); border-radius:5px; padding:1px 5px; margin-left:4px; vertical-align:1px; }
 .hacp-mis-meta{ font-size:10.5px; color:var(--parch2); margin-top:2px; }
@@ -728,6 +735,17 @@ button.hacp-slot.manual:hover{ background:rgba(201,168,76,.24); }
 .hacp-suc-verdict.ok{ color:#bfe0b2; } .hacp-suc-verdict.bad{ color:#e2a06a; } .hacp-suc-verdict.neutral{ color:var(--parch,#eadfce); }
 .hacp-suc-eff{ font-size:12.5px; color:var(--parch2,#c9bda6); text-align:center; line-height:1.5; margin-bottom:14px; }
 .hacp-suc-eff b{ color:var(--parch,#eadfce); }
+/* Encuentro (tirada única): aptitud con la que se resuelve. */
+.hacp-enc-apt{ font-size:12.5px; color:var(--parch2,#c9bda6); text-align:center; margin:2px 0 12px; }
+.hacp-enc-apt b{ font-weight:800; }
+/* Banner de encuentros pendientes en el tablón (bloquea el cobro). */
+.hacp-board-encb{ display:flex; align-items:center; gap:10px; justify-content:space-between; margin-bottom:9px; padding:9px 11px; border-radius:8px;
+  font-size:12.5px; line-height:1.4; color:var(--parch2,#c9bda6); background:rgba(201,168,76,.08); border:1px solid rgba(201,168,76,.28); }
+.hacp-board-encb.hot{ color:#f0d9a0; background:rgba(201,168,76,.16); border-color:rgba(201,168,76,.55); }
+.hacp-board-encb b{ color:var(--parch,#eadfce); }
+.hacp-board-encb .hacp-cp-btn{ flex:0 0 auto; white-space:nowrap; }
+/* Parpadeo del botón «Misiones» en la barra de acciones móvil (encuentro pendiente). */
+.hacp-mobar-btn.pulse{ color:var(--gold); animation:hacpToolPulse 1s ease-in-out infinite; }
 .hacp-suc-done{ display:block; width:100%; }
 /* ── Bautizo del caballo ── */
 .hacp-horse-in{ width:100%; box-sizing:border-box; margin-top:4px; padding:11px 12px; font:800 18px 'Noto Serif SC',serif; text-align:center;
@@ -790,6 +808,22 @@ button.hacp-slot.manual:hover{ background:rgba(201,168,76,.24); }
 .hacp-esc-suc{ font-size:12px; padding:5px 9px; border-radius:6px; background:rgba(255,255,255,.03); border:1px solid rgba(201,168,76,.16); }
 .hacp-esc-suc.ok{ color:#bfe0b2; border-color:rgba(122,162,110,.35); }
 .hacp-esc-suc.bad{ color:#e2a06a; border-color:rgba(178,59,46,.35); }
+.hacp-esc-suc.skip{ color:var(--parch2); opacity:.75; }
+.hacp-esc-suc .dom-ic{ width:13px; height:13px; }
+/* Reserva de encuentros (banda coop) */
+.hacp-enc-slots-lbl{ font:700 11px 'Cinzel',serif; letter-spacing:.04em; color:var(--gold); margin:10px 0 5px; }
+.hacp-enc-slots{ display:flex; flex-direction:column; gap:6px; margin-bottom:6px; }
+.hacp-enc-slot{ display:flex; align-items:center; flex-wrap:wrap; gap:6px 8px; padding:7px 9px; border-radius:8px;
+  background:rgba(255,255,255,.03); border:1px solid rgba(201,168,76,.2); }
+.hacp-enc-slot.taken{ background:rgba(201,168,76,.07); }
+.hacp-enc-slot.mine{ border-color:rgba(201,168,76,.55); box-shadow:inset 0 0 0 1px rgba(201,168,76,.28); }
+.hacp-enc-si{ width:18px; height:18px; flex:0 0 auto; }
+.hacp-enc-slot-nm{ flex:1 1 auto; min-width:0; font:700 12.5px 'Noto Sans SC',sans-serif; color:var(--parch); }
+.hacp-enc-owner{ flex:0 0 auto; font-size:11.5px; color:var(--parch2); }
+.hacp-enc-owner.mio{ color:var(--gold); font-weight:700; }
+.hacp-enc-resv{ flex:0 0 auto; margin:0 0 0 auto!important; width:auto!important; padding:5px 10px!important; font-size:11.5px!important; white-space:nowrap; }
+.hacp-enc-progress{ font-size:12px; color:var(--parch2); text-align:center; margin:6px 0; }
+.hacp-enc-progress b{ color:var(--gold); font-variant-numeric:tabular-nums; }
 .hacp-esc-abort, .hacp-cp-abort{ background:rgba(178,59,46,.18)!important; border-color:rgba(178,59,46,.5)!important; color:#e2a06a!important; }
 .hacp-esc-abort:hover, .hacp-cp-abort:hover{ background:rgba(178,59,46,.34)!important; color:#fff!important; }
 .hacp-esc-result{ font:900 16px 'Noto Serif SC',serif; text-align:center; padding:8px 0 2px; }
