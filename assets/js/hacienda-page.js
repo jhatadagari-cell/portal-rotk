@@ -854,7 +854,8 @@
         <div class="hacp-suc-eyebrow">${domIcon(ev.dom)} Encuentro · ${esc(mis.nombre || 'Expedición')}</div>
         <div class="hacp-suc-ttl">${esc(enc.txt)}</div>
         <div class="hacp-suc-desc">${esc(enc.desc || '')}</div>
-        <div class="hacp-enc-apt">Se resuelve con tu <b style="color:${DOM_COLOR[ev.dom]}">${DOM_NOMBRE[ev.dom]}</b> · nivel ${nivelEf(ev.dom)}</div>
+        <div class="hacp-enc-apt">Se resuelve con tu <b style="color:${DOM_COLOR[ev.dom]}">${DOM_NOMBRE[ev.dom]}</b> · nivel ${nivelEf(ev.dom)} vs dificultad ${mis.dif}</div>
+        <div class="hacp-enc-hint">El % sube cuanto más alto tengas tu <b>${DOM_NOMBRE[ev.dom]}</b> respecto a la dificultad.</div>
         <div class="hacp-suc-ops"><button type="button" class="hacp-suc-op" data-enc-go><span class="hacp-suc-opt">Afrontar el encuentro</span><span class="hacp-suc-pct">${p}%</span></button></div>
         </div>`;
       el.querySelector('[data-enc-go]').addEventListener('click', () => encAfrontar(o, mis, ev));
@@ -1300,7 +1301,8 @@
         <div class="hacp-suc-eyebrow">${domIcon(e.dom)} Tu encuentro · ${esc((escenarioDef(band.escenario) || {}).nombre || 'Escaramuza')}</div>
         <div class="hacp-suc-ttl">${esc(enc.txt)}</div>
         <div class="hacp-suc-desc">${esc(enc.desc || '')}</div>
-        <div class="hacp-enc-apt">Tu <b style="color:${DOM_COLOR[e.dom]}">${DOM_NOMBRE[e.dom]}</b> · nivel ${nivelEf(e.dom)}</div>
+        <div class="hacp-enc-apt">Se resuelve con tu <b style="color:${DOM_COLOR[e.dom]}">${DOM_NOMBRE[e.dom]}</b> · nivel ${nivelEf(e.dom)} vs dificultad ${dif}</div>
+        <div class="hacp-enc-hint">El % sube cuanto más alto tengas tu <b>${DOM_NOMBRE[e.dom]}</b> respecto a la dificultad.</div>
         <div class="hacp-suc-ops">${ops}</div></div>`;
       el.querySelectorAll('[data-eop]').forEach(b => b.addEventListener('click', () => escEncTirar(band, slot, e.dom, e.encIdx, +b.dataset.eop)));
       return true;
@@ -1559,8 +1561,16 @@
             <button class="hacp-cp-btn" data-unir="${esc(b.id)}"${bloqueado ? ' disabled' : ''}>Escoltar</button></div>`;
         }
         const scn = escenarioDef(b.escenario);
+        // Mezcla de encuentros: icono por aptitud; libres muestran TU % (según tu nivel),
+        // reservados van atenuados. Así ves de un vistazo si hay un hueco que te encaja.
+        const mix = escEncuentros(b).map((e, slot) => {
+          const taken = escSlotOwner(b, slot), pct = Math.round(pSuceso(nivelEf(e.dom), b.dificultad || 4) * 100);
+          const tip = `${DOM_NOMBRE[e.dom]} · ${difMeta(bandRating(b)).lbl}${taken ? ' · ya reservado' : ` · tu éxito ${pct}%`}`;
+          return `<span class="hacp-encmix-i${taken ? ' taken' : ''}" title="${esc(tip)}">${domIcon(e.dom, 'hacp-encmix-ic')}${taken ? '' : `<i>${pct}%</i>`}</span>`;
+        }).join('');
         return `<div class="hacp-mrow"><div class="hacp-mrow-main"><b>${esc(scn ? scn.nombre : 'Expedición militar')}</b>
-          <span>${difBadgeHTML(bandRating(b), { noLabel: true })} · ${b.miembros.length}/${b.plazas} · cap. ${esc(b.hostNombre || '—')}</span></div>
+          <span>${difBadgeHTML(bandRating(b), { noLabel: true })} · ${b.miembros.length}/${b.plazas} · cap. ${esc(b.hostNombre || '—')}</span>
+          <div class="hacp-esc-encmix">${mix}</div></div>
           <button class="hacp-cp-btn" data-unir="${esc(b.id)}"${bloqueado ? ' disabled' : ''}>Unirse</button></div>`;
       }).join('') || '<div class="hacp-inv-note">No hay bandas abiertas. ¡Monta una de las de hoy!</div>';
       body.innerHTML = `
@@ -1588,7 +1598,8 @@
       const probCls = probPct >= 65 ? 'hi' : (probPct >= 45 ? 'mid' : 'lo');
       const sharePrev = Math.max(0, shareRating(rating));
       const lootBonus = lootRating(rating);
-      const probHTML = `<div class="hacp-esc-prob ${probCls}">Éxito estimado <b>${probPct}%</b></div>`;
+      const riskPct = Math.max(0, 100 - probPct);
+      const probHTML = `<div class="hacp-esc-prob ${probCls}"><span>Éxito estimado</span><span class="hacp-esc-prob-v"><b>${probPct}%</b><i class="hacp-esc-prob-risk">riesgo ${riskPct}%</i></span></div>`;
       const desgloseHTML = probDesgloseHTML(b);
       const rewardHTML = `<div class="hacp-esc-reward">Botín si vencéis: <b>~${sharePrev}💰</b>/mecenas · <b>1 objeto</b> c/u${lootBonus ? ` · <b>+${lootBonus}</b> de botín común` : ''}</div>`;
       const reqHTML = (scn && rq.partes.length) ? `<div class="hacp-esc-scn-meta"><span class="hacp-esc-req-lbl">Requisito</span> ${reqChipsHTML(scn, b)}</div>` : '';
@@ -1603,7 +1614,7 @@
           const right = owner
             ? `<span class="hacp-enc-owner${mio ? ' mio' : ''}">${esc(nm)}${mio ? ' (tú)' : ''}</span>`
             : `<button type="button" class="hacp-cp-btn hacp-enc-resv" data-resv="${slot}">Reservar · ${pct}%</button>`;
-          return `<div class="hacp-enc-slot${owner ? ' taken' : ''}${mio ? ' mine' : ''}">${domIcon(e.dom, 'hacp-enc-si')}<span class="hacp-enc-slot-nm">${DOM_NOMBRE[e.dom]}</span>${right}</div>`;
+          return `<div class="hacp-enc-slot${owner ? ' taken' : ''}${mio ? ' mine' : ''}">${domIcon(e.dom, 'hacp-enc-si')}<span class="hacp-enc-slot-nm">${DOM_NOMBRE[e.dom]} <i class="hacp-enc-lvl">tu nivel ${nivelEf(e.dom)}</i></span>${right}</div>`;
         }).join('');
         const slotsBox = `<div class="hacp-enc-slots-lbl">Encuentros · elige el tuyo</div><div class="hacp-enc-slots">${slotsHTML}</div>`;
         accion = reqHTML + probHTML + desgloseHTML + rewardHTML + slotsBox;

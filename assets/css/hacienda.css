@@ -277,7 +277,7 @@ html.hacp-pseudofs, html.hacp-pseudofs body{ overflow:hidden; }
 .hacp-mis-main{ flex:1; min-width:0; }
 .hacp-mis-name{ font:700 12.5px/1.2 'Noto Sans SC',sans-serif; color:var(--parch); }
 /* Iconos de aptitud (SVG unificado): espada / pincel / moneda china. */
-.dom-ic{ display:inline-block; vertical-align:-0.15em; flex:0 0 auto; }
+.dom-ic{ display:inline-block; width:1em; height:1em; vertical-align:-0.15em; flex:0 0 auto; }
 .hacp-mis-gi{ width:20px; height:20px; }
 .hacp-mis-enc{ display:inline-flex; align-items:center; gap:2px; margin-left:5px; padding:1px 5px 1px 4px; vertical-align:1px;
   background:rgba(201,168,76,.10); border:1px solid rgba(201,168,76,.28); border-radius:6px; }
@@ -689,6 +689,17 @@ button.hacp-slot.manual:hover{ background:rgba(201,168,76,.24); }
 .hacp-esc-prob b{ font:800 16px 'Cinzel',serif; font-variant-numeric:tabular-nums; }
 .hacp-esc-prob.hi b{ color:#7fc76a; } .hacp-esc-prob.mid b{ color:#e2a04a; } .hacp-esc-prob.lo b{ color:#e0685a; }
 .hacp-esc-prob.hi{ border-color:rgba(127,199,106,.4); } .hacp-esc-prob.lo{ border-color:rgba(224,104,90,.4); }
+.hacp-esc-prob-v{ display:inline-flex; align-items:baseline; gap:8px; }
+.hacp-esc-prob-risk{ font-style:normal; font-weight:600; font-size:11px; color:var(--parch2); }
+.hacp-enc-lvl{ font-style:normal; font-weight:400; font-size:11px; color:var(--parch2); }
+.hacp-enc-hint{ font-size:11px; color:var(--parch2); text-align:center; margin:-6px 0 12px; opacity:.9; }
+.hacp-enc-hint b{ color:var(--parch); }
+/* Tira de encuentros en la publicación de una banda abierta (icono + tu %). */
+.hacp-esc-encmix{ display:flex; flex-wrap:wrap; gap:5px; margin-top:5px; }
+.hacp-encmix-i{ display:inline-flex; align-items:center; gap:3px; padding:2px 6px 2px 4px; border-radius:6px;
+  background:rgba(201,168,76,.10); border:1px solid rgba(201,168,76,.28); font:700 10.5px 'Noto Sans SC',sans-serif; color:var(--parch2); font-variant-numeric:tabular-nums; }
+.hacp-encmix-i.taken{ opacity:.4; }
+.hacp-encmix-ic{ width:14px; height:14px; }
 .hacp-esc-reward{ font-size:11.5px; color:var(--parch2); }
 .hacp-esc-reward b{ color:var(--parch); }
 
@@ -736,6 +747,7 @@ button.hacp-slot.manual:hover{ background:rgba(201,168,76,.24); }
 .hacp-suc-eff{ font-size:12.5px; color:var(--parch2,#c9bda6); text-align:center; line-height:1.5; margin-bottom:14px; }
 .hacp-suc-eff b{ color:var(--parch,#eadfce); }
 /* Encuentro (tirada única): aptitud con la que se resuelve. */
+.hacp-suc-eyebrow .dom-ic{ width:14px; height:14px; vertical-align:-3px; }
 .hacp-enc-apt{ font-size:12.5px; color:var(--parch2,#c9bda6); text-align:center; margin:2px 0 12px; }
 .hacp-enc-apt b{ font-weight:800; }
 /* Banner de encuentros pendientes en el tablón (bloquea el cobro). */
