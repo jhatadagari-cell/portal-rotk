@@ -2082,7 +2082,7 @@
     // principal justo antes). Evita el churn que rompe la interacción.
     function escRefresh() {
       if (!escVisible || !window.HacEscaramuzas) return;
-      const sig = JSON.stringify((HacEscaramuzas.all(h.id) || []).map(b => [b.id, b.estado, (b.miembros || []).length, Object.keys(b.elecciones || {}).length]));
+      const sig = JSON.stringify((HacEscaramuzas.all(h.id) || []).map(b => [b.id, b.estado, (b.miembros || []).length, Object.keys(b.elecciones || {}).length, b.reservaciones || {}, Object.keys(b.resultados || {}).length]));
       if (sig !== escSig) { escSig = sig; renderEscaramuzas(); }
     }
     // ESCRITORIO: overlay (botón ⚔ Escaramuzas del panel del personaje).
