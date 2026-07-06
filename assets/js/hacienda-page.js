@@ -1129,39 +1129,59 @@
     // opciones (live o al volver). Efectos: pMod/share/loot pliegan el desenlace de la
     // banda; xp/cura son personales (los auto-aplica quien resuelve, a su mecenas).
     const ESC_APT = ['militar', 'cultural', 'administrativo'];
+    // Cada encuentro trae una ESCENA (viñeta animada del informe) y cada opción una
+    // frase de desenlace (sayOk/sayFail) con {m} = nombre del mecenas que lo resolvió.
     const ENC_COOP = {
       militar: [
-        { txt: 'Choque en el desfiladero', desc: 'El enemigo os cierra el paso entre las rocas.',
-          ops: [{ t: 'Cargar de frente', bonus: -0.06, ok: { pMod: 0.08, loot: 1, xp: 30 }, fail: { pMod: -0.12 } },
-                { t: 'Flanquear con cautela', bonus: 0.06, ok: { pMod: 0.05, xp: 18 }, fail: { pMod: -0.06 } }] },
-        { txt: 'Un oficial os reta a duelo', desc: 'Un guerrero enemigo os desafía ante ambas huestes.',
-          ops: [{ t: 'Aceptar el duelo', bonus: -0.04, ok: { share: 12, xp: 28 }, fail: { pMod: -0.10 } },
-                { t: 'Rehuir y hostigar', bonus: 0.05, ok: { pMod: 0.04, xp: 16 }, fail: { share: -6 } }] },
-        { txt: 'Una posición fortificada', desc: 'El objetivo se atrinchera tras empalizadas.',
-          ops: [{ t: 'Asaltar de inmediato', bonus: -0.05, ok: { loot: 1, pMod: 0.06, xp: 26 }, fail: { pMod: -0.10 } },
-                { t: 'Asediar con paciencia', bonus: 0.06, ok: { pMod: 0.05, xp: 16 }, fail: { pMod: -0.05 } }] },
+        { txt: 'Choque en el desfiladero', desc: 'El enemigo os cierra el paso entre las rocas.', scene: 'bridge', obstacle: 'chasm',
+          ops: [{ t: 'Cargar de frente', bonus: -0.06, ok: { pMod: 0.08, loot: 1, xp: 30 }, fail: { pMod: -0.12 },
+                  sayOk: '{m} os impulsó uno a uno por el barranco y cruzó de un salto.', sayFail: '{m} calculó mal el impulso y estuvo a punto de despeñaros.' },
+                { t: 'Flanquear con cautela', bonus: 0.06, ok: { pMod: 0.05, xp: 18 }, fail: { pMod: -0.06 },
+                  sayOk: '{m} halló un paso y os hizo cruzar sin que os vieran.', sayFail: '{m} tanteó el vado, pero el terreno cedió a mitad de camino.' }] },
+        { txt: 'Un oficial os reta a duelo', desc: 'Un guerrero enemigo os desafía ante ambas huestes.', scene: 'duel',
+          ops: [{ t: 'Aceptar el duelo', bonus: -0.04, ok: { share: 12, xp: 28 }, fail: { pMod: -0.10 },
+                  sayOk: '{m} aceptó el reto y derribó al oficial ante ambas huestes.', sayFail: '{m} se batió con brío, pero el oficial pudo con él.' },
+                { t: 'Rehuir y hostigar', bonus: 0.05, ok: { pMod: 0.04, xp: 16 }, fail: { share: -6 },
+                  sayOk: '{m} rehusó el duelo y lo hostigó hasta hacerlo ceder.', sayFail: '{m} intentó hostigarlo, pero cayó en su provocación.' }] },
+        { txt: 'Una posición fortificada', desc: 'El objetivo se atrinchera tras empalizadas.', scene: 'bridge', obstacle: 'wall',
+          ops: [{ t: 'Asaltar de inmediato', bonus: -0.05, ok: { loot: 1, pMod: 0.06, xp: 26 }, fail: { pMod: -0.10 },
+                  sayOk: '{m} os aupó sobre la empalizada y saltó el último.', sayFail: '{m} os empujó al muro, pero la empalizada aguantó.' },
+                { t: 'Asediar con paciencia', bonus: 0.06, ok: { pMod: 0.05, xp: 16 }, fail: { pMod: -0.05 },
+                  sayOk: '{m} os coló por encima sin prisa y sin bajas.', sayFail: '{m} tardó demasiado y os detectaron desde la torre.' }] },
       ],
       cultural: [
-        { txt: 'Un enviado enemigo', desc: 'Traen una propuesta de tregua envenenada.',
-          ops: [{ t: 'Debatir con firmeza', bonus: -0.03, ok: { share: 12, xp: 28 }, fail: { share: -6 } },
-                { t: 'Escuchar y ceder algo', bonus: 0.06, ok: { share: 6, xp: 16 }, fail: {} }] },
-        { txt: 'Señales y estandartes', desc: 'Interpretar los movimientos del enemigo a tiempo.',
-          ops: [{ t: 'Descifrar sus señales', bonus: 0.04, ok: { pMod: 0.06, xp: 26 }, fail: { pMod: -0.05 } },
-                { t: 'Arengar a la tropa', bonus: -0.02, ok: { pMod: 0.08, xp: 22 }, fail: { pMod: -0.08 } }] },
-        { txt: 'Rumores en la aldea', desc: 'La población local sabe más de lo que dice.',
-          ops: [{ t: 'Sembrar propaganda', bonus: -0.03, ok: { pMod: 0.06, loot: 1, xp: 24 }, fail: { pMod: -0.08 } },
-                { t: 'Recabar información', bonus: 0.06, ok: { pMod: 0.04, xp: 16 }, fail: {} }] },
+        { txt: 'Un enviado enemigo', desc: 'Traen una propuesta de tregua envenenada.', scene: 'parley',
+          ops: [{ t: 'Debatir con firmeza', bonus: -0.03, ok: { share: 12, xp: 28 }, fail: { share: -6 },
+                  sayOk: '{m} desmontó la tregua envenenada y arrancó concesiones.', sayFail: '{m} se cerró en banda y el enviado se marchó ofendido.' },
+                { t: 'Escuchar y ceder algo', bonus: 0.06, ok: { share: 6, xp: 16 }, fail: {},
+                  sayOk: '{m} escuchó, cedió lo justo y os ganó tiempo.', sayFail: '{m} concedió de más y el trato quedó en nada.' }] },
+        { txt: 'Señales y estandartes', desc: 'Interpretar los movimientos del enemigo a tiempo.', scene: 'parley',
+          ops: [{ t: 'Descifrar sus señales', bonus: 0.04, ok: { pMod: 0.06, xp: 26 }, fail: { pMod: -0.05 },
+                  sayOk: '{m} leyó los estandartes y adivinó su próximo paso.', sayFail: '{m} malinterpretó las señales y os llevó al lugar errado.' },
+                { t: 'Arengar a la tropa', bonus: -0.02, ok: { pMod: 0.08, xp: 22 }, fail: { pMod: -0.08 },
+                  sayOk: '{m} arengó a los vuestros y les levantó el ánimo.', sayFail: '{m} alzó la voz, pero nadie pareció escucharle.' }] },
+        { txt: 'Rumores en la aldea', desc: 'La población local sabe más de lo que dice.', scene: 'parley',
+          ops: [{ t: 'Sembrar propaganda', bonus: -0.03, ok: { pMod: 0.06, loot: 1, xp: 24 }, fail: { pMod: -0.08 },
+                  sayOk: '{m} sembró el rumor justo y volvió la aldea a vuestro favor.', sayFail: '{m} se pasó de listo y la aldea se le puso en contra.' },
+                { t: 'Recabar información', bonus: 0.06, ok: { pMod: 0.04, xp: 16 }, fail: {},
+                  sayOk: '{m} tiró de la lengua a los vecinos y sacó buena pista.', sayFail: '{m} preguntó mucho y no sacó nada en claro.' }] },
       ],
       administrativo: [
-        { txt: 'Suministros y rutas', desc: 'Sin abasto la banda flaquea; hay que resolverlo.',
-          ops: [{ t: 'Requisar por la fuerza', bonus: -0.05, ok: { share: 14, xp: 24 }, fail: { pMod: -0.06, share: -6 } },
-                { t: 'Negociar el abasto', bonus: 0.05, ok: { share: 10, xp: 18 }, fail: { share: -4 } }] },
-        { txt: 'Un contrato ventajoso', desc: 'Un mercader ofrece un trato para la casa.',
-          ops: [{ t: 'Cerrar trato agresivo', bonus: -0.04, ok: { share: 16, xp: 26 }, fail: { share: -8 } },
-                { t: 'Trato prudente', bonus: 0.06, ok: { share: 8, xp: 16 }, fail: {} }] },
-        { txt: 'Mediar un pleito local', desc: 'Dos clanes al borde de las manos por unas lindes.',
-          ops: [{ t: 'Imponer un fallo', bonus: -0.03, ok: { share: 10, xp: 22 }, fail: { pMod: -0.05 } },
-                { t: 'Conciliar a las partes', bonus: 0.05, ok: { share: 8, loot: 1, xp: 18 }, fail: {} }] },
+        { txt: 'Suministros y rutas', desc: 'Sin abasto la banda flaquea; hay que resolverlo.', scene: 'supply',
+          ops: [{ t: 'Requisar por la fuerza', bonus: -0.05, ok: { share: 14, xp: 24 }, fail: { pMod: -0.06, share: -6 },
+                  sayOk: '{m} requisó el abasto y llenó los carros hasta arriba.', sayFail: '{m} requisó a la brava y se le echaron encima.' },
+                { t: 'Negociar el abasto', bonus: 0.05, ok: { share: 10, xp: 18 }, fail: { share: -4 },
+                  sayOk: '{m} negoció el suministro y os aseguró la ruta.', sayFail: '{m} regateó de más y el trato se torció.' }] },
+        { txt: 'Un contrato ventajoso', desc: 'Un mercader ofrece un trato para la casa.', scene: 'supply',
+          ops: [{ t: 'Cerrar trato agresivo', bonus: -0.04, ok: { share: 16, xp: 26 }, fail: { share: -8 },
+                  sayOk: '{m} cerró un trato redondo y volvió con las arcas llenas.', sayFail: '{m} apretó demasiado y el mercader se retiró.' },
+                { t: 'Trato prudente', bonus: 0.06, ok: { share: 8, xp: 16 }, fail: {},
+                  sayOk: '{m} firmó un trato prudente y sin sorpresas.', sayFail: '{m} dudó y el mercader cerró con otro.' }] },
+        { txt: 'Mediar un pleito local', desc: 'Dos clanes al borde de las manos por unas lindes.', scene: 'supply',
+          ops: [{ t: 'Imponer un fallo', bonus: -0.03, ok: { share: 10, xp: 22 }, fail: { pMod: -0.05 },
+                  sayOk: '{m} dictó sentencia y ambos clanes acataron.', sayFail: '{m} impuso su fallo y encendió aún más el pleito.' },
+                { t: 'Conciliar a las partes', bonus: 0.05, ok: { share: 8, loot: 1, xp: 18 }, fail: {},
+                  sayOk: '{m} concilió a los clanes y os ganó su gratitud.', sayFail: '{m} medió sin fortuna; el pleito siguió igual.' }] },
       ],
     };
     const encByDomIdx = (dom, idx) => (ENC_COOP[dom] || [])[idx] || null;
@@ -1196,15 +1216,71 @@
       return t;
     }
     // Informe: una línea por encuentro (aptitud + mecenas + ✔/✘/sin resolver).
+    // Los encuentros RESUELTOS son clicables → reviven su viñeta animada.
     function escEncReportHTML(band) {
       const plan = escEncuentros(band), rez = band.resultados || {};
       const li = plan.map((e, slot) => {
         const owner = escSlotOwner(band, slot);
         const nm = owner ? ((band.miembros.find(m => m.id === owner) || {}).nombre || 'mecenas') : '—';
-        const r = rez[slot]; const st = r ? (r.ok ? 'ok' : 'bad') : 'skip'; const mk = r ? (r.ok ? '✔' : '✘') : '·';
-        return `<li class="hacp-esc-suc ${st}">${domIcon(e.dom, 'hacp-enc-li')} ${mk} ${esc(nm)}${r ? '' : ' <i>(sin resolver)</i>'}</li>`;
+        const r = rez[slot];
+        const enc = encByDomIdx(e.dom, e.encIdx); const ttl = enc ? enc.txt : 'Encuentro';
+        if (!r) return `<li class="hacp-esc-suc skip">${domIcon(e.dom, 'hacp-enc-li')} · ${esc(nm)} <i>(sin resolver)</i></li>`;
+        const st = r.ok ? 'ok' : 'bad', mk = r.ok ? '✔' : '✘';
+        return `<li class="hacp-esc-suc ${st}"><button type="button" class="hacp-esc-sucbtn" data-enc-anim="${slot}">
+          ${domIcon(e.dom, 'hacp-enc-li')}<span class="hacp-esc-sucmk">${mk}</span>
+          <span class="hacp-esc-suctxt"><b>${esc(nm)}</b> · ${esc(ttl)}</span>
+          <span class="hacp-esc-sucplay" aria-hidden="true">▶</span></button></li>`;
       }).join('');
-      return `<ul class="hacp-esc-sucs">${li}</ul>`;
+      const hint = Object.keys(rez).length ? '<div class="hacp-esc-sucs-lbl">Encuentros de la banda · toca uno para revivirlo</div>' : '';
+      return `${hint}<ul class="hacp-esc-sucs">${li}</ul>`;
+    }
+    // Actor para las viñetas (aptitud/aspecto del personaje; color de casa si falta).
+    function escAnimActor(memberId, mio) {
+      const pj = (window.HacPersonajes && HacPersonajes.get) ? HacPersonajes.get(memberId) : null;
+      return { aptitud: pj ? pj.aptitud : '', aspecto: pj ? (pj.aspecto || {}) : { robe: color }, mio: !!mio };
+    }
+    // Abre el overlay y REVIVE el encuentro `slot` de una banda resuelta: reproduce la
+    // viñeta y, al llegar al clímax, revela «¡Éxito!»/«Fracasó» + lo conseguido.
+    function escEncPlayReport(band, slot) {
+      const plan = escEncuentros(band), e = plan[slot]; if (!e) return;
+      const enc = encByDomIdx(e.dom, e.encIdx); if (!enc) return;
+      const r = (band.resultados || {})[slot]; if (!r) return;
+      const op = enc.ops[r.opt] || enc.ops[0], ok = !!r.ok;
+      const owner = escSlotOwner(band, slot);
+      const heroName = (owner ? (band.miembros.find(m => m.id === owner) || {}).nombre : '') || 'El mecenas';
+      const hero = escAnimActor(owner, owner === myId);
+      const allies = (band.miembros || []).filter(m => m.id !== owner).map(m => escAnimActor(m.id, m.id === myId));
+      const say = esc(((ok ? op.sayOk : op.sayFail) || '').replace('{m}', heroName) || (ok ? 'Salió bien.' : 'Salió mal.'));
+      // Recompensa: efectos de banda (pMod/share/loot) + personales del que resolvió (xp/cura).
+      const s = (ok ? op.ok : op.fail) || {}, bandFx = [], pers = [];
+      if (s.pMod) bandFx.push((s.pMod > 0 ? '+' : '−') + Math.round(Math.abs(s.pMod) * 100) + '% éxito de la banda');
+      if (s.share) bandFx.push((s.share > 0 ? '+' : '−') + Math.abs(s.share) + '💰/mecenas');
+      if (s.loot) bandFx.push((s.loot > 0 ? '+' : '') + s.loot + ' botín común');
+      if (s.xp) pers.push('+' + s.xp + ' XP de ' + (DOM_NOMBRE[e.dom] || '').toLowerCase());
+      if (s.cura) pers.push('herida curada');
+      const rewHTML = (bandFx.length ? `<div>${esc(bandFx.join(' · '))}</div>` : '')
+        + (pers.length ? `<div class="hacp-enc-pers">${esc(heroName)}: ${esc(pers.join(' · '))}</div>` : '')
+        + (!bandFx.length && !pers.length ? '<div>sin consecuencias</div>' : '');
+      const el = ensureEscSucEl(); el.hidden = false;
+      el.innerHTML = `<div class="hacp-suc-box hacp-enc-box">
+        <div class="hacp-suc-eyebrow">${domIcon(e.dom)} Encuentro · ${esc((escenarioDef(band.escenario) || {}).nombre || 'Escaramuza')}</div>
+        <div class="hacp-suc-ttl">${esc(enc.txt)}</div>
+        <div class="hacp-enc-say">${say}</div>
+        <canvas class="hacp-enc-anim" data-enc-cv></canvas>
+        <div class="hacp-enc-result" data-enc-result hidden>
+          <div class="hacp-suc-verdict ${ok ? 'ok' : 'bad'}">${ok ? '¡Éxito!' : 'Fracasó'}</div>
+          <div class="hacp-suc-eff">${rewHTML}</div>
+        </div>
+        <button type="button" class="hacp-cp-btn hacp-suc-done" data-eenc-done>Continuar</button></div>`;
+      const cv = el.querySelector('[data-enc-cv]');
+      const resEl = el.querySelector('[data-enc-result]');
+      const reveal = () => { if (resEl && resEl.hidden) { resEl.hidden = false; resEl.classList.add('show'); } };
+      if (escReportAnim) { escReportAnim.stop(); escReportAnim = null; }
+      if (window.HacEncAnim && cv) {
+        // rAF necesita el ancho ya medido: espera al layout.
+        requestAnimationFrame(() => { escReportAnim = HacEncAnim.play(cv, { scene: enc.scene, obstacle: enc.obstacle, ok: ok, hero: hero, heroName: heroName, members: allies, onEnd: reveal }); });
+      } else { reveal(); }
+      el.querySelector('[data-eenc-done]').addEventListener('click', closeEscSuc);
     }
     // MI banda en curso con un encuentro mío SIN resolver (dispara el aviso/parpadeo).
     function escEncPendMio() {
@@ -1276,14 +1352,14 @@
     // suceso puede CAMBIAR la maniobra (dominio) de ese trance. Se guarda en la BD
     // (escaramuza_suceso). Si no decide (o no mira), se mantiene la doctrina.
     const ESC_SUC_WINDOW = (/[?&]escfast=1/.test(location.search || '')) ? 12000 : 25000;
-    let escSucEl = null;
+    let escSucEl = null, escReportAnim = null;
     function ensureEscSucEl() {
       if (escSucEl) return escSucEl;
       escSucEl = document.createElement('div'); escSucEl.className = 'hacp-suc-ov'; escSucEl.hidden = true; document.body.appendChild(escSucEl);
       ['pointerdown', 'pointerup', 'wheel', 'click'].forEach(ev => escSucEl.addEventListener(ev, e => e.stopPropagation(), { passive: false }));
       return escSucEl;
     }
-    function closeEscSuc() { if (escSucEl) escSucEl.hidden = true; }
+    function closeEscSuc() { if (escReportAnim) { escReportAnim.stop(); escReportAnim = null; } if (escSucEl) escSucEl.hidden = true; }
     // Abre la carta del encuentro que RESERVÉ (con opciones). true si había uno pendiente.
     function escEncAbrir(band) {
       band = band || (window.HacEscaramuzas && HacEscaramuzas.miBanda(h.id, myId)); if (!band) return false;
@@ -1516,6 +1592,7 @@
         const ab = body.querySelector('[data-abort]'); if (ab) ab.addEventListener('click', abortarEscaramuza);
         body.querySelectorAll('[data-resv]').forEach(b => b.addEventListener('click', () => reservarEncuentro(mine.id, +b.dataset.resv)));
         const rv = body.querySelector('[data-esc-resolver]'); if (rv) rv.addEventListener('click', () => escEncAbrir());
+        body.querySelectorAll('[data-enc-anim]').forEach(b => b.addEventListener('click', () => escEncPlayReport(mine, +b.dataset.encAnim)));
         body.querySelectorAll('[data-loot]').forEach(b => b.addEventListener('click', () => reclamarBotin(mine.id, +b.dataset.loot)));
         const march = body.querySelector('[data-esc-march]'); if (march) startMarch(march, mine);
         escTick();

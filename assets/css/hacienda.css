@@ -828,7 +828,29 @@ button.hacp-slot.manual:hover{ background:rgba(201,168,76,.24); }
 .hacp-esc-suc.ok{ color:#bfe0b2; border-color:rgba(122,162,110,.35); }
 .hacp-esc-suc.bad{ color:#e2a06a; border-color:rgba(178,59,46,.35); }
 .hacp-esc-suc.skip{ color:var(--parch2); opacity:.75; }
-.hacp-esc-suc .dom-ic{ width:13px; height:13px; }
+.hacp-esc-suc .dom-ic{ width:13px; height:13px; flex:none; }
+/* Informe animado: cada encuentro resuelto es clicable → revive su viñeta */
+.hacp-esc-sucs-lbl{ font:700 11px 'Cinzel',serif; letter-spacing:.04em; color:var(--gold); margin:8px 0 5px; }
+.hacp-esc-suc:has(.hacp-esc-sucbtn){ padding:0; overflow:hidden; }
+.hacp-esc-sucbtn{ display:flex; align-items:center; gap:7px; width:100%; padding:6px 9px; background:none; border:0;
+  color:inherit; font:inherit; text-align:left; cursor:pointer; transition:background .14s ease; }
+.hacp-esc-sucbtn:hover, .hacp-esc-sucbtn:focus-visible{ background:rgba(201,168,76,.12); outline:none; }
+.hacp-esc-sucmk{ font-weight:800; flex:none; }
+.hacp-esc-suctxt{ flex:1 1 auto; min-width:0; color:var(--parch,#eadfce); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.hacp-esc-suctxt b{ color:inherit; }
+.hacp-esc-suc.ok .hacp-esc-suctxt b{ color:#bfe0b2; } .hacp-esc-suc.bad .hacp-esc-suctxt b{ color:#e2a06a; }
+.hacp-esc-sucplay{ flex:none; font-size:10px; color:var(--gold); opacity:.6; transition:opacity .14s, transform .14s; }
+.hacp-esc-sucbtn:hover .hacp-esc-sucplay{ opacity:1; transform:scale(1.15); }
+/* Viñeta del encuentro (overlay) */
+.hacp-enc-say{ font-size:13px; color:var(--parch2,#c9bda6); line-height:1.5; margin:2px 0 9px; font-style:italic; text-wrap:pretty; }
+.hacp-enc-anim{ display:block; width:100%; height:184px; border-radius:11px; background:#171410;
+  box-shadow:inset 0 0 0 1px rgba(201,168,76,.18), inset 0 -20px 30px rgba(0,0,0,.5); }
+.hacp-enc-result{ overflow:hidden; }
+.hacp-enc-result.show{ animation:hacpEncReveal .45s cubic-bezier(.2,.9,.3,1.15) both; }
+.hacp-enc-result .hacp-suc-verdict{ margin:12px 0 5px; font-size:23px; }
+.hacp-enc-pers{ margin-top:3px; opacity:.85; font-size:11.5px; }
+@keyframes hacpEncReveal{ from{ opacity:0; transform:translateY(8px); } to{ opacity:1; transform:none; } }
+.hacp-enc-box .hacp-suc-done{ margin-top:12px; }
 /* Reserva de encuentros (banda coop) */
 .hacp-enc-slots-lbl{ font:700 11px 'Cinzel',serif; letter-spacing:.04em; color:var(--gold); margin:10px 0 5px; }
 .hacp-enc-slots{ display:flex; flex-direction:column; gap:6px; margin-bottom:6px; }
