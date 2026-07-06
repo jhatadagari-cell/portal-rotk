@@ -82,6 +82,14 @@ const HacBuild = (function () {
     { id: 'salon-doble', dominio: 'administrativo',       nombre: 'Salón Doble',        zh: '重殿', capa: 'edificio', footprint: [4, 8], tierMin: 5, unico: false, cargoMin: null, color: '#bb3c1e', altura: 48, desc: 'Doble salón corrido para las grandes audiencias de la casa.' },
     { id: 'gran-recinto', dominio: 'administrativo',      nombre: 'Gran Recinto',       zh: '大院', capa: 'edificio', footprint: [5, 8], tierMin: 6, unico: true,  cargoMin: null, color: '#c43c1a', altura: 56, principal: true, rango: 5, desc: 'Bloque palaciego monumental: la mayor construcción de la finca. Edificio PRINCIPAL (cima de la escalera).' },
     { id: 'pabellon-te', dominio: 'cultural',       nombre: 'Pabellón de Té',     zh: '茶亭', capa: 'edificio', footprint: [1, 1], tierMin: 1, unico: false, cargoMin: null,    color: '#9a6b3a', altura: 26, desc: 'Quiosco abierto para el té, la lectura y la caligrafía.' },
+    // ── Monumentos imperiales (variedad para las grandes haciendas de reino) ──
+    // Sin sprite procedural: se muestran como bloque placeholder salvo que la
+    // hacienda use un TEMA con arte a mano (p.ej. 'wei'). Ver iso-sprites-wei.js.
+    { id: 'puerta-imperial', dominio: 'administrativo', nombre: 'Puerta Imperial',   zh: '午門', capa: 'edificio', footprint: [4, 2], tierMin: 4, unico: false, cargoMin: null, color: '#b23b2e', altura: 44, desc: 'Pórtico monumental de tres vanos que abre el eje ceremonial de una gran capital.' },
+    { id: 'que',             dominio: null,             nombre: 'Torre Que',         zh: '闕',   capa: 'edificio', footprint: [1, 2], tierMin: 4, unico: false, cargoMin: null, color: '#a03828', altura: 46, desc: 'Torre-pilar ceremonial que se alza en pareja flanqueando la entrada del palacio.' },
+    { id: 'salon-trono',     dominio: 'administrativo', nombre: 'Salón del Trono',   zh: '太極殿', capa: 'edificio', footprint: [5, 6], tierMin: 5, unico: true,  cargoMin: null, color: '#c43c1a', altura: 66, desc: 'El gran salón del trono imperial: la construcción más imponente del eje.' },
+    { id: 'torre-esquina',   dominio: 'militar',        nombre: 'Torre de Esquina',  zh: '角樓', capa: 'edificio', footprint: [2, 2], tierMin: 3, unico: false, cargoMin: null, color: '#7a5a3a', altura: 48, desc: 'Torreón de varios aleros que corona las esquinas de la muralla imperial.' },
+    { id: 'pabellon-agua',   dominio: 'cultural',       nombre: 'Pabellón sobre el Agua', zh: '水榭', capa: 'edificio', footprint: [2, 2], tierMin: 3, unico: false, cargoMin: null, color: '#3a6a70', altura: 24, desc: 'Pabellón de recreo que se asoma sobre el estanque para contemplar el agua.' },
     { id: 'yingbi',            nombre: 'Muro de los Espíritus', zh: '影壁', capa: 'edificio', footprint: [1, 3], tierMin: 2, unico: false, cargoMin: null, color: '#8a6a4a', altura: 20, desc: 'Pantalla ornamentada tras la puerta; da privacidad y detiene a los malos espíritus.' },
     { id: 'chuihuamen',        nombre: 'Puerta Floral',      zh: '垂花門', capa: 'edificio', footprint: [1, 2], tierMin: 3, unico: false, cargoMin: null, color: '#a85a2e', altura: 30, puerta: true, desc: 'Puerta interior tallada que separa el patio público del privado.' },
     { id: 'muralla',           nombre: 'Muro Interior',      zh: '院墙', capa: 'edificio', footprint: [1, 1], tierMin: 1, unico: false, cargoMin: null, color: '#8a8070', altura: 19, desc: 'Tramo de muro para dividir el recinto en patios a tu gusto (gira para orientarlo).' },
@@ -171,7 +179,12 @@ const HacBuild = (function () {
     'patio-o':          { verbo: 'Descansando',             lugar: 'el patio' },
     'salon-doble':      { verbo: 'En audiencia',            lugar: 'el salón doble' },
     'gran-recinto':     { verbo: 'En ceremonia',            lugar: 'el gran recinto' },
-    'pabellon-te':      { verbo: 'Tomando el té',           lugar: 'el pabellón de té' }
+    'pabellon-te':      { verbo: 'Tomando el té',           lugar: 'el pabellón de té' },
+    'puerta-imperial':  { verbo: 'Custodiando el paso',     lugar: 'la puerta imperial' },
+    que:                { verbo: 'De guardia',              lugar: 'la torre que' },
+    'salon-trono':      { verbo: 'En audiencia imperial',   lugar: 'el salón del trono' },
+    'torre-esquina':    { verbo: 'Vigilando',               lugar: 'la torre de esquina' },
+    'pabellon-agua':    { verbo: 'Contemplando el agua',    lugar: 'el pabellón sobre el agua' }
   });
   // Tarea de un tipo de edificio | null si no es un edificio "visitable".
   // Fallback genérico para edificios nuevos sin entrada explícita. (El catálogo
@@ -488,6 +501,9 @@ const HacBuild = (function () {
     // guarda en el mapa (jsonb) para no requerir migración de la tabla.
     const EST = { primavera: 1, verano: 1, otono: 1, invierno: 1 };
     if (mapa && EST[String(mapa.estacion || '').toLowerCase().replace('ñ', 'n')]) out.estacion = String(mapa.estacion).toLowerCase().replace('ñ', 'n');
+    // Tema visual de la hacienda (arte a mano por reino, p.ej. 'wei'). Carga sprites
+    // de assets/img/iso/<tema>/. Se guarda en el mapa (jsonb) — sin migración.
+    if (mapa && mapa.tema) out.tema = String(mapa.tema).toLowerCase();
     // Fundador (líder) de la casa: id de miembro designado por el admin. Se guarda
     // en el mapa (jsonb) para no requerir migración de la tabla. (Sin esto, la
     // normalización lo descartaba y el selector volvía a «sin fundador».)

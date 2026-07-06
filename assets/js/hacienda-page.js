@@ -122,7 +122,7 @@
     const iso = document.getElementById('hacp-iso');
     if (iso && window.HacIso) {
       const pabellones = (window.HacStore && HacStore.pabellones) ? HacStore.pabellones(h.id) : [];
-      HacIso.draw(iso, { mapa: h.mapa, tier, color, pabellones, estacion: (h.mapa && h.mapa.estacion) || 'verano' });
+      HacIso.draw(iso, { mapa: h.mapa, tier, color, pabellones, estacion: (h.mapa && h.mapa.estacion) || 'verano', tema: (h.mapa && h.mapa.tema) || '' });
       const vp = document.getElementById('hacp-iso-wrap');
       // Visor navegable: arrastrar (pan) + pellizco/ctrl-rueda (zoom). Las fincas
       // grandes ya no caben en pantalla, así que se exploran moviéndose dentro.

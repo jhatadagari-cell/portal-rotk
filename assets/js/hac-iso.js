@@ -9,7 +9,9 @@
    La capa de LAYOUT (geometría iso + orden de pintado) es la misma para sprite
    y placeholder; solo cambia cómo se pinta cada edificio.
 
-   API:  HacIso.draw(canvas, { mapa, tier, color })
+   API:  HacIso.draw(canvas, { mapa, tier, color, estacion, tema })
+         `tema` (opcional, p.ej. 'wei') carga arte a mano por hacienda desde
+         assets/img/iso/<tema>/ con anclajes en window.ISO_SPRITES_THEMES.
    Estático (sin bucles de animación; precarga de imágenes una sola vez).
    ═══════════════════════════════════════════════════════════════════════ */
 const HacIso = (function () {
@@ -20,7 +22,7 @@ const HacIso = (function () {
   const TOP_MARGIN = 132;             // hueco arriba para edificios altos, murallas y torres
   const PAD_X = 40;                   // margen lateral para murallas y paseo de ronda
   const SPRITE_BASE = 'assets/img/iso/';
-  const SPRITE_VER = '43';  // súbelo al regenerar los PNG (cache-busting)
+  const SPRITE_VER = '44';  // súbelo al regenerar los PNG (cache-busting)
 
   // ── Color helpers (para el placeholder) ─────────────────────────────────
   const { hexToRgb, clamp255: cl } = HacUtil;
@@ -32,7 +34,13 @@ const HacIso = (function () {
 
   // ── Precarga de sprites ─────────────────────────────────────────────────
   const META = (typeof window !== 'undefined' && window.ISO_SPRITES_META) || null;
-  const SPRITES = {};
+  // Overlays de TEMA por hacienda (arte a mano por reino). Cada tema aporta su
+  // propia meta (anclaje/tamaño) para las claves que redefine; el resto cae al set
+  // por defecto (gris). Ver assets/js/iso-sprites-wei.js.
+  const THEMES = (typeof window !== 'undefined' && window.ISO_SPRITES_THEMES) || {};
+  const SPRITES = {};          // storageKey → Image  (base: 'bld-x-0'; tema: 'wei/bld-x-0')
+  const themeReady = {};       // tema → bool (todas sus imágenes resueltas)
+  const themeStarted = {};     // tema → bool (precarga lanzada)
   let _NT = null;
   function noiseT() {
     if (!_NT) { _NT = new Int8Array(4096); for (let k = 0; k < 4096; k++) { const s = Math.sin((k & 63) * 12.9898 + (k >> 6) * 78.233) * 43758.5453; _NT[k] = Math.round(((s - Math.floor(s)) - 0.5) * 6); } }
@@ -52,6 +60,9 @@ const HacIso = (function () {
   let spritesReady = false, preloadStarted = false;
   const pending = new Map();   // canvas → opts (para re-render al cargar)
 
+  // Normaliza el tema pedido: '' si no existe overlay para él (→ set por defecto).
+  const normTheme = (t) => { t = String(t || '').toLowerCase(); return (t && THEMES[t]) ? t : ''; };
+
   function preload() {
     if (preloadStarted || !META || typeof Image === 'undefined') return;
     preloadStarted = true;
@@ -69,19 +80,46 @@ const HacIso = (function () {
       img.src = SPRITE_BASE + k + ext + '?v=' + SPRITE_VER;
     });
   }
+  // Precarga del arte a mano de un TEMA (assets/img/iso/<tema>/). Solo las claves
+  // que el tema redefine; se guardan como 'tema/clave'. Las que falten (aún sin
+  // dibujar) simplemente no entran → el render cae al set por defecto (gris).
+  function preloadTheme(t) {
+    const tema = normTheme(t);
+    if (!tema || themeStarted[tema] || typeof Image === 'undefined') return;
+    themeStarted[tema] = true;
+    const tmeta = THEMES[tema], keys = Object.keys(tmeta);
+    let left = keys.length;
+    if (!left) { themeReady[tema] = true; return; }
+    keys.forEach(k => {
+      const img = new Image();
+      const done = () => { if (--left === 0) { themeReady[tema] = true; flush(); } };
+      img.onload = () => { SPRITES[tema + '/' + k] = img; done(); };
+      img.onerror = done;
+      const ext = (tmeta[k] && tmeta[k].webp) ? '.webp' : '.png';
+      img.src = SPRITE_BASE + tema + '/' + k + ext + '?v=' + SPRITE_VER;
+    });
+  }
+  // ¿Está todo lo que ESTE lienzo necesita (base + su tema) ya cargado?
+  function readyFor(opts) {
+    const tema = normTheme(opts && opts.tema);
+    return spritesReady && (!tema || themeReady[tema]);
+  }
   function flush() {
-    const q = Array.from(pending.entries());
-    pending.clear();
-    q.forEach(([canvas, opts]) => render(canvas, opts));
+    Array.from(pending.entries()).forEach(([canvas, opts]) => {
+      render(canvas, opts);
+      if (readyFor(opts)) pending.delete(canvas);   // sigue pendiente si aún falta su tema
+    });
   }
 
   // ── Punto de entrada ────────────────────────────────────────────────────
   function draw(canvas, opts) {
     if (!canvas) return;
+    opts = opts || {};
     preload();
-    render(canvas, opts || {});
-    // Si los sprites aún no están, re-renderizamos este lienzo al cargar.
-    if (META && !spritesReady) pending.set(canvas, opts || {});
+    preloadTheme(opts.tema);
+    render(canvas, opts);
+    // Si los sprites (base o del tema) aún no están, re-renderizamos al cargar.
+    if (META && !readyFor(opts)) pending.set(canvas, opts);
   }
 
   // ── Render ──────────────────────────────────────────────────────────────
@@ -91,6 +129,14 @@ const HacIso = (function () {
     const dims = B ? B.gridDims(tier) : [2 + tier, 2 + tier];
     const GW = dims[0], GH = dims[1];
     const casa = safeColor(opts.color);
+
+    // Resolución de sprites por TEMA (arte a mano por hacienda): una clave que el
+    // tema redefine usa SU meta (anclaje/tamaño) e imagen de 'tema/clave'; el resto
+    // cae al set por defecto (gris). metaOf/imgOf se usan en todo el render.
+    const tema = normTheme(opts.tema);
+    const TMETA = tema ? THEMES[tema] : null;
+    const metaOf = (k) => (k && TMETA && TMETA[k]) || (k && META ? META[k] : null) || null;
+    const imgOf  = (k) => SPRITES[(k && TMETA && TMETA[k]) ? (tema + '/' + k) : k];
 
     // Murallas: datos del nivel (necesarios para dimensionar el lienzo).
     const WALLS = {
@@ -123,7 +169,7 @@ const HacIso = (function () {
           gxLo = Math.min(gxLo, x - 1.5); gxHi = Math.max(gxHi, x + 1.5);   // orla de campo en torno a la huella
           gyLo = Math.min(gyLo, y - 1.5); gyHi = Math.max(gyHi, y + 1.5);
         });
-        const m = META && META[spriteKey(c)];
+        const m = metaOf(spriteKey(c));
         if (m) extSprites.push({ c, m });
       });
     }
@@ -280,7 +326,7 @@ const HacIso = (function () {
     // del campamento— y, sin esto, se plantarían árboles/bambú encima o por
     // delante (rompiendo la oclusión). Muestreamos el alpha del sprite ya cargado.
     const extAlpha = extSprites.map(({ c, m }) => {
-      const img = SPRITES[spriteKey(c)];
+      const img = imgOf(spriteKey(c));
       if (!img || !img.width) return null;
       try {
         const oc = document.createElement('canvas'); oc.width = img.width; oc.height = img.height;
@@ -650,7 +696,7 @@ const HacIso = (function () {
       // la recomposición por frame sepa que una estructura ALTA/ANCHA (p.ej. el
       // campamento, 720×444) cubre celdas lejos de su footprint y debe redibujarse
       // sobre los mecenas que tape (si no, los "chafan").
-      const sk = spriteKey(c), m = sk && META[sk];
+      const sk = spriteKey(c), m = sk && metaOf(sk);
       const sox = X(x0, y0) * SCALE, soy = Y(x0, y0) * SCALE;
       const srect = m ? [sox - m.ox, soy - m.oy, sox - m.ox + m.w, soy - m.oy + m.h] : null;
       drawList.push({ box: [x0, y0, x0 + f[0], y0 + f[1]], srect, draw: () => drawC(c) });
@@ -674,7 +720,7 @@ const HacIso = (function () {
     };
     // Zócalo/escalinata de los edificios que lo tienen: capa baja, sobre el
     // suelo y bajo el resto (decoración, muros, edificios, mecenas).
-    lista.filter(c => !isFlat(c) && META['bld-' + c.tipo + '-base-' + (((c.rot || 0) % 4 + 4) % 4)])
+    lista.filter(c => !isFlat(c) && metaOf('bld-' + c.tipo + '-base-' + (((c.rot || 0) % 4 + 4) % 4)))
       .sort((a, b) => flatSort(a) - flatSort(b) || a.pos[0] - b.pos[0])
       .forEach(drawBaseSprite);
 
@@ -726,27 +772,28 @@ const HacIso = (function () {
       const k = 'bld-' + c.tipo + '-' + (((c.rot || 0) % 4 + 4) % 4);
       // Si no hay sprite para esa rotación (edificios de vista ÚNICA, p.ej. el
       // campamento), cae al sprite base (-0) en vez de al placeholder de prisma.
-      return (META && META[k]) ? k : ('bld-' + c.tipo + '-0');
+      return metaOf(k) ? k : ('bld-' + c.tipo + '-0');
     }
 
     function sprite(c) {
       const key = spriteKey(c);
-      const img = key && SPRITES[key];
-      const m = key && META[key];
+      const img = key && imgOf(key);
+      const m = key && metaOf(key);
       if (!img || !m) { placeholder(c); return; }
-      // El sprite está horneado a SCALE× (meta en px de dispositivo). Lo pintamos
-      // a tamaño NATIVO en coords de dispositivo para que quede nítido (1:1).
+      // El sprite está horneado a SCALE× (meta en px de dispositivo). Lo pintamos a
+      // tamaño de META (m.w×m.h): para el set procedural coincide con el nativo (1:1,
+      // nítido); para el arte a mano por tema, la meta fija el tamaño en pantalla.
       g.setTransform(1, 0, 0, 1, 0, 0);
-      g.drawImage(img, Math.round(X(c.pos[0], c.pos[1]) * SCALE - m.ox), Math.round(Y(c.pos[0], c.pos[1]) * SCALE - m.oy));
+      g.drawImage(img, Math.round(X(c.pos[0], c.pos[1]) * SCALE - m.ox), Math.round(Y(c.pos[0], c.pos[1]) * SCALE - m.oy), m.w, m.h);
       g.setTransform(SCALE, 0, 0, SCALE, 0, 0);
     }
 
     function drawBaseSprite(c) {
       const key = 'bld-' + c.tipo + '-base-' + (((c.rot || 0) % 4 + 4) % 4);
-      const img = SPRITES[key], m = META[key];
+      const img = imgOf(key), m = metaOf(key);
       if (!img || !m) return;
       g.setTransform(1, 0, 0, 1, 0, 0);
-      g.drawImage(img, Math.round(X(c.pos[0], c.pos[1]) * SCALE - m.ox), Math.round(Y(c.pos[0], c.pos[1]) * SCALE - m.oy));
+      g.drawImage(img, Math.round(X(c.pos[0], c.pos[1]) * SCALE - m.ox), Math.round(Y(c.pos[0], c.pos[1]) * SCALE - m.oy), m.w, m.h);
       g.setTransform(SCALE, 0, 0, SCALE, 0, 0);
     }
 

@@ -46,6 +46,7 @@
     <button class="adm-tab" data-tab="solicitudes">Solicitudes<span class="adm-solic-badge" id="solic-badge" hidden></span></button>
     <button class="adm-tab" data-tab="usuarios">Usuarios</button>
     <button class="adm-tab" data-tab="tareas">Tareas de edificios</button>
+    <button class="adm-tab" data-tab="arte">Arte / Sprites</button>
   </nav>
 
   <!-- ══ Pestaña: Haciendas ══ -->
@@ -124,6 +125,45 @@
     <p class="adm-warn adm-info">Catálogo <b>global</b> de tareas: lo que hace un mecenas dentro de cada tipo de edificio y cuánto tarda. Es igual para todas las haciendas.</p>
     <div class="adm-tareas" id="adm-tareas"></div>
   </div>
+
+  <!-- ══ Pestaña: Arte / Sprites ══ -->
+  <div class="adm-tabpanel" id="tab-arte" hidden>
+    <p class="adm-warn adm-info">Coloca tu <b>pixel-art</b> sobre la rejilla para obtener su <b>anclaje y tamaño</b>. Elige tema y edificio, carga el PNG, ajústalo (arrástralo o usa las flechas; rueda del ratón o el deslizador para escalar) y copia el snippet a <code>assets/js/iso-sprites-wei.js</code>. La imagen va en <code>assets/img/iso/&lt;tema&gt;/bld-&lt;tipo&gt;-&lt;rot&gt;.png</code>.</p>
+    <div class="arte-wrap">
+      <div class="arte-side">
+        <label>Tema<select id="arte-tema"></select></label>
+        <label>Edificio<select id="arte-tipo"></select></label>
+        <label>Rotación <i class="adm-lbl-note">vista única = 0</i><select id="arte-rot">${[0,1,2,3].map(r=>`<option value="${r}">${r}</option>`).join('')}</select></label>
+        <label>Imagen (PNG/WebP)<input type="file" id="arte-file" accept="image/*"></label>
+        <label>Escala <span id="arte-scale-val">100%</span><input type="range" id="arte-scale" min="10" max="400" value="100"></label>
+        <label>Zoom de vista <span id="arte-zoom-val">100%</span><input type="range" id="arte-zoom" min="25" max="300" value="100"></label>
+        <label class="arte-check"><input type="checkbox" id="arte-guides" checked> Mostrar rejilla</label>
+        <div class="arte-nums" id="arte-nums">Carga una imagen para empezar.</div>
+        <textarea id="arte-out" rows="3" readonly placeholder="El snippet aparecerá aquí…"></textarea>
+        <button class="adm-btn adm-btn-gold" id="arte-copy" type="button">Copiar snippet</button>
+        <p class="arte-help">Arrastra la imagen para mover el anclaje. Flechas = 1&nbsp;px · Mayús+flechas = 10&nbsp;px. La silueta rosa es la huella del edificio en la rejilla; cuadra la base sobre ella.</p>
+      </div>
+      <div class="arte-stage">
+        <canvas id="arte-canvas" width="760" height="560"></canvas>
+      </div>
+    </div>
+  </div>
+  <style>
+    .arte-wrap{display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap}
+    .arte-side{flex:0 0 300px;display:flex;flex-direction:column;gap:12px}
+    .arte-side label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:#c9bd9c}
+    .arte-side select,.arte-side input[type=file]{width:100%}
+    .arte-side .arte-check{flex-direction:row;align-items:center;gap:8px}
+    .arte-nums{font:12px/1.6 ui-monospace,Menlo,monospace;color:#d8b65a;background:rgba(0,0,0,.28);
+      border:1px solid rgba(216,182,90,.28);border-radius:8px;padding:8px 10px;white-space:pre-wrap}
+    #arte-out{width:100%;font:12px/1.5 ui-monospace,Menlo,monospace;background:rgba(0,0,0,.3);
+      color:#e6dcc2;border:1px solid rgba(216,182,90,.28);border-radius:8px;padding:8px;resize:vertical}
+    .arte-help{font-size:12px;line-height:1.5;color:#b9a888;opacity:.85;margin:0}
+    .arte-stage{flex:1 1 380px;min-width:340px}
+    #arte-canvas{width:100%;height:auto;background:#141019;border:1px solid rgba(216,182,90,.28);
+      border-radius:10px;cursor:grab;touch-action:none}
+    #arte-canvas.grabbing{cursor:grabbing}
+  </style>
 </main>
 
 <div id="chrome-footer"></div>
@@ -132,7 +172,7 @@
 <script src="assets/js/hac-util.js?v=1"></script>
 <script src="assets/js/haciendas-data.js?v=11"></script>
 <script src="assets/js/hac-calc.js?v=7"></script>
-<script src="assets/js/hac-build.js?v=36"></script>
+<script src="assets/js/hac-build.js?v=37"></script>
 <script src="assets/js/hac-store.js?v=5"></script>
 <script src="assets/js/hac-tareas.js?v=2"></script>
 <script src="assets/js/personajes-data.js?v=2"></script>
@@ -143,6 +183,9 @@
 <script src="assets/js/hac-competencias.js?v=1"></script>
 <script src="assets/js/hac-puntos.js?v=1"></script>
 <script src="assets/js/hac-stats.js?v=8"></script>
+<script src="assets/js/iso-sprites-meta.js?v=22"></script>
+<script src="assets/js/iso-sprites-extra.js?v=12"></script>
+<script src="assets/js/iso-sprites-wei.js?v=1"></script>
 <script>
 (function () {
   'use strict';
@@ -705,6 +748,11 @@
                 const cur = ((h.mapa && h.mapa.estacion) || 'verano');
                 return `<option value="${v}"${v === cur ? ' selected' : ''}>${t}</option>`;
               }).join('')}</select></label>
+            <label>Tema visual <i class="adm-lbl-note">arte a mano por reino</i>
+              <select name="tema">${[['', '— Genérico (gris)'], ['wei', '魏 Wei · Luoyang']].map(([v, t]) => {
+                const cur = ((h.mapa && h.mapa.tema) || '');
+                return `<option value="${v}"${v === cur ? ' selected' : ''}>${t}</option>`;
+              }).join('')}</select></label>
             <label class="adm-col2">Lema<input name="lema" value="${esc(h.lema || '')}"></label>
             <label class="adm-col2">Descripción<textarea name="descripcion" rows="2">${esc(h.descripcion || '')}</textarea></label>
           </div>
@@ -867,6 +915,8 @@
       if (f.nivelFinca) { h.mapa = h.mapa || { v: 1, construcciones: [] }; h.mapa.tier = clampTier(Number(f.nivelFinca.value) || 1); }
       // Estación del territorio exterior (se guarda en el mapa jsonb).
       if (f.estacion) { h.mapa = h.mapa || { v: 1, construcciones: [] }; h.mapa.estacion = f.estacion.value; }
+      // Tema visual (arte a mano por reino; '' = set gris por defecto).
+      if (f.tema) { h.mapa = h.mapa || { v: 1, construcciones: [] }; if (f.tema.value) h.mapa.tema = f.tema.value; else delete h.mapa.tema; }
       saveHacienda(h);
       render();
     });
@@ -1670,9 +1720,163 @@
 
   // Conmutación de pestañas (Haciendas / Personajes / Tareas).
   function wireTabs() {
+    // ── Herramienta "Arte / Sprites": afinar anclaje (ox,oy) y tamaño (w,h) de un
+    // PNG a mano sobre la rejilla iso. Trabaja en px de DISPOSITIVO (meta = ×SCALE).
+    let arteInited = false;
+    function initArte() {
+      if (arteInited) return; arteInited = true;
+      const SCALE = (window.HacIso && HacIso.SCALE) || 2;
+      const dTW = ((window.HacIso && HacIso.TILE_W) || 36) * SCALE;   // ancho de rombo (device)
+      const dTH = ((window.HacIso && HacIso.TILE_H) || 18) * SCALE;   // alto  de rombo (device)
+      const cv = document.getElementById('arte-canvas'); if (!cv) return;
+      const g = cv.getContext('2d');
+      const $ = (id) => document.getElementById(id);
+      const temaSel = $('arte-tema'), tipoSel = $('arte-tipo'), rotSel = $('arte-rot'),
+            fileIn = $('arte-file'), scaleIn = $('arte-scale'), zoomIn = $('arte-zoom'),
+            guides = $('arte-guides'), numsEl = $('arte-nums'), outEl = $('arte-out'),
+            copyBtn = $('arte-copy'), scaleVal = $('arte-scale-val'), zoomVal = $('arte-zoom-val');
+
+      const TEMAS = [['wei', '魏 Wei · Luoyang']];
+      temaSel.innerHTML = TEMAS.map(([v, t]) => `<option value="${v}">${t}</option>`).join('');
+      const cons = (window.HacBuild && HacBuild.CONSTRUCCIONES) || [];
+      tipoSel.innerHTML = cons.map(c => `<option value="${c.id}">${c.nombre} · ${c.zh} [${(c.footprint || [1, 1]).join('×')}]</option>`).join('');
+
+      let img = null, natW = 0, natH = 0;
+      const st = { ox: 0, oy: 0, w: 0, h: 0, scale: 1, zoom: 1 };
+      cv.tabIndex = 0;
+
+      const footprint = () => { const c = HacBuild.tipo(tipoSel.value); return (c && c.footprint) || [1, 1]; };
+      const spriteKey = () => 'bld-' + tipoSel.value + '-' + (rotSel.value || 0);
+      // Ancla (vértice superior de la celda 0,0) en pantalla: deja hueco para que la
+      // huella crezca hacia abajo-derecha y el edificio hacia arriba.
+      const anchor = () => ({ x: Math.round(cv.width * 0.40), y: Math.round(cv.height * 0.34) });
+
+      function loadExisting() {
+        const th = (window.ISO_SPRITES_THEMES && ISO_SPRITES_THEMES[temaSel.value]) || {};
+        const m = th[spriteKey()];
+        if (m && img) {
+          st.ox = m.ox; st.oy = m.oy; st.w = m.w; st.h = m.h;
+          st.scale = natW ? (m.w / natW) : 1;
+          scaleIn.value = Math.round(st.scale * 100);
+        }
+      }
+      function setImage(image) {
+        img = image; natW = image.naturalWidth || image.width; natH = image.naturalHeight || image.height;
+        st.scale = (Number(scaleIn.value) || 100) / 100;
+        st.w = Math.round(natW * st.scale); st.h = Math.round(natH * st.scale);
+        st.ox = Math.round(st.w / 2); st.oy = Math.round(st.h * 0.9);   // base centro por defecto
+        loadExisting();
+        draw();
+      }
+      function rescale(newScale) {
+        newScale = Math.max(0.05, newScale);
+        // Escala en torno al ANCLA (mantiene la base cuadrada al escalar).
+        const fx = st.w ? st.ox / st.w : 0.5, fy = st.h ? st.oy / st.h : 0.9;
+        st.scale = newScale;
+        st.w = Math.round(natW * newScale); st.h = Math.round(natH * newScale);
+        st.ox = Math.round(fx * st.w); st.oy = Math.round(fy * st.h);
+        scaleIn.value = Math.round(newScale * 100);
+        draw();
+      }
+
+      function draw() {
+        const Z = st.zoom = (Number(zoomIn.value) || 100) / 100;
+        scaleVal.textContent = Math.round((st.scale || 1) * 100) + '%';
+        zoomVal.textContent = Math.round(Z * 100) + '%';
+        g.clearRect(0, 0, cv.width, cv.height);
+        const A = anchor(), [fw, fh] = footprint();
+        const cellTop = (gx, gy) => ({ x: A.x + (gx - gy) * dTW / 2 * Z, y: A.y + (gx + gy) * dTH / 2 * Z });
+        const dia = (gx, gy) => { const T = cellTop(gx, gy); return [T, { x: T.x + dTW / 2 * Z, y: T.y + dTH / 2 * Z }, { x: T.x, y: T.y + dTH * Z }, { x: T.x - dTW / 2 * Z, y: T.y + dTH / 2 * Z }]; };
+        // Huella (silueta rosa) — celdas del footprint.
+        if (guides.checked) {
+          g.fillStyle = 'rgba(232,120,150,0.16)';
+          g.strokeStyle = 'rgba(232,120,150,0.5)'; g.lineWidth = 1;
+          for (let gx = 0; gx < fw; gx++) for (let gy = 0; gy < fh; gy++) {
+            const p = dia(gx, gy); g.beginPath(); g.moveTo(p[0].x, p[0].y);
+            p.forEach(q => g.lineTo(q.x, q.y)); g.closePath(); g.fill(); g.stroke();
+          }
+        }
+        // Imagen anclada.
+        if (img) {
+          const ix = A.x - st.ox * Z, iy = A.y - st.oy * Z;
+          g.imageSmoothingEnabled = false;
+          g.drawImage(img, ix, iy, st.w * Z, st.h * Z);
+        }
+        // Rejilla por encima (contorno) para ver la base bajo la imagen.
+        if (guides.checked) {
+          g.strokeStyle = 'rgba(120,200,255,0.5)'; g.lineWidth = 1;
+          for (let gx = 0; gx < fw; gx++) for (let gy = 0; gy < fh; gy++) {
+            const p = dia(gx, gy); g.beginPath(); g.moveTo(p[0].x, p[0].y);
+            p.forEach(q => g.lineTo(q.x, q.y)); g.closePath(); g.stroke();
+          }
+        }
+        // Cruz del ancla.
+        g.strokeStyle = '#f0c040'; g.lineWidth = 1.5;
+        g.beginPath(); g.moveTo(A.x - 8, A.y); g.lineTo(A.x + 8, A.y);
+        g.moveTo(A.x, A.y - 8); g.lineTo(A.x, A.y + 8); g.stroke();
+        // Números + snippet.
+        const key = spriteKey();
+        numsEl.textContent = img
+          ? `${key}\nfootprint ${fw}×${fh}\nox ${Math.round(st.ox)}  oy ${Math.round(st.oy)}\nw  ${Math.round(st.w)}  h  ${Math.round(st.h)}  (nat ${natW}×${natH})`
+          : 'Carga una imagen para empezar.';
+        outEl.value = img
+          ? `window.ISO_SPRITES_THEMES.${temaSel.value}['${key}'] = { ox: ${Math.round(st.ox)}, oy: ${Math.round(st.oy)}, w: ${Math.round(st.w)}, h: ${Math.round(st.h)} };`
+          : '';
+      }
+
+      // ── Interacción ──
+      fileIn.addEventListener('change', () => {
+        const f = fileIn.files && fileIn.files[0]; if (!f) return;
+        const r = new FileReader();
+        r.onload = () => { const im = new Image(); im.onload = () => setImage(im); im.src = r.result; };
+        r.readAsDataURL(f);
+      });
+      tipoSel.addEventListener('change', () => { if (img) { loadExisting(); } draw(); });
+      rotSel.addEventListener('change', () => { if (img) { loadExisting(); } draw(); });
+      temaSel.addEventListener('change', () => { if (img) { loadExisting(); } draw(); });
+      scaleIn.addEventListener('input', () => rescale((Number(scaleIn.value) || 100) / 100));
+      zoomIn.addEventListener('input', draw);
+      guides.addEventListener('change', draw);
+      copyBtn.addEventListener('click', () => {
+        if (!outEl.value) return;
+        outEl.select();
+        try { navigator.clipboard.writeText(outEl.value); } catch (e) { document.execCommand('copy'); }
+        copyBtn.textContent = '¡Copiado!'; setTimeout(() => copyBtn.textContent = 'Copiar snippet', 1200);
+      });
+      let drag = null;
+      cv.addEventListener('pointerdown', (e) => {
+        if (!img) return; cv.setPointerCapture(e.pointerId); cv.classList.add('grabbing');
+        drag = { x: e.clientX, y: e.clientY };
+      });
+      cv.addEventListener('pointermove', (e) => {
+        if (!drag) return;
+        const rect = cv.getBoundingClientRect(), sx = cv.width / rect.width;   // px CSS → px canvas
+        const Z = st.zoom || 1;
+        st.ox -= (e.clientX - drag.x) * sx / Z; st.oy -= (e.clientY - drag.y) * sx / Z;
+        drag = { x: e.clientX, y: e.clientY }; draw();
+      });
+      const endDrag = () => { drag = null; cv.classList.remove('grabbing'); };
+      cv.addEventListener('pointerup', endDrag);
+      cv.addEventListener('pointercancel', endDrag);
+      cv.addEventListener('wheel', (e) => {
+        if (!img) return; e.preventDefault();
+        rescale((st.scale || 1) * (e.deltaY < 0 ? 1.06 : 1 / 1.06));
+      }, { passive: false });
+      cv.addEventListener('keydown', (e) => {
+        if (!img) return;
+        const step = e.shiftKey ? 10 : 1; let d = false;
+        if (e.key === 'ArrowRight') { st.ox -= step; d = true; }
+        else if (e.key === 'ArrowLeft') { st.ox += step; d = true; }
+        else if (e.key === 'ArrowDown') { st.oy -= step; d = true; }
+        else if (e.key === 'ArrowUp') { st.oy += step; d = true; }
+        if (d) { e.preventDefault(); draw(); }
+      });
+      draw();
+    }
+
     const tabs = document.getElementById('adm-tabs');
     if (!tabs) return;
-    const panels = { haciendas: 'tab-haciendas', personajes: 'tab-personajes', solicitudes: 'tab-solicitudes', usuarios: 'tab-usuarios', tareas: 'tab-tareas' };
+    const panels = { haciendas: 'tab-haciendas', personajes: 'tab-personajes', solicitudes: 'tab-solicitudes', usuarios: 'tab-usuarios', tareas: 'tab-tareas', arte: 'tab-arte' };
     tabs.querySelectorAll('.adm-tab').forEach(b => b.addEventListener('click', () => {
       tabs.querySelectorAll('.adm-tab').forEach(x => x.classList.toggle('on', x === b));
       const which = b.dataset.tab;
@@ -1683,6 +1887,7 @@
       if (which === 'personajes') renderPersonajes();
       if (which === 'solicitudes') renderSolicitudes();
       if (which === 'usuarios') renderUsuarios();
+      if (which === 'arte') initArte();
     }));
     refreshSolicBadge();
   }
