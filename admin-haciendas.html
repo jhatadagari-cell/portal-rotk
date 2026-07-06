@@ -133,7 +133,7 @@
       <div class="arte-side">
         <label>Tema<select id="arte-tema"></select></label>
         <label>Edificio<select id="arte-tipo"></select></label>
-        <label>Rotación <i class="adm-lbl-note">vista única = 0</i><select id="arte-rot">${[0,1,2,3].map(r=>`<option value="${r}">${r}</option>`).join('')}</select></label>
+        <label>Rotación <i class="adm-lbl-note">vista única = 0</i><select id="arte-rot"><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></label>
         <label>Imagen (PNG/WebP)<input type="file" id="arte-file" accept="image/*"></label>
         <label>Escala <span id="arte-scale-val">100%</span><input type="range" id="arte-scale" min="10" max="400" value="100"></label>
         <label>Zoom de vista <span id="arte-zoom-val">100%</span><input type="range" id="arte-zoom" min="25" max="300" value="100"></label>
