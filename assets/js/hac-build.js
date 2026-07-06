@@ -85,7 +85,7 @@ const HacBuild = (function () {
     // ── Monumentos imperiales (variedad para las grandes haciendas de reino) ──
     // Sin sprite procedural: se muestran como bloque placeholder salvo que la
     // hacienda use un TEMA con arte a mano (p.ej. 'wei'). Ver iso-sprites-wei.js.
-    { id: 'puerta-imperial', dominio: 'administrativo', nombre: 'Puerta Imperial',   zh: '午門', capa: 'edificio', footprint: [4, 2], tierMin: 4, unico: false, cargoMin: null, color: '#b23b2e', altura: 44, desc: 'Pórtico monumental de tres vanos que abre el eje ceremonial de una gran capital.' },
+    { id: 'puerta-imperial', dominio: 'administrativo', nombre: 'Puerta Imperial',   zh: '午門', capa: 'edificio', footprint: [4, 4], tierMin: 4, unico: false, cargoMin: null, color: '#b23b2e', altura: 56, desc: 'Torre-puerta monumental sobre base de piedra: el acceso ceremonial de la muralla exterior de una gran capital.' },
     { id: 'que',             dominio: null,             nombre: 'Torre Que',         zh: '闕',   capa: 'edificio', footprint: [1, 2], tierMin: 4, unico: false, cargoMin: null, color: '#a03828', altura: 46, desc: 'Torre-pilar ceremonial que se alza en pareja flanqueando la entrada del palacio.' },
     { id: 'salon-trono',     dominio: 'administrativo', nombre: 'Salón del Trono',   zh: '太極殿', capa: 'edificio', footprint: [5, 6], tierMin: 5, unico: true,  cargoMin: null, color: '#c43c1a', altura: 66, desc: 'El gran salón del trono imperial: la construcción más imponente del eje.' },
     { id: 'torre-esquina',   dominio: 'militar',        nombre: 'Torre de Esquina',  zh: '角樓', capa: 'edificio', footprint: [2, 2], tierMin: 3, unico: false, cargoMin: null, color: '#7a5a3a', altura: 48, desc: 'Torreón de varios aleros que corona las esquinas de la muralla imperial.' },

@@ -24,9 +24,30 @@
   // ── Sprites de Wei ───────────────────────────────────────────────────────
   // Salón del Trono 太極殿 (edificio principal de Luoyang): gran salón imperial de
   // teja dorada con su propia base de mármol y escalinata. Dos vistas: rot 0
-  // (puerta a la derecha) y rot 1 (puerta a la izquierda); rot 2/3 caen a -0.
-  // Anclaje/tamaño PROVISIONALES — afínalos con la herramienta "Arte / Sprites".
+  // (frente, con la entrada y el estandarte) y rot 1 (trasera, girada 180°);
+  // rot 2/3 caen a -0. Arte a mano en proyección 2:1; anclaje calculado para que
+  // el rombo de la base cubra el footprint [5,6] centrado (base 848px → 396px
+  // device, factor ≈0.467). Afínalo con la herramienta "Arte / Sprites" si hace falta.
   const T = window.ISO_SPRITES_THEMES.wei;
-  T['bld-salon-trono-0'] = { ox: 230, oy: 300, w: 460, h: 412 };
-  T['bld-salon-trono-1'] = { ox: 230, oy: 305, w: 460, h: 419 };
+  T['bld-salon-trono-0'] = { ox: 216, oy: 131, w: 396, h: 317 };
+  T['bld-salon-trono-1'] = { ox: 216, oy: 135, w: 396, h: 316 };
+
+  // Puerta Imperial 午門 (portón monumental de la muralla exterior, 洛陽宮). Torre
+  // de puerta sobre base de piedra. rot 0 = vista lisa (puerta a la derecha);
+  // rot 1 = vista ornamentada con leones y estandartes 魏 (puerta a la izquierda).
+  T['bld-puerta-imperial-0'] = { ox: 240, oy: 330, w: 480, h: 470 };
+  T['bld-puerta-imperial-1'] = { ox: 240, oy: 365, w: 480, h: 525 };
+
+  // ── Kit de MURALLA EXTERIOR (solo se usa cuando la hacienda es tema Wei) ────
+  // NO son edificios colocables: los coloca el renderizador de perímetro de
+  // hac-iso (drawWeiPerimeter) tile a tile alrededor de la finca. Aquí solo se
+  // registran para que preloadTheme cargue las imágenes; w/h son el tamaño NATIVO
+  // del PNG y ox/oy el "pico" (vértice frontal-bajo) medido — el perímetro escala
+  // y ancla por ese pico. gate-wall-* es el 午門 con alas que rellena el vano.
+  const wall=(k,w,h,ox,oy)=>{ T[k]={w,h,ox,oy}; };
+  wall('wall-straight1-front',209,255,56,250);  wall('wall-straight1-back',206,265,149,261);
+  wall('wall-straight2-front',327,292,65,287);  wall('wall-straight2-back',318,322,227,317);
+  wall('wall-corner-out-front',262,276,158,271);wall('wall-corner-out-back',259,314,164,309);
+  wall('wall-corner-in-front',292,280,85,275);  wall('wall-corner-in-back',297,299,152,294);
+  wall('gate-wall-front',747,625,722,624);      wall('gate-wall-back',748,635,677,634);
 })();

@@ -22,7 +22,7 @@ const HacIso = (function () {
   const TOP_MARGIN = 132;             // hueco arriba para edificios altos, murallas y torres
   const PAD_X = 40;                   // margen lateral para murallas y paseo de ronda
   const SPRITE_BASE = 'assets/img/iso/';
-  const SPRITE_VER = '44';  // súbelo al regenerar los PNG (cache-busting)
+  const SPRITE_VER = '45';  // súbelo al regenerar los PNG (cache-busting)
 
   // ── Color helpers (para el placeholder) ─────────────────────────────────
   const { hexToRgb, clamp255: cl } = HacUtil;
@@ -472,6 +472,38 @@ const HacIso = (function () {
       else { box(u - .12, inner, u + .12, inner + p, 0, h, ce, cl, cr); texFace('S', inner + p, u - .12, u + .12, 0, h); }
     };
 
+    // ── MURALLA por TILES (SOLO tema Wei): sustituye al muro procedural ───────
+    // Coloca el kit de tiles (assets/img/iso/wei/wall-*) alrededor del perímetro,
+    // con el 午門 (gate-wall) en el eje. Recinto cerrado (4 lados a altura completa).
+    const WEI = (typeof window !== 'undefined' && window.ISO_SPRITES_THEMES && window.ISO_SPRITES_THEMES.wei) || null;
+    const weiWalls = tema === 'wei' && WEI && SPRITES['wei/wall-straight2-front'];
+    const gateGcW = WD.gate ? Math.floor((GW - 1) / 2) : -999;
+    function drawWeiTile(key, fx, fy, flip, S, box) {
+      const m = WEI && WEI[key], img = SPRITES['wei/' + key]; if (!m || !img) return;
+      const vx = X(fx, fy) * SCALE, vy = (Y(fx, fy) + TILE_H) * SCALE;   // vértice frontal-bajo destino (device)
+      wallSegs.push({ box, draw: () => {
+        if (flip) g.setTransform(-S, 0, 0, S, vx + m.ox * S, vy - m.oy * S);
+        else      g.setTransform(S, 0, 0, S, vx - m.ox * S, vy - m.oy * S);
+        g.imageSmoothingEnabled = true;      // arte a mano (tema) reescalado → sin aliasing
+        g.drawImage(img, 0, 0);
+        g.imageSmoothingEnabled = false;
+        g.setTransform(SCALE, 0, 0, SCALE, 0, 0);
+      } });
+    }
+    function drawWeiPerimeter() {
+      const S = 0.46, ST = 2;
+      for (let gy = lo; gy <= hiH; gy += ST) drawWeiTile('wall-straight2-front', FRi, gy, false, S, [FRi - 1, gy - 1, FRi + 1, gy + 1]); // FR este (frente)
+      for (let gy = lo; gy <= hiH; gy += ST) drawWeiTile('wall-straight2-front', WLi, gy, false, S, [WLi - 1, gy - 1, WLi + 1, gy + 1]); // WL oeste (fondo)
+      for (let gx = lo; gx <= hiW; gx += ST) drawWeiTile('wall-straight2-front', gx, WTi, true,  S, [gx - 1, WTi - 1, gx + 1, WTi + 1]); // WT norte (fondo)
+      for (let gx = lo; gx <= hiW; gx += ST) { if (Math.abs(gx - gateGcW) <= 1) continue; drawWeiTile('wall-straight2-front', gx, FLi, true, S, [gx - 1, FLi - 1, gx + 1, FLi + 1]); } // FL sur (frente) + hueco puerta
+      drawWeiTile('wall-corner-out-front', FRi, FLi, false, S, [FRi - 1, FLi - 1, FRi + 1, FLi + 1]); // esquina S (frente-abajo)
+      drawWeiTile('wall-corner-out-back',  WLi, WTi, false, S, [WLi - 1, WTi - 1, WLi + 1, WTi + 1]); // esquina N (fondo-arriba)
+      drawWeiTile('wall-corner-out-front', WLi, FLi, true,  S, [WLi - 1, FLi - 1, WLi + 1, FLi + 1]); // esquina W (izq)
+      drawWeiTile('wall-corner-out-back',  FRi, WTi, true,  S, [FRi - 1, WTi - 1, FRi + 1, WTi + 1]); // esquina E (der)
+      drawWeiTile('gate-wall-front', gateGcW, FLi, false, S, [gateGcW - 2, FLi - 2, gateGcW + 2, FLi + 2]); // 午門 en el eje sur
+    }
+
+    if (!weiWalls) {
     // Muro TRASERO-izquierdo (x), cara al patio (+x).
     for (let gy = lo; gy <= hiH; gy++) {
       const b = gy - 0.5, d = gy + 0.5;
@@ -586,6 +618,7 @@ const HacIso = (function () {
       [[eN, eN], [eE, eN], [eN, eW]].forEach(([gx, gy], i) => pennants.push({ gx, gy, z0, zt, len: 14, phase: i * 1.3, box: [gx - 0.4, gy - 0.4, gx + 0.4, gy + 0.4] }));
       if (WD.gate) [-2.3, 2.3].forEach((dx, i) => pennants.push({ gx: gateGc + dx, gy: FLi - 0.9, z0: 0, zt: WD.h + 24, len: 14, phase: i * 1.1 + 0.6, box: [gateGc + dx - 0.4, FLi - 1.3, gateGc + dx + 0.4, FLi - 0.5] }));
     }
+    } else { drawWeiPerimeter(); }
 
     // ── Construcciones del jugador ────────────────────────────────────────
     const lista = B ? B.construccionesValidas(opts.mapa, tier)
@@ -783,8 +816,13 @@ const HacIso = (function () {
       // El sprite está horneado a SCALE× (meta en px de dispositivo). Lo pintamos a
       // tamaño de META (m.w×m.h): para el set procedural coincide con el nativo (1:1,
       // nítido); para el arte a mano por tema, la meta fija el tamaño en pantalla.
+      // El arte de tema (TMETA) suele venir a mayor resolución que su tamaño en
+      // pantalla → activamos suavizado para reducirlo sin aliasing (el procedural va 1:1).
+      const isTheme = !!(TMETA && TMETA[key]);
       g.setTransform(1, 0, 0, 1, 0, 0);
+      if (isTheme) g.imageSmoothingEnabled = true;
       g.drawImage(img, Math.round(X(c.pos[0], c.pos[1]) * SCALE - m.ox), Math.round(Y(c.pos[0], c.pos[1]) * SCALE - m.oy), m.w, m.h);
+      if (isTheme) g.imageSmoothingEnabled = false;
       g.setTransform(SCALE, 0, 0, SCALE, 0, 0);
     }
 
@@ -792,8 +830,11 @@ const HacIso = (function () {
       const key = 'bld-' + c.tipo + '-base-' + (((c.rot || 0) % 4 + 4) % 4);
       const img = imgOf(key), m = metaOf(key);
       if (!img || !m) return;
+      const isTheme = !!(TMETA && TMETA[key]);
       g.setTransform(1, 0, 0, 1, 0, 0);
+      if (isTheme) g.imageSmoothingEnabled = true;
       g.drawImage(img, Math.round(X(c.pos[0], c.pos[1]) * SCALE - m.ox), Math.round(Y(c.pos[0], c.pos[1]) * SCALE - m.oy), m.w, m.h);
+      if (isTheme) g.imageSmoothingEnabled = false;
       g.setTransform(SCALE, 0, 0, SCALE, 0, 0);
     }
 
