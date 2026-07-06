@@ -25,12 +25,12 @@
   // Salón del Trono 太極殿 (Great Hall imperial de Luoyang): gran salón alargado de
   // doble alero, teja dorada, sobre terraza de mármol con escalinatas. Dos vistas:
   // rot 0 (frente, entrada + estandarte) y rot 1 (trasera, girada 180°); rot 2/3
-  // caen a -0. Arte a mano en proyección 2:1 (base ≈26.6°); anclaje calculado para
-  // que el rombo de la base cubra el footprint [9,12] centrado — a esta escala el
-  // arte se dibuja ~1:1 (nativo), sin reescalado, calidad intacta.
+  // caen a -0. El arte venía con proyección más plana (~20°); se estiró ×1.38 en
+  // vertical para que la BASE quede a 26.565° (2:1) y cuadre con la rejilla del
+  // suelo. Anclaje calculado para cubrir el footprint [9,12] centrado.
   const T = window.ISO_SPRITES_THEMES.wei;
-  T['bld-salon-trono-0'] = { ox: 432, oy: 252, w: 757, h: 653 };
-  T['bld-salon-trono-1'] = { ox: 432, oy: 252, w: 757, h: 642 };
+  T['bld-salon-trono-0'] = { ox: 432, oy: 313, w: 757, h: 747 };
+  T['bld-salon-trono-1'] = { ox: 432, oy: 312, w: 757, h: 734 };
 
   // Palacio 宮殿 (tema Wei): reutiliza el arte del ANTIGUO salón del trono (salón
   // cuadrado de doble alero sobre base de mármol). Footprint [4,6] centrado.
