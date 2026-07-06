@@ -29,8 +29,8 @@
   // que el rombo de la base cubra el footprint [9,12] centrado — a esta escala el
   // arte se dibuja ~1:1 (nativo), sin reescalado, calidad intacta.
   const T = window.ISO_SPRITES_THEMES.wei;
-  T['bld-salon-trono-0'] = { ox: 432, oy: 180, w: 757, h: 541 };
-  T['bld-salon-trono-1'] = { ox: 432, oy: 179, w: 757, h: 532 };
+  T['bld-salon-trono-0'] = { ox: 432, oy: 252, w: 757, h: 653 };
+  T['bld-salon-trono-1'] = { ox: 432, oy: 252, w: 757, h: 642 };
 
   // Palacio 宮殿 (tema Wei): reutiliza el arte del ANTIGUO salón del trono (salón
   // cuadrado de doble alero sobre base de mármol). Footprint [4,6] centrado.
