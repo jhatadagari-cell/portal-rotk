@@ -754,9 +754,12 @@
     };
     const encById = (dom, id) => (ENCUENTROS[dom] || []).find(e => e.id === id) || null;
     const sucKey = (o) => myId + '|' + o.inicioMs + '|' + o.targetId;
-    // Prob. de ÉXITO de un encuentro: tu nivel efectivo en ese dominio vs la dificultad.
-    function pEncuentro(dom, dif) { return Math.max(0.12, Math.min(0.9, 0.42 + 0.13 * (nivelEf(dom) - (dif || 3)))); }
-    const pSuceso = pEncuentro;   // alias: lo usan los SUCESOS cooperativos de las escaramuzas (A2b)
+    // Prob. de ÉXITO por NIVEL vs dificultad (curva base). +13% por nivel de ventaja.
+    function pByNivel(niv, dif) { return Math.max(0.12, Math.min(0.9, 0.42 + 0.13 * ((niv || 1) - (dif || 3)))); }
+    // Encuentro individual: recibe el DOMINIO y usa TU nivel efectivo en él.
+    function pEncuentro(dom, dif) { return pByNivel(nivelEf(dom), dif); }
+    // Escaramuzas coop (encuentros + SUCESOS A2b): reciben el NIVEL/stat ya calculado.
+    const pSuceso = pByNivel;
     // Monedas perdidas por un "robo" (escala con la dificultad de la misión).
     const roboMonedas = (n, dif) => Math.round((n || 0) * (8 + (dif || 1) * 4));
     // Plan DETERMINISTA de encuentros: uno por aptitud de mis.enc, repartidos por el
