@@ -773,6 +773,26 @@ const HacIso = (function () {
     drawList.sort((p, q) => before(p.box, q.box) ? -1 : (before(q.box, p.box) ? 1 : 0));
     drawList.forEach(d => d.draw());
 
+    // DEBUG: contorno de la huella (celdas ocupadas) de cada edificio. Activar con
+    // window.HAC_DEBUG_FOOTPRINT = true (solo para calibrar anclajes en el harness).
+    if (typeof window !== 'undefined' && window.HAC_DEBUG_FOOTPRINT && B) {
+      g.save();
+      g.setTransform(SCALE, 0, 0, SCALE, 0, 0);
+      lista.filter(c => !isFlat(c)).forEach(c => {
+        (cellsOf(c) || []).forEach(([gx, gy]) => {
+          const top = [X(gx, gy), Y(gx, gy) - TILE_H / 2];
+          const rgt = [X(gx, gy) + TILE_W / 2, Y(gx, gy)];
+          const bot = [X(gx, gy), Y(gx, gy) + TILE_H / 2];
+          const lft = [X(gx, gy) - TILE_W / 2, Y(gx, gy)];
+          g.beginPath(); g.moveTo(top[0], top[1]); g.lineTo(rgt[0], rgt[1]);
+          g.lineTo(bot[0], bot[1]); g.lineTo(lft[0], lft[1]); g.closePath();
+          g.fillStyle = 'rgba(0,255,0,0.30)'; g.fill();
+          g.strokeStyle = 'rgba(0,220,0,0.9)'; g.lineWidth = 1; g.stroke();
+        });
+      });
+      g.restore();
+    }
+
     // Props del territorio que quedan DELANTE de la finca: sobre los muros.
     drawFrontProps();
 
