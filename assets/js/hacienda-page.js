@@ -1293,8 +1293,10 @@
       const enc = encByDomIdx(e.dom, e.encIdx); if (!enc) return false;
       const dif = band.dificultad || 4;
       const ops = enc.ops.map((op, ix) => {
-        const p = Math.round(Math.max(0.05, Math.min(0.95, pSuceso(nivelEf(e.dom), dif) + (op.bonus || 0))) * 100);
-        return `<button type="button" class="hacp-suc-op" data-eop="${ix}"><span class="hacp-suc-opt">${esc(op.t)}</span><span class="hacp-suc-pct">${p}%</span></button>`;
+        const bo = op.bonus || 0;
+        const p = Math.round(Math.max(0.05, Math.min(0.95, pSuceso(nivelEf(e.dom), dif) + bo)) * 100);
+        const tag = bo > 0.01 ? '<span class="hacp-opt-tag seg">seguro</span>' : bo < -0.01 ? '<span class="hacp-opt-tag rie">arriesgado</span>' : '';
+        return `<button type="button" class="hacp-suc-op" data-eop="${ix}"><span class="hacp-suc-opt">${esc(op.t)}</span>${tag}<span class="hacp-suc-pct">${p}%</span></button>`;
       }).join('');
       const el = ensureEscSucEl(); el.hidden = false;
       el.innerHTML = `<div class="hacp-suc-box">
@@ -1566,7 +1568,7 @@
         const mix = escEncuentros(b).map((e, slot) => {
           const taken = escSlotOwner(b, slot), pct = Math.round(pSuceso(nivelEf(e.dom), b.dificultad || 4) * 100);
           const tip = `${DOM_NOMBRE[e.dom]} · ${difMeta(bandRating(b)).lbl}${taken ? ' · ya reservado' : ` · tu éxito ${pct}%`}`;
-          return `<span class="hacp-encmix-i${taken ? ' taken' : ''}" title="${esc(tip)}">${domIcon(e.dom, 'hacp-encmix-ic')}${taken ? '' : `<i>${pct}%</i>`}</span>`;
+          return `<span class="hacp-encmix-i${taken ? ' taken' : ''}" title="${esc(tip)}">${domIcon(e.dom, 'hacp-encmix-ic')}<i>${taken ? '✓' : pct + '%'}</i></span>`;
         }).join('');
         return `<div class="hacp-mrow"><div class="hacp-mrow-main"><b>${esc(scn ? scn.nombre : 'Expedición militar')}</b>
           <span>${difBadgeHTML(bandRating(b), { noLabel: true })} · ${b.miembros.length}/${b.plazas} · cap. ${esc(b.hostNombre || '—')}</span>
@@ -3100,7 +3102,10 @@
         const dinB = Math.round(conBono(rec.dinero, bonos.dinero) * rm), xpB = Math.round(conBono(rec.xp, xpFracMision(m.dom)) * rm);   // ya con bonos de pabellón
         const rutina = rm < 1 ? ` <span class="hacp-mis-rutina" title="Rutina: muy por debajo de tu nivel, rinde ${Math.round(rm * 100)}%">rutina</span>` : '';
         const enc = (m.enc && m.enc.length)
-          ? ` <span class="hacp-mis-enc" title="Encuentros por el camino (${m.enc.map(d => DOM_NOMBRE[d]).join(', ')}): resuélvelos con esa aptitud para ganar recompensa extra">${m.enc.map(d => domIcon(d, 'hacp-mis-eci')).join('')}</span>`
+          ? ` <span class="hacp-mis-enc" title="Encuentros por el camino: resuélvelos con esa aptitud para ganar recompensa extra">${m.enc.map(d => {
+              const ep = Math.round(pEncuentro(d, m.dif) * 100);
+              return `<span class="hacp-mis-eciw" title="Encuentro de ${DOM_NOMBRE[d]} · tu éxito ${ep}%">${domIcon(d, 'hacp-mis-eci')}<i>${ep}%</i></span>`;
+            }).join('')}</span>`
           : '';
         return `<div class="hacp-mis t-${m.dom}">
           <span class="hacp-mis-g">${domIcon(m.dom, 'hacp-mis-gi')}</span>
