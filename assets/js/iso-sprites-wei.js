@@ -31,8 +31,8 @@
   // corregido con un shear VERTICAL k=0.05 (baja el lado derecho = giro horario) que
   // endereza el rombo del suelo dejando las columnas verticales. Anclaje centrado.
   const T = window.ISO_SPRITES_THEMES.wei;
-  T['bld-salon-trono-0'] = { ox: 324, oy: 381, w: 757, h: 773 };
-  T['bld-salon-trono-1'] = { ox: 324, oy: 381, w: 757, h: 773 };
+  T['bld-salon-trono-0'] = { ox: 324, oy: 201, w: 757, h: 573 };
+  T['bld-salon-trono-1'] = { ox: 324, oy: 201, w: 757, h: 573 };
 
   // Palacio 宮殿 (tema Wei): reutiliza el arte del ANTIGUO salón del trono (salón
   // cuadrado de doble alero sobre base de mármol). Footprint [4,6] centrado.
