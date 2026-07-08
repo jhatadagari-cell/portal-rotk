@@ -30,10 +30,11 @@
   // escala: la base de mármol del dibujo mide ~10×4 celdas, así que dentro del
   // footprint [12,9] el salón queda como un pabellón en un patio ceremonial con
   // paseo de losas alrededor (NO invade las casillas vecinas). Anclaje = esquina
-  // norte de la huella con el rombo de la base centrado en el solar (ox=411, oy=523).
+  // norte de la huella con el rombo de la base centrado en el solar y desplazado
+  // ~1 celda al NO (ox=447, oy=541) para que las escalinatas SE no pisen el camino.
   const T = window.ISO_SPRITES_THEMES.wei;
-  T['bld-salon-trono-0'] = { ox: 411, oy: 523, w: 948, h: 954 };
-  T['bld-salon-trono-1'] = { ox: 411, oy: 523, w: 948, h: 954 };
+  T['bld-salon-trono-0'] = { ox: 447, oy: 541, w: 948, h: 954 };
+  T['bld-salon-trono-1'] = { ox: 447, oy: 541, w: 948, h: 954 };
 
   // Palacio 宮殿 (tema Wei): reutiliza el arte del ANTIGUO salón del trono (salón
   // cuadrado de doble alero sobre base de mármol). Footprint [4,6] centrado.
