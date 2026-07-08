@@ -23,16 +23,17 @@
 
   // ── Sprites de Wei ───────────────────────────────────────────────────────
   // Salón del Trono 太極殿 (Great Hall imperial de Luoyang): gran salón alargado de
-  // doble alero, teja dorada, sobre terraza de mármol con escalinatas. Dos vistas:
-  // rot 0 (frente, entrada + estandarte) y rot 1 (trasera, girada 180°); rot 2/3
-  // caen a -0. El arte venía con proyección más plana (~20°); se estiró ×1.38 en
-  // vertical para que la BASE quede a 26.565° (2:1) y cuadre con la rejilla del
-  // suelo. Footprint [12,9]. El arte venía ligeramente girado (arista base derecha mas plana);
-  // corregido con un shear VERTICAL k=0.05 (baja el lado derecho = giro horario) que
-  // endereza el rombo del suelo dejando las columnas verticales. Anclaje centrado.
+  // doble alero, teja dorada, sobre terraza de mármol con escalinatas. rot 0/1 usan
+  // el mismo arte (rot 2/3 caen a -0). El PNG es de 948×954 y se coloca a ESCALA
+  // NATIVA (w=948,h=954, es decir 1:1 con la rejilla: la plantilla _plantilla-12x9.png
+  // se dibujó también a 72×36 px/celda, igual que TILE·SCALE). NO se estira ni se
+  // escala: la base de mármol del dibujo mide ~10×4 celdas, así que dentro del
+  // footprint [12,9] el salón queda como un pabellón en un patio ceremonial con
+  // paseo de losas alrededor (NO invade las casillas vecinas). Anclaje = esquina
+  // norte de la huella con el rombo de la base centrado en el solar (ox=411, oy=523).
   const T = window.ISO_SPRITES_THEMES.wei;
-  T['bld-salon-trono-0'] = { ox: 288, oy: 159, w: 685, h: 519 };
-  T['bld-salon-trono-1'] = { ox: 288, oy: 159, w: 685, h: 519 };
+  T['bld-salon-trono-0'] = { ox: 411, oy: 523, w: 948, h: 954 };
+  T['bld-salon-trono-1'] = { ox: 411, oy: 523, w: 948, h: 954 };
 
   // Palacio 宮殿 (tema Wei): reutiliza el arte del ANTIGUO salón del trono (salón
   // cuadrado de doble alero sobre base de mármol). Footprint [4,6] centrado.
