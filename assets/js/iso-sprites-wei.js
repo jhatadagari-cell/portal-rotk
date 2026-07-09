@@ -33,8 +33,11 @@
   // norte de la huella con el rombo de la base centrado en el solar y desplazado
   // ~1 celda al NO (ox=447, oy=541) para que las escalinatas SE no pisen el camino.
   const T = window.ISO_SPRITES_THEMES.wei;
-  T['bld-salon-trono-0'] = { ox: 447, oy: 541, w: 948, h: 954 };
-  T['bld-salon-trono-1'] = { ox: 447, oy: 541, w: 948, h: 954 };
+  // occ = [oeste, norte, este, sur] celdas que se recortan de la huella 12×9 para la
+  // CAJA DE OCLUSIÓN (a quién tapa): el cuerpo alto ocupa la mitad norte, así que
+  // recortamos filas por el sur para que quien pase por delante no quede oculto.
+  T['bld-salon-trono-0'] = { ox: 447, oy: 541, w: 948, h: 954, occ: [0, 0, 0, 4] };
+  T['bld-salon-trono-1'] = { ox: 447, oy: 541, w: 948, h: 954, occ: [0, 0, 0, 4] };
 
   // Palacio 宮殿 (tema Wei): reutiliza el arte del ANTIGUO salón del trono (salón
   // cuadrado de doble alero sobre base de mármol). Footprint [4,6] centrado.

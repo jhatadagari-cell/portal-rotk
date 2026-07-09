@@ -732,7 +732,16 @@ const HacIso = (function () {
       const sk = spriteKey(c), m = sk && metaOf(sk);
       const sox = X(x0, y0) * SCALE, soy = Y(x0, y0) * SCALE;
       const srect = m ? [sox - m.ox, soy - m.oy, sox - m.ox + m.w, soy - m.oy + m.h] : null;
-      drawList.push({ box: [x0, y0, x0 + f[0], y0 + f[1]], srect, draw: () => drawC(c) });
+      // Caja de OCLUSIÓN opcional (m.occ = [oeste, norte, este, sur] en celdas a
+      // recortar de la huella). Cuando el sprite tiene una base PLANA ancha (terraza,
+      // escalinatas) mayor que el cuerpo ALTO —caso del Salón del Trono—, encogemos
+      // la caja que decide si el edificio tapa a un actor: así quien pasa por DELANTE
+      // (al sur del cuerpo) no queda oculto tras la piedra, y solo se tapa quien va
+      // por detrás. Solo afecta a la oclusión de mecenas (frame), NO al orden de
+      // pintado entre estructuras (que sigue usando la huella real). [rot 0/1]
+      let obox = null;
+      if (m && m.occ) { const o = m.occ; obox = [x0 + (o[0] || 0), y0 + (o[1] || 0), x0 + f[0] - (o[2] || 0), y0 + f[1] - (o[3] || 0)]; }
+      drawList.push({ box: [x0, y0, x0 + f[0], y0 + f[1]], srect, obox, draw: () => drawC(c) });
     });
     lista.filter(c => c.tipo === 'muralla').forEach(c => {
       const gx = c.pos[0], gy = c.pos[1], v = vecinos(gx, gy);
@@ -937,7 +946,7 @@ const HacIso = (function () {
       acts.sort((p, q) => sc.before(p.box, q.box) ? -1 : (sc.before(q.box, p.box) ? 1 : 0));
       acts.forEach(a => {
         let idx = render.length;
-        for (let i = 0; i < render.length; i++) { if (sc.before(a.box, render[i].box)) { idx = i; break; } }
+        for (let i = 0; i < render.length; i++) { if (sc.before(a.box, render[i].obox || render[i].box)) { idx = i; break; } }
         render.splice(idx, 0, a);
       });
       g.save();
