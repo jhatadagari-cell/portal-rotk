@@ -64,6 +64,8 @@ const HacEnergia = (function () {
 
   // Suma energía (p.ej. comida del mercado), topada a MAX, y persiste.
   async function add(hid, mid, amount) {
+    await ready();
+    if (!ok) { console.warn('[HacEnergia] add omitido: datos no cargados'); return; }
     const nowMs = now();
     const nv = Math.max(0, Math.min(MAX, current(hid, mid) + (amount || 0)));
     const i = cache.findIndex(r => r.haciendaId === hid && r.miembroId === mid);
@@ -85,6 +87,8 @@ const HacEnergia = (function () {
 
   // Descuenta `coste` de la energía ACTUAL y persiste (instante = ahora).
   async function spend(hid, mid, coste) {
+    await ready();
+    if (!ok) { console.warn('[HacEnergia] spend omitido: datos no cargados'); return; }
     const nowMs = now();
     const nv = Math.max(0, current(hid, mid) - (coste || 0));
     const i = cache.findIndex(r => r.haciendaId === hid && r.miembroId === mid);

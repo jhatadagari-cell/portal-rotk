@@ -54,6 +54,11 @@ const HacPuntos = (function () {
 
   async function award(hid, mid, n) {
     if (!n) return;
+    // ANTI-PISOTÓN: calcula el valor nuevo SOLO con la caché ya cargada. Si la
+    // carga no tuvo éxito (ok=false), no escribimos: si no, deMiembro() daría 0
+    // y el upsert machacaría los puntos reales con solo el incremento.
+    await ready();
+    if (!ok) { console.warn('[HacPuntos] award omitido: datos no cargados'); return; }
     const nv = deMiembro(hid, mid) + n;
     const i = cache.findIndex(x => x.haciendaId === hid && x.miembroId === mid);
     if (i >= 0) cache[i].puntos = nv; else cache.push({ haciendaId: hid, miembroId: mid, puntos: nv });   // optimista

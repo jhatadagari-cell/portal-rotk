@@ -142,6 +142,22 @@ const HacStats = (function () {
 
   let caballoCol = true;   // false si la columna `caballo` aún no existe (falta caballo.sql)
   async function persist(r) {
+    // ── SEGURIDAD ANTI-PISOTÓN ────────────────────────────────────────────
+    // persist() hace un UPSERT de la FILA COMPLETA (xp, dinero, inventario…).
+    // Si escribiéramos una fila fabricada por ensure() cuando la caché NO
+    // refleja la BD, machacaríamos el XP/dinero reales con ceros. Eso pasaba
+    // cuando load() fallaba (fallo transitorio de red → ok=false, caché vacía)
+    // o iba en curso: una mutación fabricaba {mid, todo a 0} y el upsert lo
+    // volcaba, "reseteando" al mecenas a nivel 1. Dos guardas lo impiden:
+    //   1) ok===false  → la carga inicial NUNCA tuvo éxito: no escribimos.
+    //   2) r fuera de la caché actual → quedó huérfana tras un (re)load: la
+    //      caché recargada es la verdad; descartamos la escritura obsoleta.
+    // Con ok===true la caché tiene TODAS las filas de la BD, así que ensure()
+    // devuelve la fila real (no fabrica), y un mecenas nuevo (fila a 0 legítima)
+    // sí está en la caché → se persiste bien.
+    await ready();
+    if (!ok) { console.warn('[HacStats] persist omitido: datos no cargados (evita resetear stats)'); return; }
+    if (cache.indexOf(r) < 0) { console.warn('[HacStats] persist omitido: fila desincronizada tras recarga'); return; }
     try {
       const client = await sb();
       const rowData = {
