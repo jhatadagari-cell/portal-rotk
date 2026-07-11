@@ -1326,6 +1326,17 @@
     let debjShownRound = -1, debjShownP = null, debjAnimating = false;   // para la animación de clash
     const skillDe = (pjId, tema) => debNivel(pjId, tema);
     const stanceOf = (id) => (DEB.STANCES || []).find(s => s.id === id) || { zh: '?', nombre: '?' };
+    // Aptitud + aspecto del personaje (para dibujarlo con HacChar). NPC → color de la casa.
+    function debateAspecto(pjId) {
+      const m = (h.miembros || []).find(x => walkerIdOf(x) === pjId);
+      const pj = (m && m.personajeId && window.HacPersonajes && HacPersonajes.get) ? HacPersonajes.get(m.personajeId) : null;
+      return { aptitud: pj ? pj.aptitud : '', aspecto: pj ? (pj.aspecto || {}) : { robe: (m && m.color) || color } };
+    }
+    function pintarRetrato(cv, pjId, dir) {
+      if (!window.HacChar || !HacChar.draw) return;
+      const a = debateAspecto(pjId);
+      try { HacChar.draw(cv, { aptitud: a.aptitud, aspecto: a.aspecto, dir, pose: 'stand', frame: 0, scale: 3 }); } catch (e) {}
+    }
     function ensureDebjEl() {
       if (debjEl) return debjEl;
       debjEl = document.createElement('div');
@@ -1386,8 +1397,8 @@
       // Última ronda con ambas jugadas (para mostrar el intercambio).
       const j = d.jugadas || [], curRound = completo ? DEB.ROUNDS - 1 : info.round;
       const ask = j[curRound * 2], resp = j[curRound * 2 + 1];
-      const askTxt = ask ? DEB.frase(d.tema, 'ask', ask.s) : '…';
-      const respTxt = resp ? DEB.frase(d.tema, 'resp', resp.s) : (ask ? '…' : '');
+      const askTxt = ask ? DEB.frase(d.tema, 'ask', ask.s, curRound * 2) : '…';
+      const respTxt = resp ? DEB.frase(d.tema, 'resp', resp.s, curRound * 2 + 1) : (ask ? '…' : '');
       const aH = (curRound % 2 === 0);   // ¿pregunta el host esta ronda?
       // prompt del turno
       let prompt, choices = '';
@@ -1397,7 +1408,7 @@
         const rem = Math.max(0, Math.ceil((DEB.turnoDeadline(d) - clock()) / 1000));
         if (miTurno) {
           prompt = (info.rol === 'ask' ? 'Tu turno · plantea tu argumento' : 'Tu turno · replica') + ` <span class="hacp-deb-countdown">${rem}s</span>`;
-          choices = '<div class="hacp-debj-choices">' + DEB.STANCES.map(s => `<button type="button" class="hacp-debj-arg t-${s.id}" data-st="${s.id}"><span class="zh">${s.zh}</span><span class="nb">${esc(s.nombre)}</span><span class="ph">${esc(DEB.frase(d.tema, info.rol, s.id))}</span></button>`).join('') + '</div>';
+          choices = '<div class="hacp-debj-choices">' + DEB.STANCES.map(s => `<button type="button" class="hacp-debj-arg t-${s.id}" data-st="${s.id}"><span class="zh">${s.zh}</span><span class="nb">${esc(s.nombre)}</span><span class="ph">${esc(DEB.frase(d.tema, info.rol, s.id, i))}</span></button>`).join('') + '</div>';
         } else {
           const nm = actorId === d.hostId ? d.hostNombre : d.invitadoNombre;
           prompt = `Espera a <b>${esc(nm || 'tu rival')}</b>… <span class="hacp-deb-countdown">${rem}s</span>`;
@@ -1409,13 +1420,13 @@
       el.innerHTML = `<div class="hacp-shop-box hacp-debj-box">
         <button type="button" class="hacp-shop-x" data-act="x" aria-label="Cerrar">✕</button>
         <div class="hacp-debj-head"><span class="hacp-deb-seal">論</span>Debate de ${esc(t ? t.nombre : d.tema)}<span class="hacp-debj-round">Ronda ${round}/${DEB.ROUNDS}</span></div>
-        <div class="hacp-debj-arena">
-          <div class="hacp-debj-fighter a${!completo && DEB.turnActorId(d, i) === d.hostId ? ' on' : ''}"><div class="g">${doms}</div><div class="nm">${esc(d.hostNombre || 'Anfitrión')}</div></div>
+        <div class="hacp-debj-arena" data-focus="${completo ? 'both' : (DEB.turnActorId(d, i) === d.hostId ? 'host' : 'inv')}">
+          <div class="hacp-debj-fighter a${!completo && DEB.turnActorId(d, i) === d.hostId ? ' on' : ''}"><canvas class="hacp-debj-portrait" data-pj="host"></canvas><div class="nm">${esc(d.hostNombre || 'Anfitrión')}</div></div>
           <div class="hacp-debj-center">
             <div class="hacp-debj-bubble${aH ? ' a' : ' b'}${ask ? '' : ' ghost'}">${esc(askTxt)}</div>
             <div class="hacp-debj-bubble${aH ? ' b' : ' a'}${resp ? '' : ' ghost'}">${esc(respTxt || '…')}</div>
           </div>
-          <div class="hacp-debj-fighter b${!completo && DEB.turnActorId(d, i) === d.invitadoId ? ' on' : ''}"><div class="g">${doms}</div><div class="nm">${esc(d.invitadoNombre || 'Invitado')}</div></div>
+          <div class="hacp-debj-fighter b${!completo && DEB.turnActorId(d, i) === d.invitadoId ? ' on' : ''}"><canvas class="hacp-debj-portrait" data-pj="inv"></canvas><div class="nm">${esc(d.invitadoNombre || 'Invitado')}</div></div>
         </div>
         ${flash}
         <div class="hacp-debj-turn">${prompt}</div>
@@ -1425,6 +1436,8 @@
       </div>`;
       el.querySelector('[data-act="x"]').addEventListener('click', cerrarDebateJuego);
       el.querySelectorAll('[data-st]').forEach(b => b.addEventListener('click', () => elegirArgumento(b.dataset.st)));
+      // Los personajes REALES (mecenas) mirándose de frente.
+      el.querySelectorAll('.hacp-debj-portrait').forEach(cv => pintarRetrato(cv, cv.dataset.pj === 'host' ? d.hostId : d.invitadoId, cv.dataset.pj === 'host' ? 'SE' : 'SW'));
       // Se cerró una ronda nueva → CLASH animado + la balanza se desliza al nuevo valor.
       if (newlyDone) {
         const round = rondas[rondas.length - 1], oldP = (debjShownP != null) ? debjShownP : p;
@@ -1539,6 +1552,7 @@
         .hacp-debj-fighter .g{font:700 26px 'Noto Serif SC',serif;color:#e8c064;line-height:1}
         .hacp-debj-fighter.b .g{color:#d98a6e}
         .hacp-debj-fighter .nm{font-weight:700;font-size:13px;margin-top:3px;color:#efe2c2}
+        .hacp-debj-portrait{display:block;height:66px;width:auto;margin:0 auto;image-rendering:pixelated}
         .hacp-debj-center{flex:1;display:flex;flex-direction:column;gap:6px;min-height:78px;justify-content:center}
         .hacp-debj-bubble{position:relative;border-radius:10px;padding:7px 11px;font-size:13px;line-height:1.3;max-width:90%}
         .hacp-debj-bubble.a{align-self:flex-start;background:rgba(232,192,96,.14);border:1px solid rgba(232,192,96,.4);color:#f0e2bf}
@@ -1590,6 +1604,18 @@
           .hacp-debj-head{font-size:16px}
           .hacp-debj-arena{gap:6px}
           .hacp-debj-fighter{flex-basis:64px;padding:8px 3px}.hacp-debj-fighter .g{font-size:22px}
+          /* ── ENFOQUE móvil: solo se ve el personaje del turno; ambos en el clash ── */
+          .hacp-debj-arena{flex-wrap:wrap;justify-content:center;gap:4px}
+          .hacp-debj-center{order:3;flex:0 0 100%}
+          .hacp-debj-arena[data-focus="host"] .hacp-debj-fighter.b,
+          .hacp-debj-arena[data-focus="inv"] .hacp-debj-fighter.a{display:none}
+          .hacp-debj-arena[data-focus="host"] .hacp-debj-fighter.a,
+          .hacp-debj-arena[data-focus="inv"] .hacp-debj-fighter.b{flex:0 0 auto;background:none;border:0;padding:2px}
+          .hacp-debj-arena[data-focus="host"] .hacp-debj-portrait,
+          .hacp-debj-arena[data-focus="inv"] .hacp-debj-portrait{height:132px}
+          .hacp-debj-arena[data-focus="host"] .hacp-debj-fighter .nm,
+          .hacp-debj-arena[data-focus="inv"] .hacp-debj-fighter .nm{font-size:15px}
+          .hacp-debj-arena[data-focus="both"] .hacp-debj-portrait{height:72px}
           .hacp-debj-center{min-height:70px}.hacp-debj-bubble{font-size:12.5px;padding:6px 9px}
           .hacp-debj-choices{gap:6px}.hacp-debj-arg{padding:9px 4px}.hacp-debj-arg .zh{font-size:20px}.hacp-debj-arg .nb{font-size:12px}.hacp-debj-arg .ph{font-size:12px}
           .hacp-debj-clash{top:46px;height:140px}.hacp-debj-clash .row{gap:12px}.cl-side .zh{font-size:34px}.cl-verdict{font-size:13.5px}

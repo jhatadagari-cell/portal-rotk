@@ -169,15 +169,40 @@ const HacDebates = (function () {
   const contra = (b) => (STANCES.find(s => s.vence === b) || STANCES[0]).id;   // la que gana a b
   // Frases temáticas por tema × postura (pregunta / respuesta). El RPS se juega sobre la
   // POSTURA; el texto es sabor. La respuesta "contesta" en el tono de esa postura.
+  // POOL de argumentos: varias variantes por tema × rol (ask=pregunta/reto, resp=réplica)
+  // × postura, para que el intercambio se sienta como un debate de verdad. `frase()`
+  // elige la variante por índice de turno (determinista → igual en todos los clientes).
   const FRASES = Object.freeze({
-    guerra:         { ask: { ofensiva: 'Sin audacia no hay victoria: ¡ataquemos ya!', cautelosa: 'El mejor general vence sin librar batalla.', ingeniosa: 'Engaña al enemigo y la guerra está ganada.' }, resp: { ofensiva: '¡Tu prudencia será tu tumba, cargo yo!', cautelosa: 'Tu ímpetu se estrella contra mi muro.', ingeniosa: 'Preví tu treta y la vuelvo contra ti.' } },
-    letras:         { ask: { ofensiva: 'Los clásicos me dan la razón, ¡refútalos!', cautelosa: 'Cada cita, medida; cada palabra, exacta.', ingeniosa: 'Un verso oportuno desarma tu tesis.' }, resp: { ofensiva: 'Recito de memoria lo que tú olvidas.', cautelosa: 'Tu retórica es humo; mi fuente, sólida.', ingeniosa: 'Con una analogía deshago tu argumento.' } },
-    administracion: { ask: { ofensiva: '¡Los números no mienten y te aplastan!', cautelosa: 'Registremos todo antes de decidir.', ingeniosa: 'Un pequeño ajuste y el balance cambia.' }, resp: { ofensiva: 'Mis cuentas son firmes; las tuyas, aire.', cautelosa: 'Sin pruebas en el libro, no hay caso.', ingeniosa: 'Reinterpreto tu dato a mi favor.' } },
-    estrategia:     { ask: { ofensiva: 'Golpeemos por el flanco antes del alba.', cautelosa: 'Fortifiquémonos y aguardemos su error.', ingeniosa: 'Finjamos retirada y tendamos la trampa.' }, resp: { ofensiva: 'Contraataco donde menos lo esperas.', cautelosa: 'Tu avance se agota; yo resisto.', ingeniosa: 'Tu plan ya lo había anticipado.' } },
-    gobierno:       { ask: { ofensiva: 'Mano dura: la ley se impone sin temblar.', cautelosa: 'Gobernar es prever, no reaccionar.', ingeniosa: 'Con un decreto astuto los desarmo a todos.' }, resp: { ofensiva: 'Tu rigor sin pueblo es tiranía vacía.', cautelosa: 'Toda prisa en el mando trae desorden.', ingeniosa: 'Tu edicto tiene una grieta que aprovecho.' } },
-    diplomacia:     { ask: { ofensiva: '¡Exijo respeto o rompo la alianza!', cautelosa: 'Midamos cada palabra en la embajada.', ingeniosa: 'Un halago a tiempo abre toda puerta.' }, resp: { ofensiva: 'Tu amenaza me da la razón ante la corte.', cautelosa: 'La paciencia teje pactos que tu prisa deshace.', ingeniosa: 'Convierto tu exigencia en mi ventaja.' } },
+    guerra: {
+      ask: { ofensiva: ['Sin audacia no hay victoria: ¿por qué esperar?', '¿Vas a temblar mientras el enemigo avanza?'], cautelosa: ['¿No es más sabio vencer sin librar batalla?', '¿De qué sirve el arrojo sin un plan?'], ingeniosa: ['¿Y si el engaño valiera más que mil lanzas?', '¿Quién dijo que la guerra se gana de frente?'] },
+      resp: { ofensiva: ['¡Mientras dudas, ya he tomado la colina!', 'Tu prudencia no es más que miedo disfrazado.'], cautelosa: ['Tu ímpetu se estrellará contra mi muro.', 'Corre tú al frente; yo aguardaré tu error.'], ingeniosa: ['Ya preví tu treta y la vuelvo contra ti.', 'Tu fuerza es tan predecible como tu caída.'] },
+    },
+    letras: {
+      ask: { ofensiva: ['Los clásicos me dan la razón, ¿osas refutarlos?', '¿Contradices tú lo que escribieron los sabios?'], cautelosa: ['¿No merece cada palabra su medida?', '¿No es la fuente más firme que la elocuencia?'], ingeniosa: ['¿Y si un solo verso deshiciera tu tesis?', '¿No dice más una metáfora que mil citas?'] },
+      resp: { ofensiva: ['Recito de memoria lo que tú apenas hojeaste.', 'Tu duda insulta a los maestros.'], cautelosa: ['Tu retórica es humo; mi fuente, sólida.', 'Sin rigor, tu ingenio es solo ruido.'], ingeniosa: ['Con una analogía desmonto tu argumento.', 'Le doy la vuelta a tu cita y te contradice.'] },
+    },
+    administracion: {
+      ask: { ofensiva: ['¡Los números no mienten y te aplastan!', '¿Puedes negar lo que dicta el registro?'], cautelosa: ['¿No conviene anotarlo todo antes de decidir?', '¿No es la prudencia la mejor hacienda?'], ingeniosa: ['¿Y si un pequeño ajuste cambiara el balance?', '¿Quién controla el grano, no controla el reino?'] },
+      resp: { ofensiva: ['Mis cuentas son firmes; las tuyas, aire.', 'Tu desorden se ve en cada cifra.'], cautelosa: ['Sin pruebas en el libro, no hay caso.', 'Tu prisa arruinaría el granero.'], ingeniosa: ['Reinterpreto tu dato y ahora me favorece.', 'Un asiento bien puesto vale más que tu grito.'] },
+    },
+    estrategia: {
+      ask: { ofensiva: ['¿Golpeamos por el flanco antes del alba?', '¿A qué esperar, si podemos romper su línea?'], cautelosa: ['¿No es mejor fortificarnos y aguardar su error?', '¿Para qué arriesgar lo que el tiempo nos dará?'], ingeniosa: ['¿Y si fingimos retirada y les tendemos la trampa?', '¿No vale una emboscada más que un asalto?'] },
+      resp: { ofensiva: ['Contraataco donde menos lo esperas.', 'Tu defensa cede al primer empujón.'], cautelosa: ['Tu avance se agota; yo resisto.', 'Cada paso tuyo te aleja de tus suministros.'], ingeniosa: ['Tu plan ya lo había anticipado.', 'Caes en la trampa que creías tender.'] },
+    },
+    gobierno: {
+      ask: { ofensiva: ['¿No se impone la ley con mano firme?', '¿Toleraremos el desorden un día más?'], cautelosa: ['¿No es gobernar prever, y no reaccionar?', '¿No trae la calma mejor cosecha que el rigor?'], ingeniosa: ['¿Y si un decreto astuto los desarmara a todos?', '¿No se domina mejor con maña que con fuerza?'] },
+      resp: { ofensiva: ['Tu rigor sin pueblo es tiranía vacía.', 'Mando yo donde tú solo amenazas.'], cautelosa: ['Toda prisa en el mando trae desorden.', 'La paciencia sostiene lo que tu ley quiebra.'], ingeniosa: ['Tu edicto tiene una grieta y la aprovecho.', 'Tu astucia se enreda en sus propias leyes.'] },
+    },
+    diplomacia: {
+      ask: { ofensiva: ['¿Respeto, o rompo aquí mismo la alianza?', '¿Crees que cederé un solo palmo?'], cautelosa: ['¿No merece cada palabra su peso en la embajada?', '¿No teje la paciencia mejores pactos?'], ingeniosa: ['¿Y si un halago a tiempo abriera toda puerta?', '¿No se gana más con una sonrisa que con un ejército?'] },
+      resp: { ofensiva: ['Tu amenaza me da la razón ante la corte.', 'Alzas la voz porque te falta el argumento.'], cautelosa: ['La paciencia teje lo que tu prisa deshace.', 'Un pacto medido dura más que tu bravata.'], ingeniosa: ['Convierto tu exigencia en mi ventaja.', 'Tu halago lo devuelvo y te comprometo.'] },
+    },
   });
-  const frase = (tema, rol, stance) => (FRASES[tema] && FRASES[tema][rol] && FRASES[tema][rol][stance]) || '…';
+  const frase = (tema, rol, stance, idx) => {
+    const a = FRASES[tema] && FRASES[tema][rol] && FRASES[tema][rol][stance];
+    if (!a) return '…';
+    return a[((idx | 0) % a.length + a.length) % a.length];
+  };
 
   const askerIsHost = (round) => round % 2 === 0;   // ronda 1 (r0): pregunta el host
   // Info de un turno i (0..9): ronda, rol (ask/resp) y lado (host/inv) que actúa.
