@@ -631,9 +631,14 @@
       if (!o) { _wasOnMission = false; return; }
       const me = HacFolk.list().find(w => w.id === myId);
       const onM = !!(me && me.onMission);
-      const hardDone = clock() > o.inicioMs + (o.duracionSeg || 60) * 1000 + 90000;   // saludo+viaje+tarea, con margen
-      const liveDone = _wasOnMission && !onM;                                          // el sim la acaba de completar
-      if (hardDone || liveDone) {
+      const hardDone = clock() > o.inicioMs + (o.duracionSeg || 60) * 1000 + 90000;   // tope de seguridad amplio
+      const liveDone = _wasOnMission && !onM;                                          // el sim la acaba de completar (observado)
+      // Backstop ROBUSTO: aunque NO se observara la transición onMission→false (p.ej.
+      // recarga a media misión o pestaña oculta), si el mecenas ya está EN LA FINCA
+      // (existe en el sim y no está en misión) y su duración nominal transcurrió, la
+      // misión está hecha → premia y limpia. Antes se quedaba "ocupado" colgado.
+      const doneByTime = !!me && !onM && clock() > o.inicioMs + (o.duracionSeg || 120) * 1000;
+      if (hardDone || liveDone || doneByTime) {
         // Las ESCARAMUZAS (cooperativas) NO se premian aquí: al volver, solo se limpia
         // la orden; el reparto de dinero/botín/heridas lo hará la resolución de la banda (4c).
         if (String(o.targetId || '').indexOf('escaramuza:') === 0) {
