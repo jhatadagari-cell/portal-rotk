@@ -182,7 +182,7 @@
 <script src="assets/js/hac-perfiles.js?v=1"></script>
 <script src="assets/js/hac-competencias.js?v=1"></script>
 <script src="assets/js/hac-puntos.js?v=1"></script>
-<script src="assets/js/hac-stats.js?v=8"></script>
+<script src="assets/js/hac-stats.js?v=9"></script>
 <script src="assets/js/iso-sprites-meta.js?v=22"></script>
 <script src="assets/js/iso-sprites-extra.js?v=13"></script>
 <script src="assets/js/iso-sprites-wei.js?v=10"></script>
@@ -1524,6 +1524,13 @@
     const curPer = editing ? editing.personalidad : 'audaz';
     const curApt = editing ? editing.aptitud : 'guerrero';
 
+    // Estadísticas (nivel por dominio) — vienen de mecenas_stats vía HacStats. Los
+    // NPC sin fila salen a nivel 1 en todo; el admin los fija aquí para los retos
+    // por stats (debates, escaramuzas…). Al crear un personaje nuevo, por defecto 1.
+    const statOk = !!(window.HacStats && HacStats.nivel && HacStats.setNiveles);
+    const statDbOk = statOk && HacStats.dbOk && HacStats.dbOk();
+    const curLvl = (dom) => (editing && statOk) ? HacStats.nivel(editing.id, dom) : 1;
+
     const dbWarn = !dbOk
       ? `<div class="adm-tareas-seed">⚠ La tabla <b>personajes</b> no existe o no responde. Ejecuta <code>supabase/personajes.sql</code> en Supabase (SQL Editor) para crear y guardar personajes.</div>`
       : '';
@@ -1606,6 +1613,20 @@
                 <label class="adm-pj-asp-row">Túnica <input type="color" id="pj-robe" value="${esc(robeVal)}"${dis}></label>
                 <span class="adm-pj-asp-row">Piel <span class="adm-pj-sws">${skinSw}</span></span>
                 <span class="adm-pj-asp-row">Pelo <span class="adm-pj-sws">${hairSw}</span></span>
+              </div>
+            </div>
+            <div class="adm-pj-pick adm-pj-stats">
+              <span class="adm-pj-picklbl">Estadísticas <i>· nivel por dominio (retos: debates, escaramuzas…)</i></span>
+              ${statDbOk ? '' : `<div class="adm-pj-stats-warn">⚠ La tabla <b>mecenas_stats</b> no responde. Ejecuta <code>supabase/mecenas_stats.sql</code> para poder guardar los niveles.</div>`}
+              <div class="adm-pj-statrow">
+                ${['militar', 'cultural', 'administrativo'].map(dk => {
+                  const dd = D.dominio(dk) || {};
+                  return `<label class="adm-pj-stat" title="${esc(dd.nombre || dk)}">
+                    <span class="adm-pj-stat-zh">${esc(dd.zh || '')}</span>
+                    <span class="adm-pj-stat-name">${esc(dd.nombre || dk)}</span>
+                    <input type="number" name="lvl_${dk}" min="1" max="999" step="1" value="${curLvl(dk)}"${(statOk && statDbOk) ? '' : ' disabled'}>
+                  </label>`;
+                }).join('')}
               </div>
             </div>
           </div>
@@ -1697,8 +1718,30 @@
       const personalidad = (f.querySelector('input[name=personalidad]:checked') || {}).value || '';
       const aptitud = (f.querySelector('input[name=aptitud]:checked') || {}).value || '';
       const aspecto = { robe: pjAspecto.robe || '', piel: Number(pjAspecto.piel) || 0, pelo: Number(pjAspecto.pelo) || 0 };
-      if (pjEditId) HacPersonajes.update({ id: pjEditId, nombre, personalidad, aptitud, aspecto }).catch(onPjError('guardar'));
-      else HacPersonajes.add({ nombre, personalidad, aptitud, aspecto }).catch(onPjError('crear'));
+
+      // Niveles editados. Solo guardamos los dominios cuyo nivel CAMBIÓ respecto al
+      // actual (evita pisar el XP parcial de un dominio que no se ha tocado). Para
+      // un personaje nuevo, "actual" = 1 en todo.
+      const clampLvl = (v) => Math.max(1, Math.min(999, parseInt(v, 10) || 1));
+      const editId = pjEditId;
+      const curOf = (dom) => (editId && window.HacStats && HacStats.nivel) ? HacStats.nivel(editId, dom) : 1;
+      const cambios = {};
+      ['militar', 'cultural', 'administrativo'].forEach(dk => {
+        const inp = f.querySelector('[name=lvl_' + dk + ']');
+        if (!inp || inp.disabled) return;
+        const n = clampLvl(inp.value);
+        if (n !== curOf(dk)) cambios[dk] = n;
+      });
+      const hayCambios = Object.keys(cambios).length > 0;
+
+      if (editId) {
+        HacPersonajes.update({ id: editId, nombre, personalidad, aptitud, aspecto }).catch(onPjError('guardar'));
+        if (hayCambios && window.HacStats && HacStats.setNiveles) HacStats.setNiveles(editId, cambios);
+      } else {
+        HacPersonajes.add({ nombre, personalidad, aptitud, aspecto })
+          .then(obj => { if (obj && hayCambios && window.HacStats && HacStats.setNiveles) HacStats.setNiveles(obj.id, cambios); })
+          .catch(onPjError('crear'));
+      }
       pjResetForm();
       renderPersonajes();
     });

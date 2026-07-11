@@ -110,15 +110,24 @@ const HacStats = (function () {
   // (suma de expedPct, tope 0.6 para no llegar a 0). Fracciones (0.05 = 5%).
   function bonusDinero(mid) { const r = row(mid); if (!r || !window.HacTienda) return 0; let s = 0; r.equipado.forEach(id => { const b = HacTienda.equipBonus(id); if (b && b.dineroPct) s += b.dineroPct; }); return s; }
   function bonusExped(mid) { const r = row(mid); if (!r || !window.HacTienda) return 0; let s = 0; r.equipado.forEach(id => { const b = HacTienda.equipBonus(id); if (b && b.expedPct) s += b.expedPct; }); return Math.min(0.6, s); }
-  // Usa un MANUAL de la mochila: +XP fija a su dominio y se consume. {ok, dom, xp}.
+  // Usa un MANUAL de la mochila: +XP fija y se consume. Admite dos formas de efecto:
+  //   { dom, xp }              → clásico, un solo dominio.
+  //   { xp: { dom: n, … } }    → multi-dominio (libros de conclusiones de combo).
+  // Devuelve { ok, ganado:{dom:xp}, dom?, xp? } (dom/xp por compatibilidad si es simple).
   function usarManual(mid, id) {
     const m = window.HacTienda && HacTienda.manualDe ? HacTienda.manualDe(id) : null;
     if (!m) return { ok: false, motivo: 'No es un manual' };
     const r = ensure(mid);
     if (!quita(r.inv, id)) return { ok: false, motivo: 'No lo llevas en la mochila' };
-    if (DOMS.indexOf(m.dom) >= 0) r[m.dom] += (m.xp || 0);
+    const ganado = {};
+    if (m.xp && typeof m.xp === 'object') {                    // forma multi-dominio
+      Object.keys(m.xp).forEach(d => { if (DOMS.indexOf(d) >= 0) { r[d] += (m.xp[d] || 0); ganado[d] = m.xp[d] || 0; } });
+    } else if (DOMS.indexOf(m.dom) >= 0) {                     // forma clásica {dom, xp}
+      r[m.dom] += (m.xp || 0); ganado[m.dom] = m.xp || 0;
+    }
     persist(r);
-    return { ok: true, dom: m.dom, xp: m.xp || 0 };
+    const simple = !(m.xp && typeof m.xp === 'object');
+    return { ok: true, ganado, dom: simple ? m.dom : null, xp: simple ? (m.xp || 0) : null };
   }
   function nivelTotal(mid, dom) { return nivel(mid, dom) + bonus(mid, dom); }
   // Equipa un objeto de la MOCHILA (máx 3). Devuelve {ok, motivo}.
@@ -248,6 +257,23 @@ const HacStats = (function () {
     return r;
   }
 
+  // ── ADMIN: fija los NIVELES de dominio de un mecenas (NPC) ────────────────
+  // Los mecenas NPC no tienen fila en mecenas_stats → salen a nivel 1 en todo
+  // (1-1-1). Esto es un problema para retos por stats (p. ej. debatir con Cao
+  // Cao). El admin fija el NIVEL de cada dominio y aquí lo traducimos al XP
+  // MÍNIMO de ese nivel (xpAcum), de modo que nivel()/nivelTotal() devuelvan
+  // exactamente lo pedido y el resto de la mecánica (curva, sendas) siga valiendo.
+  // `niveles` = { militar?, cultural?, administrativo? } (1..999). Solo escribe
+  // los dominios presentes; el resto de la fila (dinero, inventario…) se preserva.
+  function nivelAXp(n) { return xpAcum(Math.max(1, Math.min(999, n | 0))); }
+  function setNiveles(mid, niveles) {
+    if (!mid || !niveles) return null;
+    const r = ensure(mid);
+    for (const d of DOMS) if (niveles[d] != null) r[d] = nivelAXp(niveles[d]);
+    persist(r);
+    return r;
+  }
+
   // Compra de un artículo del mercado: descuenta dinero y aplica el efecto en una
   // sola escritura (XP / ampliación de inventario / objeto guardado). La energía
   // (comida) la añade quien llama vía HacEnergia. Devuelve {ok, motivo}.
@@ -341,6 +367,6 @@ const HacStats = (function () {
     persist(r); return { ok: true, dinero: r.dinero };
   }
 
-  return { ready, reload, dinero, ahorro, casaPos, casasReclamadas, duenoDeCasa, comprarCasa, liberarCasa, abandonar, heridas, penHerida, malherido, herir, curar, secuelas, tieneSecuela, escaramuzaCd, bonusDinero, bonusExped, usarManual, xp, nivel, progresoNivel, bonus, nivelTotal, nivelPersonaje, puntosTalento, talentos, puntosGastados, puntosLibres, tieneTalento, aprenderTalento, equipados, equipar, desequipar, MAX_EQUIP, award, comprar, guardar, sacar, darItem, meterEnCasa, sacarDeCasa, inventario, casaInventario, capInventario, ocupadas, recompensaExped, caballo, tieneCaballo, comprarCaballo, venderItem, DOMS, dbOk: () => ok, TABLE };
+  return { ready, reload, dinero, ahorro, casaPos, casasReclamadas, duenoDeCasa, comprarCasa, liberarCasa, abandonar, heridas, penHerida, malherido, herir, curar, secuelas, tieneSecuela, escaramuzaCd, bonusDinero, bonusExped, usarManual, xp, nivel, progresoNivel, bonus, nivelTotal, nivelPersonaje, setNiveles, puntosTalento, talentos, puntosGastados, puntosLibres, tieneTalento, aprenderTalento, equipados, equipar, desequipar, MAX_EQUIP, award, comprar, guardar, sacar, darItem, meterEnCasa, sacarDeCasa, inventario, casaInventario, capInventario, ocupadas, recompensaExped, caballo, tieneCaballo, comprarCaballo, venderItem, DOMS, dbOk: () => ok, TABLE };
 })();
 if (typeof window !== 'undefined') window.HacStats = HacStats;
