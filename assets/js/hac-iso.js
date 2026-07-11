@@ -22,7 +22,7 @@ const HacIso = (function () {
   const TOP_MARGIN = 132;             // hueco arriba para edificios altos, murallas y torres
   const PAD_X = 40;                   // margen lateral para murallas y paseo de ronda
   const SPRITE_BASE = 'assets/img/iso/';
-  const SPRITE_VER = '55';  // súbelo al regenerar los PNG (cache-busting)
+  const SPRITE_VER = '56';  // súbelo al regenerar los PNG (cache-busting)
 
   // ── Color helpers (para el placeholder) ─────────────────────────────────
   const { hexToRgb, clamp255: cl } = HacUtil;
@@ -388,7 +388,7 @@ const HacIso = (function () {
       const pick = hash(gx * 2.7 + 5, gy * 3.1 + 8), vv = (hash(gx * 1.9 + 2, gy * 2.3 + 7) * 99) | 0;
       // ÁRBOLES a mano (verano): reemplazan a los procedurales. Menos frecuentes que
       // antes (son grandes → que no sature) — el resto son matas/rocas bajas.
-      if (hasImgTrees && pick < 0.32) return { img: pickTree(gx, gy), sh: 12, scale: 0.46, tree: true };
+      if (hasImgTrees && pick < 0.20) return { img: pickTree(gx, gy), sh: 12, scale: 0.46, tree: true };
       if (FLORA && !hasImgTrees && pick < 0.5) { const sp = HacFlora.SPECIES[(hash(gx * 5.1 + 3, gy * 4.7 + 6) * HacFlora.SPECIES.length) | 0]; return { cv: FLORA.tree(sp, seasonKey, vv), sh: 13 }; }
       if (imgPlants.length) { const k = imgPlants[(hash(gx * 4.9 + 6, gy * 3.7 + 2) * imgPlants.length) | 0]; return { img: PLANTS[k], sh: k === 'rock' || k === 'bushrock' ? 8 : 6 }; }
       if (!FLORA) return { blob: true, sh: 9 };
