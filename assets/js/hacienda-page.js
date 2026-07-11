@@ -1322,8 +1322,10 @@
     // Ventana en vivo: dos mecenas a izq/der, 5 rondas alternando quién pregunta. En tu
     // turno eliges 1 de 3 posturas (argumentos temáticos); si el turno activo no responde
     // en 60 s, la IA elige (determinista). Cada ronda mueve el tira y afloja (abajo).
-    let debjEl = null, debjId = null, debjIv = null, debjResueltoRonda = -1;
+    let debjEl = null, debjId = null, debjIv = null;
+    let debjShownRound = -1, debjShownP = null, debjAnimating = false;   // para la animación de clash
     const skillDe = (pjId, tema) => debNivel(pjId, tema);
+    const stanceOf = (id) => (DEB.STANCES || []).find(s => s.id === id) || { zh: '?', nombre: '?' };
     function ensureDebjEl() {
       if (debjEl) return debjEl;
       debjEl = document.createElement('div');
@@ -1335,7 +1337,10 @@
     function abrirDebateJuego() {
       const d = DEB && DEB.miDebate(h.id, myId);
       if (!d) { toast('No tienes un debate en curso'); return; }
-      debjId = d.id; debjResueltoRonda = -1;
+      debjId = d.id; debjAnimating = false;
+      // No re-animar rondas ya resueltas al abrir: arranca "al día".
+      const t0 = DEB.tug(d, debProb(debNivel(d.hostId, d.tema), debNivel(d.invitadoId, d.tema)));
+      debjShownRound = t0.rondas.length; debjShownP = t0.p;
       ensureDebjEl().hidden = false;
       renderDebateJuego();
       if (debjIv) clearInterval(debjIv);
@@ -1345,7 +1350,7 @@
     function cerrarDebateJuego() { if (debjEl) debjEl.hidden = true; if (debjIv) { clearInterval(debjIv); debjIv = null; } debjId = null; }
     let _debjReloadCd = 0;
     function tickDebateJuego() {
-      if (!debjId || !DEB) return;
+      if (!debjId || !DEB || debjAnimating) return;   // en pausa mientras corre el clash
       _debjReloadCd -= 1;
       if (_debjReloadCd <= 0) { _debjReloadCd = 2; DEB.reload().then(() => { syncDebateFolk(); renderDebateJuego(); }); }   // liveness (~2 s)
       const d = DEB.byId(debjId);
@@ -1365,12 +1370,15 @@
       DEB.jugar(d.id, i, stance).then(() => DEB.reload().then(() => { syncDebateFolk(); renderDebateJuego(); })).catch(e => toast((e && e.message) || 'No se pudo argumentar'));
     }
     function renderDebateJuego() {
-      const el = ensureDebjEl(); if (el.hidden) return;
+      const el = ensureDebjEl(); if (el.hidden || debjAnimating) return;
       const d = DEB && DEB.byId(debjId); if (!d) return;
       const t = debTema(d.tema), doms = (t ? t.doms : []).map(dm => DOM_GLYPH[dm]).join('');
       const p0 = debProb(debNivel(d.hostId, d.tema), debNivel(d.invitadoId, d.tema));
       const { p, rondas } = DEB.tug(d, p0);
-      const pH = Math.round(p * 100);
+      // Si acaba de cerrarse una ronda nueva, la balanza arranca en su valor ANTERIOR y el
+      // clash la desliza al nuevo (para que se vea moverse). Si no, se muestra directa.
+      const newlyDone = rondas.length > debjShownRound;
+      const pH = Math.round(((newlyDone && debjShownP != null) ? debjShownP : p) * 100);
       const i = DEB.turnoActual(d), completo = DEB.juegoCompleto(d);
       const info = completo ? null : DEB.turnInfo(i);
       const miTurno = !completo && DEB.turnActorId(d, i) === myId;
@@ -1417,6 +1425,44 @@
       </div>`;
       el.querySelector('[data-act="x"]').addEventListener('click', cerrarDebateJuego);
       el.querySelectorAll('[data-st]').forEach(b => b.addEventListener('click', () => elegirArgumento(b.dataset.st)));
+      // Se cerró una ronda nueva → CLASH animado + la balanza se desliza al nuevo valor.
+      if (newlyDone) {
+        const round = rondas[rondas.length - 1], oldP = (debjShownP != null) ? debjShownP : p;
+        debjShownRound = rondas.length; debjShownP = p;
+        playClashDebate(d, round, oldP, p);
+      }
+    }
+    // Animación del choque de una ronda: ambas posturas entran, chocan, gana una, y la balanza se mueve.
+    function playClashDebate(d, round, oldP, newP) {
+      const box = debjEl && debjEl.querySelector('.hacp-debj-box'); if (!box) return;
+      debjAnimating = true;
+      const aH = round.r % 2 === 0;                       // ¿preguntó el host esta ronda?
+      const hostStance = aH ? round.ask : round.resp, invStance = aH ? round.resp : round.ask;
+      const hs = stanceOf(hostStance), is = stanceOf(invStance);
+      const winName = round.lado === 'host' ? (d.hostNombre || 'Anfitrión') : (d.invitadoNombre || 'Invitado');
+      const winStance = round.lado === 'host' ? hs : is, loseStance = round.lado === 'host' ? is : hs;
+      const verdict = round.lado === 'tie'
+        ? 'Tablas · la balanza no se mueve'
+        : `<b>${esc(winStance.zh)} ${esc(winStance.nombre)}</b> vence a ${esc(loseStance.zh)} ${esc(loseStance.nombre)} · ventaja para <b>${esc(winName)}</b>`;
+      const cl = document.createElement('div'); cl.className = 'hacp-debj-clash';
+      cl.innerHTML = `<div class="row">
+        <div class="cl-side a t-${hostStance}" id="cl-a"><span class="zh">${esc(hs.zh)}</span><span class="nm">${esc(hs.nombre)}</span><span class="who">${esc(d.hostNombre || 'Anfitrión')}</span></div>
+        <div class="cl-spark">⚔</div>
+        <div class="cl-side b t-${invStance}" id="cl-b"><span class="zh">${esc(is.zh)}</span><span class="nm">${esc(is.nombre)}</span><span class="who">${esc(d.invitadoNombre || 'Invitado')}</span></div>
+      </div><div class="cl-verdict">${verdict}</div>`;
+      box.appendChild(cl);
+      setTimeout(() => {   // tras el choque: marca ganador/perdedor y desliza la balanza
+        const a = cl.querySelector('#cl-a'), b = cl.querySelector('#cl-b');
+        if (round.lado === 'host') { a.classList.add('win'); b.classList.add('lose'); }
+        else if (round.lado === 'inv') { b.classList.add('win'); a.classList.add('lose'); }
+        const me = debjEl.querySelector('.hacp-deb-beam .me'), foe = debjEl.querySelector('.hacp-deb-beam .foe');
+        const np = Math.round(newP * 100);
+        if (me) me.style.width = np + '%'; if (foe) foe.style.width = (100 - np) + '%';
+        const lbl = debjEl.querySelectorAll('.hacp-deb-beamlbl span');
+        if (lbl[0]) lbl[0].textContent = (d.hostNombre || 'Anfitrión') + ' ' + np + '%';
+        if (lbl[2]) lbl[2].textContent = (d.invitadoNombre || 'Invitado') + ' ' + (100 - np) + '%';
+      }, 460);
+      setTimeout(() => { if (cl.parentNode) cl.remove(); debjAnimating = false; renderDebateJuego(); }, 2000);
     }
 
     function debStyleOnce() {
@@ -1510,7 +1556,28 @@
         .hacp-debj-arg .nb{font:700 12px system-ui;color:#efe2c2}
         .hacp-debj-arg .ph{font-size:11px;line-height:1.25;color:#b39a72}
         .hacp-debj-beamlbl{display:flex;justify-content:space-between;font-size:12px;color:#d8c8a4;margin-top:4px}
-        .hacp-debj-beamlbl .mut{color:#9a8360}`;
+        .hacp-debj-beamlbl .mut{color:#9a8360}
+        .hacp-deb-beam i{transition:width .7s cubic-bezier(.25,1,.4,1)}
+        .hacp-debj-clash{position:absolute;left:8px;right:8px;top:48px;height:150px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;border-radius:12px;z-index:3;background:radial-gradient(circle at 50% 42%,rgba(34,22,12,.86),rgba(18,11,6,.96))}
+        .hacp-debj-clash .row{display:flex;align-items:center;gap:20px}
+        .cl-side{display:flex;flex-direction:column;align-items:center;gap:2px}
+        .cl-side.a{animation:cl-in-l .34s ease-out both}
+        .cl-side.b{animation:cl-in-r .34s ease-out both}
+        @keyframes cl-in-l{from{opacity:0;transform:translateX(-72px)}to{opacity:1;transform:translateX(0)}}
+        @keyframes cl-in-r{from{opacity:0;transform:translateX(72px)}to{opacity:1;transform:translateX(0)}}
+        .cl-side .zh{font:700 42px 'Noto Serif SC',serif;line-height:1}
+        .cl-side.a .zh{color:#e8c064}.cl-side.b .zh{color:#d98a6e}
+        .cl-side.t-ofensiva .zh{color:#e0715a}.cl-side.t-cautelosa .zh{color:#6fb0e0}.cl-side.t-ingeniosa .zh{color:#9cc47a}
+        .cl-side .nm{font-weight:700;font-size:13px;color:#efe2c2}
+        .cl-side .who{font-size:11px;color:#b39a72}
+        .cl-side.win{animation:none;transform:scale(1.14);transition:transform .3s;filter:drop-shadow(0 0 14px rgba(232,192,96,.7))}
+        .cl-side.lose{animation:cl-shake .34s;transform:scale(.86);opacity:.4;transition:opacity .3s,transform .3s}
+        @keyframes cl-shake{0%,100%{transform:translateX(0) scale(.9)}25%{transform:translateX(-5px) scale(.9)}75%{transform:translateX(5px) scale(.9)}}
+        .cl-spark{font-size:32px;opacity:0;animation:cl-spark .55s .28s ease-out}
+        @keyframes cl-spark{0%{opacity:0;transform:scale(.3) rotate(-20deg)}40%{opacity:1;transform:scale(1.5) rotate(0)}100%{opacity:0;transform:scale(1)}}
+        .cl-verdict{opacity:0;font:700 15px 'Noto Serif SC',serif;color:#f3e6c4;text-align:center;padding:0 10px;animation:cl-fade .4s .62s forwards}
+        .cl-verdict b{color:#e8c877}
+        @keyframes cl-fade{to{opacity:1}}`;
       document.head.appendChild(s);
     }
     debStyleOnce();
