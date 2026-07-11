@@ -549,13 +549,10 @@ const HacIso = (function () {
         // Lados gy (verticales, espejo): también con hueco de esquina.
         tileAxis(C, GH - C, y => drawWeiBld('bld-muralla-luoyang-0', 0, y, true, [0, y, 2, y + SEG]));       // WL oeste (mira NO)
         tileAxis(C, GH - C, y => drawWeiBld('bld-muralla-luoyang-0', GW - 2, y, true, [GW - 2, y, GW, y + SEG])); // FR este (mira SE)
-        // Torre de esquina 角樓 (solo vista NORTE por ahora) en el vértice de fondo.
-        // Se ancla por el vértice trasero de su base en la esquina (0,0) y va a escala
-        // SC (mucho menor que los portones) para ser una continuación seamless del muro.
-        if (SPRITES['wei/bld-esquina-luoyang-0']) {
-          const SC = 0.24, CX = 1.4, CY = 1.4;
-          drawWeiBld('bld-esquina-luoyang-0', CX, CY, false, [CX - 1, CY - 1, CX + 2.2, CY + 2.2], SC);
-        }
+        // Torre de esquina 角樓: DESACTIVADA. Hundirla tras el muro hace que la base
+        // asome por el lado interior (patio) del vértice como un pegote sin sentido
+        // (no hay muro que la tape ahí). Las 4 esquinas quedan huecas hasta rehacer
+        // bien la integración (ver notas). drawWeiBld('bld-esquina-luoyang-0', ...)
         return;
       }
       const S = 0.46, ST = 2;
