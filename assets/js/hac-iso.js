@@ -300,7 +300,6 @@ const HacIso = (function () {
     const useGrassTile = seasonKey === 'verano' && !!FLOOR.grass;
     const soilTiles = [FLOOR.soil, FLOOR.soil2, FLOOR.soil3, FLOOR.soil4].filter(Boolean);
     const hasWater = !!(opts.mapa && Array.isArray(opts.mapa.construcciones) && opts.mapa.construcciones.some(c => c && (c.tipo === 'estanque' || c.tipo === 'lago')));
-    const frontTrees = [];   // árboles delante de la finca (se pintan tras los muros)
 
     // ── CAMINO de tierra desde el 午門 (portón SUROESTE) ──────────────────────
     // Sale RECTO del portón (eje central, perpendicular al muro delantero) hacia
@@ -468,11 +467,15 @@ const HacIso = (function () {
       props.push({ gx, gy, sum: gx + gy, lx: X(gx, gy) + jx, ly: Y(gx, gy) + jy, spec });
     }
     const drawProp = (p) => { if (p.spec.img) blitPlant(p.spec.img, p.lx, p.ly, p.spec.sh, p.spec.scale); else if (p.spec.cv) blitProp(p.spec.cv, p.lx, p.ly, p.spec.sh); else if (p.spec.blob) drawTreeBlob(p.lx, p.ly); };
-    // Delante/detrás de la finca POR BORDE: al sur (gy>hiY) o al este (gx>hiX)
-    // van DELANTE (sobre los muros); al norte/oeste, DETRÁS. Dentro de cada grupo,
-    // orden isométrico por profundidad (suma de celda).
-    props.sort((a, b) => a.sum - b.sum).forEach(p => { if (p.gx > hiX || p.gy > hiY) frontTrees.push(p); else drawProp(p); });
-    const drawFrontProps = () => frontTrees.forEach(drawProp);
+    // rect de PANTALLA (device) que ocupa el sprite del prop. La recomposición por
+    // frame lo usa para saber que un árbol ALTO cubre celdas lejos de su base y
+    // redibujarlo SOBRE los mecenas que pasen por delante (si no, el mecenas se ve
+    // por encima del árbol: el "cuadrado" que lo atraviesa todo).
+    const propSrect = (p) => {
+      if (p.spec.img) { const s = p.spec.scale || 0.5, w = p.spec.img.width * s, h = p.spec.img.height * s; return [p.lx * SCALE - w / 2, p.ly * SCALE - h + 3, p.lx * SCALE + w / 2, p.ly * SCALE + 3]; }
+      if (p.spec.cv) { const cv = p.spec.cv; return [p.lx * SCALE - cv.width / 2, p.ly * SCALE - cv.height + 6, p.lx * SCALE + cv.width / 2, p.ly * SCALE + 6]; }
+      return null;
+    };
     for (let by = blk(loY); by <= hiY; by += BS) {
       for (let bx = blk(loX); bx <= hiX; bx += BS) {
         const x0 = Math.max(bx, loX), y0 = Math.max(by, loY);
@@ -919,6 +922,11 @@ const HacIso = (function () {
       if (gy === GH - 1 && v.hasY)   drawList.push({ box: [gx - hf, gy + hf, gx + hf, FLi], draw: () => wbox(gx - hf, gy + hf, gx + hf, FLi) });
     });
     pennants.forEach(p => drawList.push({ box: p.box, draw: () => pennant(p) }));
+    // Props del territorio (árboles, matas, rocas): ENTRAN en el drawList con su
+    // caja de huella (1 celda) + srect, para que ordenen en profundidad con muros/
+    // edificios/mecenas y se recompongan bien por frame (no van al bgFloor: si no,
+    // el mecenas se dibujaría siempre por encima del árbol).
+    props.forEach(p => drawList.push({ box: [p.gx, p.gy, p.gx + 1, p.gy + 1], srect: propSrect(p), draw: () => drawProp(p) }));
     const before = (A, Z) => {
       if (A[2] <= Z[0] + 1e-6) return true;     // A al oeste de Z → detrás
       if (Z[2] <= A[0] + 1e-6) return false;
@@ -968,8 +976,7 @@ const HacIso = (function () {
       g.restore();
     }
 
-    // Props del territorio que quedan DELANTE de la finca: sobre los muros.
-    drawFrontProps();
+    // (Los props del territorio ya van en drawList, ordenados en profundidad.)
 
     // ── Grano sutil: rompe el monocromo del suelo y las murallas (textura) ──
     // Ruido de luminancia determinista por píxel; los sprites (ya texturizados)
