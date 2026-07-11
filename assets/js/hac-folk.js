@@ -252,7 +252,15 @@ const HacFolk = (function () {
           if (score > bestScore) { bestScore = score; best = { spot: p, app: n }; }
         });
       });
-      if (best) { b.spotCell = best.spot; b.approach = best.app; b.approachKey = best.app[0] + ',' + best.app[1]; b.visitable = true; visitable.push(b); }
+      if (best) {
+        b.approach = best.app; b.approachKey = best.app[0] + ',' + best.app[1];
+        // El TABLÓN no se "entra": nada de tareas DENTRO ni banner 匾額 de ocupantes.
+        // Solo se CONSULTA de pie delante (el flujo usa approach/approachKey), así que
+        // le damos aproximación pero NO lo marcamos visitable (queda fuera del vagabundeo
+        // ambiente que mete mecenas dentro). Su "spot" es la propia celda de delante.
+        if (b.tipo === 'tablon') { b.spotCell = best.app; }
+        else { b.spotCell = best.spot; b.visitable = true; visitable.push(b); }
+      }
     });
     // Lista de celdas de césped PISABLE (para que los mecenas que pasean cerca
     // decidan acercarse a descansar en la hierba).
