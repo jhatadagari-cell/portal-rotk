@@ -939,8 +939,20 @@
       if (sig !== lastOrdersSig) { lastOrdersSig = sig; if (HacFolk.setOrders) HacFolk.setOrders(map); }
       refresh();
     }
+    // ¿El mecenas está OCUPADO/FUERA ahora mismo? Cubre TODO: una misión interna o
+    // expedición del tablón (orden activa), una escaramuza lanzada (también orden), o
+    // pertenecer a una banda/peregrinaje que aún NO ha vuelto: 'abierta' (montándose,
+    // sin orden todavía), 'en_curso' (fuera) o 'abortando' (regresando). NO cuenta
+    // 'botin'/'resuelta' (ya ha vuelto, solo queda repartir botín → puede volver a
+    // actuar). Si está ocupado, no puede elegir NINGUNA otra actividad.
+    const ocupadoAhora = (id) => {
+      if (window.HacOrdenes && HacOrdenes.mine(h.id, id)) return true;
+      const b = window.HacEscaramuzas && HacEscaramuzas.miBanda(h.id, id);
+      return !!(b && (b.estado === 'abierta' || b.estado === 'en_curso' || b.estado === 'abortando'));
+    };
     function dispatch(taskId) {
       if (!myId || !taskId || !window.HacOrdenes) return;
+      if (ocupadoAhora(myId)) { toast('Tu mecenas ya está ocupado · espera a que vuelva o libéralo'); return; }
       const t = availableTasks().find(x => x.taskId === taskId); if (!t) return;
       if (window.HacEnergia) HacEnergia.spend(h.id, myId, costeMision(t.dominio));   // la tarea cuesta energía
       HacOrdenes.set({ haciendaId: h.id, miembroId: myId, tipo: 'mision', targetId: taskId, duracionSeg: t.duracionSeg })
@@ -952,6 +964,7 @@
     const durExped = (m) => Math.max(30, Math.round(HacMisiones.durSeg(m) * (1 - (HacStats.bonusExped ? HacStats.bonusExped(myId) : 0) - (tieneT('estratega') ? 0.10 : 0) - caballoExped())));
     function dispatchMision(misId) {
       if (!myId || !window.HacOrdenes || !window.HacMisiones) return;
+      if (ocupadoAhora(myId)) { toast('Tu mecenas ya está ocupado · espera a que vuelva'); return; }
       if (window.HacStats && HacStats.malherido && HacStats.malherido(myId)) { toast('Tu mecenas está malherido · cúralo antes de salir'); return; }
       const m = HacMisiones.get(misId); if (!m) return;
       if (window.HacEnergia) HacEnergia.spend(h.id, myId, costeExped(m));
@@ -1614,8 +1627,10 @@
       const cd = (window.HacStats && HacStats.escaramuzaCd) ? HacStats.escaramuzaCd(myId) : 0;
       const enCd = !ESC_FAST && cd > clock();
       const malherido = !!(window.HacStats && HacStats.malherido && HacStats.malherido(myId));
-      const bloqueado = enCd || malherido;
+      const ocupado = ocupadoAhora(myId);   // ya en misión/tarea/expedición (aquí no hay banda: la captura el bloque `mine`)
+      const bloqueado = enCd || malherido || ocupado;
       const cdAviso = malherido ? `<div class="hacp-esc-note" style="color:#e2a06a">✚ Malherido (3/3) · no puedes montar escaramuzas normales. Organiza el <b>peregrinaje</b> de abajo o cúrate en tu panel.</div>`
+        : ocupado ? `<div class="hacp-esc-note" style="color:#e2a06a">Tu mecenas ya está ocupado en otra actividad · no puede montar ni unirse a una escaramuza hasta que vuelva.</div>`
         : enCd ? `<div class="hacp-esc-note" style="color:#e2a06a">⏳ En cooldown · podrás unirte o montar banda en ${fmtClock((cd - clock()) / 1000)}.</div>` : '';
       // CTA del peregrinaje: alternativa de curación cuando estás malherido (3/3).
       const peregCTA = malherido ? `
@@ -1626,7 +1641,7 @@
           </div>
           <div class="hacp-esc-scn-en">Peregrina a la montaña de Hua Tuo · si llegáis, curará 1-3 heridas al azar</div>
           <div class="hacp-esc-scn-meta"><span class="hacp-esc-req-lbl">Riesgo</span> <span class="hacp-req">25% · baja con escoltas</span></div>
-          <button class="hacp-cp-btn hacp-esc-crear" data-montar-pereg${enCd ? ' disabled' : ''}>⛰ Organizar peregrinaje${enCd ? ' (en cooldown)' : ''}</button>
+          <button class="hacp-cp-btn hacp-esc-crear" data-montar-pereg${(enCd || ocupado) ? ' disabled' : ''}>⛰ Organizar peregrinaje${enCd ? ' (en cooldown)' : ocupado ? ' (ocupado)' : ''}</button>
         </div>` : '';
       // Coste de montar una escaramuza: plazas + su dificultad (rating).
       const costeEsc = (scn) => costeRating(escPlazas, scn.rating);
@@ -1823,6 +1838,7 @@
     // Monta el peregrinaje (solo con 3/3 heridas). Gratis, sin requisitos de aptitud.
     async function montarPeregrinaje() {
       if (escBusy) return;
+      if (ocupadoAhora(myId)) { toast('Tu mecenas ya está ocupado · espera a que vuelva'); return; }
       if (!(window.HacStats && HacStats.heridas(myId) >= 3)) { toast('El peregrinaje solo se organiza con 3/3 heridas'); return; }
       if (!ESC_FAST && window.HacStats && HacStats.escaramuzaCd && HacStats.escaramuzaCd(myId) > clock()) { toast('En cooldown · aún no puedes salir'); return; }
       escBusy = true;
@@ -1875,6 +1891,7 @@
       if (escBusy) return;
       const scn = escenarioDef(scnId);
       if (!scn) { toast('Esa escaramuza ya no está disponible'); return; }
+      if (ocupadoAhora(myId)) { toast('Tu mecenas ya está ocupado · espera a que vuelva'); return; }
       if (window.HacStats && HacStats.malherido && HacStats.malherido(myId)) { toast('Tu mecenas está malherido · cúralo antes de salir'); return; }
       if (!ESC_FAST && window.HacStats && HacStats.escaramuzaCd && HacStats.escaramuzaCd(myId) > clock()) { toast('Escaramuza en cooldown'); return; }
       const coste = costeRating(escPlazas, scn.rating);
@@ -1892,6 +1909,7 @@
     }
     async function unirBanda(id) {
       if (escBusy) return;
+      if (ocupadoAhora(myId)) { toast('Tu mecenas ya está ocupado · espera a que vuelva'); return; }
       if (window.HacStats && HacStats.malherido && HacStats.malherido(myId)) { toast('Tu mecenas está malherido · cúralo antes de salir'); return; }
       if (!ESC_FAST && window.HacStats && HacStats.escaramuzaCd && HacStats.escaramuzaCd(myId) > clock()) { toast('Escaramuza en cooldown'); return; }
       escBusy = true;
@@ -2596,6 +2614,10 @@
             : d.enTarea ? `⚒ En la tarea · <b id="hacp-cp-rest">${fmtClock(d.rest)}</b>`
             : `⚒ De camino…`;
           mision = `<div class="hacp-cp-mis hacp-cp-mis-on"><span class="hacp-cp-flag">${flag}</span><button type="button" class="hacp-cp-btn" data-act="release">Liberar</button></div>`;
+        } else if (ocupadoAhora(myId)) {
+          // Comprometido en algo sin orden aún (p.ej. banda de escaramuza/peregrinaje
+          // 'abierta', esperando a partir): tampoco puede coger una tarea interna.
+          mision = `<div class="hacp-cp-mis"><span class="hacp-cp-flag" style="opacity:.8">Ocupado en otra actividad</span></div>`;
         } else {
           const tasks = availableTasks();   // tareas DENTRO de la finca (edificios)
           const opts = tasks.map(t => `<option value="${esc(t.taskId)}">${esc(t.nombre)} · ${fmtDur(t.duracionSeg)} · −${costeMision(t.dominio)}⚡</option>`).join('');
@@ -3181,8 +3203,7 @@
     function buildBoard() {
       const el = ensureBoardEl();
       const list = window.HacMisiones ? HacMisiones.disponibles(tier) : [];
-      const orden = window.HacOrdenes ? HacOrdenes.mine(h.id, myId) : null;
-      const ocupado = !!orden;
+      const ocupado = ocupadoAhora(myId);   // orden activa O banda/peregrinaje (incl. 'abierta')
       const energia = window.HacEnergia ? HacEnergia.current(h.id, myId) : 100;
       const rows = list.slice().sort((a, b) => (a.dom < b.dom ? -1 : a.dom > b.dom ? 1 : a.dif - b.dif)).map(m => {
         const risk = riesgoMision(m), rc = HacMisiones.nivelColor(risk), rec = HacMisiones.recompensa(m);
@@ -3223,7 +3244,7 @@
         <div class="hacp-shop-box">
           <button type="button" class="hacp-shop-x" data-act="board-close" aria-label="Cerrar">✕</button>
           <div class="hacp-shop-h"><span class="hacp-shop-zh">📜</span> Tablón de misiones <span class="hacp-shop-money">⚡ <b>${Math.round(energia)}</b></span></div>
-          <div class="hacp-shop-sub">A tu nivel una misión es una apuesta real; superarla baja el riesgo con rendimientos decrecientes (nunca es gratis). Las muy por debajo de tu nivel son <b>rutina</b> y pagan menos: conviene variar de dominio y buscar retos. Las difíciles cuestan más energía y dan más 🎁 botín.${ocupado ? ' <b>Tu mecenas ya está en una misión.</b>' : ''}</div>
+          <div class="hacp-shop-sub">A tu nivel una misión es una apuesta real; superarla baja el riesgo con rendimientos decrecientes (nunca es gratis). Las muy por debajo de tu nivel son <b>rutina</b> y pagan menos: conviene variar de dominio y buscar retos. Las difíciles cuestan más energía y dan más 🎁 botín.${ocupado ? ' <b>Tu mecenas ya está ocupado en otra actividad.</b>' : ''}</div>
           ${hayBonos() ? `<div class="hacp-shop-note">Bonos de los pabellones de la finca: ${bonosTexto()}</div>` : ''}
           ${encBanner}
           <div class="hacp-board-list">${rows || '<div class="hacp-inv-note">No hay misiones disponibles.</div>'}</div>
@@ -3514,9 +3535,11 @@
         const body = sec.querySelector('[data-mtb="internas"]');
         if (!myId) { body.innerHTML = '<div class="hacp-inv-note">Entra con tu mecenas para enviar tareas.</div>'; return; }
         const tasks = availableTasks();
-        body.innerHTML = tasks.length
-          ? tasks.map(t => `<div class="hacp-mrow"><div class="hacp-mrow-main"><b>${esc(t.nombre)}</b><span>${fmtDur(t.duracionSeg)} · −${costeMision(t.dominio)}⚡</span></div><button class="hacp-cp-btn" data-task="${esc(t.taskId)}">Enviar</button></div>`).join('')
-          : '<div class="hacp-inv-note">No hay tareas internas disponibles ahora mismo.</div>';
+        const ocupado = ocupadoAhora(myId);   // en misión/expedición/escaramuza/peregrinaje → no puede coger otra tarea
+        const aviso = ocupado ? '<div class="hacp-inv-note">Tu mecenas ya está ocupado · espera a que vuelva para enviarle una tarea.</div>' : '';
+        body.innerHTML = aviso + (tasks.length
+          ? tasks.map(t => `<div class="hacp-mrow"><div class="hacp-mrow-main"><b>${esc(t.nombre)}</b><span>${fmtDur(t.duracionSeg)} · −${costeMision(t.dominio)}⚡</span></div><button class="hacp-cp-btn" data-task="${esc(t.taskId)}"${ocupado ? ' disabled' : ''}>Enviar</button></div>`).join('')
+          : '<div class="hacp-inv-note">No hay tareas internas disponibles ahora mismo.</div>');
         body.querySelectorAll('[data-task]').forEach(b => b.addEventListener('click', () => { dispatch(b.dataset.task); mgo('personaje'); }));
       }
       function renderExped() {
