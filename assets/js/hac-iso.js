@@ -519,24 +519,31 @@ const HacIso = (function () {
         const nearC = (v, c) => Math.abs(v + SEG / 2 - c) < SEG / 2 + 2;   // el segmento [v,v+8] pisa el centro c
         // Portones en los lados gx PARALELOS: FRENTE (洛阳宫) al SO (FL), TRASERA (lisa)
         // al NE (WT). Ambos rot 0 (mismo eje) → sin flip. WL/FR: solo muro (espejo).
-        const SG = 0.7, SC = 0.5;   // escala portones (algo menor) y esquina (mucho menor)
-        // FL (sur, mira al SO): portón FRENTE en gcX
-        for (let x = 0; x < GW; x += SEG) { if (nearC(x, gcX)) continue; drawWeiBld('bld-muralla-luoyang-0', x, GH - 2, false, [x, GH - 2, x + SEG, GH]); }
+        const SG = 0.7;             // escala de los portones (algo menor que el muro)
+        const C = 2;                // reserva de ESQUINA (= grosor del muro): hueco a
+                                    // dejar en cada vértice para la futura torre 角樓.
+        // Teja piezas de SEG celdas desde `a` hasta `b` a lo largo del eje, a ras en
+        // ambos extremos (la última se solapa un pelín si el tramo no es múltiplo de
+        // SEG). `place(p)` dibuja una pieza cuyo borde arranca en el offset p.
+        const tileAxis = (a, b, place) => {
+          if (b - a < SEG + 1e-6) { if (b - a > 1e-6) place(a); return; }
+          const pos = []; let p = a;
+          for (; p + SEG <= b + 1e-6; p += SEG) pos.push(p);
+          if (pos[pos.length - 1] + SEG < b - 1e-6) pos.push(b - SEG);   // remate a ras
+          pos.forEach(place);
+        };
+        // Lados gx (horizontales): tramos de muro con HUECO de C celdas en cada esquina
+        // y el portón en el centro. FL (sur, mira al SO): portón FRENTE ceremonial.
+        tileAxis(C, GW - C, x => { if (nearC(x, gcX)) return; drawWeiBld('bld-muralla-luoyang-0', x, GH - 2, false, [x, GH - 2, x + SEG, GH]); });
         drawWeiBld('bld-puerta-luoyang-1', gcX - 2, GH - 3, false, [gcX - 2, GH - 3, gcX + 2, GH], SG);
-        // WT (norte, mira al NE): portón TRASERO (lisa) en gcX
-        for (let x = 0; x < GW; x += SEG) { if (nearC(x, gcX)) continue; drawWeiBld('bld-muralla-luoyang-0', x, 0, false, [x, 0, x + SEG, 2]); }
+        // WT (norte, mira al NE): portón TRASERO (lisa) en el centro.
+        tileAxis(C, GW - C, x => { if (nearC(x, gcX)) return; drawWeiBld('bld-muralla-luoyang-0', x, 0, false, [x, 0, x + SEG, 2]); });
         drawWeiBld('bld-puerta-luoyang-0', gcX - 2, 0, false, [gcX - 2, 0, gcX + 2, 3], SG);
-        // WL (oeste, mira al NO): solo muro (espejo)
-        for (let y = 0; y < GH; y += SEG) drawWeiBld('bld-muralla-luoyang-0', 0, y, true, [0, y, 2, y + SEG]);
-        // FR (este, mira al SE): solo muro (espejo)
-        for (let y = 0; y < GH; y += SEG) drawWeiBld('bld-muralla-luoyang-0', GW - 2, y, true, [GW - 2, y, GW, y + SEG]);
-        // Esquina NORTE (vértice de fondo): torre de esquina (mucho más pequeña).
-        // PENDIENTE: al estar en el vértice más lejano, los tramos de muralla (8 celdas,
-        // arrancan en el propio vértice y avanzan hacia el espectador) la sepultan en el
-        // pintor. Para que "encare" bien hay que dejar HUECO de esquina en las tiradas de
-        // muro y colocar la torre ahí (+ arte de las otras 3 esquinas). Desactivada hasta
-        // entonces para no dejar un torreón medio enterrado. drawWeiBld(...,'bld-esquina-luoyang-0', 1,1, false,[-1,-1,3,3], SC)
-        void SC;
+        // Lados gy (verticales, espejo): también con hueco de esquina.
+        tileAxis(C, GH - C, y => drawWeiBld('bld-muralla-luoyang-0', 0, y, true, [0, y, 2, y + SEG]));       // WL oeste (mira NO)
+        tileAxis(C, GH - C, y => drawWeiBld('bld-muralla-luoyang-0', GW - 2, y, true, [GW - 2, y, GW, y + SEG])); // FR este (mira SE)
+        // Las 4 ESQUINAS quedan HUECAS a propósito (reserva C): ahí irá la torre de
+        // esquina 角樓 cuando tengamos su arte (4 vistas) y el orden de pintor resuelto.
         return;
       }
       const S = 0.46, ST = 2;
