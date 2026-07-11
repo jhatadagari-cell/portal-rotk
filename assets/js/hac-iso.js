@@ -549,8 +549,13 @@ const HacIso = (function () {
         // Lados gy (verticales, espejo): también con hueco de esquina.
         tileAxis(C, GH - C, y => drawWeiBld('bld-muralla-luoyang-0', 0, y, true, [0, y, 2, y + SEG]));       // WL oeste (mira NO)
         tileAxis(C, GH - C, y => drawWeiBld('bld-muralla-luoyang-0', GW - 2, y, true, [GW - 2, y, GW, y + SEG])); // FR este (mira SE)
-        // Las 4 ESQUINAS quedan HUECAS a propósito (reserva C): ahí irá la torre de
-        // esquina 角樓 cuando tengamos su arte (4 vistas) y el orden de pintor resuelto.
+        // Torre de esquina 角樓 (solo vista NORTE por ahora) en el vértice de fondo.
+        // Se ancla por el vértice trasero de su base en la esquina (0,0) y va a escala
+        // SC (mucho menor que los portones) para ser una continuación seamless del muro.
+        if (SPRITES['wei/bld-esquina-luoyang-0']) {
+          const SC = 0.24, CX = 1.4, CY = 1.4;
+          drawWeiBld('bld-esquina-luoyang-0', CX, CY, false, [CX - 1, CY - 1, CX + 2.2, CY + 2.2], SC);
+        }
         return;
       }
       const S = 0.46, ST = 2;
