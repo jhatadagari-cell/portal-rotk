@@ -59,6 +59,10 @@ const HacIso = (function () {
   }
   let spritesReady = false, preloadStarted = false;
   const pending = new Map();   // canvas → opts (para re-render al cargar)
+  // Tiles de SUELO a mano (assets/img/iso/floor/*.png, rombos 144×72 con esquinas
+  // transparentes). De momento solo `grass` (hierba exterior) y solo en verano.
+  const FLOOR = {};
+  let floorStarted = false, floorReady = false;
 
   // Normaliza el tema pedido: '' si no existe overlay para él (→ set por defecto).
   const normTheme = (t) => { t = String(t || '').toLowerCase(); return (t && THEMES[t]) ? t : ''; };
@@ -99,10 +103,25 @@ const HacIso = (function () {
       img.src = SPRITE_BASE + tema + '/' + k + ext + '?v=' + SPRITE_VER;
     });
   }
+  // Precarga de los tiles de suelo a mano (floor/). Si falta alguno (404) no pasa
+  // nada: floorReady se marca igual y el render cae al suelo procedural.
+  function preloadFloor() {
+    if (floorStarted || typeof Image === 'undefined') return;
+    floorStarted = true;
+    const tiles = ['grass'];
+    let left = tiles.length;
+    tiles.forEach(name => {
+      const img = new Image();
+      const done = () => { if (--left === 0) { floorReady = true; flush(); } };
+      img.onload = () => { FLOOR[name] = img; done(); };
+      img.onerror = done;
+      img.src = SPRITE_BASE + 'floor/' + name + '.png?v=' + SPRITE_VER;
+    });
+  }
   // ¿Está todo lo que ESTE lienzo necesita (base + su tema) ya cargado?
   function readyFor(opts) {
     const tema = normTheme(opts && opts.tema);
-    return spritesReady && (!tema || themeReady[tema]);
+    return spritesReady && floorReady && (!tema || themeReady[tema]);
   }
   function flush() {
     Array.from(pending.entries()).forEach(([canvas, opts]) => {
@@ -117,6 +136,7 @@ const HacIso = (function () {
     opts = opts || {};
     preload();
     preloadTheme(opts.tema);
+    preloadFloor();
     render(canvas, opts);
     // Si los sprites (base o del tema) aún no están, re-renderizamos al cargar.
     if (META && !readyFor(opts)) pending.set(canvas, opts);
@@ -257,6 +277,8 @@ const HacIso = (function () {
     };
     const seasonKey = (function () { const s = String(opts.estacion || '').toLowerCase().replace('ñ', 'n'); return SEASONS[s] ? s : 'verano'; })();
     const P = SEASONS[seasonKey];
+    // Tile de hierba a mano: SOLO en verano y si ya cargó (si no, suelo procedural).
+    const useGrassTile = seasonKey === 'verano' && !!FLOOR.grass;
     const hasWater = !!(opts.mapa && Array.isArray(opts.mapa.construcciones) && opts.mapa.construcciones.some(c => c && (c.tipo === 'estanque' || c.tipo === 'lago')));
     const frontTrees = [];   // árboles delante de la finca (se pintan tras los muros)
 
@@ -274,6 +296,14 @@ const HacIso = (function () {
         poly([N, E, S, Wp], hv < 0.5 ? wc : light(wc, 0.08));
         edge(Wp, N, light(wc, 0.22));                                  // reflejo en la orilla
         if (P.snow && hash(gx + 5, gy + 2) > 0.55) poly([N, E, S, Wp], 'rgba(235,245,248,0.30)');   // placas de hielo
+        return;
+      }
+      // Tile de HIERBA a mano (solo verano por ahora): rombo 144×72 dibujado a
+      // tamaño de celda (36×18 lógico → 72×36 device). Reemplaza el suelo procedural.
+      if (useGrassTile) {
+        g.imageSmoothingEnabled = true;
+        g.drawImage(FLOOR.grass, cx - TILE_W / 2, cy - TILE_H / 2, TILE_W, TILE_H);
+        g.imageSmoothingEnabled = false;
         return;
       }
       const hv = hash(gx * 1.3 + 11, gy * 1.3 + 5);
