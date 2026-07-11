@@ -65,6 +65,8 @@ const HacIso = (function () {
   // Props/plantas a mano (assets/img/iso/props/*.png), a ~2× device: matas, rocas,
   // helechos y flores que se plantan por el campo exterior mezclados con la flora.
   const PLANTS = {};
+  // Árboles a mano (props/tree-*.png). En verano SUSTITUYEN a los procedurales.
+  const TREES = {};
   let floorStarted = false, floorReady = false;
 
   // Normaliza el tema pedido: '' si no existe overlay para él (→ set por defecto).
@@ -113,7 +115,8 @@ const HacIso = (function () {
     floorStarted = true;
     const tiles = ['grass', 'soil', 'soil2', 'soil3', 'soil4'];
     const plants = ['bush', 'bushrock', 'rock', 'fern', 'flowers', 'fern2'];
-    let left = tiles.length + plants.length;
+    const trees = ['pine', 'willow', 'oak', 'fruit'];
+    let left = tiles.length + plants.length + trees.length;
     const done = () => { if (--left === 0) { floorReady = true; flush(); } };
     tiles.forEach(name => {
       const img = new Image();
@@ -126,6 +129,12 @@ const HacIso = (function () {
       img.onload = () => { PLANTS[name] = img; done(); };
       img.onerror = done;
       img.src = SPRITE_BASE + 'props/plant-' + name + '.png?v=' + SPRITE_VER;
+    });
+    trees.forEach(name => {
+      const img = new Image();
+      img.onload = () => { TREES[name] = img; done(); };
+      img.onerror = done;
+      img.src = SPRITE_BASE + 'props/tree-' + name + '.png?v=' + SPRITE_VER;
     });
   }
   // ¿Está todo lo que ESTE lienzo necesita (base + su tema) ya cargado?
@@ -344,8 +353,8 @@ const HacIso = (function () {
     }
     // Igual pero para una PLANTA por imagen (arte a ~2× device): se dibuja a media
     // resolución (nítida) anclada por su base, con sombra de contacto.
-    function blitPlant(img, lx, ly, shR) {
-      const w = img.width / 2, h = img.height / 2;
+    function blitPlant(img, lx, ly, shR, scale) {
+      const s = scale || 0.5, w = img.width * s, h = img.height * s;
       g.fillStyle = 'rgba(0,0,0,0.20)'; g.beginPath(); g.ellipse(lx, ly + 1, shR, shR * 0.42, 0, 0, 6.2832); g.fill();
       g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.imageSmoothingEnabled = true;
       g.drawImage(img, Math.round(lx * SCALE - w / 2), Math.round(ly * SCALE - h + 3), w, h);
@@ -360,18 +369,27 @@ const HacIso = (function () {
       if (P.bare) blob(0, -2, 5, '#8f9a96'); else { blob(0, 2, 7, dark(P.leaf, 0.12)); blob(-3, 0, 5, P.leaf); blob(3, -1, 5, P.leaf); blob(0, -3, 5.5, light(P.leaf, 0.05)); }
     }
     // Especifica el prop de una celda (o null): sprite + radio de sombra.
-    // Plantas por imagen disponibles (solo verano; el arte es de temporada verde).
+    // Arte a mano disponible (solo verano; es de temporada verde).
     const imgPlants = seasonKey === 'verano'
       ? ['bush', 'bushrock', 'rock', 'fern', 'flowers', 'fern2'].filter(k => PLANTS[k])
       : [];
+    const hasImgTrees = seasonKey === 'verano' && (TREES.pine || TREES.oak || TREES.willow || TREES.fruit);
+    // Elige un árbol a mano DISCRETO por celda: pino/roble/sauce comunes, frutal raro.
+    function pickTree(gx, gy) {
+      const roll = hash(gx * 8.3 + 4, gy * 6.1 + 7);
+      let k = roll < 0.32 ? 'oak' : roll < 0.62 ? 'pine' : roll < 0.9 ? 'willow' : 'fruit';
+      if (!TREES[k]) k = ['pine', 'oak', 'willow', 'fruit'].find(t => TREES[t]);
+      return TREES[k];
+    }
     function propAt(gx, gy, riverNear) {
       const r = hash(gx * 7.3 + 1, gy * 7.7 + 2);
       if (riverNear && r < 0.5) return FLORA ? { cv: FLORA.reeds(seasonKey, (hash(gx + 9, gy + 4) * 9) | 0), sh: 6 } : null;
       if (r < 0.66) return null;                                  // hierba pelada (densidad moderada)
       const pick = hash(gx * 2.7 + 5, gy * 3.1 + 8), vv = (hash(gx * 1.9 + 2, gy * 2.3 + 7) * 99) | 0;
-      // Árboles: siguen siendo de HacFlora (variedad y estación). El resto de matas
-      // bajas (arbustos, rocas, helechos, flores) usan el arte a mano si está.
-      if (FLORA && pick < 0.5) { const sp = HacFlora.SPECIES[(hash(gx * 5.1 + 3, gy * 4.7 + 6) * HacFlora.SPECIES.length) | 0]; return { cv: FLORA.tree(sp, seasonKey, vv), sh: 13 }; }
+      // ÁRBOLES a mano (verano): reemplazan a los procedurales. Menos frecuentes que
+      // antes (son grandes → que no sature) — el resto son matas/rocas bajas.
+      if (hasImgTrees && pick < 0.32) return { img: pickTree(gx, gy), sh: 12, scale: 0.46, tree: true };
+      if (FLORA && !hasImgTrees && pick < 0.5) { const sp = HacFlora.SPECIES[(hash(gx * 5.1 + 3, gy * 4.7 + 6) * HacFlora.SPECIES.length) | 0]; return { cv: FLORA.tree(sp, seasonKey, vv), sh: 13 }; }
       if (imgPlants.length) { const k = imgPlants[(hash(gx * 4.9 + 6, gy * 3.7 + 2) * imgPlants.length) | 0]; return { img: PLANTS[k], sh: k === 'rock' || k === 'bushrock' ? 8 : 6 }; }
       if (!FLORA) return { blob: true, sh: 9 };
       if (pick < 0.78) return { cv: FLORA.bush(seasonKey, vv), sh: 9 };
@@ -427,7 +445,7 @@ const HacIso = (function () {
       const jx = (hash(gx + 1, gy + 5) - 0.5) * TILE_W * 0.4, jy = (hash(gx + 7, gy + 2) - 0.5) * TILE_H * 0.4;
       props.push({ gx, gy, sum: gx + gy, lx: X(gx, gy) + jx, ly: Y(gx, gy) + jy, spec });
     }
-    const drawProp = (p) => { if (p.spec.img) blitPlant(p.spec.img, p.lx, p.ly, p.spec.sh); else if (p.spec.cv) blitProp(p.spec.cv, p.lx, p.ly, p.spec.sh); else if (p.spec.blob) drawTreeBlob(p.lx, p.ly); };
+    const drawProp = (p) => { if (p.spec.img) blitPlant(p.spec.img, p.lx, p.ly, p.spec.sh, p.spec.scale); else if (p.spec.cv) blitProp(p.spec.cv, p.lx, p.ly, p.spec.sh); else if (p.spec.blob) drawTreeBlob(p.lx, p.ly); };
     // Delante/detrás de la finca POR BORDE: al sur (gy>hiY) o al este (gx>hiX)
     // van DELANTE (sobre los muros); al norte/oeste, DETRÁS. Dentro de cada grupo,
     // orden isométrico por profundidad (suma de celda).
