@@ -333,21 +333,22 @@ const HacIso = (function () {
       // CAMINO de tierra que sale del portón: siempre soil (todas las estaciones).
       if (onPath(gx, gy)) {
         const tile = soilTiles[(hash(gx * 5.7 + 1, gy * 4.3 + 9) * soilTiles.length) | 0];
-        g.imageSmoothingEnabled = true;
+        poly([N, E, S, Wp], P.soil);                 // base OPACA: sin costura (halo blanco) entre rombos
+        g.imageSmoothingEnabled = false;             // 2:1 exacto → bordes duros que teselan sin fleco
         g.drawImage(tile, cx - TILE_W / 2, cy - TILE_H / 2, TILE_W, TILE_H);
-        g.imageSmoothingEnabled = false;
         return;
       }
       // Tile de HIERBA a mano (solo verano por ahora): rombo 144×72 dibujado a
       // tamaño de celda (36×18 lógico → 72×36 device). Reemplaza el suelo procedural.
       // Alguna celda suelta lleva un parche de TIERRA (variantes soil) por variedad.
       if (useGrassTile) {
-        let tile = FLOOR.grass;
-        if (soilTiles.length && hash(gx * 3.1 + 2, gy * 2.3 + 6) > 0.9)
-          tile = soilTiles[(hash(gx * 5.7 + 1, gy * 4.3 + 9) * soilTiles.length) | 0];
-        g.imageSmoothingEnabled = true;
+        let tile = FLOOR.grass, base = P.g2;
+        if (soilTiles.length && hash(gx * 3.1 + 2, gy * 2.3 + 6) > 0.9) {
+          tile = soilTiles[(hash(gx * 5.7 + 1, gy * 4.3 + 9) * soilTiles.length) | 0]; base = P.soil;
+        }
+        poly([N, E, S, Wp], base);                   // base OPACA bajo la tile: sin costura (halo blanco)
+        g.imageSmoothingEnabled = false;             // 2:1 exacto → bordes duros que teselan sin fleco
         g.drawImage(tile, cx - TILE_W / 2, cy - TILE_H / 2, TILE_W, TILE_H);
-        g.imageSmoothingEnabled = false;
         return;
       }
       const hv = hash(gx * 1.3 + 11, gy * 1.3 + 5);
