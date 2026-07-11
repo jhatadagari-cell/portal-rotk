@@ -532,13 +532,20 @@ const HacIso = (function () {
           if (pos[pos.length - 1] + SEG < b - 1e-6) pos.push(b - SEG);   // remate a ras
           pos.forEach(place);
         };
+        // Alinear el VANO (puerta roja) con el eje ceremonial (columna gcX): al
+        // escalar a SG el vano se corre hacia el ancla del sprite, así que deslizamos
+        // el portón por el muro (+gx desliza a lo largo del muro, no cambia la
+        // profundidad) para devolver el vano al centro del footprint. Deltas medidos
+        // del arte a SG=0.7 — vano frente 洛阳宫 en px≈(201,449); trasero liso ≈(142,335)
+        // — con Δgx = [144 + SG·(ox+2·oy − px − 2·py)] / 72 (independiente del tier).
+        const DXF = 1.17, DXB = 0.89;   // corrimiento gx del portón FRENTE / TRASERO (ajustado a render)
         // Lados gx (horizontales): tramos de muro con HUECO de C celdas en cada esquina
         // y el portón en el centro. FL (sur, mira al SO): portón FRENTE ceremonial.
         tileAxis(C, GW - C, x => { if (nearC(x, gcX)) return; drawWeiBld('bld-muralla-luoyang-0', x, GH - 2, false, [x, GH - 2, x + SEG, GH]); });
-        drawWeiBld('bld-puerta-luoyang-1', gcX - 2, GH - 3, false, [gcX - 2, GH - 3, gcX + 2, GH], SG);
+        drawWeiBld('bld-puerta-luoyang-1', gcX - 2 + DXF, GH - 3, false, [gcX - 2 + DXF, GH - 3, gcX + 2 + DXF, GH], SG);
         // WT (norte, mira al NE): portón TRASERO (lisa) en el centro.
         tileAxis(C, GW - C, x => { if (nearC(x, gcX)) return; drawWeiBld('bld-muralla-luoyang-0', x, 0, false, [x, 0, x + SEG, 2]); });
-        drawWeiBld('bld-puerta-luoyang-0', gcX - 2, 0, false, [gcX - 2, 0, gcX + 2, 3], SG);
+        drawWeiBld('bld-puerta-luoyang-0', gcX - 2 + DXB, 0, false, [gcX - 2 + DXB, 0, gcX + 2 + DXB, 3], SG);
         // Lados gy (verticales, espejo): también con hueco de esquina.
         tileAxis(C, GH - C, y => drawWeiBld('bld-muralla-luoyang-0', 0, y, true, [0, y, 2, y + SEG]));       // WL oeste (mira NO)
         tileAxis(C, GH - C, y => drawWeiBld('bld-muralla-luoyang-0', GW - 2, y, true, [GW - 2, y, GW, y + SEG])); // FR este (mira SE)
