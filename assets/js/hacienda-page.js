@@ -1216,6 +1216,9 @@
       _pickJardin = { invM, tema: _debPick.tema, gardens: disp };
       const cells = disp.reduce((a, g) => a.concat(g.cells), []);
       if (window.HacFolk && HacFolk.setHighlight) HacFolk.setHighlight(cells);
+      // En MÓVIL, muestra el MAPA (si no, el resaltado queda oculto tras la sección abierta).
+      if (mShell && mShell.go) mShell.go('hacienda'); else { deselect(); folkCollapse(true); }
+      if (window.HacFolk && HacFolk.repaintOverlay) HacFolk.repaintOverlay();
       mostrarHintJardin(disp.length);
     }
     function cancelarPickJardin() {
@@ -1244,7 +1247,7 @@
     }
     // Aceptar / rechazar una invitación que me han hecho.
     function aceptarDebate(id) { if (!DEB) return; DEB.aceptar(id, myId, clock()).then(() => { toast('🗣 ¡Al jardín a debatir!'); return DEB.reload().then(afterDebChange); }).catch(e => toast((e && e.message) || 'No se pudo aceptar')); }
-    function rechazarDebate(id) { if (!DEB) return; DEB.rechazar(id, myId).then(() => { toast('Invitación rechazada'); return DEB.reload().then(afterDebChange); }).catch(() => {}); }
+    function rechazarDebate(id) { if (!DEB) return; const mia = DEB.byId(id); const soyHost = mia && mia.hostId === myId; DEB.rechazar(id, myId).then(() => { toast(soyHost ? '🗣 Invitación cancelada' : 'Invitación rechazada'); return DEB.reload().then(afterDebChange); }).catch(() => {}); }
 
     // ── Widget de SUSPENSE: barra que rebota izq↔der y se para en el ganador ──
     function mostrarRevelacionDebate(d, oc) {
@@ -3123,23 +3126,25 @@
           const invPend = DEB && DEB.miInvitacionPendiente(h.id, myId, clock());
           const enDeb = DEB && DEB.miDebate(h.id, myId);
           const invSent = DEB && DEB.miInvitacionEnviada(h.id, myId);
+          const debLbl = '<label class="hacp-cp-lbl">🗣 Debate</label>';   // cabecera para cohesionar la sección
           if (invPend) {
             const tt = debTema(invPend.tema);
-            mision = `<div class="hacp-cp-mis hacp-deb-invite"><span class="hacp-cp-flag">🗣 <b>${esc(invPend.hostNombre || 'Alguien')}</b> te reta a un debate de <b>${esc(tt ? tt.nombre : invPend.tema)}</b></span><div class="r"><button type="button" class="hacp-cp-btn hacp-cp-go" data-act="deb-yes" data-id="${esc(invPend.id)}">Aceptar</button><button type="button" class="hacp-cp-btn" data-act="deb-no" data-id="${esc(invPend.id)}">Rechazar</button></div></div>`;
+            mision = `<div class="hacp-cp-mis hacp-deb-invite">${debLbl}<span class="hacp-cp-flag"><b>${esc(invPend.hostNombre || 'Alguien')}</b> te reta a un debate de <b>${esc(tt ? tt.nombre : invPend.tema)}</b></span><div class="r"><button type="button" class="hacp-cp-btn hacp-cp-go" data-act="deb-yes" data-id="${esc(invPend.id)}">Aceptar</button><button type="button" class="hacp-cp-btn" data-act="deb-no" data-id="${esc(invPend.id)}">Rechazar</button></div></div>`;
           } else if (enDeb) {
             const tt = debTema(enDeb.tema);
             const remD = Math.max(0, Math.ceil((enDeb.finMs - clock()) / 1000));
             const miTurno = DEB && !DEB.juegoCompleto(enDeb) && DEB.turnActorId(enDeb, DEB.turnoActual(enDeb)) === myId;
             const argLbl = DEB && DEB.juegoCompleto(enDeb) ? 'Ver debate' : (miTurno ? '¡Tu turno! Argumentar →' : 'Argumentar →');
-            mision = `<div class="hacp-cp-mis hacp-cp-mis-on"><span class="hacp-cp-flag">🗣 Debatiendo de ${esc(tt ? tt.nombre : enDeb.tema)} · queda <b class="hacp-deb-countdown">${fmtClock(remD)}</b></span><button type="button" class="hacp-cp-btn hacp-cp-go${miTurno ? ' hacp-mo-mis' : ''}" data-act="debj">${argLbl}</button></div>`;
+            mision = `<div class="hacp-cp-mis hacp-cp-mis-on hacp-deb-invite">${debLbl}<span class="hacp-cp-flag">Debatiendo de <b>${esc(tt ? tt.nombre : enDeb.tema)}</b> · queda <b class="hacp-deb-countdown">${fmtClock(remD)}</b></span><div class="r"><button type="button" class="hacp-cp-btn hacp-cp-go${miTurno ? ' hacp-mo-mis' : ''}" data-act="debj">${argLbl}</button></div></div>`;
           } else if (invSent) {
-            mision = `<div class="hacp-cp-mis"><span class="hacp-cp-flag" style="opacity:.85">🗣 Invitación enviada a ${esc(invSent.invitadoNombre || '…')} · esperando respuesta</span></div>`;
+            const tt = debTema(invSent.tema);
+            mision = `<div class="hacp-cp-mis hacp-deb-invite">${debLbl}<span class="hacp-cp-flag">Reto enviado a <b>${esc(invSent.invitadoNombre || '…')}</b> <span style="opacity:.7">(${esc(tt ? tt.nombre : invSent.tema)})</span> · esperando respuesta…</span><div class="r"><button type="button" class="hacp-cp-btn" data-act="deb-cancel" data-id="${esc(invSent.id)}">Cancelar invitación</button></div></div>`;
           } else {
             const cd = DEB ? DEB.cooldownRestanteMs(h.id, myId, clock()) : 0;
             const hayJard = gardensFinca().length > 0;
             const dis = (cd > 0 || !hayJard || !DEB) ? ' disabled' : '';
-            const hint = cd > 0 ? ` <span class="hacp-cp-lbl" style="opacity:.6">reposa ${fmtClock(Math.ceil(cd / 1000))}</span>` : (!hayJard ? ` <span class="hacp-cp-lbl" style="opacity:.6">(construye un Jardín)</span>` : '');
-            mision = `<div class="hacp-cp-mis"><div class="hacp-cp-row"><button type="button" class="hacp-cp-btn hacp-cp-go" data-act="debate"${dis}>🗣 Invitar a debatir</button>${hint}</div></div>`;
+            const sub = cd > 0 ? `Reposa tras el último debate · ${fmtClock(Math.ceil(cd / 1000))}` : (!hayJard ? 'Necesitas un Jardín (≥4 de área)' : 'Reta a otro mecenas a un debate de 5 min');
+            mision = `<div class="hacp-cp-mis hacp-deb-invite">${debLbl}<button type="button" class="hacp-cp-btn hacp-cp-go" style="width:100%" data-act="debate"${dis}>Invitar a debatir</button><span class="hacp-cp-lbl" style="opacity:.6;margin-top:6px;text-transform:none;letter-spacing:0">${sub}</span></div>`;
           }
         }
       }
@@ -3178,6 +3183,8 @@
       if (dby) dby.addEventListener('click', () => aceptarDebate(dby.dataset.id));
       const dbn = charEl.querySelector('[data-act="deb-no"]');
       if (dbn) dbn.addEventListener('click', () => rechazarDebate(dbn.dataset.id));
+      const dbc = charEl.querySelector('[data-act="deb-cancel"]');
+      if (dbc) dbc.addEventListener('click', () => rechazarDebate(dbc.dataset.id));
       const rb = charEl.querySelector('[data-act="release"]');
       if (rb) rb.addEventListener('click', release);
       const ab = charEl.querySelector('[data-act="abort"]');
@@ -4075,13 +4082,14 @@
         if (!DEB) inner = '<div class="hacp-inv-note">Los debates aún no están disponibles.</div>';
         else if (invPend) { const tt = debTema(invPend.tema); inner = `<div class="hacp-mrow"><div class="hacp-mrow-main"><b>🗣 ${esc(invPend.hostNombre || 'Alguien')} te reta</b><span>Debate de ${esc(tt ? tt.nombre : invPend.tema)}</span></div><div style="display:flex;gap:6px"><button class="hacp-cp-btn hacp-cp-go" data-deb-yes="${esc(invPend.id)}">Aceptar</button><button class="hacp-cp-btn" data-deb-no="${esc(invPend.id)}">Rechazar</button></div></div>`; }
         else if (enDeb) { const tt = debTema(enDeb.tema), remD = Math.max(0, Math.ceil((enDeb.finMs - clock()) / 1000)); inner = `<div class="hacp-mrow"><div class="hacp-mrow-main"><b>🗣 Debate de ${esc(tt ? tt.nombre : enDeb.tema)}</b><span>en el jardín · queda ${fmtClock(remD)}</span></div><button class="hacp-cp-btn hacp-cp-go" data-deb-play="1">Argumentar</button></div>`; }
-        else if (invSent) inner = `<div class="hacp-inv-note">🗣 Invitación enviada a ${esc(invSent.invitadoNombre || '…')} · esperando respuesta.</div>`;
+        else if (invSent) inner = `<div class="hacp-mrow"><div class="hacp-mrow-main"><b>🗣 Reto enviado a ${esc(invSent.invitadoNombre || '…')}</b><span>esperando respuesta…</span></div><button class="hacp-cp-btn" data-deb-cancel="${esc(invSent.id)}">Cancelar</button></div>`;
         else if (cd > 0) inner = `<div class="hacp-inv-note">Tu mecenas reposa tras el último debate · disponible en ${fmtClock(Math.ceil(cd / 1000))}.</div>`;
         else if (!hayJard) inner = '<div class="hacp-inv-note">Construye un <b>Jardín</b> en la finca para poder debatir.</div>';
         else inner = `<div class="hacp-mrow"><div class="hacp-mrow-main"><b>🗣 Invitar a debatir</b><span>Reta a otro mecenas a un debate de 5 min en el jardín · XP + posible libro · prestigio al ganador.</span></div><button class="hacp-cp-btn hacp-cp-go" data-deb-open="1">Invitar</button></div>`;
         body.innerHTML = inner;
         const op = body.querySelector('[data-deb-open]'); if (op) op.addEventListener('click', () => { abrirInvitarDebate(); });
         const pl = body.querySelector('[data-deb-play]'); if (pl) pl.addEventListener('click', () => { abrirDebateJuego(); });
+        const cn = body.querySelector('[data-deb-cancel]'); if (cn) cn.addEventListener('click', () => { rechazarDebate(cn.dataset.debCancel); renderInternas(); });
         const yy = body.querySelector('[data-deb-yes]'); if (yy) yy.addEventListener('click', () => { aceptarDebate(yy.dataset.debYes); renderInternas(); });
         const nn = body.querySelector('[data-deb-no]'); if (nn) nn.addEventListener('click', () => { rechazarDebate(nn.dataset.debNo); renderInternas(); });
       }

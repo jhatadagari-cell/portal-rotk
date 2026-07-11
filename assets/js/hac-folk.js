@@ -1735,9 +1735,12 @@ const HacFolk = (function () {
   // Dibuja la lista de personajes (ordenada de atrás→delante) en el overlay, a
   // resolución de pantalla, desde el maestro de alta resolución.
   function paintOverlay(people, sel) {
-    if (!ovActive()) { if (ovCtx) ovCtx.clearRect(0, 0, ovCanvas.width, ovCanvas.height); return; }
+    const active = ovActive();
+    // El resaltado de celdas (jardines) debe verse SIEMPRE, aunque la capa nítida de
+    // personajes no esté activa; solo salimos pronto si no hay ni capa ni resaltado.
+    if (!active && !hlCells.length) { if (ovCtx && ovCanvas) ovCtx.clearRect(0, 0, ovCanvas.width, ovCanvas.height); return; }
     if (!ensureOverlay()) return;
-    const t = getT(); if (!t) return;
+    const t = getT(); if (!t) { if (ovCtx && ovCanvas) ovCtx.clearRect(0, 0, ovCanvas.width, ovCanvas.height); return; }
     const vp = iso.parentElement, dpr = (window.devicePixelRatio || 1);
     const vw = vp.clientWidth, vh = vp.clientHeight;
     const bw = Math.max(1, Math.round(vw * dpr)), bh = Math.max(1, Math.round(vh * dpr));
@@ -1747,22 +1750,25 @@ const HacFolk = (function () {
     g.clearRect(0, 0, bw, bh);
     g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
     const S = SCALE, cs = t.scale, k = cs * dpr;                 // backing px → device px del overlay
-    const feetFrac = (HacChar.feetFrac || (charFEET() / charH()));
-    const aspect = (HacChar.aspect || (charW() / charH()));
-    // Celdas resaltadas (amarillo pulsante): rombos de tile bajo los personajes.
+    // Celdas RESALTADAS (jardines para el debate): rombos amarillos que PARPADEAN. Se
+    // pintan aunque no haya capa de personajes activa (van antes del early-return).
     if (hlCells.length) {
-      hlPhase += 0.045;
-      const a = 0.30 + 0.15 * Math.sin(hlPhase);
+      hlPhase += 0.10;
+      const pulse = 0.5 + 0.5 * Math.sin(hlPhase);               // 0..1
+      const a = 0.22 + 0.42 * pulse;                             // relleno 0.22..0.64
       const toDev = (X, Y) => [(t.tx + X * S * cs) * dpr, (t.ty + Y * S * cs) * dpr];
-      g.lineWidth = Math.max(1, k);
+      g.lineWidth = Math.max(1.5, 2.2 * cs * dpr);
       hlCells.forEach(c => {
         const lc = logic(c[0], c[1]);
         const N = toDev(lc[0], lc[1] - TH / 2), E = toDev(lc[0] + TW / 2, lc[1]), So = toDev(lc[0], lc[1] + TH / 2), Wo = toDev(lc[0] - TW / 2, lc[1]);
         g.beginPath(); g.moveTo(N[0], N[1]); g.lineTo(E[0], E[1]); g.lineTo(So[0], So[1]); g.lineTo(Wo[0], Wo[1]); g.closePath();
-        g.fillStyle = 'rgba(255,224,90,' + a.toFixed(3) + ')'; g.fill();
-        g.strokeStyle = 'rgba(255,238,150,0.95)'; g.stroke();
+        g.fillStyle = 'rgba(255,222,70,' + a.toFixed(3) + ')'; g.fill();
+        g.strokeStyle = 'rgba(255,246,180,' + (0.7 + 0.3 * pulse).toFixed(3) + ')'; g.stroke();
       });
     }
+    if (!active) return;                                         // sin capa de personajes: solo el resaltado
+    const feetFrac = (HacChar.feetFrac || (charFEET() / charH()));
+    const aspect = (HacChar.aspect || (charW() / charH()));
     const one = (p, highlight) => {
       const pr = ovPose(p);
       const master = HacChar.imgFor(pr.dir, pr.pose, pr.frame); if (!master) return;
@@ -1871,12 +1877,13 @@ const HacFolk = (function () {
     HacIso.frame(iso, actors, overlays);
     // Capa nítida de personajes (atrás→delante; el seleccionado, encima de todo).
     if (OV) { ovPeople.sort((a, b) => (a.fx + a.fy) - (b.fx + b.fy)); lastOv = { people: ovPeople, sel: ovSel }; paintOverlay(ovPeople, ovSel); }
+    else if (hlCells.length) { lastOv = { people: [], sel: null }; paintOverlay([], null); }   // solo resaltado (sin capa nítida)
     else { lastOv = { people: [], sel: null }; if (ovCtx) ovCtx.clearRect(0, 0, ovCanvas.width, ovCanvas.height); }
   }
   // Repinta SOLO la capa nítida (barato) con las posiciones del último frame de sim,
   // reproyectando con el transform ACTUAL. Lo llama la cámara en cada pan/zoom para
   // que los personajes sigan al tablero sin retraso (0 frames de desfase).
-  function repaintOverlay() { if (ovActive()) paintOverlay(lastOv.people, lastOv.sel); }
+  function repaintOverlay() { if (ovActive()) paintOverlay(lastOv.people, lastOv.sel); else if (hlCells.length) paintOverlay([], null); }
 
   // Avisa a la página cuando cambia el "estado social" (quién hace qué, o el
   // seleccionado) para que refresque el listado lateral.
