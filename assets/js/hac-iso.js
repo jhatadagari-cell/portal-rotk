@@ -476,7 +476,7 @@ const HacIso = (function () {
     // Coloca el kit de tiles (assets/img/iso/wei/wall-*) alrededor del perímetro,
     // con el 午門 (gate-wall) en el eje. Recinto cerrado (4 lados a altura completa).
     const WEI = (typeof window !== 'undefined' && window.ISO_SPRITES_THEMES && window.ISO_SPRITES_THEMES.wei) || null;
-    const weiWalls = tema === 'wei' && WEI && SPRITES['wei/wall-straight2-front'];
+    const weiWalls = tema === 'wei' && WEI && (SPRITES['wei/wall-straight2-front'] || SPRITES['wei/bld-muralla-luoyang-0']);
     const gateGcW = WD.gate ? Math.floor((GW - 1) / 2) : -999;
     function drawWeiTile(key, fx, fy, flip, S, box) {
       const m = WEI && WEI[key], img = SPRITES['wei/' + key]; if (!m || !img) return;
@@ -490,7 +490,55 @@ const HacIso = (function () {
         g.setTransform(SCALE, 0, 0, SCALE, 0, 0);
       } });
     }
+    // Dibuja un sprite de EDIFICIO del tema (convención meta: ox/oy = esquina N,
+    // tamaño m.w×m.h en device) en la celda (gx,gy), con espejo horizontal opcional
+    // (para las rectas que corren por el eje gy). Empuja a wallSegs con su caja de
+    // orden. Se usa para tejer la muralla exterior de Luoyang con las piezas a mano.
+    function drawWeiBld(key, gx, gy, flip, box, s) {
+      const m = WEI && WEI[key], img = SPRITES['wei/' + key]; if (!m || !img) return;
+      s = s || 1;                                    // factor de escala por pieza
+      const ox = m.ox * s, oy = m.oy * s, w = m.w * s, h = m.h * s;
+      const nx = X(gx, gy) * SCALE, ny = Y(gx, gy) * SCALE;   // esquina N (pos) en device
+      wallSegs.push({ box, draw: () => {
+        g.setTransform(1, 0, 0, 1, 0, 0); g.imageSmoothingEnabled = true;
+        if (flip) { g.save(); g.translate(Math.round(nx + ox), Math.round(ny - oy)); g.scale(-1, 1); g.drawImage(img, 0, 0, w, h); g.restore(); }
+        else g.drawImage(img, Math.round(nx - ox), Math.round(ny - oy), w, h);
+        g.imageSmoothingEnabled = false; g.setTransform(SCALE, 0, 0, SCALE, 0, 0);
+      } });
+    }
+
     function drawWeiPerimeter() {
+      // ── Muralla exterior de LUOYANG (piezas a mano) ────────────────────────
+      // Si están las piezas nuevas, tejemos el perímetro con muralla-luoyang [8×2]
+      // + portón-luoyang [6×4] (frente 洛阳宫 al SO, lisa al NO). Lados gx (FL sur/SO,
+      // WT norte/NE) → rot 0; lados gy (WL oeste/NO, FR este/SE) → espejo. Sin esquinas
+      // aún (llegarán aparte): v1 para iterar. Fallback al kit viejo si faltan.
+      const luo = SPRITES['wei/bld-muralla-luoyang-0'] && SPRITES['wei/bld-puerta-luoyang-1'];
+      if (luo) {
+        const SEG = 8, gcX = Math.floor((GW - 1) / 2);
+        const nearC = (v, c) => Math.abs(v + SEG / 2 - c) < SEG / 2 + 2;   // el segmento [v,v+8] pisa el centro c
+        // Portones en los lados gx PARALELOS: FRENTE (洛阳宫) al SO (FL), TRASERA (lisa)
+        // al NE (WT). Ambos rot 0 (mismo eje) → sin flip. WL/FR: solo muro (espejo).
+        const SG = 0.7, SC = 0.5;   // escala portones (algo menor) y esquina (mucho menor)
+        // FL (sur, mira al SO): portón FRENTE en gcX
+        for (let x = 0; x < GW; x += SEG) { if (nearC(x, gcX)) continue; drawWeiBld('bld-muralla-luoyang-0', x, GH - 2, false, [x, GH - 2, x + SEG, GH]); }
+        drawWeiBld('bld-puerta-luoyang-1', gcX - 2, GH - 3, false, [gcX - 2, GH - 3, gcX + 2, GH], SG);
+        // WT (norte, mira al NE): portón TRASERO (lisa) en gcX
+        for (let x = 0; x < GW; x += SEG) { if (nearC(x, gcX)) continue; drawWeiBld('bld-muralla-luoyang-0', x, 0, false, [x, 0, x + SEG, 2]); }
+        drawWeiBld('bld-puerta-luoyang-0', gcX - 2, 0, false, [gcX - 2, 0, gcX + 2, 3], SG);
+        // WL (oeste, mira al NO): solo muro (espejo)
+        for (let y = 0; y < GH; y += SEG) drawWeiBld('bld-muralla-luoyang-0', 0, y, true, [0, y, 2, y + SEG]);
+        // FR (este, mira al SE): solo muro (espejo)
+        for (let y = 0; y < GH; y += SEG) drawWeiBld('bld-muralla-luoyang-0', GW - 2, y, true, [GW - 2, y, GW, y + SEG]);
+        // Esquina NORTE (vértice de fondo): torre de esquina (mucho más pequeña).
+        // PENDIENTE: al estar en el vértice más lejano, los tramos de muralla (8 celdas,
+        // arrancan en el propio vértice y avanzan hacia el espectador) la sepultan en el
+        // pintor. Para que "encare" bien hay que dejar HUECO de esquina en las tiradas de
+        // muro y colocar la torre ahí (+ arte de las otras 3 esquinas). Desactivada hasta
+        // entonces para no dejar un torreón medio enterrado. drawWeiBld(...,'bld-esquina-luoyang-0', 1,1, false,[-1,-1,3,3], SC)
+        void SC;
+        return;
+      }
       const S = 0.46, ST = 2;
       for (let gy = lo; gy <= hiH; gy += ST) drawWeiTile('wall-straight2-front', FRi, gy, false, S, [FRi - 1, gy - 1, FRi + 1, gy + 1]); // FR este (frente)
       for (let gy = lo; gy <= hiH; gy += ST) drawWeiTile('wall-straight2-front', WLi, gy, false, S, [WLi - 1, gy - 1, WLi + 1, gy + 1]); // WL oeste (fondo)

@@ -44,6 +44,26 @@
   T['bld-palacio-0'] = { ox: 216, oy: 122, w: 360, h: 288 };
   T['bld-palacio-1'] = { ox: 216, oy: 121, w: 360, h: 288 };
 
+  // Muralla de Luoyang 洛陽城牆 (tramo recto): gran muro de sillería con adarve
+  // transitable y balaustrada, adaptado del arte a mano al iso 2:1 (rectificado por
+  // cizallado en Y para no torcer la sillería). Footprint [8,2]; se concatena por el
+  // eje largo (gx) para cerrar el recinto. Solo rot 0 por ahora (falta el tramo
+  // perpendicular + esquinas/torres/puerta a juego, que llegarán como piezas aparte).
+  T['bld-muralla-luoyang-0'] = { ox: 93, oy: 82, w: 402, h: 262 };
+
+  // Portón/Torre-puerta de Luoyang 洛陽門 (torre sobre base de sillería, footprint
+  // [6,4]): dos vistas de la MISMA torre rectificadas a 2:1 y ancladas a la misma
+  // base (alineadas por la puerta roja, para que roten sin saltar). rot 0 = lisa
+  // (trasera); rot 1 = FRENTE ceremonial (placa 洛阳宫, leones y estandartes 魏, que
+  // sobresalen del footprint). rot 2/3 caen a -0.
+  T['bld-puerta-luoyang-0'] = { ox: 178, oy: 254, w: 432, h: 435 };
+  T['bld-puerta-luoyang-1'] = { ox: 242, oy: 358, w: 451, h: 580 };
+
+  // Torre de esquina 角樓 de Luoyang (footprint 4×4): base de sillería + torreón de
+  // doble alero. Rectificada a 2:1 (base simétrica de torre). De momento solo la
+  // vista NORTE (esquina de fondo); las otras esquinas llegarán / se derivarán.
+  T['bld-esquina-luoyang-0'] = { ox: 325, oy: 338, w: 506, h: 483 };
+
   // Puerta Imperial 午門 (portón monumental de la muralla exterior, 洛陽宮). Torre
   // de puerta sobre base de piedra. rot 0 = vista lisa (puerta a la derecha);
   // rot 1 = vista ornamentada con leones y estandartes 魏 (puerta a la izquierda).
