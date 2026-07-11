@@ -303,14 +303,17 @@ const HacIso = (function () {
     const frontTrees = [];   // árboles delante de la finca (se pintan tras los muros)
 
     // ── CAMINO de tierra desde el 午門 (portón SUROESTE) ──────────────────────
-    // Sale RECTO del portón (columna central, perpendicular al muro delantero) hacia
+    // Sale RECTO del portón (eje central, perpendicular al muro delantero) hacia
     // afuera (+y = abajo-izquierda en pantalla). En esas celdas se pinta TIERRA (soil)
-    // en vez de hierba, y se DESPEJA de árboles/arbustos (el camino ±1) para que nada
-    // se superponga. Requiere las tiles soil cargadas (si no, se omite sin más).
+    // en vez de hierba, y se DESPEJA de árboles/arbustos (el camino +1 a cada lado)
+    // para que nada se superponga. Requiere las tiles soil cargadas (si no, se omite).
+    const PATH_W = 2;                                            // ancho del camino en tiles
     const pathCol = WD.gate ? Math.floor((GW - 1) / 2) : null;   // = gateGc del muro delantero
+    const pathC0 = pathCol != null ? pathCol - Math.floor(PATH_W / 2) : null;   // 1ª columna del camino
+    const pathC1 = pathC0 != null ? pathC0 + PATH_W - 1 : null;                 // última columna
     const pathFromGy = GH - 1 + M + 1;                           // 1ª fila FUERA del muro delantero
-    const onPath = (gx, gy) => pathCol != null && soilTiles.length && gx === pathCol && gy >= pathFromGy;
-    const pathClear = (gx, gy) => pathCol != null && soilTiles.length && Math.abs(gx - pathCol) <= 1 && gy >= pathFromGy;
+    const onPath = (gx, gy) => pathC0 != null && soilTiles.length && gx >= pathC0 && gx <= pathC1 && gy >= pathFromGy;
+    const pathClear = (gx, gy) => pathC0 != null && soilTiles.length && gx >= pathC0 - 1 && gx <= pathC1 + 1 && gy >= pathFromGy;
 
     // Río que discurre por fuera del borde OESTE, con un leve meandro (ancho 2).
     function isRiver(gx, gy) {
