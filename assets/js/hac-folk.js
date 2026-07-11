@@ -41,6 +41,9 @@ const HacFolk = (function () {
   // nítidos a cualquier zoom (el lienzo del mundo es pixel-art horneado a SCALE=2 y
   // se emborrona al ampliar). Compromiso: se pierde la oclusión por edificios altos.
   let ovCanvas = null, ovCtx = null, lastOv = { people: [], sel: null };
+  // Celdas RESALTADAS (amarillo) sobre el mapa (p.ej. elegir jardín para un debate).
+  let hlCells = [], hlPhase = 0;
+  function setHighlight(cells) { hlCells = Array.isArray(cells) ? cells.slice() : []; }
 
   // ── Determinismo / vida compartida (CONTINUA, con snapshots) ────────────────
   // La simulación es función de un STREAM sembrado (R) y de una hora COMPARTIDA
@@ -1729,6 +1732,20 @@ const HacFolk = (function () {
     const S = SCALE, cs = t.scale, k = cs * dpr;                 // backing px → device px del overlay
     const feetFrac = (HacChar.feetFrac || (charFEET() / charH()));
     const aspect = (HacChar.aspect || (charW() / charH()));
+    // Celdas resaltadas (amarillo pulsante): rombos de tile bajo los personajes.
+    if (hlCells.length) {
+      hlPhase += 0.045;
+      const a = 0.30 + 0.15 * Math.sin(hlPhase);
+      const toDev = (X, Y) => [(t.tx + X * S * cs) * dpr, (t.ty + Y * S * cs) * dpr];
+      g.lineWidth = Math.max(1, k);
+      hlCells.forEach(c => {
+        const lc = logic(c[0], c[1]);
+        const N = toDev(lc[0], lc[1] - TH / 2), E = toDev(lc[0] + TW / 2, lc[1]), So = toDev(lc[0], lc[1] + TH / 2), Wo = toDev(lc[0] - TW / 2, lc[1]);
+        g.beginPath(); g.moveTo(N[0], N[1]); g.lineTo(E[0], E[1]); g.lineTo(So[0], So[1]); g.lineTo(Wo[0], Wo[1]); g.closePath();
+        g.fillStyle = 'rgba(255,224,90,' + a.toFixed(3) + ')'; g.fill();
+        g.strokeStyle = 'rgba(255,238,150,0.95)'; g.stroke();
+      });
+    }
     const one = (p, highlight) => {
       const pr = ovPose(p);
       const master = HacChar.imgFor(pr.dir, pr.pose, pr.frame); if (!master) return;
@@ -2104,6 +2121,6 @@ const HacFolk = (function () {
   }
 
   function mainBuildingId() { return wk ? (wk.mainBid || null) : null; }
-  return { start, stop, list, select, selected, position, buildings, buildingTypes, setOrders, setEscaramuzas, setDebate, setCaballos, drawAvatar, goHome, consultar, consultando, dejarConsulta, mainBuildingId, repaintOverlay, refreshCargos };
+  return { start, stop, list, select, selected, position, buildings, buildingTypes, setOrders, setEscaramuzas, setDebate, setHighlight, setCaballos, drawAvatar, goHome, consultar, consultando, dejarConsulta, mainBuildingId, repaintOverlay, refreshCargos };
 })();
 if (typeof window !== 'undefined') window.HacFolk = HacFolk;

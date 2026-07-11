@@ -1025,15 +1025,29 @@
     const miNombreDeb = () => { const m = miMiembro(); return (m && m.nombre) || (_myPj && _myPj.nombre) || 'Tú'; };
     const debTema = (id) => DEB && DEB.temaDe ? DEB.temaDe(id) : null;
     const debNivel = (pjId, temaId) => { const t = debTema(temaId); if (!t || !window.HacStats || !HacStats.nivelTotal) return 0; return t.doms.reduce((s, d) => s + HacStats.nivelTotal(pjId, d), 0); };
-    const debProb = (nA, nB) => Math.max(0.15, Math.min(0.85, (nA + 1) / (nA + nB + 2)));
-    // Jardines de la finca (sede del debate). cell = celda pisable representativa.
+    // Probabilidad de ganar por DIFERENCIA de nivel, con dos pendientes: hasta 20 de
+    // diferencia sube POCO (skill apenas inclina la balanza); a partir de 20, cada punto
+    // pesa bastante más (una superioridad clara sí decide). Siempre queda hueco a la sorpresa.
+    const DEB_GENTLE = 0.005, DEB_STEEP = 0.013, DEB_KNEE = 20;   // /punto; ajustables
+    function debProb(nA, nB) {
+      const diff = nA - nB, a = Math.abs(diff);
+      const adv = a <= DEB_KNEE ? a * DEB_GENTLE : DEB_KNEE * DEB_GENTLE + (a - DEB_KNEE) * DEB_STEEP;
+      return Math.max(0.10, Math.min(0.90, 0.5 + (diff < 0 ? -adv : adv)));
+    }
+    // Jardines de la finca APTOS para debate: tipo jardín + área ≥ 4 (1×4 / 2×2 mín.).
+    // cell = celda representativa (pos); cells = todas sus celdas (resaltado + hit-test).
     function gardensFinca() {
       const G = { jardin: 1, 'jardin-flores': 1, bonsai: 1 };
+      const B = window.HacBuild;
       return ((h.mapa && h.mapa.construcciones) || []).filter(c => G[c.tipo]).map(c => {
-        const def = window.HacBuild && HacBuild.tipo(c.tipo);
-        return { cell: c.pos[0] + ',' + c.pos[1], nombre: (def && def.nombre) || 'Jardín', zh: (def && def.zh) || '园' };
-      });
+        const def = B && B.tipo(c.tipo);
+        const cells = (B && B.celdasOcupadas) ? B.celdasOcupadas(c) : [[c.pos[0], c.pos[1]]];
+        return { cell: c.pos[0] + ',' + c.pos[1], cells, area: cells.length, nombre: (def && def.nombre) || 'Jardín', zh: (def && def.zh) || '园' };
+      }).filter(g => g.area >= 4);
     }
+    // Un jardín está OCUPADO si ya aloja un debate propuesto/en_curso (uno por jardín).
+    function jardinOcupado(cell) { return !!DEB && DEB.all(h.id).some(d => (d.estado === 'propuesto' || d.estado === 'en_curso') && d.jardinCell === cell); }
+    function gardensDisponibles() { return gardensFinca().filter(g => !jardinOcupado(g.cell)); }
     // Resultado DETERMINISTA (mismo id → igual en todos los clientes y en la repetición).
     function debOutcome(d) {
       const t = debTema(d.tema), doms = t ? t.doms : ['cultural'];
@@ -1120,20 +1134,21 @@
       debEl.addEventListener('click', (e) => { if (e.target === debEl) debEl.hidden = true; });
       return debEl;
     }
-    let _debPick = { invitado: null, tema: null, jardin: null };
+    let _debPick = { invitado: null, tema: null };
+    let _pickJardin = null;   // {invM, tema, gardens[]} mientras eliges jardín en el mapa
     function abrirInvitarDebate() {
       if (!DEB) { toast('Los debates aún no están disponibles'); return; }
-      const gardens = gardensFinca();
-      if (!gardens.length) { toast('Construye un Jardín en la finca para poder debatir'); return; }
+      if (!gardensFinca().length) { toast('Necesitas un Jardín de al menos 4 de área (1×4 / 2×2) para debatir'); return; }
+      if (!gardensDisponibles().length) { toast('Todos los jardines tienen ya un debate en marcha'); return; }
       const cd = DEB.cooldownRestanteMs(h.id, myId, clock());
       if (cd > 0) { toast('Tu mecenas necesita reposar tras el último debate (' + fmtClock(Math.ceil(cd / 1000)) + ')'); return; }
       const otros = (h.miembros || []).filter(m => walkerIdOf(m) !== myId);
       if (!otros.length) { toast('No hay a quién invitar en esta hacienda'); return; }
-      _debPick = { invitado: walkerIdOf(otros[0]), tema: DEB.TEMAS[0].id, jardin: gardens[0].cell };
-      renderInvitarDebate(gardens, otros);
+      _debPick = { invitado: walkerIdOf(otros[0]), tema: DEB.TEMAS[0].id };
+      renderInvitarDebate(otros);
       ensureDebEl().hidden = false;
     }
-    function renderInvitarDebate(gardens, otros) {
+    function renderInvitarDebate(otros) {
       const el = ensureDebEl();
       const invM = otros.find(m => walkerIdOf(m) === _debPick.invitado) || otros[0];
       const invId = walkerIdOf(invM);
@@ -1143,30 +1158,55 @@
         const domTxt = t.doms.map(d => DOM_GLYPH[d]).join('');
         return `<button type="button" class="hacp-deb-opt hacp-deb-tema${t.id === _debPick.tema ? ' on' : ''}" data-tema="${esc(t.id)}" title="${esc(t.nombre)} · ${domTxt}"><b>${esc(t.nombre)}</b> <span class="hacp-deb-dom">${domTxt}</span><span class="hacp-deb-odds">${p}% tú</span></button>`;
       }).join('');
-      const jardBtns = gardens.map((g, i) => `<button type="button" class="hacp-deb-opt${g.cell === _debPick.jardin ? ' on' : ''}" data-jard="${esc(g.cell)}">${esc(g.zh)} ${esc(g.nombre)}${gardens.length > 1 ? ' #' + (i + 1) : ''}</button>`).join('');
       const nMeSel = debNivel(myId, _debPick.tema), nOtSel = debNivel(invId, _debPick.tema), pMe = Math.round(debProb(nMeSel, nOtSel) * 100);
       const domSel = (debTema(_debPick.tema) || { doms: [] }).doms.map(d => DOM_GLYPH[d]).join('');
       el.innerHTML = `<div class="hacp-shop-box">
         <button type="button" class="hacp-shop-x" data-act="x" aria-label="Cerrar">✕</button>
         <div class="hacp-shop-h"><span class="hacp-shop-zh">🗣</span> Invitar a debatir</div>
-        <div class="hacp-shop-sub">Retas a otro mecenas a un debate de 5 min en el jardín. Ambos ganáis experiencia del tema; el ganador, prestigio. <b>Quién gana depende de vuestro nivel en ${domSel || 'el dominio'}</b> (+ algo de suerte).</div>
+        <div class="hacp-shop-sub">Retas a otro mecenas a un debate de 5 min en un jardín. Ambos ganáis experiencia del tema; el ganador, prestigio. <b>Quién gana depende de vuestro nivel en ${domSel || 'el dominio'}</b> (+ algo de suerte).</div>
         <div class="hacp-deb-sec"><label class="hacp-cp-lbl">¿A quién retas?</label><div class="hacp-deb-opts">${invBtns}</div></div>
         <div class="hacp-deb-sec"><label class="hacp-cp-lbl">Tema del debate</label><div class="hacp-deb-opts">${temaBtns}</div></div>
-        <div class="hacp-deb-sec"><label class="hacp-cp-lbl">¿Dónde?</label><div class="hacp-deb-opts">${jardBtns}</div></div>
         <div class="hacp-deb-odds-big">Tu probabilidad: <b>${pMe}%</b> <span>(${domSel} tú ${nMeSel} vs ${esc(invM.nombre)} ${nOtSel})</span></div>
-        <button type="button" class="hacp-cp-btn hacp-cp-go" data-act="invitar">Invitar a debatir</button>
+        <button type="button" class="hacp-cp-btn hacp-cp-go" data-act="pickjardin">Elegir jardín en el mapa →</button>
       </div>`;
       el.querySelector('[data-act="x"]').addEventListener('click', () => { el.hidden = true; });
-      el.querySelectorAll('[data-inv]').forEach(b => b.addEventListener('click', () => { _debPick.invitado = b.dataset.inv; renderInvitarDebate(gardens, otros); }));
-      el.querySelectorAll('[data-tema]').forEach(b => b.addEventListener('click', () => { _debPick.tema = b.dataset.tema; renderInvitarDebate(gardens, otros); }));
-      el.querySelectorAll('[data-jard]').forEach(b => b.addEventListener('click', () => { _debPick.jardin = b.dataset.jard; renderInvitarDebate(gardens, otros); }));
-      el.querySelector('[data-act="invitar"]').addEventListener('click', () => enviarInvitacionDebate(invM));
+      el.querySelectorAll('[data-inv]').forEach(b => b.addEventListener('click', () => { _debPick.invitado = b.dataset.inv; renderInvitarDebate(otros); }));
+      el.querySelectorAll('[data-tema]').forEach(b => b.addEventListener('click', () => { _debPick.tema = b.dataset.tema; renderInvitarDebate(otros); }));
+      el.querySelector('[data-act="pickjardin"]').addEventListener('click', () => iniciarPickJardin(invM));
     }
-    function enviarInvitacionDebate(invM) {
-      if (!DEB) return;
-      DEB.crear({ haciendaId: h.id, hostId: myId, hostNombre: miNombreDeb(), invitadoId: walkerIdOf(invM), invitadoNombre: invM.nombre || '', tema: _debPick.tema, jardinCell: _debPick.jardin })
-        .then(() => { if (debEl) debEl.hidden = true; toast(esNpc(invM) ? '🗣 Invitación enviada · ' + (invM.nombre || 'el NPC') + ' aceptará en un momento' : '🗣 Invitación enviada · espera a que ' + (invM.nombre || 'te') + ' acepte'); return DEB.reload().then(afterDebChange); })
-        .catch(e => { toast((e && e.message) || 'No se pudo invitar'); });
+    // Modo ELEGIR JARDÍN en el mapa: resalta en amarillo los jardines libres; toca uno.
+    function iniciarPickJardin(invM) {
+      const disp = gardensDisponibles();
+      if (!disp.length) { toast('Todos los jardines tienen ya un debate en marcha'); return; }
+      if (debEl) debEl.hidden = true;
+      _pickJardin = { invM, tema: _debPick.tema, gardens: disp };
+      const cells = disp.reduce((a, g) => a.concat(g.cells), []);
+      if (window.HacFolk && HacFolk.setHighlight) HacFolk.setHighlight(cells);
+      mostrarHintJardin(disp.length);
+    }
+    function cancelarPickJardin() {
+      _pickJardin = null;
+      if (window.HacFolk && HacFolk.setHighlight) HacFolk.setHighlight([]);
+      const b = document.getElementById('hacp-deb-hint'); if (b) b.remove();
+    }
+    function mostrarHintJardin(n) {
+      let b = document.getElementById('hacp-deb-hint');
+      if (!b) { b = document.createElement('div'); b.id = 'hacp-deb-hint'; b.className = 'hacp-deb-hint'; vp.appendChild(b); }
+      b.innerHTML = `🟡 Toca uno de los <b>${n}</b> jardines iluminados para el debate <button type="button" data-act="cancel-pick">Cancelar</button>`;
+      b.querySelector('[data-act="cancel-pick"]').addEventListener('click', (e) => { e.stopPropagation(); cancelarPickJardin(); });
+    }
+    // Resuelve un tap del mapa en modo pick: ¿cae en un jardín iluminado? → crea el debate.
+    function pickJardinTap(gx, gy) {
+      if (!_pickJardin) return false;
+      const key = gx + ',' + gy;
+      const g = _pickJardin.gardens.find(gg => (gg.cells || []).some(c => c[0] === gx && c[1] === gy));
+      const invM = _pickJardin.invM, tema = _pickJardin.tema;
+      cancelarPickJardin();
+      if (!g) { toast('Ese sitio no vale · elige un jardín iluminado'); return true; }
+      DEB.crear({ haciendaId: h.id, hostId: myId, hostNombre: miNombreDeb(), invitadoId: walkerIdOf(invM), invitadoNombre: invM.nombre || '', tema, jardinCell: g.cell })
+        .then(() => { toast(esNpc(invM) ? '🗣 Debate en ' + g.nombre + ' · ' + (invM.nombre || 'el NPC') + ' aceptará enseguida' : '🗣 Invitación enviada · espera a que ' + (invM.nombre || '') + ' acepte'); return DEB.reload().then(afterDebChange); })
+        .catch(e => { toast((e && e.message) || 'No se pudo montar el debate'); });
+      return true;
     }
     // Aceptar / rechazar una invitación que me han hecho.
     function aceptarDebate(id) { if (!DEB) return; DEB.aceptar(id, myId, clock()).then(() => { toast('🗣 ¡Al jardín a debatir!'); return DEB.reload().then(afterDebChange); }).catch(e => toast((e && e.message) || 'No se pudo aceptar')); }
@@ -1252,7 +1292,9 @@
         .hacp-deb-win{min-height:22px;margin-top:6px;font-size:16px;opacity:.5;transition:opacity .3s}
         .hacp-deb-win.on{opacity:1}
         .hacp-deb-invite{background:#241a14;border:1px solid #7a4a1c;border-radius:9px;padding:8px 10px;margin-top:6px}
-        .hacp-deb-invite .r{display:flex;gap:6px;margin-top:6px}`;
+        .hacp-deb-invite .r{display:flex;gap:6px;margin-top:6px}
+        .hacp-deb-hint{position:absolute;left:50%;top:12px;transform:translateX(-50%);z-index:6;background:rgba(36,26,18,.94);color:#fbeecf;border:1px solid #d0a84a;border-radius:10px;padding:9px 13px;font:600 14px/1.3 system-ui,sans-serif;box-shadow:0 6px 20px rgba(0,0,0,.4);display:flex;align-items:center;gap:10px;max-width:92%}
+        .hacp-deb-hint button{background:#7a4a1c;color:#fbeecf;border:1px solid #d0a84a;border-radius:7px;padding:5px 10px;font:inherit;cursor:pointer}`;
       document.head.appendChild(s);
     }
     debStyleOnce();
@@ -3694,6 +3736,12 @@
     vp.addEventListener('pointerup', (e) => {
       const was = downAt; downAt = null;
       if (!was || moved) return;
+      // Modo ELEGIR JARDÍN (debate): el tap escoge un jardín iluminado.
+      if (_pickJardin) {
+        const cc = (window.HacIso && HacIso.cellAt) ? HacIso.cellAt(iso, e.clientX, e.clientY) : null;
+        if (cc) pickJardinTap(cc[0], cc[1]); else toast('Toca un jardín iluminado (amarillo)');
+        return;
+      }
       const r = iso.getBoundingClientRect();
       if (!r.width || !r.height) return;
       const lx = (e.clientX - r.left) / r.width * iso.width / S;

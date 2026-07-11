@@ -50,6 +50,11 @@ begin
                and (e.host_id in (p_host, p_invitado) or e.invitado_id in (p_host, p_invitado))) then
     raise exception 'Tú o el invitado ya estáis en un debate';
   end if;
+  -- Un jardín solo aloja UN debate a la vez (reservado desde la propuesta).
+  if coalesce(p_jardin,'') <> '' and exists (select 1 from public.debates e
+             where e.hacienda_id = p_hac and e.estado in ('propuesto','en_curso') and e.jardin_cell = p_jardin) then
+    raise exception 'Ese jardín ya tiene un debate en marcha';
+  end if;
   insert into public.debates (hacienda_id, host_id, host_nombre, invitado_id, invitado_nombre, tema, jardin_cell, estado)
   values (p_hac, p_host, coalesce(p_host_nombre,''), p_invitado, coalesce(p_invitado_nombre,''),
           p_tema, coalesce(p_jardin,''), 'propuesto')
