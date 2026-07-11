@@ -494,12 +494,12 @@ const HacIso = (function () {
     // tamaño m.w×m.h en device) en la celda (gx,gy), con espejo horizontal opcional
     // (para las rectas que corren por el eje gy). Empuja a wallSegs con su caja de
     // orden. Se usa para tejer la muralla exterior de Luoyang con las piezas a mano.
-    function drawWeiBld(key, gx, gy, flip, box, s) {
+    function drawWeiBld(key, gx, gy, flip, box, s, obox) {
       const m = WEI && WEI[key], img = SPRITES['wei/' + key]; if (!m || !img) return;
       s = s || 1;                                    // factor de escala por pieza
       const ox = m.ox * s, oy = m.oy * s, w = m.w * s, h = m.h * s;
       const nx = X(gx, gy) * SCALE, ny = Y(gx, gy) * SCALE;   // esquina N (pos) en device
-      wallSegs.push({ box, draw: () => {
+      wallSegs.push({ box, obox, draw: () => {
         g.setTransform(1, 0, 0, 1, 0, 0); g.imageSmoothingEnabled = true;
         if (flip) { g.save(); g.translate(Math.round(nx + ox), Math.round(ny - oy)); g.scale(-1, 1); g.drawImage(img, 0, 0, w, h); g.restore(); }
         else g.drawImage(img, Math.round(nx - ox), Math.round(ny - oy), w, h);
@@ -549,10 +549,18 @@ const HacIso = (function () {
         // Lados gy (verticales, espejo): también con hueco de esquina.
         tileAxis(C, GH - C, y => drawWeiBld('bld-muralla-luoyang-0', 0, y, true, [0, y, 2, y + SEG]));       // WL oeste (mira NO)
         tileAxis(C, GH - C, y => drawWeiBld('bld-muralla-luoyang-0', GW - 2, y, true, [GW - 2, y, GW, y + SEG])); // FR este (mira SE)
-        // Torre de esquina 角樓: DESACTIVADA. Hundirla tras el muro hace que la base
-        // asome por el lado interior (patio) del vértice como un pegote sin sentido
-        // (no hay muro que la tape ahí). Las 4 esquinas quedan huecas hasta rehacer
-        // bien la integración (ver notas). drawWeiBld('bld-esquina-luoyang-0', ...)
+        // Torre de esquina 角樓 (vista NORTE) cuadrada sobre plantilla en L: su base
+        // 2×2 llena el codo del vértice a escala SC (así la altura de sillería ≈ la del
+        // muro → adarve continuo, sin flotar) y los dos brazos del muro entran por sus
+        // caras. Anclada por el vértice trasero de la base al apex.
+        if (SPRITES['wei/bld-esquina-luoyang-0']) {
+          const SC = 0.147, CX = 0.8, CY = 0.4;
+          // box GRANDE (orden de pintado): fuerza a la torre a dibujarse DESPUÉS de los
+          // dos tramos de muro contiguos (que la taparían por el desbordamiento del
+          // sprite) para que corone el vértice. obox PEQUEÑO (oclusión de mecenas): su
+          // huella real, para no ocultar a nadie del patio cercano.
+          drawWeiBld('bld-esquina-luoyang-0', CX, CY, false, [CX, CY, CX + 7, CY + 7], SC, [CX, CY, CX + 2.2, CY + 2.2]);
+        }
         return;
       }
       const S = 0.46, ST = 2;

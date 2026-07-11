@@ -62,7 +62,7 @@
   // Torre de esquina 角樓 de Luoyang (footprint 4×4): base de sillería + torreón de
   // doble alero. Rectificada a 2:1 (base simétrica de torre). De momento solo la
   // vista NORTE (esquina de fondo); las otras esquinas llegarán / se derivarán.
-  T['bld-esquina-luoyang-0'] = { ox: 503, oy: 560, w: 982, h: 1105 };
+  T['bld-esquina-luoyang-0'] = { ox: 503, oy: 590, w: 982, h: 1105 };
 
   // Puerta Imperial 午門 (portón monumental de la muralla exterior, 洛陽宮). Torre
   // de puerta sobre base de piedra. rot 0 = vista lisa (puerta a la derecha);
