@@ -476,7 +476,10 @@ const HacIso = (function () {
     // Coloca el kit de tiles (assets/img/iso/wei/wall-*) alrededor del perímetro,
     // con el 午門 (gate-wall) en el eje. Recinto cerrado (4 lados a altura completa).
     const WEI = (typeof window !== 'undefined' && window.ISO_SPRITES_THEMES && window.ISO_SPRITES_THEMES.wei) || null;
-    const weiWalls = tema === 'wei' && WEI && (SPRITES['wei/wall-straight2-front'] || SPRITES['wei/bld-muralla-luoyang-0']);
+    // Muralla exterior: SIEMPRE procedural (como las demás haciendas). Se descartó la
+    // vía por imagen (muralla-luoyang / portones-luoyang / torre de esquina): nunca
+    // cuadraban bien en los vértices. El Salón del Trono sigue siendo arte a mano.
+    const weiWalls = false;
     const gateGcW = WD.gate ? Math.floor((GW - 1) / 2) : -999;
     function drawWeiTile(key, fx, fy, flip, S, box) {
       const m = WEI && WEI[key], img = SPRITES['wei/' + key]; if (!m || !img) return;
