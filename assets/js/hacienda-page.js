@@ -1577,7 +1577,24 @@
         @keyframes cl-spark{0%{opacity:0;transform:scale(.3) rotate(-20deg)}40%{opacity:1;transform:scale(1.5) rotate(0)}100%{opacity:0;transform:scale(1)}}
         .cl-verdict{opacity:0;font:700 15px 'Noto Serif SC',serif;color:#f3e6c4;text-align:center;padding:0 10px;animation:cl-fade .4s .62s forwards}
         .cl-verdict b{color:#e8c877}
-        @keyframes cl-fade{to{opacity:1}}`;
+        @keyframes cl-fade{to{opacity:1}}
+        @media(max-width:640px){
+          /* ── Debate: adaptación MÓVIL (caben en pantalla, se puede desplazar, textos legibles) ── */
+          .hacp-deb-box,.hacp-deb-revbox,.hacp-debj-box{max-width:none;width:100%;max-height:calc(100dvh - var(--nav-h,58px) - 16px);overflow-y:auto;padding:14px 14px calc(14px + env(safe-area-inset-bottom,0px))}
+          .hacp-deb-title{font-size:17px}
+          .hacp-deb-duel{gap:6px}.hacp-deb-side{padding:8px 4px}.hacp-deb-glyph{font-size:26px}
+          .hacp-deb-temas{gap:6px}.hacp-deb-tema{padding:8px 3px}.hacp-deb-tema .g{font-size:19px}.hacp-deb-tema .n{font-size:12px}.hacp-deb-tema .o{font-size:12px}
+          .hacp-deb-cta{padding:13px;font-size:15px}
+          .hacp-deb-chip{padding:7px 12px}
+          .hacp-deb-banners{gap:8px}.hacp-deb-banner .g{font-size:24px}
+          .hacp-debj-head{font-size:16px}
+          .hacp-debj-arena{gap:6px}
+          .hacp-debj-fighter{flex-basis:64px;padding:8px 3px}.hacp-debj-fighter .g{font-size:22px}
+          .hacp-debj-center{min-height:70px}.hacp-debj-bubble{font-size:12.5px;padding:6px 9px}
+          .hacp-debj-choices{gap:6px}.hacp-debj-arg{padding:9px 4px}.hacp-debj-arg .zh{font-size:20px}.hacp-debj-arg .nb{font-size:12px}.hacp-debj-arg .ph{font-size:12px}
+          .hacp-debj-clash{top:46px;height:140px}.hacp-debj-clash .row{gap:12px}.cl-side .zh{font-size:34px}.cl-verdict{font-size:13.5px}
+          .hacp-deb-hint{top:8px;font-size:13px;padding:9px 12px;gap:8px}
+        }`;
       document.head.appendChild(s);
     }
     debStyleOnce();
