@@ -549,18 +549,8 @@ const HacIso = (function () {
         // Lados gy (verticales, espejo): también con hueco de esquina.
         tileAxis(C, GH - C, y => drawWeiBld('bld-muralla-luoyang-0', 0, y, true, [0, y, 2, y + SEG]));       // WL oeste (mira NO)
         tileAxis(C, GH - C, y => drawWeiBld('bld-muralla-luoyang-0', GW - 2, y, true, [GW - 2, y, GW, y + SEG])); // FR este (mira SE)
-        // Torre de esquina 角樓 (vista NORTE) cuadrada sobre plantilla en L: su base
-        // 2×2 llena el codo del vértice a escala SC (así la altura de sillería ≈ la del
-        // muro → adarve continuo, sin flotar) y los dos brazos del muro entran por sus
-        // caras. Anclada por el vértice trasero de la base al apex.
-        if (SPRITES['wei/bld-esquina-luoyang-0']) {
-          const SC = 0.147, CX = 0.8, CY = 0.4;
-          // box GRANDE (orden de pintado): fuerza a la torre a dibujarse DESPUÉS de los
-          // dos tramos de muro contiguos (que la taparían por el desbordamiento del
-          // sprite) para que corone el vértice. obox PEQUEÑO (oclusión de mecenas): su
-          // huella real, para no ocultar a nadie del patio cercano.
-          drawWeiBld('bld-esquina-luoyang-0', CX, CY, false, [CX, CY, CX + 7, CY + 7], SC, [CX, CY, CX + 2.2, CY + 2.2]);
-        }
+        // Torre de esquina: la vía IMAGEN queda descartada (nunca cuadra bien en el
+        // vértice). Se generará PROCEDURALMENTE como en las demás haciendas.
         return;
       }
       const S = 0.46, ST = 2;
