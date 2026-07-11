@@ -600,6 +600,7 @@
       return out.filter(t => { const k = t.nombre + '|' + t.dominio + '|' + t.duracionSeg; if (vistos.has(k)) return false; vistos.add(k); return true; });
     }
     const DOM_GLYPH = { militar: '武', cultural: '文', administrativo: '政' };
+    const DOM_COL = { militar: '#c0463a', cultural: '#4fa06a', administrativo: '#5a8fd0' };
     // Nivel EFECTIVO en un dominio (nivel por XP + bonos de equipo).
     function nivelEf(dom) { return (window.HacStats && HacStats.nivelTotal && dom) ? HacStats.nivelTotal(myId, dom) : 1; }
     // Riesgo de una MISIÓN del tablón: depende de tu nivel efectivo vs su dificultad,
@@ -1055,11 +1056,15 @@
       const pHost = debProb(nH, nI);
       const rw = (window.HacRand && HacRand.make) ? HacRand.make('win#' + d.id) : { next: () => 0.5 };
       const ganador = (rw.next() < pHost) ? d.hostId : d.invitadoId;
+      // El LIBRO favorece con fuerza al GANADOR: él saca conclusiones a menudo (y pueden
+      // ser reveladoras); el perdedor rara vez y NUNCA reveladoras (como mucho, muy buenas).
       const libroDe = (pjId) => {
+        const gana = pjId === ganador;
         const r = (window.HacRand && HacRand.make) ? HacRand.make('book#' + d.id + '#' + pjId) : { next: () => 1 };
-        if (r.next() > 0.55) return null;                                // ~45 % sin libro
-        const roll = r.next() + (pjId === ganador ? 0.18 : 0);           // el ganador saca mejor calidad
-        return roll > 0.92 ? 'reveladoras' : roll > 0.66 ? 'muy-buenas' : 'buenas';
+        if (r.next() > (gana ? 0.75 : 0.30)) return null;
+        const q = r.next();
+        if (gana) return q > 0.80 ? 'reveladoras' : q > 0.45 ? 'muy-buenas' : 'buenas';
+        return q > 0.85 ? 'muy-buenas' : 'buenas';                        // perdedor: nunca reveladoras
       };
       return { ganador, pHost, nH, nI, doms, libros: { [d.hostId]: libroDe(d.hostId), [d.invitadoId]: libroDe(d.invitadoId) } };
     }
@@ -1097,19 +1102,21 @@
       if (!d || clock() < d.finMs || _debDone[d.id]) return;
       _debDone[d.id] = true;
       const oc = debOutcome(d), t = debTema(d.tema), soyGanador = oc.ganador === myId;
-      const xp = {}; oc.doms.forEach(dom => xp[dom] = 22 + (soyGanador ? 12 : 0));
+      const xpCada = 22 + (soyGanador ? 12 : 0);
+      const xp = {}; oc.doms.forEach(dom => xp[dom] = xpCada);
       if (window.HacStats && HacStats.award) HacStats.award(myId, { xp });
-      let extra = '';
+      let extra = '', libroOk = false;
       const cal = oc.libros[myId];
       if (cal && window.HacStats && HacStats.darItem && DEB.bookId) {
         const rr = HacStats.darItem(myId, DEB.bookId(d.tema, cal));
-        extra = (rr && rr.ok !== false) ? ` · 📔 Conclusiones ${(DEB.CALIDADES[cal] || {}).nombre || cal}` : ' · 📔 (mochila llena)';
+        libroOk = !!(rr && rr.ok !== false);
+        extra = libroOk ? ` · 📔 Conclusiones ${(DEB.CALIDADES[cal] || {}).nombre || cal}` : ' · 📔 (mochila llena)';
       }
       if (soyGanador && window.HacPuntos && HacPuntos.award) HacPuntos.award(h.id, myId, HacPuntos.recompensa ? HacPuntos.recompensa(20, 300) : 8);
       const otro = (myId === d.hostId) ? d.invitadoNombre : d.hostNombre;
       if (window.HacBitacora) HacBitacora.log(myId, 'debate', `🗣 Debate de ${t ? t.nombre : d.tema} con ${otro || 'otro mecenas'}: ${soyGanador ? '✔ ganaste' : '✘ perdiste'}${extra}`, { clave: 'debate:' + d.id });
       DEB.resolver(d.id, { ganador: oc.ganador, pHost: oc.pHost, libros: oc.libros }).then(() => DEB.reload().then(afterDebChange)).catch(() => {});
-      mostrarRevelacionDebate(d, oc);
+      mostrarRevelacionDebate(d, oc, { won: soyGanador, xp: xpCada, doms: oc.doms, libro: (cal && libroOk) ? cal : null });
       refresh();
     }
     // Notificación de invitación pendiente (para el invitado).
@@ -1152,22 +1159,29 @@
       const el = ensureDebEl();
       const invM = otros.find(m => walkerIdOf(m) === _debPick.invitado) || otros[0];
       const invId = walkerIdOf(invM);
-      const invBtns = otros.map(m => `<button type="button" class="hacp-deb-opt${walkerIdOf(m) === _debPick.invitado ? ' on' : ''}" data-inv="${esc(walkerIdOf(m))}">${esc(m.nombre)}${esNpc(m) ? ' <i>(NPC)</i>' : ''}</button>`).join('');
-      const temaBtns = DEB.TEMAS.map(t => {
-        const nMe = debNivel(myId, t.id), nOt = debNivel(invId, t.id), p = Math.round(debProb(nMe, nOt) * 100);
-        const domTxt = t.doms.map(d => DOM_GLYPH[d]).join('');
-        return `<button type="button" class="hacp-deb-opt hacp-deb-tema${t.id === _debPick.tema ? ' on' : ''}" data-tema="${esc(t.id)}" title="${esc(t.nombre)} · ${domTxt}"><b>${esc(t.nombre)}</b> <span class="hacp-deb-dom">${domTxt}</span><span class="hacp-deb-odds">${p}% tú</span></button>`;
+      const tSel = debTema(_debPick.tema) || DEB.TEMAS[0];
+      const domSel = tSel.doms.map(d => DOM_GLYPH[d]).join('');
+      const dcol = DOM_COL[tSel.doms[0]] || '#e6c877';
+      const nMe = debNivel(myId, _debPick.tema), nOt = debNivel(invId, _debPick.tema), pMe = Math.round(debProb(nMe, nOt) * 100);
+      const invChips = otros.length > 1
+        ? `<div class="hacp-deb-field"><span class="hacp-deb-lbl">Rival</span><div class="hacp-deb-chips">${otros.map(m => `<button type="button" class="hacp-deb-chip${walkerIdOf(m) === _debPick.invitado ? ' on' : ''}" data-inv="${esc(walkerIdOf(m))}">${esc(m.nombre)}${esNpc(m) ? ' <i>NPC</i>' : ''}</button>`).join('')}</div></div>` : '';
+      const temaTiles = DEB.TEMAS.map(t => {
+        const p = Math.round(debProb(debNivel(myId, t.id), debNivel(invId, t.id)) * 100);
+        return `<button type="button" class="hacp-deb-tema${t.id === _debPick.tema ? ' on' : ''}" data-tema="${esc(t.id)}" title="${esc(t.nombre)}"><span class="g">${t.doms.map(d => DOM_GLYPH[d]).join('')}</span><span class="n">${esc(t.nombre)}</span><span class="o">${p}%</span></button>`;
       }).join('');
-      const nMeSel = debNivel(myId, _debPick.tema), nOtSel = debNivel(invId, _debPick.tema), pMe = Math.round(debProb(nMeSel, nOtSel) * 100);
-      const domSel = (debTema(_debPick.tema) || { doms: [] }).doms.map(d => DOM_GLYPH[d]).join('');
-      el.innerHTML = `<div class="hacp-shop-box">
+      el.innerHTML = `<div class="hacp-shop-box hacp-deb-box">
         <button type="button" class="hacp-shop-x" data-act="x" aria-label="Cerrar">✕</button>
-        <div class="hacp-shop-h"><span class="hacp-shop-zh">🗣</span> Invitar a debatir</div>
-        <div class="hacp-shop-sub">Retas a otro mecenas a un debate de 5 min en un jardín. Ambos ganáis experiencia del tema; el ganador, prestigio. <b>Quién gana depende de vuestro nivel en ${domSel || 'el dominio'}</b> (+ algo de suerte).</div>
-        <div class="hacp-deb-sec"><label class="hacp-cp-lbl">¿A quién retas?</label><div class="hacp-deb-opts">${invBtns}</div></div>
-        <div class="hacp-deb-sec"><label class="hacp-cp-lbl">Tema del debate</label><div class="hacp-deb-opts">${temaBtns}</div></div>
-        <div class="hacp-deb-odds-big">Tu probabilidad: <b>${pMe}%</b> <span>(${domSel} tú ${nMeSel} vs ${esc(invM.nombre)} ${nOtSel})</span></div>
-        <button type="button" class="hacp-cp-btn hacp-cp-go" data-act="pickjardin">Elegir jardín en el mapa →</button>
+        <div class="hacp-deb-head"><span class="hacp-deb-seal">論</span><div><div class="hacp-deb-title">Convocar un debate</div><div class="hacp-deb-subt">5 min en un jardín · experiencia para ambos · prestigio al vencedor</div></div></div>
+        <div class="hacp-deb-duel">
+          <div class="hacp-deb-side"><div class="hacp-deb-glyph" style="--dc:${dcol}">${domSel}</div><div class="hacp-deb-nm">Tú</div><div class="hacp-deb-lv">nivel ${nMe}</div></div>
+          <div class="hacp-deb-mid">對</div>
+          <div class="hacp-deb-side"><div class="hacp-deb-glyph" style="--dc:${dcol}">${domSel}</div><div class="hacp-deb-nm">${esc(invM.nombre)}</div><div class="hacp-deb-lv">nivel ${nOt}</div></div>
+        </div>
+        ${invChips}
+        <div class="hacp-deb-field"><span class="hacp-deb-lbl">Materia del debate</span><div class="hacp-deb-temas">${temaTiles}</div></div>
+        <div class="hacp-deb-beam"><i class="me" style="width:${pMe}%"></i><i class="foe" style="width:${100 - pMe}%"></i></div>
+        <div class="hacp-deb-beamlbl"><span>Tú ${pMe}%</span><span class="mut">${domSel} · ${nMe} vs ${nOt}</span><span>${esc(invM.nombre)} ${100 - pMe}%</span></div>
+        <button type="button" class="hacp-deb-cta" data-act="pickjardin">Elegir jardín en el mapa →</button>
       </div>`;
       el.querySelector('[data-act="x"]').addEventListener('click', () => { el.hidden = true; });
       el.querySelectorAll('[data-inv]').forEach(b => b.addEventListener('click', () => { _debPick.invitado = b.dataset.inv; renderInvitarDebate(otros); }));
@@ -1222,47 +1236,60 @@
       const pH = Math.round(oc.pHost * 100), pI = 100 - pH;
       const domTxt = (t ? t.doms : []).map(dm => DOM_GLYPH[dm]).join('');
       el.innerHTML = `<div class="hacp-shop-box hacp-deb-revbox">
-        <div class="hacp-shop-h"><span class="hacp-shop-zh">🗣</span> Debate de ${esc(t ? t.nombre : d.tema)}</div>
-        <div class="hacp-deb-vs">
-          <div class="hacp-deb-vs-a"><b>${esc(d.hostNombre || 'Anfitrión')}</b><span>${domTxt} ${oc.nH} · ${pH}%</span></div>
-          <div class="hacp-deb-vs-x">兵</div>
-          <div class="hacp-deb-vs-b"><b>${esc(d.invitadoNombre || 'Invitado')}</b><span>${domTxt} ${oc.nI} · ${pI}%</span></div>
+        <div class="hacp-deb-revhead"><span class="hacp-deb-seal">論</span>Debate de ${esc(t ? t.nombre : d.tema)}</div>
+        <div class="hacp-deb-arena" id="deb-arena">
+          <div class="hacp-deb-banners">
+            <div class="hacp-deb-banner a" id="deb-ban-a"><div class="g">${domTxt}</div><div class="nm">${esc(d.hostNombre || 'Anfitrión')}</div><div class="pc">nivel ${oc.nH} · ${pH}%</div></div>
+            <div class="hacp-deb-banner b" id="deb-ban-b"><div class="g">${domTxt}</div><div class="nm">${esc(d.invitadoNombre || 'Invitado')}</div><div class="pc">nivel ${oc.nI} · ${pI}%</div></div>
+          </div>
+          <canvas class="hacp-deb-cord" width="380" height="38"></canvas>
         </div>
-        <canvas class="hacp-deb-bar" width="440" height="54"></canvas>
-        <div class="hacp-deb-win" id="hacp-deb-win">…</div>
-        <button type="button" class="hacp-cp-btn" data-act="cerrar" style="display:none">Continuar</button>
+        <div class="hacp-deb-verdict" id="deb-verdict">Sopesando los argumentos…</div>
+        <div class="hacp-deb-reward" id="deb-reward"></div>
+        <button type="button" class="hacp-deb-cta" data-act="cerrar" style="display:none">Continuar</button>
       </div>`;
-      const cv = el.querySelector('.hacp-deb-bar'), g = cv.getContext('2d'), W = cv.width, H = cv.height;
-      const zoneH = W * oc.pHost;                                  // zona del anfitrión (izq)
-      // destino: dentro de la zona del ganador (con margen), para que la barra "caiga" ahí
-      const dest = hostGana ? zoneH * (0.25 + 0.5 * 0.5) : zoneH + (W - zoneH) * (0.25 + 0.5 * 0.5);
-      const T = 3200; let start = null;
-      const winEl = el.querySelector('#hacp-deb-win'), btn = el.querySelector('[data-act="cerrar"]');
+      const arena = el.querySelector('#deb-arena'); arena.classList.add('shake');
+      const cv = el.querySelector('.hacp-deb-cord'), g = cv.getContext('2d'), W = cv.width, H = cv.height, cy = H / 2;
+      const zoneH = W * oc.pHost;                                  // zona del anfitrión (izq) ∝ odds
+      const dest = hostGana ? zoneH * 0.5 : zoneH + (W - zoneH) * 0.5;
+      const T = 3400; let start = null;
+      const verdictEl = el.querySelector('#deb-verdict'), rewEl = el.querySelector('#deb-reward'), btn = el.querySelector('[data-act="cerrar"]');
       const reduced = !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
       function draw(px) {
         g.clearRect(0, 0, W, H);
-        g.fillStyle = 'rgba(90,143,208,0.55)'; g.fillRect(0, 18, zoneH, 20);          // zona A (azul)
-        g.fillStyle = 'rgba(192,70,58,0.55)'; g.fillRect(zoneH, 18, W - zoneH, 20);   // zona B (rojo)
-        g.fillStyle = '#e8dcc0'; g.fillRect(zoneH - 1, 12, 2, 32);                    // separador ∝ odds
-        g.fillStyle = '#fbeecf'; g.fillRect(px - 2, 6, 4, 42);                        // marcador
-        g.fillStyle = '#3a2a16'; g.fillRect(px - 2, 6, 4, 42);
+        const bh = 8;
+        g.fillStyle = 'rgba(232,192,96,0.32)'; g.fillRect(0, cy - bh / 2, zoneH, bh);            // viga lado A (oro)
+        g.fillStyle = 'rgba(182,84,58,0.38)'; g.fillRect(zoneH, cy - bh / 2, W - zoneH, bh);     // viga lado B (rojo)
+        g.fillStyle = 'rgba(236,224,196,0.7)'; g.fillRect(zoneH - 1, cy - 9, 2, 18);             // fiel ∝ odds
+        g.save(); g.shadowColor = 'rgba(255,232,150,0.9)'; g.shadowBlur = 13;                    // token brillante
+        const grd = g.createRadialGradient(px - 2, cy - 2, 1, px, cy, 8); grd.addColorStop(0, '#fff7db'); grd.addColorStop(0.5, '#f0cd72'); grd.addColorStop(1, '#b8862f');
+        g.fillStyle = grd; g.beginPath(); g.arc(px, cy, 8, 0, 6.2832); g.fill(); g.restore();
+        g.strokeStyle = 'rgba(58,40,16,0.6)'; g.lineWidth = 1; g.beginPath(); g.arc(px, cy, 8, 0, 6.2832); g.stroke();
       }
       function finish() {
-        draw(dest);
+        draw(dest); arena.classList.remove('shake');
+        el.querySelector('#deb-ban-' + (hostGana ? 'a' : 'b')).classList.add('win');
+        el.querySelector('#deb-ban-' + (hostGana ? 'b' : 'a')).classList.add('lose');
         const gan = hostGana ? d.hostNombre : d.invitadoNombre;
-        winEl.innerHTML = `🏆 <b>${esc(gan || 'Ganador')}</b> gana el debate`;
-        winEl.classList.add('on'); btn.style.display = '';
-        btn.addEventListener('click', () => el.remove());
-        setTimeout(() => { if (el.parentNode) el.remove(); }, 9000);   // auto-cierra
+        verdictEl.innerHTML = `🏆 <b>${esc(gan || 'Vencedor')}</b> se lleva el debate`;
+        verdictEl.classList.add('on');
+        if (mine) {
+          const dg = (mine.doms || []).map(dm => DOM_GLYPH[dm]).join('');
+          const parts = [`+${mine.xp} XP ${dg}`];
+          if (mine.won) parts.push('+prestigio');
+          if (mine.libro) parts.push('📔 Conclusiones ' + ((DEB.CALIDADES[mine.libro] || {}).nombre || mine.libro));
+          rewEl.innerHTML = (mine.won ? 'Ganas · ' : 'Te llevas · ') + parts.map(p => `<b>${esc(p)}</b>`).join(' · ');
+        }
+        btn.style.display = ''; btn.addEventListener('click', () => el.remove());
+        setTimeout(() => { if (el.parentNode) el.remove(); }, 11000);
       }
       if (reduced) { finish(); return; }
       function tick(ts) {
         if (start == null) start = ts;
         const e = Math.min(1, (ts - start) / T);
-        // rebote que se amortigua y converge al destino
-        const amp = (1 - e) * (W * 0.5), osc = Math.sin(e * 22) * amp * (1 - e);
+        const amp = (1 - e) * (W * 0.5), osc = Math.sin(e * 24) * amp * (1 - e);   // rebote amortiguado
         const px = dest * e + (W / 2) * (1 - e) + osc;
-        draw(Math.max(4, Math.min(W - 4, px)));
+        draw(Math.max(9, Math.min(W - 9, px)));
         if (e < 1) requestAnimationFrame(tick); else finish();
       }
       requestAnimationFrame(tick);
@@ -1271,30 +1298,65 @@
       if (document.getElementById('hacp-deb-style')) return;
       const s = document.createElement('style'); s.id = 'hacp-deb-style';
       s.textContent = `
-        .hacp-deb-sec{margin:8px 0}
-        .hacp-deb-opts{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
-        .hacp-deb-opt{background:#2a2016;color:#e8dcc0;border:1px solid #5a4020;border-radius:8px;padding:6px 9px;font:inherit;cursor:pointer;font-size:13px}
-        .hacp-deb-opt.on{background:#7a4a1c;border-color:#d0a84a;color:#fff}
-        .hacp-deb-opt i{opacity:.6;font-size:11px}
-        .hacp-deb-tema{display:flex;flex-direction:column;align-items:flex-start;line-height:1.25}
-        .hacp-deb-dom{opacity:.8;font-size:12px}
-        .hacp-deb-odds{color:#9cc47a;font-size:11px}
-        .hacp-deb-odds-big{margin:8px 0;color:#e8dcc0}
-        .hacp-deb-odds-big span{opacity:.7;font-size:12px}
+        .hacp-deb-box,.hacp-deb-revbox{max-width:460px;background:linear-gradient(165deg,#2c1f13,#18100a);border:1px solid #6a4a24;box-shadow:0 18px 50px rgba(0,0,0,.55),inset 0 0 0 1px rgba(216,180,90,.16);border-radius:14px;padding:18px 20px;color:#ece0c4;font-family:system-ui,sans-serif}
+        .hacp-deb-head{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+        .hacp-deb-seal{flex:0 0 auto;width:40px;height:40px;border-radius:9px;display:grid;place-items:center;font:700 22px 'Noto Serif SC',serif;color:#fbeecf;background:radial-gradient(circle at 35% 30%,#b83a26,#7a2417);box-shadow:inset 0 0 0 1px rgba(255,220,150,.35),0 2px 6px rgba(0,0,0,.4)}
+        .hacp-deb-title{font:800 19px/1.1 'Noto Serif SC',serif;color:#f3e6c4}
+        .hacp-deb-subt{font-size:12px;color:#b39a72;margin-top:3px}
+        .hacp-deb-duel{display:flex;align-items:stretch;gap:8px;margin:4px 0 8px}
+        .hacp-deb-side{flex:1;text-align:center;background:rgba(0,0,0,.22);border:1px solid rgba(216,180,90,.16);border-radius:11px;padding:9px 6px}
+        .hacp-deb-glyph{font:700 30px 'Noto Serif SC',serif;color:var(--dc,#e6c877);line-height:1}
+        .hacp-deb-nm{font-weight:700;margin-top:5px;font-size:14px;color:#efe2c2}
+        .hacp-deb-lv{font-size:12px;color:#b39a72}
+        .hacp-deb-mid{align-self:center;font:700 19px 'Noto Serif SC',serif;color:#8a6a3a}
+        .hacp-deb-field{margin:11px 0}
+        .hacp-deb-lbl{display:block;font:700 11px/1 system-ui;letter-spacing:.08em;text-transform:uppercase;color:#a8863c;margin-bottom:6px}
+        .hacp-deb-chips{display:flex;flex-wrap:wrap;gap:6px}
+        .hacp-deb-chip{background:#241a12;color:#d8c8a4;border:1px solid #5a4020;border-radius:999px;padding:5px 12px;font:inherit;font-size:13px;cursor:pointer}
+        .hacp-deb-chip.on{background:linear-gradient(#8a5420,#6e3f16);border-color:#d8b45a;color:#fff}
+        .hacp-deb-chip i{opacity:.5;font-style:normal;font-size:11px}
+        .hacp-deb-temas{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+        .hacp-deb-tema{background:#211710;border:1px solid #4e3819;border-radius:10px;padding:9px 4px 7px;font:inherit;cursor:pointer;text-align:center;color:#d8c8a4;display:flex;flex-direction:column;align-items:center;gap:2px;transition:border-color .12s,background .12s}
+        .hacp-deb-tema:hover{border-color:#8a6a3a}
+        .hacp-deb-tema.on{background:linear-gradient(165deg,#3a2913,#241708);border-color:#d8b45a;box-shadow:inset 0 0 0 1px rgba(216,180,90,.3)}
+        .hacp-deb-tema .g{font:700 20px 'Noto Serif SC',serif;color:#e6c877;line-height:1}
+        .hacp-deb-tema .n{font-size:12.5px;font-weight:700;color:#efe2c2}
+        .hacp-deb-tema .o{font-size:11px;color:#9cc47a}
+        .hacp-deb-beam{display:flex;height:10px;border-radius:6px;overflow:hidden;margin:12px 0 5px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.45)}
+        .hacp-deb-beam i.me{background:linear-gradient(#e8c064,#c9973a)}
+        .hacp-deb-beam i.foe{background:linear-gradient(#b6543a,#8a3420)}
+        .hacp-deb-beamlbl{display:flex;justify-content:space-between;font-size:12px;color:#d8c8a4}
+        .hacp-deb-beamlbl .mut{color:#9a8360}
+        .hacp-deb-cta{width:100%;margin-top:14px;padding:12px;border:0;border-radius:10px;cursor:pointer;font:800 15px 'Noto Serif SC',serif;color:#2a1a08;background:linear-gradient(#f0cd72,#d8a83f);box-shadow:0 3px 0 #9c7320,inset 0 1px 0 rgba(255,255,255,.4)}
+        .hacp-deb-cta:active{transform:translateY(2px);box-shadow:0 1px 0 #9c7320}
         .hacp-deb-rev{display:flex;align-items:center;justify-content:center}
-        .hacp-deb-revbox{max-width:480px;text-align:center}
-        .hacp-deb-vs{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:10px 0}
-        .hacp-deb-vs-a,.hacp-deb-vs-b{display:flex;flex-direction:column;flex:1}
-        .hacp-deb-vs-a{color:#8fb6e0}.hacp-deb-vs-b{color:#e0968f}
-        .hacp-deb-vs-a span,.hacp-deb-vs-b span{opacity:.85;font-size:12px}
-        .hacp-deb-vs-x{opacity:.6}
-        .hacp-deb-bar{width:100%;max-width:440px;image-rendering:pixelated}
-        .hacp-deb-win{min-height:22px;margin-top:6px;font-size:16px;opacity:.5;transition:opacity .3s}
-        .hacp-deb-win.on{opacity:1}
-        .hacp-deb-invite{background:#241a14;border:1px solid #7a4a1c;border-radius:9px;padding:8px 10px;margin-top:6px}
-        .hacp-deb-invite .r{display:flex;gap:6px;margin-top:6px}
-        .hacp-deb-hint{position:absolute;left:50%;top:12px;transform:translateX(-50%);z-index:6;background:rgba(36,26,18,.94);color:#fbeecf;border:1px solid #d0a84a;border-radius:10px;padding:9px 13px;font:600 14px/1.3 system-ui,sans-serif;box-shadow:0 6px 20px rgba(0,0,0,.4);display:flex;align-items:center;gap:10px;max-width:92%}
-        .hacp-deb-hint button{background:#7a4a1c;color:#fbeecf;border:1px solid #d0a84a;border-radius:7px;padding:5px 10px;font:inherit;cursor:pointer}`;
+        .hacp-deb-revbox{text-align:center}
+        .hacp-deb-revhead{font:800 18px 'Noto Serif SC',serif;color:#f3e6c4;margin-bottom:12px}
+        .hacp-deb-revhead .hacp-deb-seal{display:inline-grid;width:30px;height:30px;font-size:16px;vertical-align:middle;margin-right:6px}
+        .hacp-deb-arena{margin:2px 0 8px}
+        .hacp-deb-banners{display:flex;justify-content:space-between;gap:12px;margin-bottom:9px}
+        .hacp-deb-banner{flex:1;position:relative;background:rgba(0,0,0,.24);border:1px solid rgba(216,180,90,.18);border-radius:11px;padding:10px 6px;transition:box-shadow .35s,transform .35s,opacity .35s}
+        .hacp-deb-banner .g{font:700 26px 'Noto Serif SC',serif;line-height:1}
+        .hacp-deb-banner.a .g{color:#e8c064}.hacp-deb-banner.b .g{color:#d98a6e}
+        .hacp-deb-banner .nm{font-weight:700;font-size:14px;margin-top:3px;color:#efe2c2}
+        .hacp-deb-banner .pc{font-size:12px;color:#b39a72}
+        .hacp-deb-banner.win{box-shadow:0 0 0 1px #d8b45a,0 0 24px rgba(232,192,96,.55);transform:translateY(-2px)}
+        .hacp-deb-banner.lose{opacity:.45}
+        .hacp-deb-banner.win::after{content:'勝';position:absolute;top:-12px;right:-8px;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font:700 15px 'Noto Serif SC',serif;color:#fbeecf;background:radial-gradient(circle at 35% 30%,#c0392a,#7a1f13);box-shadow:inset 0 0 0 1px rgba(255,220,150,.5),0 2px 6px rgba(0,0,0,.5);transform:rotate(-11deg) scale(0);animation:hacp-seal .45s .05s cubic-bezier(.2,1.6,.4,1) forwards}
+        @keyframes hacp-seal{to{transform:rotate(-11deg) scale(1)}}
+        .hacp-deb-cord{width:100%;height:38px;display:block}
+        .hacp-deb-arena.shake{animation:hacp-shk .45s linear infinite}
+        @keyframes hacp-shk{0%,100%{transform:translateX(0)}25%{transform:translateX(-2px)}75%{transform:translateX(2px)}}
+        .hacp-deb-verdict{min-height:24px;font:800 17px 'Noto Serif SC',serif;color:#f3e6c4;opacity:.35;transition:opacity .35s}
+        .hacp-deb-verdict.on{opacity:1}
+        .hacp-deb-reward{margin-top:7px;font-size:13px;color:#cbb488;min-height:16px}
+        .hacp-deb-reward b{color:#e8c877}
+        .hacp-deb-invite{background:linear-gradient(#2c1f13,#20160c);border:1px solid #7a4a1c;border-radius:10px;padding:10px 12px;margin-top:6px;box-shadow:inset 0 0 0 1px rgba(216,180,90,.12)}
+        .hacp-deb-invite .r{display:flex;gap:6px;margin-top:8px}
+        .hacp-deb-hint{position:absolute;left:50%;top:12px;transform:translateX(-50%);z-index:6;background:linear-gradient(#2c1f13,#1a1109);color:#f3e6c4;border:1px solid #d8b45a;border-radius:11px;padding:10px 14px;font:600 14px/1.3 system-ui,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.5),inset 0 0 0 1px rgba(216,180,90,.2);display:flex;align-items:center;gap:12px;max-width:92%}
+        .hacp-deb-hint b{color:#e8c877}
+        .hacp-deb-hint button{background:linear-gradient(#8a5420,#6e3f16);color:#fbeecf;border:1px solid #d8b45a;border-radius:8px;padding:6px 11px;font:inherit;cursor:pointer}
+        .hacp-deb-countdown{font-variant-numeric:tabular-nums;color:#e8c877;font-weight:700}`;
       document.head.appendChild(s);
     }
     debStyleOnce();
@@ -2915,7 +2977,8 @@
             mision = `<div class="hacp-cp-mis hacp-deb-invite"><span class="hacp-cp-flag">🗣 <b>${esc(invPend.hostNombre || 'Alguien')}</b> te reta a un debate de <b>${esc(tt ? tt.nombre : invPend.tema)}</b></span><div class="r"><button type="button" class="hacp-cp-btn hacp-cp-go" data-act="deb-yes" data-id="${esc(invPend.id)}">Aceptar</button><button type="button" class="hacp-cp-btn" data-act="deb-no" data-id="${esc(invPend.id)}">Rechazar</button></div></div>`;
           } else if (enDeb) {
             const tt = debTema(enDeb.tema);
-            mision = `<div class="hacp-cp-mis hacp-cp-mis-on"><span class="hacp-cp-flag">🗣 Debatiendo de ${esc(tt ? tt.nombre : enDeb.tema)}…</span></div>`;
+            const remD = Math.max(0, Math.ceil((enDeb.finMs - clock()) / 1000));
+            mision = `<div class="hacp-cp-mis hacp-cp-mis-on"><span class="hacp-cp-flag">🗣 Debatiendo de ${esc(tt ? tt.nombre : enDeb.tema)} · queda <b class="hacp-deb-countdown">${fmtClock(remD)}</b></span></div>`;
           } else if (invSent) {
             mision = `<div class="hacp-cp-mis"><span class="hacp-cp-flag" style="opacity:.85">🗣 Invitación enviada a ${esc(invSent.invitadoNombre || '…')} · esperando respuesta</span></div>`;
           } else {
@@ -3856,7 +3919,7 @@
         let inner;
         if (!DEB) inner = '<div class="hacp-inv-note">Los debates aún no están disponibles.</div>';
         else if (invPend) { const tt = debTema(invPend.tema); inner = `<div class="hacp-mrow"><div class="hacp-mrow-main"><b>🗣 ${esc(invPend.hostNombre || 'Alguien')} te reta</b><span>Debate de ${esc(tt ? tt.nombre : invPend.tema)}</span></div><div style="display:flex;gap:6px"><button class="hacp-cp-btn hacp-cp-go" data-deb-yes="${esc(invPend.id)}">Aceptar</button><button class="hacp-cp-btn" data-deb-no="${esc(invPend.id)}">Rechazar</button></div></div>`; }
-        else if (enDeb) { const tt = debTema(enDeb.tema); inner = `<div class="hacp-inv-note">🗣 Tu mecenas está debatiendo de <b>${esc(tt ? tt.nombre : enDeb.tema)}</b> en el jardín…</div>`; }
+        else if (enDeb) { const tt = debTema(enDeb.tema), remD = Math.max(0, Math.ceil((enDeb.finMs - clock()) / 1000)); inner = `<div class="hacp-inv-note">🗣 Tu mecenas debate de <b>${esc(tt ? tt.nombre : enDeb.tema)}</b> en el jardín · queda <b class="hacp-deb-countdown">${fmtClock(remD)}</b></div>`; }
         else if (invSent) inner = `<div class="hacp-inv-note">🗣 Invitación enviada a ${esc(invSent.invitadoNombre || '…')} · esperando respuesta.</div>`;
         else if (cd > 0) inner = `<div class="hacp-inv-note">Tu mecenas reposa tras el último debate · disponible en ${fmtClock(Math.ceil(cd / 1000))}.</div>`;
         else if (!hayJard) inner = '<div class="hacp-inv-note">Construye un <b>Jardín</b> en la finca para poder debatir.</div>';

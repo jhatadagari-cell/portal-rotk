@@ -91,8 +91,12 @@ const HacFolk = (function () {
   // (lo fija la página desde HacDebates; sincronizado por inicioMs → igual en todos).
   let debateMap = {};
   function setDebate(m) { debateMap = m || {}; }
-  const DEBATE_BUBBLES = ['…', '⋯', '💬', '🤔', '☯', '！', '？', '📜', '🍵'];
-  const DEBATE_FRUST = ['😤', '💢', '🙄', '😖', '‼'];
+  // Burbujas del debate: SIN emojis. Puntos suspensivos ANIMADOS, notas musicales o
+  // exclamaciones. (Los frustrados solo sueltan exclamaciones.)
+  const DEB_DOTS = ['·', '··', '···'];
+  const DEBATE_MUSIC = ['♪', '♫', '♪♫'];
+  const DEBATE_EXCL = ['!', '?', '¡!', '¿?'];
+  const DEBATE_FRUST_EXCL = ['‼', '?!', '¡!', '!', '?'];
   // caballos[ownerId] = { nombre } — mascotas que rondan por FUERA de la finca.
   // La página lo alimenta desde HacStats; `horses` (más abajo) es su encarnación viva.
   let caballos = {}, horses = [];
@@ -902,14 +906,14 @@ const HacFolk = (function () {
     const eps = [];
     if (!(window.HacRand && HacRand.make) || finMs <= inicioMs) return eps;
     const rng = HacRand.make('frust#' + seed);
-    let t = inicioMs + 15000;                       // nada de frustración en los primeros 15 s
-    while (t < finMs - 12000) {
-      if (rng.next() < 0.5) {
-        const len = 4000 + rng.next() * 5000;
-        eps.push({ start: t, end: Math.min(finMs - 6000, t + len), side: rng.next() < 0.5 ? 0 : 1 });
+    let t = inicioMs + 20000;                       // nada de frustración en los primeros 20 s
+    while (t < finMs - 20000) {
+      if (rng.next() < 0.28) {                      // MÁS RARA que antes
+        const len = 12000 + rng.next() * 10000;     // pero MÁS LARGA (12-22 s)
+        eps.push({ start: t, end: Math.min(finMs - 8000, t + len), side: rng.next() < 0.5 ? 0 : 1 });
         t += len;
       }
-      t += 10000 + rng.next() * 16000;
+      t += 15000 + rng.next() * 20000;              // huecos largos entre episodios
     }
     return eps;
   }
@@ -918,7 +922,16 @@ const HacFolk = (function () {
     for (let i = 0; i < s.length; i++) if (t >= s[i].start && t < s[i].end && s[i].side === w.debSide) return true;
     return false;
   };
-  const debBubble = (arr, w) => { w.debBubbleI = (w.debBubbleI || 0) + 1; return arr[w.debBubbleI % arr.length]; };
+  // Suelta una burbuja: frustrado → exclamación; si no, alterna puntos ANIMADOS /
+  // notas / exclamación. Los puntos se animan luego en stepDebate (debKind='dots').
+  function debSay(w, frust) {
+    const i = (w.debBubbleI = (w.debBubbleI || 0) + 1);
+    if (frust) { w.debKind = 'excl'; w.speech = DEBATE_FRUST_EXCL[i % DEBATE_FRUST_EXCL.length]; w.speechT = 2.4; return; }
+    const kind = i % 3;
+    if (kind === 0) { w.debKind = 'dots'; w.speech = DEB_DOTS[0]; w.speechT = 2.8; }
+    else if (kind === 1) { w.debKind = 'music'; w.speech = DEBATE_MUSIC[i % DEBATE_MUSIC.length]; w.speechT = 2.2; }
+    else { w.debKind = 'excl'; w.speech = DEBATE_EXCL[i % DEBATE_EXCL.length]; w.speechT = 1.8; }
+  }
 
   function startDebate(w, dm) {
     if (w.chatWith) endChat(w);
@@ -927,7 +940,7 @@ const HacFolk = (function () {
     w.chatWith = null; w.meetWith = null;
     w.debFin = dm.finMs; w.debPartner = dm.partnerId; w.debSide = dm.side || 0;
     w.debSchedule = debateSchedule(dm.seed || '', dm.inicioMs, dm.finMs);
-    w.debBubbleCd = 2 + (w.debSide ? 1.5 : 0);
+    w.debBubbleCd = 2 + (w.debSide ? 1.5 : 0); w.debSit = false; w.debKind = null;
     // Dos celdas de pie junto al jardín: el lado 0 en la celda base, el 1 en una vecina.
     const jc = (dm.jardinCell || '').split(',').map(Number);
     const base = (jc.length === 2 && !isNaN(jc[0])) ? findMeetCell(jc[0], jc[1]) : null;
@@ -943,7 +956,7 @@ const HacFolk = (function () {
   }
   function endDebate(w) {
     w.state = 'paseando'; w.strollTimer = rng(2, 6); w.wait = rng(0.3, 0.9);
-    w.speech = null; w.debFin = 0; w.debPartner = null; w.debSchedule = null; w.debCell = null;
+    w.speech = null; w.debKind = null; w.debSit = false; w.debFin = 0; w.debPartner = null; w.debSchedule = null; w.debCell = null;
   }
   // Reclama al walker si tiene un debate EN CURSO (dentro de su ventana). Devuelve
   // true si lo gestiona el debate (para saltar missionGate). Espejo de escOrder/missionGate.
@@ -966,23 +979,24 @@ const HacFolk = (function () {
     const t = nowSimMs();
     if (w.state === 'a-debatir') {
       approachStep(w, dt, SPD);
-      if (!w.moving && !(w.path && w.path.length)) { w.state = 'debate'; w.phase = 0; w.debBubbleCd = 1 + (w.debSide ? 1 : 0); }
+      if (!w.moving && !(w.path && w.path.length)) { w.state = 'debate'; w.phase = 0; w.debSit = false; w.debBubbleCd = 1 + (w.debSide ? 1 : 0); }
       return;
     }
     if (t >= (w.debFin || 0)) { endDebate(w); return; }
-    if (w.speechT > 0) { w.speechT -= dt; if (w.speechT <= 0) w.speech = null; }
+    if (w.speechT > 0) { w.speechT -= dt; if (w.speechT <= 0) { w.speech = null; w.debKind = null; } }
+    if (w.debKind === 'dots' && w.speechT > 0) w.speech = DEB_DOTS[Math.floor(t / 350) % DEB_DOTS.length];   // puntos ANIMADOS
     const o = walkers.find(x => x.id === w.debPartner);
     const frustrado = debFrustNow(w, t);
     if (frustrado && w.state !== 'debate-frustrado') { w.state = 'debate-frustrado'; }
-    else if (!frustrado && w.state === 'debate-frustrado') {   // se calma: vuelve a su sitio
+    else if (!frustrado && w.state === 'debate-frustrado') {   // se calma: vuelve a su sitio a sentarse
       w.state = 'debate';
-      if (w.debCell) { w.path = bfs([Math.round(w.fx), Math.round(w.fy)], new Set([w.debCell[0] + ',' + w.debCell[1]])) || []; }
+      if (w.debCell) w.path = bfs([Math.round(w.fx), Math.round(w.fy)], new Set([w.debCell[0] + ',' + w.debCell[1]])) || [];
       w.moving = false;
     }
     if (w.state === 'debate-frustrado') {
-      // Se levanta y DA VUELTAS (pasea) alrededor de su sitio; suelta bufidos.
-      w.phase += dt * 1.5;
-      approachStep(w, dt, SPD * 0.95);
+      // El SACADO DE QUICIO se LEVANTA y da vueltas DEPRISA; suelta exclamaciones.
+      w.debSit = false; w.phase += dt * 2.4;
+      approachStep(w, dt, SPD * 1.8);
       if (!w.moving && !(w.path && w.path.length)) {
         const c = w.debCell || [Math.round(w.fx), Math.round(w.fy)];
         const here = Math.abs(w.fx - c[0]) + Math.abs(w.fy - c[1]) < 0.1;
@@ -991,12 +1005,15 @@ const HacFolk = (function () {
         w.path = [target]; w.moving = false;
       }
       w.debBubbleCd -= dt;
-      if (w.debBubbleCd <= 0) { w.speech = debBubble(DEBATE_FRUST, w); w.speechT = 1.8; w.debBubbleCd = 2.2; }
+      if (w.debBubbleCd <= 0) { debSay(w, true); w.debBubbleCd = 2.4; }
+    } else if ((w.path && w.path.length) || w.moving) {
+      w.debSit = false; w.phase += dt * 0.4; approachStep(w, dt, SPD);   // volviendo a su sitio tras calmarse
     } else {
-      w.phase += dt * 0.4;
+      // SENTADO debatiendo tranquilo: mira al rival y suelta burbujas de vez en cuando.
+      w.debSit = true; w.moving = false; w.phase += dt * 0.4;
       if (o) { const fd = faceFromGrid(o.fx - w.fx, o.fy - w.fy); if (fd) w.dir = fd; }
       w.debBubbleCd -= dt;
-      if (w.debBubbleCd <= 0 && !w.speech) { w.speech = debBubble(DEBATE_BUBBLES, w); w.speechT = 2.0; w.debBubbleCd = 3.4; }
+      if (w.debBubbleCd <= 0 && (!w.speech || w.debKind !== 'dots')) { debSay(w, false); w.debBubbleCd = 4.5; }
     }
   }
 
@@ -1410,7 +1427,7 @@ const HacFolk = (function () {
     // PEREGRINAJE: el herido sale COJEANDO y no hace la reverencia marcial (拱手).
     const em = escMap[w.id];
     const hurt = !!(em && em.hurt);
-    let pose = (w.state === 'tumbado') ? 'sit' : (w.bowing ? 'bow' : (moving ? 'walk' : 'stand'));
+    let pose = (w.state === 'tumbado' || w.debSit) ? 'sit' : (w.bowing ? 'bow' : (moving ? 'walk' : 'stand'));
     if (hurt) pose = moving ? 'limp' : 'stand';
     const cv = window.HacChar ? spriteFor(w, w.dir || 'S', frame, pose) : null;
     const disp = SPRITE_DISP, FEET = charFEET();
@@ -1711,7 +1728,7 @@ const HacFolk = (function () {
     const moving = w.moving && w.state !== 'tarea';
     return {
       dir: w.dir || 'SE',
-      pose: (w.state === 'tumbado') ? 'sit' : (w.bowing ? 'bow' : (moving ? 'walk' : 'stand')),
+      pose: (w.state === 'tumbado' || w.debSit) ? 'sit' : (w.bowing ? 'bow' : (moving ? 'walk' : 'stand')),
       frame: moving ? (Math.floor(w.phase * 1.2) % charNF()) : 0
     };
   }
@@ -2085,7 +2102,7 @@ const HacFolk = (function () {
     // con la túnica abierta y a menudo de espaldas). Siempre de pie y de cara al espectador
     // (vista frontal SW/SE según hacia dónde mire), salvo si está tumbado/saludando.
     let pose = 'stand', frame = 0, dir;
-    if (w.state === 'tumbado') { pose = 'sit'; dir = w.dir || 'SE'; }
+    if (w.state === 'tumbado' || w.debSit) { pose = 'sit'; dir = w.dir || 'SE'; }
     else if (w.bowing) { pose = 'bow'; dir = w.dir || 'SE'; }
     else { const east = /E$/.test(w.dir || '') || (w.dir || '') === 'S'; dir = east ? 'SE' : 'SW'; }
     // Retrato: usa el MASTER de alta resolución (nítido) si está; si no, el sprite de finca.
