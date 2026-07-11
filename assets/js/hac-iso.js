@@ -302,6 +302,16 @@ const HacIso = (function () {
     const hasWater = !!(opts.mapa && Array.isArray(opts.mapa.construcciones) && opts.mapa.construcciones.some(c => c && (c.tipo === 'estanque' || c.tipo === 'lago')));
     const frontTrees = [];   // árboles delante de la finca (se pintan tras los muros)
 
+    // ── CAMINO de tierra desde el 午門 (portón SUROESTE) ──────────────────────
+    // Sale RECTO del portón (columna central, perpendicular al muro delantero) hacia
+    // afuera (+y = abajo-izquierda en pantalla). En esas celdas se pinta TIERRA (soil)
+    // en vez de hierba, y se DESPEJA de árboles/arbustos (el camino ±1) para que nada
+    // se superponga. Requiere las tiles soil cargadas (si no, se omite sin más).
+    const pathCol = WD.gate ? Math.floor((GW - 1) / 2) : null;   // = gateGc del muro delantero
+    const pathFromGy = GH - 1 + M + 1;                           // 1ª fila FUERA del muro delantero
+    const onPath = (gx, gy) => pathCol != null && soilTiles.length && gx === pathCol && gy >= pathFromGy;
+    const pathClear = (gx, gy) => pathCol != null && soilTiles.length && Math.abs(gx - pathCol) <= 1 && gy >= pathFromGy;
+
     // Río que discurre por fuera del borde OESTE, con un leve meandro (ancho 2).
     function isRiver(gx, gy) {
       if (!hasWater) return false;
@@ -316,6 +326,14 @@ const HacIso = (function () {
         poly([N, E, S, Wp], hv < 0.5 ? wc : light(wc, 0.08));
         edge(Wp, N, light(wc, 0.22));                                  // reflejo en la orilla
         if (P.snow && hash(gx + 5, gy + 2) > 0.55) poly([N, E, S, Wp], 'rgba(235,245,248,0.30)');   // placas de hielo
+        return;
+      }
+      // CAMINO de tierra que sale del portón: siempre soil (todas las estaciones).
+      if (onPath(gx, gy)) {
+        const tile = soilTiles[(hash(gx * 5.7 + 1, gy * 4.3 + 9) * soilTiles.length) | 0];
+        g.imageSmoothingEnabled = true;
+        g.drawImage(tile, cx - TILE_W / 2, cy - TILE_H / 2, TILE_W, TILE_H);
+        g.imageSmoothingEnabled = false;
         return;
       }
       // Tile de HIERBA a mano (solo verano por ahora): rombo 144×72 dibujado a
@@ -433,6 +451,7 @@ const HacIso = (function () {
       const riv = isRiver(gx, gy);
       terrTile(gx, gy, riv);
       if (riv) continue;
+      if (pathClear(gx, gy)) continue;             // camino del portón (±1): sin árboles ni matas que lo tapen
       if (extCells.has(gx + ',' + gy)) continue;   // no plantar props sobre/junto a un edificio exterior
       if (underExtSprite(gx, gy)) continue;         // ni bajo la silueta de su sprite (torre, explanada…)
       // Orla exterior limpia: sin props en el anillo más externo (evita recortes).
