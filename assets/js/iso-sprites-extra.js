@@ -13,4 +13,8 @@
   // Mercado (3×3): puesto de té (茶) ilustrado. Vista única (no rota: spriteKey
   // cae a '-0' para cualquier rotación). El mercader lo dibuja hac-folk aparte.
   window.ISO_SPRITES_META['bld-mercado-0'] = { ox: 47, oy: 39, w: 95, h: 105 };
+  // Tablón de anuncios (1×1): 告示牌 ilustrado (tablón techado con carteles).
+  // Vista única. Anclaje calibrado contra el farol (1×1 procedural): centro de
+  // la huella de los pies en ox; oy = fondo − ½ tile (los pies caen en el rombo).
+  window.ISO_SPRITES_META['bld-tablon-0'] = { ox: 30, oy: 80, w: 58, h: 90 };
 })();

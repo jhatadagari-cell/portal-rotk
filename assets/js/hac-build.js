@@ -70,7 +70,8 @@ const HacBuild = (function () {
     { id: 'academia', dominio: 'cultural',          nombre: 'Academia',           zh: '太學', capa: 'edificio', footprint: [3, 3], tierMin: 2, unico: false, cargoMin: null, color: '#3a7a4a', altura: 38, restringido: true, desc: 'Aulas de estudio, caligrafía y clásicos. Solo los de aptitud cultural (文) pueden estudiar aquí.' },
     { id: 'cancilleria', dominio: 'administrativo', nombre: 'Cancillería',        zh: '官署', capa: 'edificio', footprint: [3, 3], tierMin: 2, unico: false, cargoMin: null, color: '#2f5a86', altura: 34, restringido: true, desc: 'Despacho de registros y gobierno de la casa. Solo los de aptitud administrativa (政) pueden despachar aquí.' },
     { id: 'campamento', dominio: 'militar',        nombre: 'Campamento Militar', zh: '军营', capa: 'edificio', footprint: [8, 10], tierMin: 3, unico: false, cargoMin: null, color: '#7a6a4a', altura: 46, exterior: true, desc: 'Campamento de tropas: tiendas, empalizada, hoguera y caballerizas. Solo en terreno exterior.' },
-    { id: 'mercado', dominio: 'administrativo',    nombre: 'Mercado',            zh: '市',   capa: 'edificio', footprint: [2, 2], tierMin: 2, unico: false, cargoMin: null, color: '#b8863a', altura: 26, desc: 'Puesto de mercado con su mercader: aquí los mecenas gastan el dinero ganado en misiones (artículos por tiers).' },
+    { id: 'mercado', dominio: 'administrativo',    nombre: 'Mercado',            zh: '市',   capa: 'edificio', footprint: [2, 2], tierMin: 2, unico: false, cargoMin: null, funcional: true, color: '#b8863a', altura: 26, desc: 'Puesto de mercado con su mercader: DESBLOQUEA la tienda, donde los mecenas gastan el dinero ganado en misiones (artículos por tiers).' },
+    { id: 'tablon',  dominio: 'administrativo',    nombre: 'Tablón de Anuncios', zh: '告示牌', capa: 'edificio', footprint: [1, 1], tierMin: 1, unico: false, cargoMin: null, funcional: true, color: '#9a7a4a', altura: 30, desc: 'Tablón techado donde se pregonan los encargos: DESBLOQUEA las misiones de la hacienda. Los mecenas acuden aquí a buscar trabajo.' },
     { id: 'casa',    dominio: null,                nombre: 'Casa de Mecenas',    zh: '宅',   capa: 'edificio', footprint: [2, 2], tierMin: 1, unico: false, cargoMin: null, color: '#9a7a4a', altura: 24, desc: 'Vivienda de un mecenas. Asígnasela (dueño) y podrá guardar a salvo en casa el dinero que gana.' },
     { id: 'gran-palacio', dominio: 'administrativo',      nombre: 'Gran Palacio',       zh: '大宮', capa: 'edificio', footprint: [4, 7], tierMin: 6, unico: true,  cargoMin: null,    color: '#c43c1a', altura: 70, desc: 'El palacio mayor: triple alero sobre el eje ceremonial de la casa.' },
     // ── Compuestos (huella en L, U o anillo · campo `mask`) ────────────────
@@ -173,6 +174,7 @@ const HacBuild = (function () {
     academia:           { verbo: 'Estudiando los clásicos',lugar: 'la academia' },
     cancilleria:        { verbo: 'Despachando asuntos',    lugar: 'la cancillería' },
     mercado:            { verbo: 'Comerciando',            lugar: 'el mercado' },
+    tablon:             { verbo: 'Leyendo los encargos',   lugar: 'el tablón de anuncios' },
     casa:               { verbo: 'Descansando',            lugar: 'su casa' },
     'gran-palacio':     { verbo: 'En ceremonia',            lugar: 'el gran palacio' },
     'ala-l':            { verbo: 'Deliberando',             lugar: 'el ala en escuadra' },

@@ -401,14 +401,18 @@
     const myId = _isMember ? _myPj.id : null;
     const myApt = _myPj ? _myPj.aptitud : '';
     const hasMarket = ((h.mapa && h.mapa.construcciones) || []).some(c => c.tipo === 'mercado');
-    // Edificio PRINCIPAL de la finca (sede del tablón de misiones), si existe.
-    const mainCons = (window.HacBuild && HacBuild.edificioPrincipal) ? HacBuild.edificioPrincipal(h.mapa) : null;
-    const hasMain = !!mainCons;
-    const mainBid = mainCons ? (mainCons.pos[0] + ',' + mainCons.pos[1]) : null;
+    // TABLÓN DE ANUNCIOS (告示牌): DESBLOQUEA las misiones (igual que el mercado
+    // desbloquea la tienda). Es el punto de consulta al que camina el mecenas. Se
+    // elige el más AL FRENTE (mayor gx+gy) → coincide con el que usa hac-folk.
+    const _tablones = ((h.mapa && h.mapa.construcciones) || []).filter(c => c.tipo === 'tablon');
+    const hasTablon = _tablones.length > 0;
+    const tablonBid = hasTablon
+      ? _tablones.reduce((a, c) => ((c.pos[0] + c.pos[1]) > (a.pos[0] + a.pos[1]) ? c : a)).pos.join(',')
+      : null;
     // ── Barra de acciones MÓVIL (estilo app): secciones grandes en la zona del
     // pulgar (CSS la muestra solo en pantallas estrechas). Vive dentro del visor →
     // también en pantalla completa. Abre los paneles/hojas ya existentes.
-    // (Va DESPUÉS de myId/hasMain/hasMarket para no leerlos en zona muerta.)
+    // (Va DESPUÉS de myId/hasTablon/hasMarket para no leerlos en zona muerta.)
     const mobar = document.createElement('div');
     mobar.className = 'hacp-mobar';
     const moBtn = (icon, label, fn) => {
@@ -419,7 +423,7 @@
       return b;
     };
     if (myId) mobar.appendChild(moBtn('士', 'Tu mecenas', () => gotoMember(myId)));
-    if (myId && hasMain) { const bMis = moBtn('檄', 'Misiones', goConsultBoard); bMis.classList.add('hacp-mo-mis'); mobar.appendChild(bMis); }
+    if (myId && hasTablon) { const bMis = moBtn('檄', 'Misiones', goConsultBoard); bMis.classList.add('hacp-mo-mis'); mobar.appendChild(bMis); }
     if (myId && hasMarket) mobar.appendChild(moBtn('市', 'Mercado', openShop));
     mobar.appendChild(moBtn('众', 'Mecenas', () => folkCollapse(false)));
     ['pointerdown', 'pointerup', 'wheel', 'click'].forEach(ev => mobar.addEventListener(ev, (e) => e.stopPropagation(), { passive: false }));
@@ -588,7 +592,7 @@
         tasks.forEach(tk => out.push({ taskId: tk.id, nombre: tk.nombre || tk.verbo || 'Tarea', dominio: ty.dominio, duracionSeg: tk.duracionSeg || 60 }));
       });
       // Las misiones FUERA de la finca ya NO van aquí: se eligen en el TABLÓN de
-      // misiones (📜) junto al edificio principal. Esta lista es solo de tareas
+      // anuncios (📜, edificio funcional). Esta lista es solo de tareas
       // dentro de la finca (edificios).
       // Deduplica tareas idénticas (mismo nombre/dominio/duración) que aparecerían
       // repetidas si hay varios edificios del mismo tipo (p. ej. dos "Descansar").
@@ -2495,7 +2499,7 @@
         tool('log', '錄', 'Bitácora'),
         hasMarket ? tool('shop', '市', 'Mercado') : '',
         tool('esc', '兵', 'Escaramuzas', ' hacp-cp-esc'),
-        hasMain ? tool('board', '檄', 'Misiones', ' hacp-cp-board') : '',
+        hasTablon ? tool('board', '檄', 'Misiones', ' hacp-cp-board') : '',
       ];
       // Distintivo de puntos de talento sin gastar sobre el icono de Sendas.
       const sendasBadge = pts > 0 ? `<span class="hacp-cp-badge">${pts}</span>` : '';
@@ -3229,12 +3233,12 @@
     }
     function openMissionBoard() { if (!myId) return; buildBoard(); ensureBoardEl().hidden = false; }
     function closeBoard() { if (boardEl) boardEl.hidden = true; }
-    // "Buscar misiones": el mecenas CAMINA al edificio principal; al llegar se planta
-    // con el cartelito 📜 y, al pulsarlo, se abre el tablón. Si ya está allí, abre ya.
+    // "Buscar misiones": el mecenas CAMINA al TABLÓN de anuncios; al llegar se planta
+    // delante con el cartelito 📜 y, al pulsarlo, se abre el tablón. Si ya está allí, abre ya.
     function goConsultBoard() {
-      if (!myId || !hasMain || !mainBid) return;
+      if (!myId || !hasTablon || !tablonBid) return;
       if (abrirEncuentrosPend()) return;   // hay un encuentro que atender: se resuelve antes que el tablón
-      const r = HacFolk.consultar ? HacFolk.consultar(myId, mainBid) : false;
+      const r = HacFolk.consultar ? HacFolk.consultar(myId, tablonBid) : false;
       if (r === 'now') { openMissionBoard(); return; }
       if (!r) { toast('Tu mecenas está ocupado ahora mismo'); return; }
       HacFolk.select(myId);
@@ -3512,7 +3516,7 @@
       }
       function renderExped() {
         const body = sec.querySelector('[data-mtb="exped"]');
-        if (!hasMain) { body.innerHTML = '<div class="hacp-inv-note">Esta finca aún no tiene edificio principal para expediciones.</div>'; return; }
+        if (!hasTablon) { body.innerHTML = '<div class="hacp-inv-note">Esta finca aún no tiene tablón de anuncios: sin él no hay misiones ni expediciones.</div>'; return; }
         buildBoard();
         const el = ensureBoardEl();
         body.appendChild(el); el.hidden = false; el.classList.add('hacp-board-inline');

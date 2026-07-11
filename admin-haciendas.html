@@ -172,7 +172,7 @@
 <script src="assets/js/hac-util.js?v=1"></script>
 <script src="assets/js/haciendas-data.js?v=11"></script>
 <script src="assets/js/hac-calc.js?v=7"></script>
-<script src="assets/js/hac-build.js?v=38"></script>
+<script src="assets/js/hac-build.js?v=39"></script>
 <script src="assets/js/hac-store.js?v=5"></script>
 <script src="assets/js/hac-tareas.js?v=2"></script>
 <script src="assets/js/personajes-data.js?v=2"></script>
@@ -184,7 +184,7 @@
 <script src="assets/js/hac-puntos.js?v=1"></script>
 <script src="assets/js/hac-stats.js?v=8"></script>
 <script src="assets/js/iso-sprites-meta.js?v=22"></script>
-<script src="assets/js/iso-sprites-extra.js?v=12"></script>
+<script src="assets/js/iso-sprites-extra.js?v=13"></script>
 <script src="assets/js/iso-sprites-wei.js?v=10"></script>
 <script>
 (function () {
@@ -381,9 +381,14 @@
     };
     const _palGroup = (label, sw, cls, list) => list.length
       ? `<div class="adm-pal-group"><p class="adm-pal-gh ${cls}"><span class="sw" style="background:${sw}"></span>${esc(label)}</p><div class="adm-pal-items">${list.slice().sort(_bySize).map(_palBtn).join('')}</div></div>` : '';
-    const _edif = disponibles.filter(t => B.categoriaDe(t.id) === 'edificio');
+    // Edificios FUNCIONALES (`funcional:true`): dan un servicio al jugador y se
+    // agrupan aparte ("Servicios"), no en su dominio. Mercado → tienda; Tablón →
+    // misiones. Se excluyen del resto de grupos de edificio.
+    const _edif = disponibles.filter(t => B.categoriaDe(t.id) === 'edificio' && !t.funcional);
+    const _serv = disponibles.filter(t => t.funcional);
     const paletteHTML =
       _DOMS.map(d => _palGroup(d.label, d.sw, d.cls, _edif.filter(t => t.dominio === d.key))).join('')
+      + _palGroup('Servicios', '#c98a3a', 'dec', _serv)
       + _palGroup('Otros edificios', '#c9a84c', 'dec', _edif.filter(t => !_DOMS.some(d => d.key === t.dominio)))
       + _palGroup('Suelos y jardines', '#6c8e4a', 'gnd', disponibles.filter(t => B.categoriaDe(t.id) === 'jardin'))
       + _palGroup('Muros y puertas', '#8a8070', 'wal', disponibles.filter(t => B.categoriaDe(t.id) === 'muro'))

@@ -134,8 +134,6 @@ const HacFolk = (function () {
   const MERCHANT_LOOK = { robe: '#3f6e9c', accent: '#d4a83a', piel: 1, pelo: 1 };   // aspecto del mercader
   const MKT_CRIES = ['¡Buen té!', '¡Pasad y ved!', '¡Té recién llegado!', '¡Té de las montañas!', '¡El mejor de la comarca!', '¡Probad, señor!', '¡Hojas de primavera!'];
   const BOARD_CRIES = ['¿Visteis la nueva recompensa?', 'Esa de la frontera es peligrosa…', 'Yo no me atrevería con esa', 'Buen botín para quien ose', '¿Recaudar tributos otra vez?', 'Necesitaría mejor equipo', 'Demasiado riesgo para mí', '¡Gloria al que la cumpla!', 'Mucho oro promete esa', 'Habrá que entrenar más', 'Ésta es para un veterano'];
-  const CLERK_PREGON = ['¡Nuevas misiones en el tablón!', '¡Se buscan valientes!', '¡Honor y oro para quien sirva!', '¡Acercaos, hay encargos!', '¡La casa necesita brazos!', '¡Atended, atended!', '¡Por orden del señor de la casa!'];
-  const CLERK_GAWKER = ['¿Alguna de su agrado?', 'Buena elección sería ésa', 'Animaos, mi señor', 'Apuntaos cuando gustéis', 'Hay encargos para todo talento', 'Decidíos, no temáis'];
   const MKT_SALUDOS = ['¡Bienvenido, señor!', '¡Adelante, adelante!', '¡Honráis mi puesto!', '¿Un buen té?'];
   const MKT_DIRS = ['S', 'SE', 'SW', 'E', 'S', 'SE'];   // mira sobre todo al cliente (sur)
   // RNG propio del mercader (NO toca el stream compartido R → no desincroniza el sim).
@@ -287,41 +285,28 @@ const HacFolk = (function () {
         fx: ax, fy: ay, tx: ax, ty: ay, dir: 'S', phase: 0, moving: false, state: 'idle', bowing: false,
         stations, timer: 1 + (seed % 100) / 30, speech: null, speechT: 0, _r: seed });
     });
-    // FUNCIONARIO (文官) junto al EDIFICIO PRINCIPAL: atiende el tablón de misiones.
-    const clerks = []; let mainBid = null, boardSlots = [];
-    const princ = (B && B.edificioPrincipal) ? B.edificioPrincipal(mapa) : null;
-    if (princ) {
-      mainBid = princ.pos[0] + ',' + princ.pos[1];
-      const mb = buildings.get(mainBid);
-      if (mb && mb.approach) {
-        // Coloca al funcionario en una celda ABIERTA cerca de la entrada: transitable
-        // y cuyas vecinas HACIA LA CÁMARA (+x,+y) no sean muro (si no, una muralla/
-        // portón delante lo taparía). Elige la más adelantada (mayor gx+gy) y cercana.
-        const ax = mb.approach[0], ay = mb.approach[1];
-        const inGrid = (x, y) => x >= 0 && y >= 0 && x < GW && y < GH;
-        const abierta = (x, y) => set.has(x + ',' + y)
-          && (!inGrid(x + 1, y) || set.has((x + 1) + ',' + y))
-          && (!inGrid(x, y + 1) || set.has(x + ',' + (y + 1)));
-        let best = null, bestS = -Infinity;
-        for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
-          if (Math.abs(dx) + Math.abs(dy) > 2) continue;
-          const x = ax + dx, y = ay + dy; if (!abierta(x, y)) continue;
-          const s = (x + y) - (Math.abs(dx) + Math.abs(dy)) * 0.15;   // adelantada + cercana
-          if (s > bestS) { bestS = s; best = [x, y]; }
-        }
-        const sp = best || [ax, ay];
-        let cfx = sp[0], cfy = sp[1];   // medio tile a un lado solo si la vecina es transitable
-        if (set.has((cfx + 1) + ',' + cfy)) cfx += 0.5; else if (set.has((cfx - 1) + ',' + cfy)) cfx -= 0.5;
-        clerks.push({ id: 'clerk@' + mainBid, name: 'Funcionario', aptitud: 'administrador', aspecto: {}, fx: cfx, fy: cfy, dir: 'S', phase: 0, moving: false, state: 'stand', bowing: false, _r: 0x9e3779b9 });
-        // Huecos en SEMICÍRCULO al frente del tablón donde los curiosos se asoman.
-        const cax = mb.approach[0], cay = mb.approach[1];
-        [[-2, 0], [2, 0], [-1, 1], [1, 1], [0, 2], [-2, 1], [2, 1]].forEach(([ox, oy]) => {
-          const x = cax + ox, y = cay + oy;
-          if (boardSlots.length < 6 && set.has(x + ',' + y)) boardSlots.push({ cell: [x, y], by: null });
-        });
-      }
+    // TABLÓN DE ANUNCIOS (告示牌): punto de consulta de las MISIONES. Sustituye al
+    // antiguo funcionario. `mainBid` = el tablón MÁS AL FRENTE (mayor gx+gy) → es
+    // el que se consulta. Ya NO hay funcionario: la vida del tablón (curiosos que
+    // se asoman y comentan) gira en torno al propio tablón (`boardFocus`).
+    const clerks = [];                                    // sin funcionario
+    let mainBid = null, boardSlots = [], boardFocus = null;
+    let bestBoard = -Infinity;
+    buildings.forEach(b => { if (b.tipo === 'tablon' && (b.cx + b.cy) > bestBoard) { bestBoard = b.cx + b.cy; mainBid = b.id; } });
+    const board = mainBid ? buildings.get(mainBid) : null;
+    if (board) {
+      boardFocus = [board.cx, board.cy];
+      // Huecos en SEMICÍRCULO AL FRENTE del tablón (+x/+y en iso) donde los curiosos
+      // se asoman mirándolo. Se salta la celda de aproximación (donde se planta el
+      // mecenas que consulta) y las no transitables.
+      const ap = board.approachKey;
+      [[1, 1], [0, 1], [1, 0], [2, 1], [1, 2], [2, 2], [0, 2]].forEach(([ox, oy]) => {
+        const x = board.cx + ox, y = board.cy + oy, k = x + ',' + y;
+        if (boardSlots.length < 5 && set.has(k) && k !== ap) boardSlots.push({ cell: [x, y], by: null });
+      });
     }
-    return { set, cells, cam, camCells, garden, gardenCells, water, GW, GH, ownByMember, buildings, visitable, gates, merchants, clerks, mainBid, boardSlots, exitCell, exitKey: exitCell ? exitCell[0] + ',' + exitCell[1] : null, outNear, outFar };
+    const boardRng = { _r: 0x9e3779b9 };                  // RNG propio del tablón (no toca R)
+    return { set, cells, cam, camCells, garden, gardenCells, water, GW, GH, ownByMember, buildings, visitable, gates, merchants, clerks, mainBid, boardSlots, boardFocus, boardRng, exitCell, exitKey: exitCell ? exitCell[0] + ',' + exitCell[1] : null, outNear, outFar };
   }
 
   // Ruta de `start` a la primera celda de `goalKeys` sobre celdas transitables,
@@ -458,8 +443,8 @@ const HacFolk = (function () {
     return 'walking';
   }
 
-  // CONSULTAR el tablón de misiones (local): el mecenas va al edificio principal,
-  // se planta delante del funcionario con un cartelito 📜 sobre la cabeza y espera
+  // CONSULTAR el tablón de misiones (local): el mecenas va al TABLÓN de anuncios,
+  // se planta delante con un cartelito 📜 sobre la cabeza y espera
   // a que el jugador lo pulse. No lo bloquea: una misión/orden lo saca. Devuelve
   // 'walking' / 'now' (ya está) / false (ocupado/sin ruta).
   function consultar(id, buildingId) {
@@ -583,7 +568,7 @@ const HacFolk = (function () {
 
   function onPathDone(w) {
     if (w.state === 'a-consultar') {
-      // Llegó al edificio principal: se planta y mira al funcionario. El AVISO de
+      // Llegó al tablón: se planta y lo mira de frente. El AVISO de
       // "revisar el tablón" lo pinta la página como botón DOM (local del jugador),
       // no como bocadillo (que verían todos y molestaría a los diálogos).
       w.state = 'consultando'; w.idleTimer = 60; w.moving = false; w.path = null; w.phase = 0; w.speech = null;
@@ -591,7 +576,7 @@ const HacFolk = (function () {
       return;
     }
     if (w.state === 'a-ojear') {
-      // Llegó a su hueco del semicírculo: ojea el tablón, de cara al funcionario.
+      // Llegó a su hueco del semicírculo: ojea el tablón, de cara a él.
       w.state = 'ojeando'; w.idleTimer = w.gawkDur || 18; w.moving = false; w.path = null; w.phase = 0;
       if (w.gawkFace) { const fd = faceFromGrid(w.gawkFace[0] - w.fx, w.gawkFace[1] - w.fy); if (fd) w.dir = fd; }
       return;
@@ -1099,30 +1084,21 @@ const HacFolk = (function () {
   }
   // TABLÓN de misiones (flavor LOCAL): los mecenas que pasean cerca a veces se
   // acercan a "ojear" las misiones nuevas y se colocan en semicírculo delante del
-  // funcionario. Comentan ESCALONADO (un cooldown compartido → 1-2 hablando a la
-  // vez, sin solaparse). RNG del funcionario (no toca R). Una misión los saca.
+  // tablón. Comentan ESCALONADO (un cooldown → 1-2 bocadillos a la vez). RNG propio
+  // del tablón (no toca R). Una misión los saca. Ya no hay funcionario.
   let boardGawkCd = 5, boardTalkCd = 3;
   function stepBoard(dt) {
-    if (!wk || !wk.clerks || !wk.clerks.length || !wk.boardSlots || !wk.boardSlots.length) return;
-    const ck = wk.clerks[0], fx = ck.fx, fy = ck.fy;
-    if (ck.speechT > 0) { ck.speechT -= dt; if (ck.speechT <= 0) ck.speech = null; }
+    if (!wk || !wk.boardFocus || !wk.boardSlots || !wk.boardSlots.length) return;
+    const fx = wk.boardFocus[0], fy = wk.boardFocus[1];
+    const rng = wk.boardRng || (wk.boardRng = { _r: 0x9e3779b9 });
     // Libera huecos de quien ya no está ojeando (misión, se fue, etc.).
     wk.boardSlots.forEach(s => { if (s.by) { const w = walkers.find(x => x.id === s.by); if (!w || (w.state !== 'a-ojear' && w.state !== 'ojeando')) s.by = null; } });
-    const lectores = walkers.filter(w => w.state === 'ojeando' || w.state === 'a-ojear');
-    // VIDA del funcionario: si hay curiosos, los MIRA (gira hacia uno); si no, otea
-    // y de vez en cuando cambia de cara. Reverencia leve si alguien acaba de llegar.
-    ck._t = (ck._t || 0) - dt;
-    if (lectores.length) {
-      const tg = lectores[Math.floor(mrand(ck) * lectores.length)];
-      const fd = faceFromGrid(tg.fx - fx, tg.fy - fy); if (fd) ck.dir = fd;
-      ck.bowing = lectores.some(w => w.state === 'a-ojear');   // saluda a los que llegan
-    } else { ck.bowing = false; if (ck._t <= 0) { ck.dir = ['S', 'SE', 'SW', 'E'][Math.floor(mrand(ck) * 4)]; ck._t = 3 + mrand(ck) * 3; } }
     boardGawkCd -= dt; boardTalkCd -= dt;
     // Reclutar un curioso de vez en cuando (a un hueco libre del semicírculo).
     if (boardGawkCd <= 0) {
-      boardGawkCd = 3 + mrand(ck) * 4;
+      boardGawkCd = 3 + mrand(rng) * 4;
       const fi = wk.boardSlots.findIndex(s => !s.by);
-      if (fi >= 0 && mrand(ck) < 0.55) {
+      if (fi >= 0 && mrand(rng) < 0.55) {
         for (let i = 0; i < walkers.length; i++) {
           const w = walkers[i];
           if (w.onMission || (w.gawkCd || 0) > 0 || (w.state !== 'paseando' && w.state !== 'saliendo')) continue;
@@ -1130,28 +1106,20 @@ const HacFolk = (function () {
           const slot = wk.boardSlots[fi];
           const path = bfs([Math.round(w.fx), Math.round(w.fy)], new Set([slot.cell[0] + ',' + slot.cell[1]]));
           if (!path) continue;
-          slot.by = w.id; w.boardSlot = fi; w.gawkFace = [fx, fy]; w.gawkDur = 14 + mrand(ck) * 16; w.gawkCd = 50 + mrand(ck) * 40;
+          slot.by = w.id; w.boardSlot = fi; w.gawkFace = [fx, fy]; w.gawkDur = 14 + mrand(rng) * 16; w.gawkCd = 50 + mrand(rng) * 40;
           w.path = path; w.state = 'a-ojear'; w.moving = false; w.speech = null; w.chatWith = null; w.meetWith = null;
           break;
         }
       }
     }
-    // Comentarios ESCALONADOS (cola compartida funcionario+curiosos): como mucho uno
-    // nuevo cada ~3 s → 1-2 bocadillos a la vez, sin solaparse.
+    // Comentarios ESCALONADOS de los curiosos: como mucho uno nuevo cada ~3 s.
     if (boardTalkCd <= 0) {
       const readers = walkers.filter(w => w.state === 'ojeando' && !w.speech);
-      const r = mrand(ck);
-      if (readers.length && r < 0.5) {                              // habla un curioso
-        const w = readers[Math.floor(mrand(ck) * readers.length)];
-        w.speech = BOARD_CRIES[Math.floor(mrand(ck) * BOARD_CRIES.length)]; w.speechT = 2.8;
-        boardTalkCd = 2.6 + mrand(ck) * 2.4;
-      } else if (!ck.speech && readers.length) {                    // COMENTA a los curiosos presentes
-        ck.speech = CLERK_GAWKER[Math.floor(mrand(ck) * CLERK_GAWKER.length)]; ck.speechT = 2.8;
-        boardTalkCd = 4 + mrand(ck) * 3;
-      } else if (!ck.speech && mrand(ck) < 0.22) {                  // PREGÓN al aire: solo de vez en cuando
-        ck.speech = CLERK_PREGON[Math.floor(mrand(ck) * CLERK_PREGON.length)]; ck.speechT = 2.8;
-        boardTalkCd = 16 + mrand(ck) * 14;                          // y espacia bien el siguiente
-      } else boardTalkCd = 7 + mrand(ck) * 6;                       // en silencio: reintenta más tarde
+      if (readers.length && mrand(rng) < 0.6) {
+        const w = readers[Math.floor(mrand(rng) * readers.length)];
+        w.speech = BOARD_CRIES[Math.floor(mrand(rng) * BOARD_CRIES.length)]; w.speechT = 2.8;
+        boardTalkCd = 2.6 + mrand(rng) * 2.4;
+      } else boardTalkCd = 6 + mrand(rng) * 6;                      // en silencio: reintenta más tarde
     }
   }
   // Vida del MERCADER (flavor, local): atiende el puesto — pasea entre un par de
@@ -1411,6 +1379,28 @@ const HacFolk = (function () {
   // mecenas y por frame (con createLinearGradient incluido), lo que hundía los FPS.
   const bannerCache = new Map();
   let bannerMeasure = null;
+  // La fuente CJK ("Noto Serif SC") pesa y en MÓVIL (primera visita, sin caché)
+  // no suele estar lista al hornear el primer banner: measureText usa entonces
+  // métricas de fallback (caja mal dimensionada → el texto se sale) y fillText
+  // puede pintar tofu/vacío. Como el sprite queda cacheado, el fallo se congelaba.
+  // Al terminar de cargar las fuentes invalidamos la caché para re-hornear con las
+  // métricas reales (el tick repinta cada frame). Forzamos además la descarga: el
+  // texto pintado en canvas NO la dispara por sí solo en varios navegadores.
+  if (typeof document !== 'undefined' && document.fonts) {
+    const rebakeBanners = () => {
+      bannerCache.clear();
+      // Con motion reducido se pinta una sola vez (sin bucle raf): re-hornea ya.
+      if (started && !running) { try { paint(); } catch (e) {} }
+    };
+    try {
+      Promise.all([
+        document.fonts.load('700 8px "Noto Serif SC"'),
+        document.fonts.load('600 7px "Noto Sans SC"'),
+      ]).then(rebakeBanners).catch(function () {});
+    } catch (e) {}
+    document.fonts.ready.then(rebakeBanners).catch(function () {});
+    if (document.fonts.addEventListener) document.fonts.addEventListener('loadingdone', rebakeBanners);
+  }
   function bannerKey(w, hot) {
     const pre = (w.cargoIcon ? w.cargoIcon + ' ' : '') + (w.aptIcon ? w.aptIcon + ' ' : '');
     return pre + String(w.name || '').slice(0, 16) + '|' + (Number(w.cargoTier) || 0) + '|' + (hot ? 1 : 0);
@@ -1655,10 +1645,6 @@ const HacFolk = (function () {
       if (OV) ovPeople.push(mk); else actors.push({ fx: mk.fx, fy: mk.fy, draw: (g, lx, ly) => drawWalker(g, lx, ly, mk, { banner: false }) });
       overlays.push({ draw: (g) => { const p = logic(mk.fx, mk.fy); npcBanner(g, p[0], p[1] - npcDy, mk.name, '市'); } });
     });
-    if (wk && wk.clerks) wk.clerks.forEach(ck => {
-      if (OV) ovPeople.push(ck); else actors.push({ fx: ck.fx, fy: ck.fy, draw: (g, lx, ly) => drawWalker(g, lx, ly, ck, { banner: false }) });
-      overlays.push({ draw: (g) => { const p = logic(ck.fx, ck.fy); npcBanner(g, p[0], p[1] - npcDy, ck.name, '📜'); } });
-    });
     // Caballos sueltos: sprite como actor (con oclusión/profundidad) + su nombre encima.
     // Si su dueño está de VIAJE (lo va montando), el corcel no ronda: viaja con él.
     if (horses.length) {                               // placeholder de círculo rojo (sin sprites)
@@ -1722,7 +1708,6 @@ const HacFolk = (function () {
     });
     // Pregones del mercader.
     if (wk && wk.merchants) wk.merchants.forEach(mk => { if (mk.speech) overlays.push({ draw: (g) => { const p = logic(mk.fx, mk.fy); speechBubble(g, p[0], p[1], mk.speech); } }); });
-    if (wk && wk.clerks) wk.clerks.forEach(ck => { if (ck.speech) overlays.push({ draw: (g) => { const p = logic(ck.fx, ck.fy); speechBubble(g, p[0], p[1], ck.speech); } }); });
 
     iso._hacSigns = signs;
     HacIso.frame(iso, actors, overlays);
