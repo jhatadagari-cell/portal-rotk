@@ -83,6 +83,13 @@ const HacFolk = (function () {
   // Sincronizado por inicioMs (reloj de servidor) → todos los clientes lo ven igual.
   let escMap = {};
   function setEscaramuzas(m) { escMap = m || {}; }
+  // ── Debate: dos mecenas caminan a un jardín y debaten 5 min (feature Debates) ──
+  // debateMap[walkerId] = { inicioMs, finMs, jardinCell:"x,y", partnerId, side:0|1, seed }
+  // (lo fija la página desde HacDebates; sincronizado por inicioMs → igual en todos).
+  let debateMap = {};
+  function setDebate(m) { debateMap = m || {}; }
+  const DEBATE_BUBBLES = ['…', '⋯', '💬', '🤔', '☯', '！', '？', '📜', '🍵'];
+  const DEBATE_FRUST = ['😤', '💢', '🙄', '😖', '‼'];
   // caballos[ownerId] = { nombre } — mascotas que rondan por FUERA de la finca.
   // La página lo alimenta desde HacStats; `horses` (más abajo) es su encarnación viva.
   let caballos = {}, horses = [];
@@ -885,6 +892,111 @@ const HacFolk = (function () {
     hailCd = rng(2, 5);                                   // nadie elegible/aceptó: reintenta pronto
   }
 
+  // ── DEBATE (coreografía) ────────────────────────────────────────────────────
+  // Episodios de FRUSTRACIÓN deterministas (mismo seed → mismos episodios en todos
+  // los clientes y en la repetición). Cada episodio marca qué LADO (0/1) se frustra.
+  function debateSchedule(seed, inicioMs, finMs) {
+    const eps = [];
+    if (!(window.HacRand && HacRand.make) || finMs <= inicioMs) return eps;
+    const rng = HacRand.make('frust#' + seed);
+    let t = inicioMs + 15000;                       // nada de frustración en los primeros 15 s
+    while (t < finMs - 12000) {
+      if (rng.next() < 0.5) {
+        const len = 4000 + rng.next() * 5000;
+        eps.push({ start: t, end: Math.min(finMs - 6000, t + len), side: rng.next() < 0.5 ? 0 : 1 });
+        t += len;
+      }
+      t += 10000 + rng.next() * 16000;
+    }
+    return eps;
+  }
+  const debFrustNow = (w, t) => {
+    const s = w.debSchedule; if (!s) return false;
+    for (let i = 0; i < s.length; i++) if (t >= s[i].start && t < s[i].end && s[i].side === w.debSide) return true;
+    return false;
+  };
+  const debBubble = (arr, w) => { w.debBubbleI = (w.debBubbleI || 0) + 1; return arr[w.debBubbleI % arr.length]; };
+
+  function startDebate(w, dm) {
+    if (w.chatWith) endChat(w);
+    if (w.meetWith) abortMeet(w);
+    w.onMission = false; w.insideId = null; w.bowing = false; w.speech = null;
+    w.chatWith = null; w.meetWith = null;
+    w.debFin = dm.finMs; w.debPartner = dm.partnerId; w.debSide = dm.side || 0;
+    w.debSchedule = debateSchedule(dm.seed || '', dm.inicioMs, dm.finMs);
+    w.debBubbleCd = 2 + (w.debSide ? 1.5 : 0);
+    // Dos celdas de pie junto al jardín: el lado 0 en la celda base, el 1 en una vecina.
+    const jc = (dm.jardinCell || '').split(',').map(Number);
+    const base = (jc.length === 2 && !isNaN(jc[0])) ? findMeetCell(jc[0], jc[1]) : null;
+    let cell = base;
+    if (base && (dm.side || 0) === 1) {
+      const alt = neigh(base[0], base[1]).find(n => wk.set.has(n[0] + ',' + n[1]));
+      if (alt) cell = alt;
+    }
+    if (!cell) { w.state = 'paseando'; w.strollTimer = rng(1, 3); return; }
+    w.debCell = cell;
+    w.path = bfs([Math.round(w.fx), Math.round(w.fy)], new Set([cell[0] + ',' + cell[1]])) || [];
+    w.state = 'a-debatir'; w.moving = false;
+  }
+  function endDebate(w) {
+    w.state = 'paseando'; w.strollTimer = rng(2, 6); w.wait = rng(0.3, 0.9);
+    w.speech = null; w.debFin = 0; w.debPartner = null; w.debSchedule = null; w.debCell = null;
+  }
+  // Reclama al walker si tiene un debate EN CURSO (dentro de su ventana). Devuelve
+  // true si lo gestiona el debate (para saltar missionGate). Espejo de escOrder/missionGate.
+  function debateGate(w) {
+    const dm = debateMap[w.id];
+    const inDeb = w.state === 'a-debatir' || w.state === 'debate' || w.state === 'debate-frustrado';
+    if (!dm) { if (inDeb) endDebate(w); return false; }
+    const t = nowSimMs();
+    if (t >= dm.finMs) { if (inDeb) endDebate(w); return false; }   // terminado → recompensa la página
+    if (t < dm.inicioMs) return false;
+    if (!inDeb) { startDebate(w, dm); return true; }
+    if (w.debFin !== dm.finMs) {   // reconcilia tras restaurar un snapshot a mitad de debate
+      w.debFin = dm.finMs; w.debPartner = dm.partnerId; w.debSide = dm.side || 0;
+      w.debSchedule = debateSchedule(dm.seed || '', dm.inicioMs, dm.finMs);
+    }
+    return true;
+  }
+  // Paso de un walker que está en el debate (llegando, debatiendo o frustrado).
+  function stepDebate(w, dt, SPD) {
+    const t = nowSimMs();
+    if (w.state === 'a-debatir') {
+      approachStep(w, dt, SPD);
+      if (!w.moving && !(w.path && w.path.length)) { w.state = 'debate'; w.phase = 0; w.debBubbleCd = 1 + (w.debSide ? 1 : 0); }
+      return;
+    }
+    if (t >= (w.debFin || 0)) { endDebate(w); return; }
+    if (w.speechT > 0) { w.speechT -= dt; if (w.speechT <= 0) w.speech = null; }
+    const o = walkers.find(x => x.id === w.debPartner);
+    const frustrado = debFrustNow(w, t);
+    if (frustrado && w.state !== 'debate-frustrado') { w.state = 'debate-frustrado'; }
+    else if (!frustrado && w.state === 'debate-frustrado') {   // se calma: vuelve a su sitio
+      w.state = 'debate';
+      if (w.debCell) { w.path = bfs([Math.round(w.fx), Math.round(w.fy)], new Set([w.debCell[0] + ',' + w.debCell[1]])) || []; }
+      w.moving = false;
+    }
+    if (w.state === 'debate-frustrado') {
+      // Se levanta y DA VUELTAS (pasea) alrededor de su sitio; suelta bufidos.
+      w.phase += dt * 1.5;
+      approachStep(w, dt, SPD * 0.95);
+      if (!w.moving && !(w.path && w.path.length)) {
+        const c = w.debCell || [Math.round(w.fx), Math.round(w.fy)];
+        const here = Math.abs(w.fx - c[0]) + Math.abs(w.fy - c[1]) < 0.1;
+        const opts = neigh(c[0], c[1]).filter(n => wk.set.has(n[0] + ',' + n[1]));
+        const target = (here && opts.length) ? opts[(w.debBubbleI = (w.debBubbleI || 0) + 1) % opts.length] : c;
+        w.path = [target]; w.moving = false;
+      }
+      w.debBubbleCd -= dt;
+      if (w.debBubbleCd <= 0) { w.speech = debBubble(DEBATE_FRUST, w); w.speechT = 1.8; w.debBubbleCd = 2.2; }
+    } else {
+      w.phase += dt * 0.4;
+      if (o) { const fd = faceFromGrid(o.fx - w.fx, o.fy - w.fy); if (fd) w.dir = fd; }
+      w.debBubbleCd -= dt;
+      if (w.debBubbleCd <= 0 && !w.speech) { w.speech = debBubble(DEBATE_BUBBLES, w); w.speechT = 2.0; w.debBubbleCd = 3.4; }
+    }
+  }
+
   const MISSION_GRACE_MS = 90 * 1000;   // margen (saludo + viaje) sobre la duración de la tarea
   // Orden SINTÉTICA de escaramuza derivada del estado de banda COMPARTIDO (escMap):
   // así TODOS los miembros salen, se concentran y vuelven con el MISMO inicioMs/finMs
@@ -949,8 +1061,12 @@ const HacFolk = (function () {
       // comprueba por LÍMITES de rejilla, no por `set` (hay muchas celdas válidas
       // fuera de `set`: puertas, bordes… comprobarlo así mandaba a TODOS al portón).
       if (w.state !== 'exped-out' && w.state !== 'exped-in' && w.state !== 'fuera' && !w.insideId && fueraDeFinca(w)) enterFromOutside(w);
-      missionGate(w);
+      const inDebate = debateGate(w);   // un debate en curso tiene prioridad sobre órdenes
+      if (!inDebate) missionGate(w);
       switch (w.state) {
+        case 'a-debatir':
+        case 'debate':
+        case 'debate-frustrado': stepDebate(w, dt, SPD); break;
         // Curiosear el mercado (flavor LOCAL, sin R): va al puesto, mira el género
         // un rato y vuelve a pasear. Una misión lo saca (lo gestiona missionGate).
         case 'a-consultar': followPath(w, dt, SPD); break;
@@ -1885,6 +2001,13 @@ const HacFolk = (function () {
     if (w.state === 'fuera') return enEsc ? 'Combatiendo en la escaramuza' : 'En expedición fuera de la finca';
     if (w.state === 'exped-out') return enEsc ? 'Acude al portón' : 'Saliendo de la finca';
     if (w.state === 'exped-in') return 'Regresando de la expedición';
+    if (w.state === 'a-debatir') return 'Se dirige al jardín a debatir';
+    if (w.state === 'debate' || w.state === 'debate-frustrado') {
+      const o = walkers.find(x => x.id === w.debPartner), quien = (o && o.name) ? o.name : 'otro mecenas';
+      if (w.state === 'debate-frustrado') return 'Sacado de quicio, tirándose de los pelos';
+      if (o && o.state === 'debate-frustrado') return 'Sacando de quicio a ' + quien;
+      return 'Debatiendo en el jardín con ' + quien;
+    }
     if (w.state === 'a-consultar') return 'Va al tablón de misiones';
     if (w.state === 'consultando') return 'Consultando el tablón de misiones';
     if (w.state === 'a-ojear') return 'Se acerca al tablón de misiones';
@@ -1981,6 +2104,6 @@ const HacFolk = (function () {
   }
 
   function mainBuildingId() { return wk ? (wk.mainBid || null) : null; }
-  return { start, stop, list, select, selected, position, buildings, buildingTypes, setOrders, setEscaramuzas, setCaballos, drawAvatar, goHome, consultar, consultando, dejarConsulta, mainBuildingId, repaintOverlay, refreshCargos };
+  return { start, stop, list, select, selected, position, buildings, buildingTypes, setOrders, setEscaramuzas, setDebate, setCaballos, drawAvatar, goHome, consultar, consultando, dejarConsulta, mainBuildingId, repaintOverlay, refreshCargos };
 })();
 if (typeof window !== 'undefined') window.HacFolk = HacFolk;

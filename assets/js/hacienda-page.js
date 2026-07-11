@@ -937,6 +937,7 @@
       });
       const sig = JSON.stringify(map);
       if (sig !== lastOrdersSig) { lastOrdersSig = sig; if (HacFolk.setOrders) HacFolk.setOrders(map); }
+      if (typeof debPulse === 'function') debPulse();   // debates: sim + resolución responsivos
       refresh();
     }
     // ¿El mecenas está OCUPADO/FUERA ahora mismo? Cubre TODO: una misión interna o
@@ -1015,6 +1016,246 @@
       });
       HacFolk.setEscaramuzas(map);
     }
+
+    // ═══════════════════ DEBATES (invitar a debatir · tarea social) ═══════════════════
+    const DEB = window.HacDebates || null;
+    const walkerIdOf = (m) => m && (m.personajeId || m.id);              // = id del walker en el sim
+    const esNpc = (m) => !!m && !m.personajeId;                          // sin personaje/dueño → auto-acepta
+    const miMiembro = () => (h.miembros || []).find(m => walkerIdOf(m) === myId) || null;
+    const miNombreDeb = () => { const m = miMiembro(); return (m && m.nombre) || (_myPj && _myPj.nombre) || 'Tú'; };
+    const debTema = (id) => DEB && DEB.temaDe ? DEB.temaDe(id) : null;
+    const debNivel = (pjId, temaId) => { const t = debTema(temaId); if (!t || !window.HacStats || !HacStats.nivelTotal) return 0; return t.doms.reduce((s, d) => s + HacStats.nivelTotal(pjId, d), 0); };
+    const debProb = (nA, nB) => Math.max(0.15, Math.min(0.85, (nA + 1) / (nA + nB + 2)));
+    // Jardines de la finca (sede del debate). cell = celda pisable representativa.
+    function gardensFinca() {
+      const G = { jardin: 1, 'jardin-flores': 1, bonsai: 1 };
+      return ((h.mapa && h.mapa.construcciones) || []).filter(c => G[c.tipo]).map(c => {
+        const def = window.HacBuild && HacBuild.tipo(c.tipo);
+        return { cell: c.pos[0] + ',' + c.pos[1], nombre: (def && def.nombre) || 'Jardín', zh: (def && def.zh) || '园' };
+      });
+    }
+    // Resultado DETERMINISTA (mismo id → igual en todos los clientes y en la repetición).
+    function debOutcome(d) {
+      const t = debTema(d.tema), doms = t ? t.doms : ['cultural'];
+      const nH = debNivel(d.hostId, d.tema), nI = debNivel(d.invitadoId, d.tema);
+      const pHost = debProb(nH, nI);
+      const rw = (window.HacRand && HacRand.make) ? HacRand.make('win#' + d.id) : { next: () => 0.5 };
+      const ganador = (rw.next() < pHost) ? d.hostId : d.invitadoId;
+      const libroDe = (pjId) => {
+        const r = (window.HacRand && HacRand.make) ? HacRand.make('book#' + d.id + '#' + pjId) : { next: () => 1 };
+        if (r.next() > 0.55) return null;                                // ~45 % sin libro
+        const roll = r.next() + (pjId === ganador ? 0.18 : 0);           // el ganador saca mejor calidad
+        return roll > 0.92 ? 'reveladoras' : roll > 0.66 ? 'muy-buenas' : 'buenas';
+      };
+      return { ganador, pHost, nH, nI, doms, libros: { [d.hostId]: libroDe(d.hostId), [d.invitadoId]: libroDe(d.invitadoId) } };
+    }
+
+    // Inyecta al sim los debates EN CURSO (coreografía en el jardín).
+    let lastDebSig = '';
+    function syncDebateFolk() {
+      if (!window.HacFolk || !HacFolk.setDebate || !DEB) return;
+      const map = {};
+      (DEB.enCurso(h.id) || []).forEach(d => {
+        map[d.hostId] = { inicioMs: d.inicioMs, finMs: d.finMs, jardinCell: d.jardinCell, partnerId: d.invitadoId, side: 0, seed: d.id };
+        map[d.invitadoId] = { inicioMs: d.inicioMs, finMs: d.finMs, jardinCell: d.jardinCell, partnerId: d.hostId, side: 1, seed: d.id };
+      });
+      const sig = JSON.stringify(map);
+      if (sig !== lastDebSig) { lastDebSig = sig; HacFolk.setDebate(map); }
+    }
+    function afterDebChange() { syncDebateFolk(); refreshCharPanel(); }
+    // Auto-acepta las invitaciones a NPC (sin dueño) que YO envié, tras ~5 s.
+    const _npcTried = {};
+    function debNpcAutoAccept() {
+      if (!DEB || !myId) return;
+      const inv = DEB.miInvitacionEnviada(h.id, myId);
+      if (!inv || _npcTried[inv.id]) return;
+      const m = (h.miembros || []).find(x => walkerIdOf(x) === inv.invitadoId);
+      if (!m || !esNpc(m)) return;
+      if (clock() - (inv.createdMs || 0) < 5000) return;
+      _npcTried[inv.id] = true;
+      DEB.aceptar(inv.id, inv.invitadoId, clock()).then(() => DEB.reload().then(afterDebChange)).catch(() => {});
+    }
+    // Al terminar (finMs) mi debate: computa outcome, premia a MI mecenas, sella y revela.
+    const _debDone = {};
+    function maybeResolveDebate() {
+      if (!DEB || !myId) return;
+      const d = DEB.miDebate(h.id, myId);
+      if (!d || clock() < d.finMs || _debDone[d.id]) return;
+      _debDone[d.id] = true;
+      const oc = debOutcome(d), t = debTema(d.tema), soyGanador = oc.ganador === myId;
+      const xp = {}; oc.doms.forEach(dom => xp[dom] = 22 + (soyGanador ? 12 : 0));
+      if (window.HacStats && HacStats.award) HacStats.award(myId, { xp });
+      let extra = '';
+      const cal = oc.libros[myId];
+      if (cal && window.HacStats && HacStats.darItem && DEB.bookId) {
+        const rr = HacStats.darItem(myId, DEB.bookId(d.tema, cal));
+        extra = (rr && rr.ok !== false) ? ` · 📔 Conclusiones ${(DEB.CALIDADES[cal] || {}).nombre || cal}` : ' · 📔 (mochila llena)';
+      }
+      if (soyGanador && window.HacPuntos && HacPuntos.award) HacPuntos.award(h.id, myId, HacPuntos.recompensa ? HacPuntos.recompensa(20, 300) : 8);
+      const otro = (myId === d.hostId) ? d.invitadoNombre : d.hostNombre;
+      if (window.HacBitacora) HacBitacora.log(myId, 'debate', `🗣 Debate de ${t ? t.nombre : d.tema} con ${otro || 'otro mecenas'}: ${soyGanador ? '✔ ganaste' : '✘ perdiste'}${extra}`, { clave: 'debate:' + d.id });
+      DEB.resolver(d.id, { ganador: oc.ganador, pHost: oc.pHost, libros: oc.libros }).then(() => DEB.reload().then(afterDebChange)).catch(() => {});
+      mostrarRevelacionDebate(d, oc);
+      refresh();
+    }
+    // Notificación de invitación pendiente (para el invitado).
+    let _invNotified = '';
+    function debNotify() {
+      if (!DEB || !myId) return;
+      const inv = DEB.miInvitacionPendiente(h.id, myId, clock());
+      if (inv && _invNotified !== inv.id) { _invNotified = inv.id; const t = debTema(inv.tema); toast(`🗣 ${inv.hostNombre || 'Alguien'} te reta a un debate de ${t ? t.nombre : inv.tema}`); }
+      if (!inv) _invNotified = '';
+    }
+    // Pulso de debates (poll): sim, auto-accept NPC, resolución, notificación.
+    function debPulse() { if (!DEB) return; syncDebateFolk(); debNpcAutoAccept(); maybeResolveDebate(); debNotify(); }
+
+    // ── UI: overlay para INVITAR (elige invitado + tema con % + jardín) ──
+    let debEl = null;
+    function ensureDebEl() {
+      if (debEl) return debEl;
+      debEl = document.createElement('div');
+      debEl.className = 'hacp-shop hacp-deb-ov'; debEl.hidden = true;
+      vp.appendChild(debEl);
+      ['pointerdown', 'pointerup', 'wheel', 'click'].forEach(ev => debEl.addEventListener(ev, (e) => e.stopPropagation(), { passive: false }));
+      debEl.addEventListener('click', (e) => { if (e.target === debEl) debEl.hidden = true; });
+      return debEl;
+    }
+    let _debPick = { invitado: null, tema: null, jardin: null };
+    function abrirInvitarDebate() {
+      if (!DEB) { toast('Los debates aún no están disponibles'); return; }
+      const gardens = gardensFinca();
+      if (!gardens.length) { toast('Construye un Jardín en la finca para poder debatir'); return; }
+      const cd = DEB.cooldownRestanteMs(h.id, myId, clock());
+      if (cd > 0) { toast('Tu mecenas necesita reposar tras el último debate (' + fmtClock(Math.ceil(cd / 1000)) + ')'); return; }
+      const otros = (h.miembros || []).filter(m => walkerIdOf(m) !== myId);
+      if (!otros.length) { toast('No hay a quién invitar en esta hacienda'); return; }
+      _debPick = { invitado: walkerIdOf(otros[0]), tema: DEB.TEMAS[0].id, jardin: gardens[0].cell };
+      renderInvitarDebate(gardens, otros);
+      ensureDebEl().hidden = false;
+    }
+    function renderInvitarDebate(gardens, otros) {
+      const el = ensureDebEl();
+      const invM = otros.find(m => walkerIdOf(m) === _debPick.invitado) || otros[0];
+      const invId = walkerIdOf(invM);
+      const invBtns = otros.map(m => `<button type="button" class="hacp-deb-opt${walkerIdOf(m) === _debPick.invitado ? ' on' : ''}" data-inv="${esc(walkerIdOf(m))}">${esc(m.nombre)}${esNpc(m) ? ' <i>(NPC)</i>' : ''}</button>`).join('');
+      const temaBtns = DEB.TEMAS.map(t => {
+        const nMe = debNivel(myId, t.id), nOt = debNivel(invId, t.id), p = Math.round(debProb(nMe, nOt) * 100);
+        const domTxt = t.doms.map(d => DOM_GLYPH[d]).join('');
+        return `<button type="button" class="hacp-deb-opt hacp-deb-tema${t.id === _debPick.tema ? ' on' : ''}" data-tema="${esc(t.id)}" title="${esc(t.nombre)} · ${domTxt}"><b>${esc(t.nombre)}</b> <span class="hacp-deb-dom">${domTxt}</span><span class="hacp-deb-odds">${p}% tú</span></button>`;
+      }).join('');
+      const jardBtns = gardens.map((g, i) => `<button type="button" class="hacp-deb-opt${g.cell === _debPick.jardin ? ' on' : ''}" data-jard="${esc(g.cell)}">${esc(g.zh)} ${esc(g.nombre)}${gardens.length > 1 ? ' #' + (i + 1) : ''}</button>`).join('');
+      const nMeSel = debNivel(myId, _debPick.tema), nOtSel = debNivel(invId, _debPick.tema), pMe = Math.round(debProb(nMeSel, nOtSel) * 100);
+      const domSel = (debTema(_debPick.tema) || { doms: [] }).doms.map(d => DOM_GLYPH[d]).join('');
+      el.innerHTML = `<div class="hacp-shop-box">
+        <button type="button" class="hacp-shop-x" data-act="x" aria-label="Cerrar">✕</button>
+        <div class="hacp-shop-h"><span class="hacp-shop-zh">🗣</span> Invitar a debatir</div>
+        <div class="hacp-shop-sub">Retas a otro mecenas a un debate de 5 min en el jardín. Ambos ganáis experiencia del tema; el ganador, prestigio. <b>Quién gana depende de vuestro nivel en ${domSel || 'el dominio'}</b> (+ algo de suerte).</div>
+        <div class="hacp-deb-sec"><label class="hacp-cp-lbl">¿A quién retas?</label><div class="hacp-deb-opts">${invBtns}</div></div>
+        <div class="hacp-deb-sec"><label class="hacp-cp-lbl">Tema del debate</label><div class="hacp-deb-opts">${temaBtns}</div></div>
+        <div class="hacp-deb-sec"><label class="hacp-cp-lbl">¿Dónde?</label><div class="hacp-deb-opts">${jardBtns}</div></div>
+        <div class="hacp-deb-odds-big">Tu probabilidad: <b>${pMe}%</b> <span>(${domSel} tú ${nMeSel} vs ${esc(invM.nombre)} ${nOtSel})</span></div>
+        <button type="button" class="hacp-cp-btn hacp-cp-go" data-act="invitar">Invitar a debatir</button>
+      </div>`;
+      el.querySelector('[data-act="x"]').addEventListener('click', () => { el.hidden = true; });
+      el.querySelectorAll('[data-inv]').forEach(b => b.addEventListener('click', () => { _debPick.invitado = b.dataset.inv; renderInvitarDebate(gardens, otros); }));
+      el.querySelectorAll('[data-tema]').forEach(b => b.addEventListener('click', () => { _debPick.tema = b.dataset.tema; renderInvitarDebate(gardens, otros); }));
+      el.querySelectorAll('[data-jard]').forEach(b => b.addEventListener('click', () => { _debPick.jardin = b.dataset.jard; renderInvitarDebate(gardens, otros); }));
+      el.querySelector('[data-act="invitar"]').addEventListener('click', () => enviarInvitacionDebate(invM));
+    }
+    function enviarInvitacionDebate(invM) {
+      if (!DEB) return;
+      DEB.crear({ haciendaId: h.id, hostId: myId, hostNombre: miNombreDeb(), invitadoId: walkerIdOf(invM), invitadoNombre: invM.nombre || '', tema: _debPick.tema, jardinCell: _debPick.jardin })
+        .then(() => { if (debEl) debEl.hidden = true; toast(esNpc(invM) ? '🗣 Invitación enviada · ' + (invM.nombre || 'el NPC') + ' aceptará en un momento' : '🗣 Invitación enviada · espera a que ' + (invM.nombre || 'te') + ' acepte'); return DEB.reload().then(afterDebChange); })
+        .catch(e => { toast((e && e.message) || 'No se pudo invitar'); });
+    }
+    // Aceptar / rechazar una invitación que me han hecho.
+    function aceptarDebate(id) { if (!DEB) return; DEB.aceptar(id, myId, clock()).then(() => { toast('🗣 ¡Al jardín a debatir!'); return DEB.reload().then(afterDebChange); }).catch(e => toast((e && e.message) || 'No se pudo aceptar')); }
+    function rechazarDebate(id) { if (!DEB) return; DEB.rechazar(id, myId).then(() => { toast('Invitación rechazada'); return DEB.reload().then(afterDebChange); }).catch(() => {}); }
+
+    // ── Widget de SUSPENSE: barra que rebota izq↔der y se para en el ganador ──
+    function mostrarRevelacionDebate(d, oc) {
+      const t = debTema(d.tema);
+      const hostGana = oc.ganador === d.hostId;
+      const el = document.createElement('div');
+      el.className = 'hacp-shop hacp-deb-rev';
+      vp.appendChild(el);
+      const pH = Math.round(oc.pHost * 100), pI = 100 - pH;
+      const domTxt = (t ? t.doms : []).map(dm => DOM_GLYPH[dm]).join('');
+      el.innerHTML = `<div class="hacp-shop-box hacp-deb-revbox">
+        <div class="hacp-shop-h"><span class="hacp-shop-zh">🗣</span> Debate de ${esc(t ? t.nombre : d.tema)}</div>
+        <div class="hacp-deb-vs">
+          <div class="hacp-deb-vs-a"><b>${esc(d.hostNombre || 'Anfitrión')}</b><span>${domTxt} ${oc.nH} · ${pH}%</span></div>
+          <div class="hacp-deb-vs-x">兵</div>
+          <div class="hacp-deb-vs-b"><b>${esc(d.invitadoNombre || 'Invitado')}</b><span>${domTxt} ${oc.nI} · ${pI}%</span></div>
+        </div>
+        <canvas class="hacp-deb-bar" width="440" height="54"></canvas>
+        <div class="hacp-deb-win" id="hacp-deb-win">…</div>
+        <button type="button" class="hacp-cp-btn" data-act="cerrar" style="display:none">Continuar</button>
+      </div>`;
+      const cv = el.querySelector('.hacp-deb-bar'), g = cv.getContext('2d'), W = cv.width, H = cv.height;
+      const zoneH = W * oc.pHost;                                  // zona del anfitrión (izq)
+      // destino: dentro de la zona del ganador (con margen), para que la barra "caiga" ahí
+      const dest = hostGana ? zoneH * (0.25 + 0.5 * 0.5) : zoneH + (W - zoneH) * (0.25 + 0.5 * 0.5);
+      const T = 3200; let start = null;
+      const winEl = el.querySelector('#hacp-deb-win'), btn = el.querySelector('[data-act="cerrar"]');
+      const reduced = !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+      function draw(px) {
+        g.clearRect(0, 0, W, H);
+        g.fillStyle = 'rgba(90,143,208,0.55)'; g.fillRect(0, 18, zoneH, 20);          // zona A (azul)
+        g.fillStyle = 'rgba(192,70,58,0.55)'; g.fillRect(zoneH, 18, W - zoneH, 20);   // zona B (rojo)
+        g.fillStyle = '#e8dcc0'; g.fillRect(zoneH - 1, 12, 2, 32);                    // separador ∝ odds
+        g.fillStyle = '#fbeecf'; g.fillRect(px - 2, 6, 4, 42);                        // marcador
+        g.fillStyle = '#3a2a16'; g.fillRect(px - 2, 6, 4, 42);
+      }
+      function finish() {
+        draw(dest);
+        const gan = hostGana ? d.hostNombre : d.invitadoNombre;
+        winEl.innerHTML = `🏆 <b>${esc(gan || 'Ganador')}</b> gana el debate`;
+        winEl.classList.add('on'); btn.style.display = '';
+        btn.addEventListener('click', () => el.remove());
+        setTimeout(() => { if (el.parentNode) el.remove(); }, 9000);   // auto-cierra
+      }
+      if (reduced) { finish(); return; }
+      function tick(ts) {
+        if (start == null) start = ts;
+        const e = Math.min(1, (ts - start) / T);
+        // rebote que se amortigua y converge al destino
+        const amp = (1 - e) * (W * 0.5), osc = Math.sin(e * 22) * amp * (1 - e);
+        const px = dest * e + (W / 2) * (1 - e) + osc;
+        draw(Math.max(4, Math.min(W - 4, px)));
+        if (e < 1) requestAnimationFrame(tick); else finish();
+      }
+      requestAnimationFrame(tick);
+    }
+    function debStyleOnce() {
+      if (document.getElementById('hacp-deb-style')) return;
+      const s = document.createElement('style'); s.id = 'hacp-deb-style';
+      s.textContent = `
+        .hacp-deb-sec{margin:8px 0}
+        .hacp-deb-opts{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+        .hacp-deb-opt{background:#2a2016;color:#e8dcc0;border:1px solid #5a4020;border-radius:8px;padding:6px 9px;font:inherit;cursor:pointer;font-size:13px}
+        .hacp-deb-opt.on{background:#7a4a1c;border-color:#d0a84a;color:#fff}
+        .hacp-deb-opt i{opacity:.6;font-size:11px}
+        .hacp-deb-tema{display:flex;flex-direction:column;align-items:flex-start;line-height:1.25}
+        .hacp-deb-dom{opacity:.8;font-size:12px}
+        .hacp-deb-odds{color:#9cc47a;font-size:11px}
+        .hacp-deb-odds-big{margin:8px 0;color:#e8dcc0}
+        .hacp-deb-odds-big span{opacity:.7;font-size:12px}
+        .hacp-deb-rev{display:flex;align-items:center;justify-content:center}
+        .hacp-deb-revbox{max-width:480px;text-align:center}
+        .hacp-deb-vs{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:10px 0}
+        .hacp-deb-vs-a,.hacp-deb-vs-b{display:flex;flex-direction:column;flex:1}
+        .hacp-deb-vs-a{color:#8fb6e0}.hacp-deb-vs-b{color:#e0968f}
+        .hacp-deb-vs-a span,.hacp-deb-vs-b span{opacity:.85;font-size:12px}
+        .hacp-deb-vs-x{opacity:.6}
+        .hacp-deb-bar{width:100%;max-width:440px;image-rendering:pixelated}
+        .hacp-deb-win{min-height:22px;margin-top:6px;font-size:16px;opacity:.5;transition:opacity .3s}
+        .hacp-deb-win.on{opacity:1}
+        .hacp-deb-invite{background:#241a14;border:1px solid #7a4a1c;border-radius:9px;padding:8px 10px;margin-top:6px}
+        .hacp-deb-invite .r{display:flex;gap:6px;margin-top:6px}`;
+      document.head.appendChild(s);
+    }
+    debStyleOnce();
     // Botín común: ≥1 objeto por participante (de la tienda del tier, preferiendo
     // equipables/guardables). El reparto/elección será la sub-fase 4d.
     function generarBotin(band, extra) {
@@ -2442,8 +2683,12 @@
       const def = window.HacTienda ? HacTienda.get(id) : null;
       const r = HacStats.usarManual(myId, id);
       if (r && r.ok) {
-        toast(`📖 +${r.xp} XP ${DOM_NOMBRE[r.dom] || ''}`.trim());
-        if (window.HacBitacora) HacBitacora.log(myId, 'progreso', `📖 Usaste ${def ? def.nombre : 'un manual'} · +${r.xp} XP ${DOM_NOMBRE[r.dom] || ''}`.trim());
+        // XP puede ser de un dominio (manuales clásicos) o de varios (libros de debate).
+        const txt = (r.ganado && Object.keys(r.ganado).length)
+          ? Object.keys(r.ganado).map(d => `+${r.ganado[d]} XP ${DOM_NOMBRE[d] || ''}`.trim()).join(' · ')
+          : `+${r.xp} XP ${DOM_NOMBRE[r.dom] || ''}`.trim();
+        toast('📖 ' + txt);
+        if (window.HacBitacora) HacBitacora.log(myId, 'progreso', `📖 Estudiaste ${def ? def.nombre : 'un tomo'} · ${txt}`);
         buildCharPanel(charId);
       } else toast((r && r.motivo) || 'No se pudo usar');
     }
@@ -2619,12 +2864,25 @@
           // 'abierta', esperando a partir): tampoco puede coger una tarea interna.
           mision = `<div class="hacp-cp-mis"><span class="hacp-cp-flag" style="opacity:.8">Ocupado en otra actividad</span></div>`;
         } else {
-          const tasks = availableTasks();   // tareas DENTRO de la finca (edificios)
-          const opts = tasks.map(t => `<option value="${esc(t.taskId)}">${esc(t.nombre)} · ${fmtDur(t.duracionSeg)} · −${costeMision(t.dominio)}⚡</option>`).join('');
-          // "Buscar misiones" ahora vive en la barra de iconos (檄 Misiones); aquí solo
-          // queda el selector de tarea interna.
-          const sel = tasks.length ? `<div class="hacp-cp-mis"><label class="hacp-cp-lbl">Tarea en la finca</label><div class="hacp-cp-row"><select class="hacp-cp-sel">${opts}</select><button type="button" class="hacp-cp-btn hacp-cp-go" data-act="dispatch">Enviar</button></div></div>` : '';
-          mision = sel;
+          // Las tareas internas de prestigio se han sustituido por INVITAR A DEBATIR.
+          const invPend = DEB && DEB.miInvitacionPendiente(h.id, myId, clock());
+          const enDeb = DEB && DEB.miDebate(h.id, myId);
+          const invSent = DEB && DEB.miInvitacionEnviada(h.id, myId);
+          if (invPend) {
+            const tt = debTema(invPend.tema);
+            mision = `<div class="hacp-cp-mis hacp-deb-invite"><span class="hacp-cp-flag">🗣 <b>${esc(invPend.hostNombre || 'Alguien')}</b> te reta a un debate de <b>${esc(tt ? tt.nombre : invPend.tema)}</b></span><div class="r"><button type="button" class="hacp-cp-btn hacp-cp-go" data-act="deb-yes" data-id="${esc(invPend.id)}">Aceptar</button><button type="button" class="hacp-cp-btn" data-act="deb-no" data-id="${esc(invPend.id)}">Rechazar</button></div></div>`;
+          } else if (enDeb) {
+            const tt = debTema(enDeb.tema);
+            mision = `<div class="hacp-cp-mis hacp-cp-mis-on"><span class="hacp-cp-flag">🗣 Debatiendo de ${esc(tt ? tt.nombre : enDeb.tema)}…</span></div>`;
+          } else if (invSent) {
+            mision = `<div class="hacp-cp-mis"><span class="hacp-cp-flag" style="opacity:.85">🗣 Invitación enviada a ${esc(invSent.invitadoNombre || '…')} · esperando respuesta</span></div>`;
+          } else {
+            const cd = DEB ? DEB.cooldownRestanteMs(h.id, myId, clock()) : 0;
+            const hayJard = gardensFinca().length > 0;
+            const dis = (cd > 0 || !hayJard || !DEB) ? ' disabled' : '';
+            const hint = cd > 0 ? ` <span class="hacp-cp-lbl" style="opacity:.6">reposa ${fmtClock(Math.ceil(cd / 1000))}</span>` : (!hayJard ? ` <span class="hacp-cp-lbl" style="opacity:.6">(construye un Jardín)</span>` : '');
+            mision = `<div class="hacp-cp-mis"><div class="hacp-cp-row"><button type="button" class="hacp-cp-btn hacp-cp-go" data-act="debate"${dis}>🗣 Invitar a debatir</button>${hint}</div></div>`;
+          }
         }
       }
       charEl.innerHTML = `
@@ -2654,6 +2912,12 @@
       charEl.querySelector('[data-act="close"]').addEventListener('click', deselect);
       const db = charEl.querySelector('[data-act="dispatch"]');
       if (db) db.addEventListener('click', () => { const s = charEl.querySelector('.hacp-cp-sel'); dispatch(s ? s.value : null); });
+      const dbb = charEl.querySelector('[data-act="debate"]');
+      if (dbb) dbb.addEventListener('click', abrirInvitarDebate);
+      const dby = charEl.querySelector('[data-act="deb-yes"]');
+      if (dby) dby.addEventListener('click', () => aceptarDebate(dby.dataset.id));
+      const dbn = charEl.querySelector('[data-act="deb-no"]');
+      if (dbn) dbn.addEventListener('click', () => rechazarDebate(dbn.dataset.id));
       const rb = charEl.querySelector('[data-act="release"]');
       if (rb) rb.addEventListener('click', release);
       const ab = charEl.querySelector('[data-act="abort"]');
@@ -3315,6 +3579,7 @@
     if (window.HacBitacora) HacBitacora.ready();
     if (window.HacRelaciones) HacRelaciones.ready();
     if (window.HacEscaramuzas) HacEscaramuzas.ready().then(escPulse);
+    if (DEB) DEB.ready().then(debPulse);
     if (window.HacOrdenes) {
       HacOrdenes.ready().then(applyOrders);
       setInterval(() => {
@@ -3325,6 +3590,7 @@
         if (window.HacStats) HacStats.reload();
         if (window.HacRelaciones) HacRelaciones.reload();
         if (window.HacEscaramuzas) HacEscaramuzas.reload().then(escPulse);   // saca al mecenas y resuelve si toca
+        if (DEB) DEB.reload().then(debPulse);                                // debates: sim, auto-accept NPC, resolución
         HacOrdenes.reload().then(applyOrders);
       }, 5000);
     }
@@ -3513,7 +3779,7 @@
       sec.innerHTML = `
         <div class="hacp-msec-pane" data-pane="personaje"></div>
         <div class="hacp-msec-pane" data-pane="misiones">
-          <div class="hacp-mtabs"><button type="button" class="hacp-mtab on" data-mt="internas">Tareas internas</button><button type="button" class="hacp-mtab" data-mt="exped">Expediciones</button></div>
+          <div class="hacp-mtabs"><button type="button" class="hacp-mtab on" data-mt="internas">Debate</button><button type="button" class="hacp-mtab" data-mt="exped">Expediciones</button></div>
           <div class="hacp-mtab-body" data-mtb="internas"></div>
           <div class="hacp-mtab-body" data-mtb="exped" hidden></div>
         </div>
@@ -3533,14 +3799,24 @@
       }));
       function renderInternas() {
         const body = sec.querySelector('[data-mtb="internas"]');
-        if (!myId) { body.innerHTML = '<div class="hacp-inv-note">Entra con tu mecenas para enviar tareas.</div>'; return; }
-        const tasks = availableTasks();
-        const ocupado = ocupadoAhora(myId);   // en misión/expedición/escaramuza/peregrinaje → no puede coger otra tarea
-        const aviso = ocupado ? '<div class="hacp-inv-note">Tu mecenas ya está ocupado · espera a que vuelva para enviarle una tarea.</div>' : '';
-        body.innerHTML = aviso + (tasks.length
-          ? tasks.map(t => `<div class="hacp-mrow"><div class="hacp-mrow-main"><b>${esc(t.nombre)}</b><span>${fmtDur(t.duracionSeg)} · −${costeMision(t.dominio)}⚡</span></div><button class="hacp-cp-btn" data-task="${esc(t.taskId)}"${ocupado ? ' disabled' : ''}>Enviar</button></div>`).join('')
-          : '<div class="hacp-inv-note">No hay tareas internas disponibles ahora mismo.</div>');
-        body.querySelectorAll('[data-task]').forEach(b => b.addEventListener('click', () => { dispatch(b.dataset.task); mgo('personaje'); }));
+        if (!myId) { body.innerHTML = '<div class="hacp-inv-note">Entra con tu mecenas para debatir.</div>'; return; }
+        const invPend = DEB && DEB.miInvitacionPendiente(h.id, myId, clock());
+        const enDeb = DEB && DEB.miDebate(h.id, myId);
+        const invSent = DEB && DEB.miInvitacionEnviada(h.id, myId);
+        const cd = DEB ? DEB.cooldownRestanteMs(h.id, myId, clock()) : 0;
+        const hayJard = gardensFinca().length > 0;
+        let inner;
+        if (!DEB) inner = '<div class="hacp-inv-note">Los debates aún no están disponibles.</div>';
+        else if (invPend) { const tt = debTema(invPend.tema); inner = `<div class="hacp-mrow"><div class="hacp-mrow-main"><b>🗣 ${esc(invPend.hostNombre || 'Alguien')} te reta</b><span>Debate de ${esc(tt ? tt.nombre : invPend.tema)}</span></div><div style="display:flex;gap:6px"><button class="hacp-cp-btn hacp-cp-go" data-deb-yes="${esc(invPend.id)}">Aceptar</button><button class="hacp-cp-btn" data-deb-no="${esc(invPend.id)}">Rechazar</button></div></div>`; }
+        else if (enDeb) { const tt = debTema(enDeb.tema); inner = `<div class="hacp-inv-note">🗣 Tu mecenas está debatiendo de <b>${esc(tt ? tt.nombre : enDeb.tema)}</b> en el jardín…</div>`; }
+        else if (invSent) inner = `<div class="hacp-inv-note">🗣 Invitación enviada a ${esc(invSent.invitadoNombre || '…')} · esperando respuesta.</div>`;
+        else if (cd > 0) inner = `<div class="hacp-inv-note">Tu mecenas reposa tras el último debate · disponible en ${fmtClock(Math.ceil(cd / 1000))}.</div>`;
+        else if (!hayJard) inner = '<div class="hacp-inv-note">Construye un <b>Jardín</b> en la finca para poder debatir.</div>';
+        else inner = `<div class="hacp-mrow"><div class="hacp-mrow-main"><b>🗣 Invitar a debatir</b><span>Reta a otro mecenas a un debate de 5 min en el jardín · XP + posible libro · prestigio al ganador.</span></div><button class="hacp-cp-btn hacp-cp-go" data-deb-open="1">Invitar</button></div>`;
+        body.innerHTML = inner;
+        const op = body.querySelector('[data-deb-open]'); if (op) op.addEventListener('click', () => { abrirInvitarDebate(); });
+        const yy = body.querySelector('[data-deb-yes]'); if (yy) yy.addEventListener('click', () => { aceptarDebate(yy.dataset.debYes); renderInternas(); });
+        const nn = body.querySelector('[data-deb-no]'); if (nn) nn.addEventListener('click', () => { rechazarDebate(nn.dataset.debNo); renderInternas(); });
       }
       function renderExped() {
         const body = sec.querySelector('[data-mtb="exped"]');

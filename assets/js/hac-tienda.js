@@ -23,6 +23,32 @@ const HacTienda = (function () {
   'use strict';
   const G = { militar: '武', cultural: '文', administrativo: '政' };
 
+  // ── Libros "Conclusiones del debate" (feature Debates): 6 temas × 3 calidades.
+  //    NO se compran ni caen como botín (oculto:true → fuera de disponibles/rotación);
+  //    solo se GANAN debatiendo, y se pueden consumir (XP), vender o donar al fundador.
+  //    Datos de tema/calidad centralizados en HacDebates (cargar hac-debates.js ANTES). ──
+  const _conclusiones = (function () {
+    const D = (typeof window !== 'undefined' && window.HacDebates) || null;
+    if (!D || !D.TEMAS || !D.CALIDADES) return [];
+    const out = [];
+    D.TEMAS.forEach(t => {
+      const combo = t.doms.length > 1, domTxt = t.doms.map(d => G[d] || d).join('');
+      Object.keys(D.CALIDADES).forEach(cal => {
+        const c = D.CALIDADES[cal], per = combo ? Math.round(c.xp * 0.6) : c.xp, xp = {};
+        t.doms.forEach(d => { xp[d] = per; });
+        const desc = cal === 'reveladoras'
+          ? `Conclusiones REVELADORAS de un debate de ${t.nombre} (${domTxt}). Gran experiencia al estudiarlas; preséntalas al fundador para un gran bono de XP a toda la casa.`
+          : cal === 'muy-buenas'
+            ? `Conclusiones muy buenas de un debate de ${t.nombre} (${domTxt}). Estúdialas por experiencia, véndelas, o preséntalas al fundador (bono de XP a la casa).`
+            : `Notas de un debate de ${t.nombre} (${domTxt}). Conclusiones útiles: estúdialas por algo de experiencia o véndelas en el mercado.`;
+        out.push({ id: D.bookId(t.id, cal), nombre: 'Conclusiones · ' + c.nombre, zh: '論議錄', icon: c.icon,
+          tier: 99, oculto: true, tipo: 'manual', calidad: cal, tema: t.id, donable: c.donable,
+          efecto: { manual: { xp } }, precio: c.precio, desc });
+      });
+    });
+    return out;
+  })();
+
   // tipo: 'comida' | 'tomo' | 'inventario' | 'mascota'
   const CATALOGO = Object.freeze([
     // ── Tier 1 ── vituallas básicas
@@ -66,12 +92,13 @@ const HacTienda = (function () {
     { id: 'comp-mil', nombre: 'Compendio militar',       zh: '武經', icon: '📕', tier: 4, precio: 80, tipo: 'manual', efecto: { manual: { dom: 'militar', xp: 130 } },        desc: 'Gran obra de estrategia. Úsalo para +130 XP Militar.' },
     { id: 'comp-cul', nombre: 'Compendio cultural',      zh: '文淵', icon: '📗', tier: 4, precio: 80, tipo: 'manual', efecto: { manual: { dom: 'cultural', xp: 130 } },       desc: 'Suma del saber letrado. Úsalo para +130 XP Cultural.' },
     { id: 'comp-adm', nombre: 'Compendio administrativo', zh: '政要', icon: '📘', tier: 4, precio: 80, tipo: 'manual', efecto: { manual: { dom: 'administrativo', xp: 130 } }, desc: 'Tratado de gobierno. Úsalo para +130 XP Administrativo.' },
-  ]);
+  ].concat(_conclusiones));
 
   const byId = {}; CATALOGO.forEach(i => { byId[i.id] = i; });
   const get = (id) => byId[id] || null;
-  const disponibles = (tier) => CATALOGO.filter(i => i.tier <= (tier || 1));
-  const bloqueados = (tier) => CATALOGO.filter(i => i.tier > (tier || 1));
+  // `oculto` (libros de conclusiones) → nunca en el mercado ni como botín.
+  const disponibles = (tier) => CATALOGO.filter(i => !i.oculto && i.tier <= (tier || 1));
+  const bloqueados = (tier) => CATALOGO.filter(i => !i.oculto && i.tier > (tier || 1));
 
   // Nombre LEGIBLE de cada dominio (el glifo 武/文/政 solo, sin traducir, no se entendía).
   const NOM = { militar: 'Militar', cultural: 'Cultural', administrativo: 'Administrativo' };
@@ -87,7 +114,11 @@ const HacTienda = (function () {
       });
       return 'Equipable · ' + parts.join(' · ');
     }
-    if (e.manual) return `Consumible · +${e.manual.xp} XP ${NOM[e.manual.dom] || e.manual.dom}`;
+    if (e.manual) {
+      const mx = e.manual.xp;
+      if (mx && typeof mx === 'object') return 'Consumible · ' + Object.keys(mx).map(d => `+${mx[d]} XP ${NOM[d] || d}`).join(' · ');
+      return `Consumible · +${e.manual.xp} XP ${NOM[e.manual.dom] || e.manual.dom}`;
+    }
     if (e.xp) return Object.keys(e.xp).map(d => `+${e.xp[d]} XP ${NOM[d] || d}`).join(' · ');
     if (e.capInv) return `+${e.capInv} ranuras de mochila 🎒`;
     if (e.guardable) return 'Objeto decorativo · ocupa 1 ranura';
