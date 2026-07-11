@@ -28,6 +28,8 @@ create table if not exists public.debates (
   updated_at       timestamptz not null default now()
 );
 create index if not exists debates_hac_idx on public.debates (hacienda_id);
+-- Jugadas del mini-juego argumental por turnos: [{t:turnIdx, s:stance, ms}] (10 turnos = 5 rondas).
+alter table public.debates add column if not exists jugadas jsonb not null default '[]'::jsonb;
 
 -- updated_at automático
 create or replace function public.set_updated_at_debates() returns trigger as $$
@@ -105,6 +107,25 @@ begin
   return d;
 end; $$;
 
+-- Registrar una JUGADA del turno actual (mini-juego por turnos). Concurrencia optimista
+-- por índice de turno: si otro cliente ya jugó ese turno (p.ej. una auto-elección de IA
+-- por tiempo agotado y el jugador a la vez), la llamada desfasada es un no-op.
+create or replace function public.debate_jugar(p_id uuid, p_turn int, p_stance text)
+returns public.debates language plpgsql security definer set search_path = public as $$
+declare d public.debates; n int;
+begin
+  select * into d from public.debates where id = p_id for update;
+  if not found then raise exception 'El debate ya no existe'; end if;
+  if d.estado <> 'en_curso' then return d; end if;
+  n := coalesce(jsonb_array_length(d.jugadas), 0);
+  if p_turn <> n or n >= 10 then return d; end if;                 -- turno desfasado o juego completo
+  update public.debates
+    set jugadas = coalesce(jugadas, '[]'::jsonb) || jsonb_build_array(
+      jsonb_build_object('t', p_turn, 's', p_stance, 'ms', (extract(epoch from now()) * 1000)::bigint))
+    where id = p_id returning * into d;
+  return d;
+end; $$;
+
 -- RLS: lectura pública; escritura solo por las RPC SECURITY DEFINER de arriba.
 alter table public.debates enable row level security;
 drop policy if exists debates_read on public.debates;
@@ -113,3 +134,4 @@ grant execute on function public.debate_crear(text,text,text,text,text,text,text
 grant execute on function public.debate_aceptar(uuid,text,bigint)                 to authenticated, anon;
 grant execute on function public.debate_rechazar(uuid,text)                       to authenticated, anon;
 grant execute on function public.debate_resolver(uuid,jsonb)                      to authenticated, anon;
+grant execute on function public.debate_jugar(uuid,int,text)                      to authenticated, anon;

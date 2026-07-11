@@ -1053,8 +1053,19 @@
     function debOutcome(d) {
       const t = debTema(d.tema), doms = t ? t.doms : ['cultural'];
       const nH = debNivel(d.hostId, d.tema), nI = debNivel(d.invitadoId, d.tema);
-      const pHost = debProb(nH, nI);
-      const rw = (window.HacRand && HacRand.make) ? HacRand.make('win#' + d.id) : { next: () => 0.5 };
+      const p0 = debProb(nH, nI);   // ventaja inicial por nivel
+      // El mini-juego argumental mueve el tira y afloja; las jugadas que falten (turnos no
+      // jugados a los 5 min) se completan con IA determinista → mismo resultado en todos.
+      const jug = (d.jugadas || []).slice();
+      if (DEB && DEB.TURNS) {
+        for (let i = jug.length; i < DEB.TURNS; i++) {
+          const dd = { id: d.id, hostId: d.hostId, invitadoId: d.invitadoId, jugadas: jug };
+          const actor = DEB.turnActorId(dd, i);
+          jug.push({ t: i, s: DEB.iaStance(dd, i, debNivel(actor, d.tema)), ms: 0 });
+        }
+      }
+      const pHost = DEB ? DEB.tug({ id: d.id, hostId: d.hostId, invitadoId: d.invitadoId, jugadas: jug }, p0).p : p0;
+      const rw = (window.HacRand && window.HacRand.make) ? window.HacRand.make('win#' + d.id) : { next: () => 0.5 };
       const ganador = (rw.next() < pHost) ? d.hostId : d.invitadoId;
       // El LIBRO favorece con fuerza al GANADOR: él saca conclusiones a menudo (y pueden
       // ser reveladoras); el perdedor rara vez y NUNCA reveladoras (como mucho, muy buenas).
@@ -1127,8 +1138,17 @@
       if (inv && _invNotified !== inv.id) { _invNotified = inv.id; const t = debTema(inv.tema); toast(`🗣 ${inv.hostNombre || 'Alguien'} te reta a un debate de ${t ? t.nombre : inv.tema}`); }
       if (!inv) _invNotified = '';
     }
-    // Pulso de debates (poll): sim, auto-accept NPC, resolución, notificación.
-    function debPulse() { if (!DEB) return; syncDebateFolk(); debNpcAutoAccept(); maybeResolveDebate(); debNotify(); }
+    // Aviso "es tu turno" en el mini-juego (una vez por turno).
+    let _turnNotified = '';
+    function debTurnNotify() {
+      if (!DEB || !myId) return;
+      const d = DEB.miDebate(h.id, myId);
+      if (!d || DEB.juegoCompleto(d)) return;
+      const i = DEB.turnoActual(d);
+      if (DEB.turnActorId(d, i) === myId) { const key = d.id + '#' + i; if (_turnNotified !== key) { _turnNotified = key; toast('🗣 Tu turno en el debate · argumenta'); } }
+    }
+    // Pulso de debates (poll): sim, auto-accept NPC, resolución, notificaciones.
+    function debPulse() { if (!DEB) return; syncDebateFolk(); debNpcAutoAccept(); maybeResolveDebate(); debNotify(); debTurnNotify(); }
 
     // ── UI: overlay para INVITAR (elige invitado + tema con % + jardín) ──
     let debEl = null;
@@ -1294,6 +1314,108 @@
       }
       requestAnimationFrame(tick);
     }
+
+    // ── MINI-JUEGO argumental por turnos (piedra-papel-tijera de posturas) ──
+    // Ventana en vivo: dos mecenas a izq/der, 5 rondas alternando quién pregunta. En tu
+    // turno eliges 1 de 3 posturas (argumentos temáticos); si el turno activo no responde
+    // en 60 s, la IA elige (determinista). Cada ronda mueve el tira y afloja (abajo).
+    let debjEl = null, debjId = null, debjIv = null, debjResueltoRonda = -1;
+    const skillDe = (pjId, tema) => debNivel(pjId, tema);
+    function ensureDebjEl() {
+      if (debjEl) return debjEl;
+      debjEl = document.createElement('div');
+      debjEl.className = 'hacp-shop hacp-debj'; debjEl.hidden = true;
+      vp.appendChild(debjEl);
+      ['pointerdown', 'pointerup', 'wheel', 'click'].forEach(ev => debjEl.addEventListener(ev, (e) => e.stopPropagation(), { passive: false }));
+      return debjEl;
+    }
+    function abrirDebateJuego() {
+      const d = DEB && DEB.miDebate(h.id, myId);
+      if (!d) { toast('No tienes un debate en curso'); return; }
+      debjId = d.id; debjResueltoRonda = -1;
+      ensureDebjEl().hidden = false;
+      renderDebateJuego();
+      if (debjIv) clearInterval(debjIv);
+      debjIv = setInterval(tickDebateJuego, 1000);
+      if (DEB.reload) DEB.reload().then(() => { syncDebateFolk(); renderDebateJuego(); });
+    }
+    function cerrarDebateJuego() { if (debjEl) debjEl.hidden = true; if (debjIv) { clearInterval(debjIv); debjIv = null; } debjId = null; }
+    let _debjReloadCd = 0;
+    function tickDebateJuego() {
+      if (!debjId || !DEB) return;
+      _debjReloadCd -= 1;
+      if (_debjReloadCd <= 0) { _debjReloadCd = 2; DEB.reload().then(() => { syncDebateFolk(); renderDebateJuego(); }); }   // liveness (~2 s)
+      const d = DEB.byId(debjId);
+      if (!d || d.estado !== 'en_curso') { cerrarDebateJuego(); return; }
+      if (DEB.juegoCompleto(d)) { renderDebateJuego(); return; }
+      // Auto-elección de IA si el turno activo agotó sus 60 s (lo dispara cualquier cliente presente).
+      const i = DEB.turnoActual(d);
+      if (clock() > DEB.turnoDeadline(d)) {
+        const actor = DEB.turnActorId(d, i);
+        DEB.jugar(d.id, i, DEB.iaStance(d, i, skillDe(actor, d.tema))).then(() => DEB.reload().then(() => { syncDebateFolk(); renderDebateJuego(); })).catch(() => {});
+      } else renderDebateJuego();
+    }
+    function elegirArgumento(stance) {
+      const d = DEB && DEB.byId(debjId); if (!d || d.estado !== 'en_curso') return;
+      const i = DEB.turnoActual(d);
+      if (DEB.turnActorId(d, i) !== myId) return;   // no es mi turno
+      DEB.jugar(d.id, i, stance).then(() => DEB.reload().then(() => { syncDebateFolk(); renderDebateJuego(); })).catch(e => toast((e && e.message) || 'No se pudo argumentar'));
+    }
+    function renderDebateJuego() {
+      const el = ensureDebjEl(); if (el.hidden) return;
+      const d = DEB && DEB.byId(debjId); if (!d) return;
+      const t = debTema(d.tema), doms = (t ? t.doms : []).map(dm => DOM_GLYPH[dm]).join('');
+      const p0 = debProb(debNivel(d.hostId, d.tema), debNivel(d.invitadoId, d.tema));
+      const { p, rondas } = DEB.tug(d, p0);
+      const pH = Math.round(p * 100);
+      const i = DEB.turnoActual(d), completo = DEB.juegoCompleto(d);
+      const info = completo ? null : DEB.turnInfo(i);
+      const miTurno = !completo && DEB.turnActorId(d, i) === myId;
+      const round = completo ? DEB.ROUNDS : (info.round + 1);
+      // Última ronda con ambas jugadas (para mostrar el intercambio).
+      const j = d.jugadas || [], curRound = completo ? DEB.ROUNDS - 1 : info.round;
+      const ask = j[curRound * 2], resp = j[curRound * 2 + 1];
+      const askTxt = ask ? DEB.frase(d.tema, 'ask', ask.s) : '…';
+      const respTxt = resp ? DEB.frase(d.tema, 'resp', resp.s) : (ask ? '…' : '');
+      const aH = (curRound % 2 === 0);   // ¿pregunta el host esta ronda?
+      // prompt del turno
+      let prompt, choices = '';
+      if (completo) { prompt = 'Argumentos agotados · el veredicto llegará al terminar el debate'; }
+      else {
+        const actorId = DEB.turnActorId(d, i);
+        const rem = Math.max(0, Math.ceil((DEB.turnoDeadline(d) - clock()) / 1000));
+        if (miTurno) {
+          prompt = (info.rol === 'ask' ? 'Tu turno · plantea tu argumento' : 'Tu turno · replica') + ` <span class="hacp-deb-countdown">${rem}s</span>`;
+          choices = '<div class="hacp-debj-choices">' + DEB.STANCES.map(s => `<button type="button" class="hacp-debj-arg t-${s.id}" data-st="${s.id}"><span class="zh">${s.zh}</span><span class="nb">${esc(s.nombre)}</span><span class="ph">${esc(DEB.frase(d.tema, info.rol, s.id))}</span></button>`).join('') + '</div>';
+        } else {
+          const nm = actorId === d.hostId ? d.hostNombre : d.invitadoNombre;
+          prompt = `Espera a <b>${esc(nm || 'tu rival')}</b>… <span class="hacp-deb-countdown">${rem}s</span>`;
+        }
+      }
+      // resultado de la ronda recién cerrada (flash)
+      const lastDone = rondas.length ? rondas[rondas.length - 1] : null;
+      const flash = (lastDone && lastDone.lado !== 'tie') ? `<div class="hacp-debj-flash">Ronda ${lastDone.r + 1}: ventaja para <b>${esc(lastDone.lado === 'host' ? d.hostNombre : d.invitadoNombre)}</b></div>` : (lastDone ? `<div class="hacp-debj-flash">Ronda ${lastDone.r + 1}: empate</div>` : '');
+      el.innerHTML = `<div class="hacp-shop-box hacp-debj-box">
+        <button type="button" class="hacp-shop-x" data-act="x" aria-label="Cerrar">✕</button>
+        <div class="hacp-debj-head"><span class="hacp-deb-seal">論</span>Debate de ${esc(t ? t.nombre : d.tema)}<span class="hacp-debj-round">Ronda ${round}/${DEB.ROUNDS}</span></div>
+        <div class="hacp-debj-arena">
+          <div class="hacp-debj-fighter a${!completo && DEB.turnActorId(d, i) === d.hostId ? ' on' : ''}"><div class="g">${doms}</div><div class="nm">${esc(d.hostNombre || 'Anfitrión')}</div></div>
+          <div class="hacp-debj-center">
+            <div class="hacp-debj-bubble${aH ? ' a' : ' b'}${ask ? '' : ' ghost'}">${esc(askTxt)}</div>
+            <div class="hacp-debj-bubble${aH ? ' b' : ' a'}${resp ? '' : ' ghost'}">${esc(respTxt || '…')}</div>
+          </div>
+          <div class="hacp-debj-fighter b${!completo && DEB.turnActorId(d, i) === d.invitadoId ? ' on' : ''}"><div class="g">${doms}</div><div class="nm">${esc(d.invitadoNombre || 'Invitado')}</div></div>
+        </div>
+        ${flash}
+        <div class="hacp-debj-turn">${prompt}</div>
+        ${choices}
+        <div class="hacp-deb-beam"><i class="me" style="width:${pH}%"></i><i class="foe" style="width:${100 - pH}%"></i></div>
+        <div class="hacp-deb-beamlbl"><span>${esc(d.hostNombre || 'Anfitrión')} ${pH}%</span><span class="mut">tira y afloja</span><span>${esc(d.invitadoNombre || 'Invitado')} ${100 - pH}%</span></div>
+      </div>`;
+      el.querySelector('[data-act="x"]').addEventListener('click', cerrarDebateJuego);
+      el.querySelectorAll('[data-st]').forEach(b => b.addEventListener('click', () => elegirArgumento(b.dataset.st)));
+    }
+
     function debStyleOnce() {
       if (document.getElementById('hacp-deb-style')) return;
       const s = document.createElement('style'); s.id = 'hacp-deb-style';
@@ -1356,7 +1478,36 @@
         .hacp-deb-hint{position:absolute;left:50%;top:12px;transform:translateX(-50%);z-index:6;background:linear-gradient(#2c1f13,#1a1109);color:#f3e6c4;border:1px solid #d8b45a;border-radius:11px;padding:10px 14px;font:600 14px/1.3 system-ui,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.5),inset 0 0 0 1px rgba(216,180,90,.2);display:flex;align-items:center;gap:12px;max-width:92%}
         .hacp-deb-hint b{color:#e8c877}
         .hacp-deb-hint button{background:linear-gradient(#8a5420,#6e3f16);color:#fbeecf;border:1px solid #d8b45a;border-radius:8px;padding:6px 11px;font:inherit;cursor:pointer}
-        .hacp-deb-countdown{font-variant-numeric:tabular-nums;color:#e8c877;font-weight:700}`;
+        .hacp-deb-countdown{font-variant-numeric:tabular-nums;color:#e8c877;font-weight:700}
+        .hacp-debj{display:flex;align-items:center;justify-content:center}
+        .hacp-debj-box{max-width:520px;background:linear-gradient(165deg,#2c1f13,#18100a);border:1px solid #6a4a24;box-shadow:0 18px 50px rgba(0,0,0,.55),inset 0 0 0 1px rgba(216,180,90,.16);border-radius:14px;padding:16px 18px;color:#ece0c4}
+        .hacp-debj-head{font:800 17px 'Noto Serif SC',serif;color:#f3e6c4;display:flex;align-items:center;gap:8px;margin-bottom:10px}
+        .hacp-debj-head .hacp-deb-seal{width:30px;height:30px;font-size:16px}
+        .hacp-debj-round{margin-left:auto;font:700 12px system-ui;color:#a8863c;letter-spacing:.04em}
+        .hacp-debj-arena{display:flex;align-items:center;gap:8px}
+        .hacp-debj-fighter{flex:0 0 84px;text-align:center;background:rgba(0,0,0,.24);border:1px solid rgba(216,180,90,.16);border-radius:11px;padding:9px 4px;transition:box-shadow .2s,transform .2s}
+        .hacp-debj-fighter.on{box-shadow:0 0 0 1px #d8b45a,0 0 16px rgba(232,192,96,.4);transform:translateY(-2px)}
+        .hacp-debj-fighter .g{font:700 26px 'Noto Serif SC',serif;color:#e8c064;line-height:1}
+        .hacp-debj-fighter.b .g{color:#d98a6e}
+        .hacp-debj-fighter .nm{font-weight:700;font-size:13px;margin-top:3px;color:#efe2c2}
+        .hacp-debj-center{flex:1;display:flex;flex-direction:column;gap:6px;min-height:78px;justify-content:center}
+        .hacp-debj-bubble{position:relative;border-radius:10px;padding:7px 11px;font-size:13px;line-height:1.3;max-width:90%}
+        .hacp-debj-bubble.a{align-self:flex-start;background:rgba(232,192,96,.14);border:1px solid rgba(232,192,96,.4);color:#f0e2bf}
+        .hacp-debj-bubble.b{align-self:flex-end;background:rgba(182,84,58,.16);border:1px solid rgba(200,110,80,.45);color:#f0d9cf}
+        .hacp-debj-bubble.ghost{opacity:.35;font-style:italic}
+        .hacp-debj-flash{text-align:center;font:700 13px system-ui;color:#e8c877;margin:8px 0 2px}
+        .hacp-debj-turn{text-align:center;font-size:14px;color:#e6dcc0;margin:8px 0}
+        .hacp-debj-turn b{color:#f0e2bf}
+        .hacp-debj-choices{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:6px 0 4px}
+        .hacp-debj-arg{background:#211710;border:1px solid #4e3819;border-radius:11px;padding:10px 8px;cursor:pointer;color:#e6dcc0;text-align:center;display:flex;flex-direction:column;align-items:center;gap:4px;transition:border-color .12s,transform .08s,background .12s}
+        .hacp-debj-arg:hover{border-color:#d8b45a;background:#2c1f10}
+        .hacp-debj-arg:active{transform:translateY(1px)}
+        .hacp-debj-arg .zh{font:700 22px 'Noto Serif SC',serif;line-height:1}
+        .hacp-debj-arg.t-ofensiva .zh{color:#e0715a}.hacp-debj-arg.t-cautelosa .zh{color:#6fb0e0}.hacp-debj-arg.t-ingeniosa .zh{color:#9cc47a}
+        .hacp-debj-arg .nb{font:700 12px system-ui;color:#efe2c2}
+        .hacp-debj-arg .ph{font-size:11px;line-height:1.25;color:#b39a72}
+        .hacp-debj-beamlbl{display:flex;justify-content:space-between;font-size:12px;color:#d8c8a4;margin-top:4px}
+        .hacp-debj-beamlbl .mut{color:#9a8360}`;
       document.head.appendChild(s);
     }
     debStyleOnce();
@@ -2978,7 +3129,9 @@
           } else if (enDeb) {
             const tt = debTema(enDeb.tema);
             const remD = Math.max(0, Math.ceil((enDeb.finMs - clock()) / 1000));
-            mision = `<div class="hacp-cp-mis hacp-cp-mis-on"><span class="hacp-cp-flag">🗣 Debatiendo de ${esc(tt ? tt.nombre : enDeb.tema)} · queda <b class="hacp-deb-countdown">${fmtClock(remD)}</b></span></div>`;
+            const miTurno = DEB && !DEB.juegoCompleto(enDeb) && DEB.turnActorId(enDeb, DEB.turnoActual(enDeb)) === myId;
+            const argLbl = DEB && DEB.juegoCompleto(enDeb) ? 'Ver debate' : (miTurno ? '¡Tu turno! Argumentar →' : 'Argumentar →');
+            mision = `<div class="hacp-cp-mis hacp-cp-mis-on"><span class="hacp-cp-flag">🗣 Debatiendo de ${esc(tt ? tt.nombre : enDeb.tema)} · queda <b class="hacp-deb-countdown">${fmtClock(remD)}</b></span><button type="button" class="hacp-cp-btn hacp-cp-go${miTurno ? ' hacp-mo-mis' : ''}" data-act="debj">${argLbl}</button></div>`;
           } else if (invSent) {
             mision = `<div class="hacp-cp-mis"><span class="hacp-cp-flag" style="opacity:.85">🗣 Invitación enviada a ${esc(invSent.invitadoNombre || '…')} · esperando respuesta</span></div>`;
           } else {
@@ -3019,6 +3172,8 @@
       if (db) db.addEventListener('click', () => { const s = charEl.querySelector('.hacp-cp-sel'); dispatch(s ? s.value : null); });
       const dbb = charEl.querySelector('[data-act="debate"]');
       if (dbb) dbb.addEventListener('click', abrirInvitarDebate);
+      const dbj = charEl.querySelector('[data-act="debj"]');
+      if (dbj) dbj.addEventListener('click', abrirDebateJuego);
       const dby = charEl.querySelector('[data-act="deb-yes"]');
       if (dby) dby.addEventListener('click', () => aceptarDebate(dby.dataset.id));
       const dbn = charEl.querySelector('[data-act="deb-no"]');
@@ -3919,13 +4074,14 @@
         let inner;
         if (!DEB) inner = '<div class="hacp-inv-note">Los debates aún no están disponibles.</div>';
         else if (invPend) { const tt = debTema(invPend.tema); inner = `<div class="hacp-mrow"><div class="hacp-mrow-main"><b>🗣 ${esc(invPend.hostNombre || 'Alguien')} te reta</b><span>Debate de ${esc(tt ? tt.nombre : invPend.tema)}</span></div><div style="display:flex;gap:6px"><button class="hacp-cp-btn hacp-cp-go" data-deb-yes="${esc(invPend.id)}">Aceptar</button><button class="hacp-cp-btn" data-deb-no="${esc(invPend.id)}">Rechazar</button></div></div>`; }
-        else if (enDeb) { const tt = debTema(enDeb.tema), remD = Math.max(0, Math.ceil((enDeb.finMs - clock()) / 1000)); inner = `<div class="hacp-inv-note">🗣 Tu mecenas debate de <b>${esc(tt ? tt.nombre : enDeb.tema)}</b> en el jardín · queda <b class="hacp-deb-countdown">${fmtClock(remD)}</b></div>`; }
+        else if (enDeb) { const tt = debTema(enDeb.tema), remD = Math.max(0, Math.ceil((enDeb.finMs - clock()) / 1000)); inner = `<div class="hacp-mrow"><div class="hacp-mrow-main"><b>🗣 Debate de ${esc(tt ? tt.nombre : enDeb.tema)}</b><span>en el jardín · queda ${fmtClock(remD)}</span></div><button class="hacp-cp-btn hacp-cp-go" data-deb-play="1">Argumentar</button></div>`; }
         else if (invSent) inner = `<div class="hacp-inv-note">🗣 Invitación enviada a ${esc(invSent.invitadoNombre || '…')} · esperando respuesta.</div>`;
         else if (cd > 0) inner = `<div class="hacp-inv-note">Tu mecenas reposa tras el último debate · disponible en ${fmtClock(Math.ceil(cd / 1000))}.</div>`;
         else if (!hayJard) inner = '<div class="hacp-inv-note">Construye un <b>Jardín</b> en la finca para poder debatir.</div>';
         else inner = `<div class="hacp-mrow"><div class="hacp-mrow-main"><b>🗣 Invitar a debatir</b><span>Reta a otro mecenas a un debate de 5 min en el jardín · XP + posible libro · prestigio al ganador.</span></div><button class="hacp-cp-btn hacp-cp-go" data-deb-open="1">Invitar</button></div>`;
         body.innerHTML = inner;
         const op = body.querySelector('[data-deb-open]'); if (op) op.addEventListener('click', () => { abrirInvitarDebate(); });
+        const pl = body.querySelector('[data-deb-play]'); if (pl) pl.addEventListener('click', () => { abrirDebateJuego(); });
         const yy = body.querySelector('[data-deb-yes]'); if (yy) yy.addEventListener('click', () => { aceptarDebate(yy.dataset.debYes); renderInternas(); });
         const nn = body.querySelector('[data-deb-no]'); if (nn) nn.addEventListener('click', () => { rechazarDebate(nn.dataset.debNo); renderInternas(); });
       }
