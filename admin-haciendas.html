@@ -1739,7 +1739,10 @@
         if (hayCambios && window.HacStats && HacStats.setNiveles) HacStats.setNiveles(editId, cambios);
       } else {
         HacPersonajes.add({ nombre, personalidad, aptitud, aspecto })
-          .then(obj => { if (obj && hayCambios && window.HacStats && HacStats.setNiveles) HacStats.setNiveles(obj.id, cambios); })
+          .then(obj => {
+            if (obj && hayCambios && window.HacStats && HacStats.setNiveles) HacStats.setNiveles(obj.id, cambios);
+            if (obj && window.HacStats && HacStats.otorgarArmaInicial) HacStats.otorgarArmaInicial(obj.id, aptitud);   // guerrero → Lanza quebradiza
+          })
           .catch(onPjError('crear'));
       }
       pjResetForm();

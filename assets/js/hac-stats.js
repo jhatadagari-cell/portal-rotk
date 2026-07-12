@@ -187,6 +187,22 @@ const HacStats = (function () {
     return out;
   }
 
+  // Arma con la que ARRANCA cada aptitud al crear el personaje (por ahora solo el
+  // guerrero: la Lanza quebradiza). Se llama UNA vez al crear (onboarding/admin);
+  // idempotente por si se reintenta.
+  const ARMA_INICIAL = { guerrero: 'lanza-quebradiza' };
+  async function otorgarArmaInicial(mid, aptitud) {
+    const id = ARMA_INICIAL[aptitud];
+    if (!id || !mid || !window.HacTienda || !HacTienda.get(id)) return { ok: false };
+    await ready();
+    const r = ensure(mid);
+    if (r.equipado.indexOf(id) >= 0 || r.inv.some(it => it.id === id)) return { ok: true, ya: true };  // ya la tiene
+    mete(r.inv, id);                 // a la mochila…
+    const eq = equipar(mid, id);     // …y equipada (persist dentro de equipar)
+    if (!eq.ok) persist(r);          // si no pudo equiparse, al menos queda en la mochila
+    return { ok: true };
+  }
+
   const cuenta = (arr) => arr.reduce((s, it) => s + (it.n || 1), 0);
   function quita(arr, id) { const e = arr.find(x => x.id === id); if (!e) return false; e.n = (e.n || 1) - 1; if (e.n <= 0) arr.splice(arr.indexOf(e), 1); return true; }
   function mete(arr, id) { const e = arr.find(x => x.id === id); if (e) e.n = (e.n || 1) + 1; else arr.push({ id, n: 1 }); }
@@ -430,6 +446,6 @@ const HacStats = (function () {
   // Bono de LABIA por objetos equipados (gancho `equip.regateo`); 0 si ninguno lo da.
   function bonusRegateo(mid) { const r = row(mid); if (!r || !window.HacTienda) return 0; let s = 0; r.equipado.forEach(id => { const b = HacTienda.equipBonus(id); if (b && b.regateo) s += b.regateo; }); return s; }
 
-  return { ready, reload, dinero, ahorro, casaPos, casasReclamadas, duenoDeCasa, comprarCasa, liberarCasa, abandonar, heridas, penHerida, malherido, herir, curar, secuelas, tieneSecuela, escaramuzaCd, bonusDinero, bonusExped, usarManual, xp, nivel, progresoNivel, bonus, nivelTotal, nivelPersonaje, setNiveles, puntosTalento, talentos, puntosGastados, puntosLibres, tieneTalento, aprenderTalento, equipados, equipar, desequipar, slotDe, MAX_EQUIP, bonusPct, bonusPctNiveles, torsoViste, vestir, award, comprar, guardar, sacar, darItem, quitarItem, meterEnCasa, sacarDeCasa, inventario, casaInventario, capInventario, ocupadas, recompensaExped, caballo, tieneCaballo, comprarCaballo, venderItem, ventaCd, ventaEnfriada, ventaCdRestanteMs, enfriarVenta, bonusRegateo, DOMS, dbOk: () => ok, TABLE };
+  return { ready, reload, dinero, ahorro, casaPos, casasReclamadas, duenoDeCasa, comprarCasa, liberarCasa, abandonar, heridas, penHerida, malherido, herir, curar, secuelas, tieneSecuela, escaramuzaCd, bonusDinero, bonusExped, usarManual, xp, nivel, progresoNivel, bonus, nivelTotal, nivelPersonaje, setNiveles, puntosTalento, talentos, puntosGastados, puntosLibres, tieneTalento, aprenderTalento, equipados, equipar, desequipar, slotDe, MAX_EQUIP, bonusPct, bonusPctNiveles, torsoViste, vestir, otorgarArmaInicial, award, comprar, guardar, sacar, darItem, quitarItem, meterEnCasa, sacarDeCasa, inventario, casaInventario, capInventario, ocupadas, recompensaExped, caballo, tieneCaballo, comprarCaballo, venderItem, ventaCd, ventaEnfriada, ventaCdRestanteMs, enfriarVenta, bonusRegateo, DOMS, dbOk: () => ok, TABLE };
 })();
 if (typeof window !== 'undefined') window.HacStats = HacStats;

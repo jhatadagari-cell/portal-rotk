@@ -134,6 +134,10 @@ const HacTienda = (function () {
     { id: 'arma-adm-1', nombre: 'Tabla de audiencia', zh: '笏', icon: '🪧', tier: 5, tipo: 'arma', slot: 'arma', req: { administrativo: 3 }, precio: 190, efecto: { equip: { pct: { administrativo: 0.10 } } }, viste: { arma: 'hu2' },  desc: 'Placa de corte, símbolo de mando. +10% Administrativo 政. Requiere 政 3.' },
     { id: 'arma-adm-2', nombre: 'Vara de mando',    zh: '節',   icon: '🪄', tier: 5, tipo: 'arma', slot: 'arma', req: { administrativo: 4 }, precio: 230, efecto: { equip: { pct: { administrativo: 0.10 } } }, viste: { arma: 'jie' },  desc: 'Bastón con borlas, insignia de autoridad. +10% Administrativo 政. Requiere 政 4.' },
     { id: 'arma-adm-3', nombre: 'Fusta de oficial', zh: '鞭',   icon: '🪢', tier: 6, tipo: 'arma', slot: 'arma', req: { administrativo: 5 }, precio: 290, efecto: { equip: { pct: { administrativo: 0.10 } } }, viste: { arma: 'bian' }, desc: 'Fusta trenzada de mando y castigo. +10% Administrativo 政. Requiere 政 5.' },
+    // Arma INICIAL del guerrero: se entrega al crear un personaje de aptitud 'guerrero'
+    // (HacStats.otorgarArmaInicial). oculto + tier 99 → NO sale en el mercado ni como
+    // botín: no se consigue de ninguna otra forma.
+    { id: 'lanza-quebradiza', nombre: 'Lanza quebradiza', zh: '折矛', icon: '🔱', tier: 99, tipo: 'arma', slot: 'arma', oculto: true, precio: 12, efecto: { equip: { pct: { militar: 0.05 } } }, viste: { arma: 'lanza' }, desc: 'El arma con la que empiezan los guerreros: recia pero ya astillada. Equípala para +5% Militar 武. No se consigue de ninguna otra forma.' },
   ].concat(_conclusiones));
 
   const byId = {}; CATALOGO.forEach(i => { byId[i.id] = i; });

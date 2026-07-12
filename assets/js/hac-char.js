@@ -520,16 +520,20 @@ const HacChar = (function () {
   function drawArma(px, P, v, g) {
     const A = anchors(g), c = CX + Math.round(v.dx * 0.6), baseY = A.baseY, key = P.arma;
     // Armas de ASTA: visibles incluso de espaldas (como la lanza).
-    if (key === 'ji' || key === 'jie') {
+    if (key === 'ji' || key === 'jie' || key === 'lanza') {
       const hx = v.back ? c + 6 : c + 10;
       px(hx, baseY - 46, 1, 46, P.boot); px(hx, baseY - 46, 1, 1, P.bootHi);      // asta
       if (key === 'ji') {                                                          // alabarda 戟: punta + media luna
         px(hx, baseY - 52, 1, 6, P.steelHi); px(hx - 1, baseY - 51, 3, 1, P.steel); px(hx - 1, baseY - 49, 3, 1, P.steelDk);
         px(hx - 3, baseY - 47, 1, 5, P.steel); px(hx - 4, baseY - 46, 1, 3, P.steelHi); px(hx - 2, baseY - 44, 2, 1, P.steelDk);  // media luna
         px(hx - 1, baseY - 41, 3, 1, P.trim); px(hx - 1, baseY - 40, 3, 1, P.trimDk);
-      } else {                                                                     // vara de mando 節: pomo + borlas
+      } else if (key === 'jie') {                                                  // vara de mando 節: pomo + borlas
         px(hx - 1, baseY - 49, 3, 3, P.gold); px(hx, baseY - 51, 1, 2, P.goldHi);
         for (let i = 0; i < 6; i++) px(hx - 2 + (i % 2) * 4, baseY - 45 + i, 1, 1, (i % 2) ? '#a83a2e' : P.trim);   // borlas
+      } else {                                                                     // lanza QUEBRADIZA 折矛: punta simple y mellada, sin borla
+        px(hx, baseY - 51, 1, 5, P.steel); px(hx, baseY - 51, 1, 1, P.steelHi); px(hx - 1, baseY - 50, 2, 1, P.steelDk);
+        px(hx - 1, baseY - 38, 3, 1, P.trimDk);                                    // atadura basta
+        px(hx, baseY - 22, 1, 2, dark(P.boot, 0.35)); px(hx - 1, baseY - 21, 1, 1, dark(P.boot, 0.4));  // astilla/mella del asta
       }
       return;
     }

@@ -312,6 +312,8 @@ const HacOnboard = (function () {
           nombre: sel.nombre, personalidad: sel.personalidad, aptitud: sel.aptitud,
           aspecto: { piel: sel.piel, pelo: sel.pelo }, owner: user.id
         });
+        // Arma inicial según la vocación (el guerrero arranca con la Lanza quebradiza).
+        if (window.HacStats && HacStats.otorgarArmaInicial) { try { await HacStats.otorgarArmaInicial(pj.id, pj.aptitud); } catch (e) { console.warn('[onboard] arma inicial', e); } }
         renderPlayer(user, pj);
       } catch (err) {
         btn.disabled = false; btn.textContent = 'Fundar personaje';
