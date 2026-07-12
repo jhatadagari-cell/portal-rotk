@@ -109,6 +109,12 @@ const HacBuild = (function () {
     { id: 'jardin-flores',     nombre: 'Jardín de Flores',   zh: '花苑', capa: 'suelo',    footprint: [2, 4], tierMin: 2, unico: false, cargoMin: null,    color: '#7a4a60', altura:  4, desc: 'Macizos de ciruelo, peonías y begonias.' },
     { id: 'estanque',          nombre: 'Estanque de Loto',   zh: '荷池', capa: 'suelo',    footprint: [3, 3], tierMin: 2, unico: false, cargoMin: null,    color: '#2a6070', altura:  2, desc: 'Estanque con flores de loto y carpas doradas.' },
     { id: 'lago',              nombre: 'Jardín del Lago',    zh: '湖苑', capa: 'suelo',    footprint: [4, 4], tierMin: 3, unico: false, cargoMin: null,    color: '#1a4a6a', altura:  2, desc: 'Gran lago de palacio con puente en zigzag y pabellón sobre el agua.' },
+    // Jardines ILUSTRADOS de tier alto (arte a mano). capa 'edificio' —NO 'suelo'—
+    // para que se pinten en el drawList con oclusión: llevan bambú/bonsái altos que
+    // deben tapar/ser tapados por el mecenas (si fueran suelo plano se hornearían y
+    // el mecenas los pisaría). `categoria:'jardin'` los deja en «Suelos y jardines».
+    { id: 'jardin-bambu',      nombre: 'Jardín de Bambú',    zh: '竹苑', capa: 'edificio', categoria: 'jardin', footprint: [4, 8], tierMin: 4, unico: false, cargoMin: null, color: '#4a6a3a', altura: 34, desc: 'Jardín amurallado con farolillo de piedra, bambú y estanque de lotos.' },
+    { id: 'jardin-puente',     nombre: 'Jardín del Puente',  zh: '拱桥苑', capa: 'edificio', categoria: 'jardin', footprint: [8, 9], tierMin: 5, unico: false, cargoMin: null, color: '#3a6a5a', altura: 46, desc: 'Gran jardín señorial: bonsái centenario, puente de piedra sobre el estanque y farolillos.' },
     // ── Caminos (suelo pavimentado autoconectado · se traza de inicio a fin) ──
     { id: 'camino',            nombre: 'Camino',             zh: '路',   capa: 'suelo',    footprint: [1, 1], tierMin: 1, unico: false, cargoMin: null,    color: '#cdc2a6', altura:  1, linea: true, desc: 'Sendero enlosado que une patios y pabellones. Traza el inicio y el final como una muralla.' }
   ].map(Object.freeze));
@@ -138,6 +144,7 @@ const HacBuild = (function () {
   const _decorIds = new Set(['farol', 'antorcha', 'brasero', 'ding', 'estandarte']);
   const categoriaDe = (id) => {
     const t = byId[id]; if (!t) return 'edificio';
+    if (t.categoria) return t.categoria;                 // override explícito (jardines ilustrados)
     if (t.capa === 'suelo') return 'jardin';
     if (_murosIds.has(id) || t.puerta) return 'muro';
     if (_decorIds.has(id)) return 'decoracion';

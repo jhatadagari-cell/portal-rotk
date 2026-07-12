@@ -19,4 +19,14 @@
   // Vista única. Anclaje calibrado contra el farol (1×1 procedural): centro de
   // la huella de los pies en ox; oy = fondo − ½ tile (los pies caen en el rombo).
   window.ISO_SPRITES_META['bld-tablon-0'] = { ox: 30, oy: 80, w: 58, h: 90 };
+  // Jardín de Bambú (4×8): plot ilustrado con murete de piedra, farolillo, roca,
+  // bambú y estanque de lotos. Arte a mano REPROYECTADO a 2:1 (aplastado vertical
+  // ×0.70 desde el original a ~37°) para cuadrar la perspectiva de la finca. Vista
+  // única (no rota: spriteKey cae a '-0'). Anclaje calibrado al vértice sur del
+  // murete sobre la plantilla de suelo 4×8. Bambú/roca suben al norte = altura.
+  window.ISO_SPRITES_META['bld-jardin-bambu-0'] = { ox: 291, oy: 148, w: 439, h: 351 };
+  // Jardín del Puente (8×9): gran plot con bonsái, puente de piedra sobre el
+  // estanque, farolillos y bambú. Mismo tratamiento (reproyección a 2:1, vista
+  // única). El bonsái sube muy por encima del norte: se ocluye por drawList/srect.
+  window.ISO_SPRITES_META['bld-jardin-puente-0'] = { ox: 327, oy: 102, w: 623, h: 394 };
 })();
