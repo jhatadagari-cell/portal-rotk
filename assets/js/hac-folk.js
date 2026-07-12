@@ -1371,12 +1371,14 @@ const HacFolk = (function () {
   // NE/NW traseras) por espejo + variante trasera; ciclo de trote de 6 fotogramas.
   const HORSE_FRAMES = 6;
   const HW = 44, HH = 38, HFEET = 34, HCX = 22;   // lienzo lógico, pies (y) y eje (x)
+  const HDRAW = 2;                                 // factor de dibujo (px enteros, nítido): caballo grande, montable
   const _hx = (c) => { c = c.replace('#', ''); return [parseInt(c.slice(0, 2), 16), parseInt(c.slice(2, 4), 16), parseInt(c.slice(4, 6), 16)]; };
   const mixc = (a, b, t) => { const A = _hx(a), B = _hx(b); return 'rgb(' + Math.round(A[0] + (B[0] - A[0]) * t) + ',' + Math.round(A[1] + (B[1] - A[1]) * t) + ',' + Math.round(A[2] + (B[2] - A[2]) * t) + ')'; };
   function horsePalette(coat) {
     return {
       base: coat, hi: mixc(coat, '#ffffff', 0.22), dk: mixc(coat, '#000000', 0.24), sh: mixc(coat, '#000000', 0.46),
       mane: mixc(coat, '#1a0f07', 0.72), muzzle: mixc(coat, '#000000', 0.52), hoof: '#20160f', eye: '#0d0906', socks: mixc(coat, '#ffffff', 0.42),
+      blanket: '#7a2f25', blanketTrim: '#d8b65a', leather: '#4a2f18', leatherHi: '#6a4526', stirrup: '#9299a0',
     };
   }
   // Contorno 1px oscuro (vecindad-4) para que el caballo destaque sobre la hierba.
@@ -1415,6 +1417,20 @@ const HacFolk = (function () {
     px(11, 23, 20, 2, P.dk); px(13, 24, 15, 1, P.sh);            // vientre en sombra
     px(9, 16, 3, 2, P.hi); px(9, 22, 3, 2, P.sh);                // volumen de la grupa
     px(30, 15, 1, 1, P.dk);                                      // sombra de esquina delantera
+    // 3b) SILLA DE MONTAR (manta + asiento de cuero + cincha + estribo)
+    if (!back) {
+      px(12, 16, 15, 3, P.blanket); px(12, 18, 15, 1, P.blanketTrim);      // manta con ribete dorado
+      px(13, 19, 2, 2, P.blanket); px(24, 19, 2, 2, P.blanket);            // picos de la manta
+      px(14, 13, 11, 4, P.leather); px(14, 13, 11, 1, P.leatherHi);        // asiento
+      px(13, 11, 3, 4, P.leather); px(13, 11, 3, 1, P.leatherHi);          // borrén trasero (cantle)
+      px(23, 12, 3, 3, P.leather);                                        // perilla (pommel)
+      px(19, 18, 2, 6, P.leather);                                        // cincha por el vientre
+      px(19, 21, 3, 2, P.stirrup); px(20, 19, 1, 2, P.leather);           // estribo + ación
+    } else {
+      px(12, 15, 14, 3, P.blanket); px(12, 17, 14, 1, P.blanketTrim);      // manta asomando
+      px(13, 12, 12, 4, P.leather); px(13, 12, 12, 1, P.leatherHi);        // asiento visto de atrás
+      px(13, 11, 3, 2, P.leather); px(22, 11, 3, 2, P.leather);            // borrenes
+    }
     if (!back) {
       // 4F) cuello + crin + cabeza (vista frontal: se ve la cara)
       px(27, 10, 6, 8, P.base); px(29, 8, 5, 5, P.base);         // cuello
@@ -1465,9 +1481,9 @@ const HacFolk = (function () {
     const cv = horseBaked(back, frame, coat);
     const fx = lx * SCALE, fy = ly * SCALE;
     g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.imageSmoothingEnabled = false;
-    g.fillStyle = 'rgba(0,0,0,.20)'; g.beginPath(); g.ellipse(fx, fy, 15, 4.5, 0, 0, 6.2832); g.fill();   // sombra
+    g.fillStyle = 'rgba(0,0,0,.22)'; g.beginPath(); g.ellipse(fx, fy, 15 * HDRAW * 0.75, 6, 0, 0, 6.2832); g.fill();   // sombra
     g.translate(fx, fy); if (mirror) g.scale(-1, 1);
-    g.drawImage(cv, -HCX, -HFEET, HW, HH);
+    g.drawImage(cv, -HCX * HDRAW, -HFEET * HDRAW, HW * HDRAW, HH * HDRAW);
     g.restore();
   }
   // Crea la encarnación de un caballo: hogar ESTABLE (semilla por dueño) en el campo
@@ -1907,7 +1923,7 @@ const HacFolk = (function () {
     // Caballos sueltos: sprite como actor (con oclusión/profundidad) + su nombre encima.
     // Si su dueño está de VIAJE (lo va montando), el corcel no ronda: viaja con él.
     if (horses.length) {                               // caballos procedurales pastando
-      const HBANNER = Math.round(HFEET / SCALE) + 3;   // banner justo por encima de las orejas
+      const HBANNER = Math.round(HFEET * HDRAW / SCALE) + 3;   // banner justo por encima de las orejas
       horses.forEach(h => {
         actors.push({ fx: h.fx, fy: h.fy, draw: (g, lx, ly) => drawHorse(g, lx, ly, h) });
         overlays.push({ draw: (g) => { const p = logic(h.fx, h.fy); npcBanner(g, p[0], p[1] - HBANNER, h.nombre, '🐎'); } });
