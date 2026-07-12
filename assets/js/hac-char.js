@@ -105,6 +105,9 @@ const HacChar = (function () {
     if (P.cape) cape(px, P, v, g);
     legs(px, P, v, g);
     torso(px, P, v, g);
+    // GESTO de debate: reemplaza los brazos en reposo por brazos expresivos (y la
+    // cara la resuelve headFace con sec.expr). Los brazos van por delante de la cabeza.
+    if (sec.gesture) { head(px, P, v, g, sec); gestureArms(px, P, v, g, sec); return; }
     backArm(px, P, v, g);     // brazo lejano (detrás del torso)
     head(px, P, v, g, sec);
     // MANCO: falta el brazo cercano (y lo que sostuviera). Se ve el costado desnudo.
@@ -334,6 +337,78 @@ const HacChar = (function () {
   }
   const shHalfOf = (v) => Math.round(8 - 3 * v.side);
 
+  // ── GESTOS DE DEBATE ──────────────────────────────────────────────────────
+  // Segmento "grueso" (brazo) entre dos puntos, pintado por pasos.
+  function limbSeg(px, color, x0, y0, x1, y1, w) {
+    const dx = x1 - x0, dy = y1 - y0, n = Math.max(Math.abs(dx), Math.abs(dy), 1), h = (w / 2) | 0;
+    for (let i = 0; i <= n; i++) px(Math.round(x0 + dx * i / n) - h, Math.round(y0 + dy * i / n) - h, w, w, color);
+  }
+  function hand(px, P, x, y, far) {
+    px(x - 1, y - 1, 3, 3, far ? P.skinDk : P.skin);
+    px(x - 1, y - 1, 3, 1, far ? P.skin : P.skinHi);
+  }
+  // Un brazo desde el hombro, doblado por el codo hasta la mano.
+  function armBent(px, P, sx, sy, ex, ey, hx, hy, col, w, far) {
+    limbSeg(px, col, sx, sy, ex, ey, w);
+    limbSeg(px, col, ex, ey, hx, hy, Math.max(2, w - 1));
+    hand(px, P, hx, hy, far);
+  }
+  // Brazos según el GESTO. Diseñados para la vista 3/4 (SE); SW sale por espejo.
+  function gestureArms(px, P, v, g, sec) {
+    const A = anchors(g), shY = A.shoulder + 2, hyv = A.hy;
+    const c = CX + Math.round(v.dx * 0.6), sh = shHalfOf(v);
+    const w = P.kind === 'armor' ? 3 : 4;
+    const near = P.robe, far = P.robeDk;
+    const nx = c + sh - 1, fx = c - sh + 1;                 // hombros cercano / lejano
+    switch (sec.gesture) {
+      case 'frustrado':                                     // ambas manos a las sienes
+        armBent(px, P, fx, shY, c - 9, shY - 3, c - 5, hyv + 1, far, w, true);
+        armBent(px, P, nx, shY, c + 9, shY - 3, c + 5, hyv + 1, near, w, false);
+        break;
+      case 'ofensiva':                                      // dedo señalando al frente
+        armBent(px, P, fx, shY, fx - 1, shY + 8, c - 3, shY + 11, far, w, true);
+        armBent(px, P, nx, shY, c + sh + 3, shY + 3, c + sh + 9, shY + 7, near, w, false);
+        px(c + sh + 10, shY + 7, 2, 1, P.skin);
+        break;
+      case 'cautelosa':                                     // mano a la barbilla (medita)
+        armBent(px, P, fx, shY, c - 4, shY + 8, c - 1, shY + 10, far, w, true);
+        armBent(px, P, nx, shY, c + sh + 2, shY + 6, c + 2, hyv + 9, near, w, false);
+        break;
+      case 'ingeniosa':                                     // índice en alto (¡idea!)
+        armBent(px, P, fx, shY, fx - 1, shY + 9, fx, shY + 12, far, w, true);
+        armBent(px, P, nx, shY, c + sh + 2, shY + 1, c + sh + 3, shY - 6, near, w, false);
+        px(c + sh + 3, shY - 9, 2, 3, P.skin);
+        break;
+      default:                                              // 'habla': antebrazo alzado al frente
+        armBent(px, P, fx, shY, fx - 1, shY + 10, fx, shY + 13, far, w, true);
+        armBent(px, P, nx, shY, c + sh + 2, shY + 5, c + 3, shY + 1, near, w, false);
+    }
+  }
+
+  // Expresión facial (encima de los rasgos base). Derivada del gesto si no se pide.
+  function gestureExpr(gest) {
+    return { habla: 'habla', ofensiva: 'enfadado', cautelosa: 'calmo', ingeniosa: 'sonrisa', frustrado: 'enfadado' }[gest] || null;
+  }
+  function exprOverpaint(px, P, v, c, hy, sec) {
+    const e = sec.expr || gestureExpr(sec.gesture);
+    if (!e) return;
+    const open = (e === 'grito' || e === 'enfadado') || (e === 'habla' && (sec.gframe % 2 === 0));
+    if (v.side >= 1) {                                       // PERFIL
+      if (e === 'enfadado') { px(c + 2, hy + 4, 3, 1, P.hair); px(c + 3, hy + 5, 1, 1, P.ink); }
+      if (e === 'sonrisa') { px(c + 2, hy + 8, 3, 1, P.skinDk); px(c + 2, hy + 7, 1, 1, P.skinDk); }
+      if (open) { px(c + 2, hy + 8, 2, 2, P.ink); px(c + 2, hy + 7, 2, 1, dark(P.skin, 0.4)); }
+      return;
+    }
+    const mx = v.front ? c - 1 : c + 1;                     // x de la boca según 3/4
+    if (e === 'enfadado') {                                 // cejas fruncidas hacia dentro
+      if (v.front) { px(c - 2, hy + 6, 2, 1, P.hair); px(c + 1, hy + 6, 2, 1, P.hair); }
+      else { px(c, hy + 6, 1, 1, P.hair); px(c + 2, hy + 6, 2, 1, P.hair); }
+    }
+    if (open) { px(mx, hy + 8, 3, 3, P.ink); px(mx, hy + 8, 3, 1, dark(P.skin, 0.4)); }
+    else if (e === 'sonrisa') { px(mx, hy + 9, 1, 1, P.skinDk); px(mx + 1, hy + 10, 2, 1, P.skinDk); px(mx + 3, hy + 9, 1, 1, P.skinDk); }
+    else if (e === 'habla') { px(mx, hy + 9, 3, 1, dark(P.skin, 0.35)); }
+  }
+
   // Cabeza redondeada con rasgos + barba (perfiles civiles).
   function headBlock(px, c, hy, halfW, h, skin, hi, dk) {
     for (let i = 0; i < h; i++) {
@@ -395,6 +470,7 @@ const HacChar = (function () {
         }
       }
     }
+    if (sec && (sec.gesture || sec.expr)) exprOverpaint(px, P, v, c, hy, sec);   // gesto de debate
     if (sec && sec.tuerto) eyePatch(px, P, v, c, hy);   // secuela: parche en el ojo
   }
 
@@ -489,10 +565,14 @@ const HacChar = (function () {
     const base = BASE[dir], mirror = !!MIRROR[dir];
     const scale = Math.max(1, Math.round(opts.scale || 1));
     const P = palette(opts.aptitud, opts.aspecto);
-    const g = gait(opts.frame || 0);
+    // GESTO expresivo (debate): brazos + cara animados. Congela la marcha (sin
+    // bobbing de andar) y usa `frame` como fase del gesto (boca que se abre/cierra…).
+    const gesture = opts.gesture || null;
+    const g = gesture ? { f: 0, bob: 0, step: 0 } : gait(opts.frame || 0);
     // SECUELAS permanentes (cosméticas) + pose de COJERA. `secuelas` = ['manco','tuerto',…].
     const secArr = Array.isArray(opts.secuelas) ? opts.secuelas : [];
-    const sec = { manco: secArr.indexOf('manco') >= 0, tuerto: secArr.indexOf('tuerto') >= 0 };
+    const sec = { manco: secArr.indexOf('manco') >= 0, tuerto: secArr.indexOf('tuerto') >= 0,
+                  gesture, expr: opts.expr || null, gframe: (opts.frame | 0) };
     if (opts.pose === 'limp') g.limp = true;   // el herido arrastra una pierna (peregrinaje)
     const wantOutline = opts.outline !== false && typeof document !== 'undefined' && document.createElement;
 

@@ -1322,7 +1322,7 @@
     // Ventana en vivo: dos mecenas a izq/der, 5 rondas alternando quién pregunta. En tu
     // turno eliges 1 de 3 posturas (argumentos temáticos); si el turno activo no responde
     // en 60 s, la IA elige (determinista). Cada ronda mueve el tira y afloja (abajo).
-    let debjEl = null, debjId = null, debjIv = null;
+    let debjEl = null, debjId = null, debjIv = null, debjAnimTimer = null, debjFrame = 0;
     let debjShownRound = -1, debjShownP = null, debjAnimating = false;   // para la animación de clash
     const skillDe = (pjId, tema) => debNivel(pjId, tema);
     const stanceOf = (id) => (DEB.STANCES || []).find(s => s.id === id) || { zh: '?', nombre: '?' };
@@ -1332,10 +1332,23 @@
       const pj = (m && m.personajeId && window.HacPersonajes && HacPersonajes.get) ? HacPersonajes.get(m.personajeId) : null;
       return { aptitud: pj ? pj.aptitud : '', aspecto: pj ? (pj.aspecto || {}) : { robe: (m && m.color) || color } };
     }
-    function pintarRetrato(cv, pjId, dir) {
+    function pintarRetrato(cv, pjId, dir, gesture, frame) {
       if (!window.HacChar || !HacChar.draw) return;
       const a = debateAspecto(pjId);
-      try { HacChar.draw(cv, { aptitud: a.aptitud, aspecto: a.aspecto, dir, pose: 'stand', frame: 0, scale: 3 }); } catch (e) {}
+      try { HacChar.draw(cv, { aptitud: a.aptitud, aspecto: a.aspecto, dir, pose: 'stand', gesture: gesture || null, frame: frame || 0, scale: 3 }); } catch (e) {}
+    }
+    // Reparte el gesto de cada retrato: el que tiene el turno ARGUMENTA (boca/brazo
+    // en movimiento), el otro escucha. Repintado por un timer ligero (~3 fps).
+    function paintPortraits() {
+      if (!debjEl || debjEl.hidden || debjAnimating) return;
+      const d = DEB && DEB.byId(debjId); if (!d) return;
+      const completo = DEB.juegoCompleto(d);
+      const actor = completo ? null : DEB.turnActorId(d, DEB.turnoActual(d));
+      debjEl.querySelectorAll('.hacp-debj-portrait').forEach(cv => {
+        const host = cv.dataset.pj === 'host', pjId = host ? d.hostId : d.invitadoId;
+        const habla = !completo && pjId === actor;
+        pintarRetrato(cv, pjId, host ? 'SE' : 'SW', habla ? 'habla' : null, habla ? debjFrame : 0);
+      });
     }
     function ensureDebjEl() {
       if (debjEl) return debjEl;
@@ -1356,9 +1369,11 @@
       renderDebateJuego();
       if (debjIv) clearInterval(debjIv);
       debjIv = setInterval(tickDebateJuego, 1000);
+      if (debjAnimTimer) clearInterval(debjAnimTimer);
+      debjAnimTimer = setInterval(() => { debjFrame++; paintPortraits(); }, 340);   // boca/brazo del que argumenta
       if (DEB.reload) DEB.reload().then(() => { syncDebateFolk(); renderDebateJuego(); });
     }
-    function cerrarDebateJuego() { if (debjEl) debjEl.hidden = true; if (debjIv) { clearInterval(debjIv); debjIv = null; } debjId = null; }
+    function cerrarDebateJuego() { if (debjEl) debjEl.hidden = true; if (debjIv) { clearInterval(debjIv); debjIv = null; } if (debjAnimTimer) { clearInterval(debjAnimTimer); debjAnimTimer = null; } debjId = null; }
     let _debjReloadCd = 0;
     function tickDebateJuego() {
       if (!debjId || !DEB || debjAnimating) return;   // en pausa mientras corre el clash
@@ -1436,8 +1451,8 @@
       </div>`;
       el.querySelector('[data-act="x"]').addEventListener('click', cerrarDebateJuego);
       el.querySelectorAll('[data-st]').forEach(b => b.addEventListener('click', () => elegirArgumento(b.dataset.st)));
-      // Los personajes REALES (mecenas) mirándose de frente.
-      el.querySelectorAll('.hacp-debj-portrait').forEach(cv => pintarRetrato(cv, cv.dataset.pj === 'host' ? d.hostId : d.invitadoId, cv.dataset.pj === 'host' ? 'SE' : 'SW'));
+      // Los personajes REALES (mecenas) mirándose de frente; el del turno argumenta.
+      paintPortraits();
       // Se cerró una ronda nueva → CLASH animado + la balanza se desliza al nuevo valor.
       if (newlyDone) {
         const round = rondas[rondas.length - 1], oldP = (debjShownP != null) ? debjShownP : p;
@@ -1464,10 +1479,16 @@
         <div class="cl-side b t-${invStance}" id="cl-b"><span class="zh">${esc(is.zh)}</span><span class="nm">${esc(is.nombre)}</span><span class="who">${esc(d.invitadoNombre || 'Invitado')}</span></div>
       </div><div class="cl-verdict">${verdict}</div>`;
       box.appendChild(cl);
+      // Los mecenas adoptan la POSTURA elegida durante el choque (brazo/cara).
+      const portA = debjEl.querySelector('.hacp-debj-fighter.a .hacp-debj-portrait');
+      const portB = debjEl.querySelector('.hacp-debj-fighter.b .hacp-debj-portrait');
+      const GEST = { ofensiva: 'ofensiva', cautelosa: 'cautelosa', ingeniosa: 'ingeniosa' };
+      if (portA) pintarRetrato(portA, d.hostId, 'SE', GEST[hostStance] || 'habla', 0);
+      if (portB) pintarRetrato(portB, d.invitadoId, 'SW', GEST[invStance] || 'habla', 0);
       setTimeout(() => {   // tras el choque: marca ganador/perdedor y desliza la balanza
         const a = cl.querySelector('#cl-a'), b = cl.querySelector('#cl-b');
-        if (round.lado === 'host') { a.classList.add('win'); b.classList.add('lose'); }
-        else if (round.lado === 'inv') { b.classList.add('win'); a.classList.add('lose'); }
+        if (round.lado === 'host') { a.classList.add('win'); b.classList.add('lose'); if (portB) pintarRetrato(portB, d.invitadoId, 'SW', 'frustrado', 0); }
+        else if (round.lado === 'inv') { b.classList.add('win'); a.classList.add('lose'); if (portA) pintarRetrato(portA, d.hostId, 'SE', 'frustrado', 0); }
         const me = debjEl.querySelector('.hacp-deb-beam .me'), foe = debjEl.querySelector('.hacp-deb-beam .foe');
         const np = Math.round(newP * 100);
         if (me) me.style.width = np + '%'; if (foe) foe.style.width = (100 - np) + '%';
