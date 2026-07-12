@@ -1098,6 +1098,7 @@ const HacIso = (function () {
         box: [cx, cy, cx + 1, cy + 1],
         fbox: [cx - 0.6, cy - 0.6, cx + 3.5, cy + 3.5],
         lx: sc.X(a.fx, a.fy), ly: sc.Y(a.fx, a.fy),
+        bound: a.bound,   // caja de recomposición a medida (px disp. sobre los pies); p.ej. un jinete es más alto/ancho que el clip por defecto
         draw: () => a.draw(g, sc.X(a.fx, a.fy), sc.Y(a.fx, a.fy), sc.SCALE)
       };
     });
@@ -1109,7 +1110,12 @@ const HacIso = (function () {
     // los muros se vieran "raros" al pasar un mecenas).
     if (acts.length && sc.bgFloor) {
       const S = sc.SCALE;
-      const rects = acts.map(a => [Math.floor((a.lx - 18) * S), Math.floor((a.ly - 36) * S), Math.ceil(36 * S), Math.ceil(44 * S)]);
+      // Recuadro por actor: el jinete/caballo declaran un `bound` (px disp. sobre los
+      // pies) porque sobresalen del clip por defecto (morro del caballo, cabeza del
+      // jinete) y, si no, se recortarían y "entrecortarían" al moverse.
+      const rects = acts.map(a => a.bound
+        ? [Math.floor(a.lx * S - a.bound.l), Math.floor(a.ly * S - a.bound.up), Math.ceil(a.bound.w), Math.ceil(a.bound.h)]
+        : [Math.floor((a.lx - 18) * S), Math.floor((a.ly - 36) * S), Math.ceil(36 * S), Math.ceil(44 * S)]);
       // Cercanas = por footprint (±3 celdas) O por SPRITE (su rect de pantalla solapa
       // el recuadro recompuesto del mecenas). Lo segundo capta estructuras altas/anchas
       // (campamento, pagodas…) que tapan al mecenas aunque su footprint esté lejos.

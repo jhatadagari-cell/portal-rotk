@@ -1442,6 +1442,10 @@ const HacFolk = (function () {
   const HORSE_FRAMES = 6;
   const HW = 44, HH = 38, HFEET = 34, HCX = 22;   // lienzo lógico, pies (y) y eje (x)
   const HDRAW = 2;                                 // factor de dibujo (px enteros, nítido): caballo grande, montable
+  // Cajas de recomposición (px DISP. sobre los pies) para HacIso.frame: el jinete y
+  // el caballo sobresalen del clip por defecto; sin esto se les recorta morro/cabeza.
+  const MOUNT_BOUND = { l: 50, up: 104, w: 100, h: 124 };   // caballo + jinete montado
+  const HORSE_BOUND = { l: 50, up: 78,  w: 100, h: 94 };    // caballo suelto pastando
   const _hx = (c) => { c = c.replace('#', ''); return [parseInt(c.slice(0, 2), 16), parseInt(c.slice(2, 4), 16), parseInt(c.slice(4, 6), 16)]; };
   const mixc = (a, b, t) => { const A = _hx(a), B = _hx(b); return 'rgb(' + Math.round(A[0] + (B[0] - A[0]) * t) + ',' + Math.round(A[1] + (B[1] - A[1]) * t) + ',' + Math.round(A[2] + (B[2] - A[2]) * t) + ')'; };
   function horsePalette(coat) {
@@ -2007,7 +2011,7 @@ const HacFolk = (function () {
       const HBANNER = Math.round(HFEET * HDRAW / SCALE) + 3;   // banner justo por encima de las orejas
       horses.forEach(h => {
         if (h.rider) return;                           // MONTADO → se dibuja con el jinete (drawMount), no suelto
-        actors.push({ fx: h.fx, fy: h.fy, draw: (g, lx, ly) => drawHorse(g, lx, ly, h) });
+        actors.push({ fx: h.fx, fy: h.fy, bound: HORSE_BOUND, draw: (g, lx, ly) => drawHorse(g, lx, ly, h) });
         overlays.push({ draw: (g) => { const p = logic(h.fx, h.fy); npcBanner(g, p[0], p[1] - HBANNER, h.nombre, '🐎'); } });
       });
     }
@@ -2019,7 +2023,7 @@ const HacFolk = (function () {
       if (w.state === 'fuera') return;                 // EN EXPEDICIÓN fuera de la finca: oculto hasta volver
       // No montados → capa nítida; montados (caballo+jinete) siguen en el lienzo.
       if (OV && !isMounted(w)) ovPeople.push(w);
-      else actors.push({ fx: w.fx, fy: w.fy, draw: (g, lx, ly) => drawWalker(g, lx, ly, w, { banner: false }) });
+      else { const act = { fx: w.fx, fy: w.fy, draw: (g, lx, ly) => drawWalker(g, lx, ly, w, { banner: false }) }; if (isMounted(w)) act.bound = MOUNT_BOUND; actors.push(act); }
       nameCands.push(w);
     });
     // Banners de nombre (overlay): de DELANTE hacia atrás, se CLAMPEAN en horizontal
