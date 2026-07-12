@@ -1698,6 +1698,7 @@
         .hacp-deb-alert .bt button:active{transform:translateY(1px);box-shadow:0 1px 0 #9c7320}
         .hacp-deb-alert .bt button.sec{background:#3a2a18;color:#e8d8b4;box-shadow:none;border:1px solid #6a4a24}
         @keyframes hacp-alert-pulse{0%,100%{box-shadow:0 10px 30px rgba(0,0,0,.55),inset 0 0 0 1px rgba(216,180,90,.2),0 0 0 0 rgba(232,192,96,0)}50%{box-shadow:0 10px 30px rgba(0,0,0,.55),inset 0 0 0 1px rgba(216,180,90,.5),0 0 22px 3px rgba(232,192,96,.35)}}
+        .hacp-deb-alert[hidden]{display:none}
         @media(prefers-reduced-motion:reduce){.hacp-deb-alert{animation:none}}
         @media(max-width:640px){.hacp-deb-alert{flex-wrap:wrap;justify-content:center;text-align:center;max-width:92%}.hacp-deb-alert .bt{flex:0 0 100%;justify-content:center;margin-top:4px}}
         .hacp-deb-hint button{background:linear-gradient(#8a5420,#6e3f16);color:#fbeecf;border:1px solid #d8b45a;border-radius:8px;padding:6px 11px;font:inherit;cursor:pointer}
@@ -3215,10 +3216,10 @@
         const man = def.efecto && def.efecto.manual;
         if (man && d.mine) {
           // XP de un dominio (manuales clásicos) o de VARIOS (libros de conclusiones → xp es un mapa).
-          const map = man.xp && typeof man.xp === 'object', dks = map ? Object.keys(man.xp) : [];
-          const glyphs = map ? dks.map(dm => DOM_GLYPH[dm] || '').join('') : (DOM_GLYPH[man.dom] || '');
+          // La etiqueta va SIN chino (el glifo confundía): "+N XP" y el dominio en el tooltip/diálogo.
+          const map = man.xp && typeof man.xp === 'object', dks = map ? Object.keys(man.xp) : [man.dom];
           const val = map ? man.xp[dks[0]] : man.xp, col = map ? 'var(--gold)' : (DOM_COLOR[man.dom] || 'var(--gold)');
-          return `<button type="button" class="hacp-slot full manual" data-usar="${esc(def.id)}" title="${esc(def.nombre)} · toca para usar (${esc(HacTienda.efectoTexto(def))})">${def.icon || '∎'}<span class="hacp-slot-xp" style="color:${col}">${glyphs} +${val} XP</span></button>`;
+          return `<button type="button" class="hacp-slot full manual" data-usar="${esc(def.id)}" title="${esc(def.nombre)} · toca para usar (${esc(HacTienda.efectoTexto(def))})">${def.icon || '∎'}<span class="hacp-slot-xp" style="color:${col}">+${val} XP</span></button>`;
         }
         return `<div class="hacp-slot full${def.raro ? ' rare' : ''}" title="${esc(def.nombre)} ${esc(def.zh || '')}${def.raro ? ' · RARO' : ''}">${def.icon || '∎'}</div>`;
       }).join('');
