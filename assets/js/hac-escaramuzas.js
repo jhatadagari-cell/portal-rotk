@@ -85,12 +85,15 @@ const HacEscaramuzas = (function () {
     if (error) throw new Error(error.message || 'No se pudo unir');
     return upsertCache(data);
   }
-  // Devuelve { disuelta } — la RPC borra la fila si sale el host o queda vacía (data=null).
+  // Devuelve { disuelta } — la RPC borra la fila si sale el host o queda vacía. Al devolver
+  // NULL una función que retorna una fila (public.escaramuzas), PostgREST NO manda `null`
+  // sino un objeto con TODOS los campos a null → hay que detectar la banda disuelta también
+  // por la ausencia de `id` (si no, `disuelta` saldría false y no se devolvería el coste).
   async function salir(id, pjId) {
     const c = await sb();
     const { data, error } = await c.rpc('escaramuza_salir', { p_id: id, p_pj: pjId });
     if (error) throw new Error(error.message || 'No se pudo salir');
-    if (!data) { cache = cache.filter(x => x.id !== id); return { disuelta: true }; }
+    if (!data || !data.id) { cache = cache.filter(x => x.id !== id); return { disuelta: true }; }
     upsertCache(data); return { disuelta: false };
   }
   // El host LANZA: la RPC valida (host, ≥2, abierta) y fija inicio/fin (30 min).
