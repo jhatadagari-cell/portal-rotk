@@ -453,7 +453,7 @@ const HacFolk = (function () {
   // campo `errand` no se serializa, así que un snapshot lo descarta sin problema.
   function goHome(id, buildingId, onArrive) {
     const w = walkers.find(x => x.id === id); if (!w || !wk) return false;
-    if (w.onMission || ['exped-out', 'exped-in', 'fuera', 'saludo', 'esc-cheer'].indexOf(w.state) >= 0) return false;
+    if (w.onMission || ['exped-out', 'exped-in', 'fuera', 'saludo', 'esc-cheer', 'monta-out', 'silbando'].indexOf(w.state) >= 0) return false;
     const b = buildingId ? wk.buildings.get(buildingId) : null;
     const callNow = () => { if (onArrive) try { onArrive(); } catch (e) {} };
     if (!b || !b.approachKey) { callNow(); return 'now'; }
@@ -471,7 +471,7 @@ const HacFolk = (function () {
   // 'walking' / 'now' (ya está) / false (ocupado/sin ruta).
   function consultar(id, buildingId) {
     const w = walkers.find(x => x.id === id); if (!w || !wk) return false;
-    if (w.onMission || ['exped-out', 'exped-in', 'fuera', 'saludo', 'esc-cheer'].indexOf(w.state) >= 0) return false;
+    if (w.onMission || ['exped-out', 'exped-in', 'fuera', 'saludo', 'esc-cheer', 'monta-out', 'silbando'].indexOf(w.state) >= 0) return false;
     const b = buildingId ? wk.buildings.get(buildingId) : null;
     if (!b || !b.approachKey) return false;
     if (w.state === 'consultando' && w.consultBid === b.id) return 'now';   // ya está allí
@@ -533,6 +533,13 @@ const HacFolk = (function () {
     // y espera a los demás. El resto (o si la ventana ya cerró) sigue hasta el campo.
     const em = escMap[w.id];
     const musterActive = em && nowSimMs() < em.inicioMs + ESC_MUSTER_MS;
+    // CON CABALLO (salida individual): se para justo fuera del vano, silba y espera a su
+    // caballo; luego monta y se aleja. En escaramuza la coreografía la lleva el muster.
+    if (!musterActive && caballos[w.id] && wk.outNear) {
+      path.push(wk.outNear);
+      w.path = path; w.state = 'monta-out'; w.goalBid = null; w.insideId = null; w.task = null; w.moving = false;
+      return;
+    }
     if (!musterActive) {
       if (wk.outNear) path.push(wk.outNear);
       if (wk.outFar) path.push(wk.outFar);                            // cruza el vano y se aleja por el campo
@@ -544,6 +551,8 @@ const HacFolk = (function () {
   // mecenas cobra justo al reaparecer en la finca, sin recorrer todo el recinto hasta
   // una celda lejana. Desde dentro, retoma el paseo normal por su cuenta.
   function startReturn(w) {
+    // Desmonta (si volvía a caballo): suelta al corcel, que retoma su pastoreo fuera.
+    if (w.mounted) { w.mounted = false; const hh = horseOf(w.id); if (hh) { hh.rider = null; hh.summonTo = null; hh.arrived = false; hh.fx = hh.homeX; hh.fy = hh.homeY; hh.tx = hh.fx; hh.ty = hh.fy; hh.moving = false; hh.pauseT = 1 + mrand(hh) * 3; } }
     const e = wk.exitCell || [Math.round(w.fx), Math.round(w.fy)];
     const far = wk.outFar || e;
     w.fx = far[0]; w.fy = far[1]; w.tx = far[0]; w.ty = far[1];        // reaparece FUERA, a lo lejos
@@ -646,6 +655,11 @@ const HacFolk = (function () {
         const o = escOrder(w) || w.order, endOut = o ? o.startMs + (o.durMs || 120000) : t0;
         w.outTimer = Math.max(2, (endOut - t0) / 1000);
       }
+    } else if (w.state === 'monta-out') {
+      // Justo fuera del vano: se para de cara al campo, SILBA y llama a su caballo.
+      w.state = 'silbando'; w.moving = false; w.path = null; w.dir = 'S';
+      w.speech = '♪ ♫'; w.speechT = 99; w.whistleT = 1.3; w._mountWait = 0;
+      summonHorse(w.id, w.fx + 1.0, w.fy + 0.1);
     } else if (w.state === 'exped-in') {
       endMission(w);   // de vuelta dentro de la finca → misión cumplida
     } else if (w.state === 'saliendo') {
@@ -1080,7 +1094,7 @@ const HacFolk = (function () {
       // muralla) y no está en tránsito de expedición, que vuelva a entrar. OJO: se
       // comprueba por LÍMITES de rejilla, no por `set` (hay muchas celdas válidas
       // fuera de `set`: puertas, bordes… comprobarlo así mandaba a TODOS al portón).
-      if (w.state !== 'exped-out' && w.state !== 'exped-in' && w.state !== 'fuera' && !w.insideId && fueraDeFinca(w)) enterFromOutside(w);
+      if (['exped-out', 'exped-in', 'fuera', 'monta-out', 'silbando'].indexOf(w.state) < 0 && !w.insideId && fueraDeFinca(w)) enterFromOutside(w);
       const inDebate = debateGate(w);   // un debate en curso tiene prioridad sobre órdenes
       if (!inDebate) missionGate(w);
       switch (w.state) {
@@ -1109,6 +1123,22 @@ const HacFolk = (function () {
           if (w.idleTimer <= 0) { w.state = 'paseando'; w.strollTimer = 1.2; w.wait = 0.4; w.gawkFace = null; w.speech = null; }
           break;
         case 'saludo': { w.phase += dt * 0.5; w.missionTimer -= dt; if (w.missionTimer <= 0) { w.bowing = false; const so = escOrder(w) || w.order; (so && so.tipo === 'expedicion') ? startExpedition(w) : startMissionVisit(w); } break; }
+        case 'monta-out': followPath(w, dt, SPD); break;
+        case 'silbando': {
+          w.phase += dt * 0.5;
+          if (w.whistleT > 0) w.whistleT -= dt;
+          w._mountWait = (w._mountWait || 0) + dt;
+          const hh = horseOf(w.id), llegado = hh && hh.arrived;
+          if (hh && !llegado) { const fd = faceFromGrid(hh.fx - w.fx, hh.fy - w.fy); if (fd) w.dir = fd; }   // mira al caballo que acude
+          if ((llegado && w.whistleT <= 0) || w._mountWait > 9) {   // MONTA (o timeout de seguridad)
+            if (hh) { hh.rider = w.id; hh.summonTo = null; }
+            w.mounted = !!hh; w.speech = null; w.speechT = 0; w.dir = 'S';
+            const out = []; if (wk.outFar) out.push(wk.outFar);
+            w.path = out.length ? out : null; w.state = out.length ? 'exped-out' : 'fuera'; w.moving = false;
+            if (w.state === 'fuera') { const o = escOrder(w) || w.order, t0 = nowSimMs(), endOut = o ? o.startMs + (o.durMs || 120000) : t0; w.outTimer = Math.max(2, (endOut - t0) / 1000); }
+          }
+          break;
+        }
         case 'exped-out': followPath(w, dt, escMap[w.id] ? SPD * ESC_RUSH : SPD); break;
         case 'exped-in': followPath(w, dt, SPD); break;
         case 'esc-cheer': {
@@ -1318,29 +1348,30 @@ const HacFolk = (function () {
   };
   const HORSE_VIEW = { E: 'SE', SE: 'SE', S: 'SE', SW: 'SW', W: 'SW', NW: 'NW', N: 'NW', NE: 'NE' };
   const horseImg = {}; let horseReady = false, horseLoadStarted = false;
-  // TEMPORAL: el caballo se dibuja como un círculo rojo (placeholder) y la montura
-  // está desactivada hasta tener un asset mejor. No se cargan los sprites del caballo.
-  function ensureHorses() { /* no-op: placeholder de círculo, sin sprites */ }
-  // Montar DESACTIVADO por ahora (fuera animaciones de montar y jinete sobre silla).
-  function isMounted(w) { return false; }
-  // Dibuja el caballo (frame del ciclo según el paso) bajo el jinete sentado en la silla.
+  function ensureHorses() { /* no-op: caballo procedural, sin sprites PNG */ }
+  // ¿El mecenas va MONTADO ahora mismo? (flag puesto por la coreografía de salida.)
+  function isMounted(w) { return !!(w && w.mounted && caballos[w.id]); }
+  // Jinete sobre la silla: sube al mecenas sentado hasta el asiento del caballo procedural.
+  const RIDER_DX = 0;      // ajuste lateral del jinete sobre la silla (px disp.)
+  const RIDER_UP = 40;     // altura del asiento sobre el suelo (px disp.): sienta al jinete en la silla
+  // Dibuja el caballo PROCEDURAL con el mecenas montado encima (ciclo de trote al moverse).
   function drawMount(g, lx, ly, w, moving) {
-    const v = HORSE_VIEW[w.dir || 'S'] || 'SW', m = HORSE_META[v];
-    const fi = moving ? (Math.floor(w.phase * 1.6) % HORSE_NF) : 0;   // 0 = en reposo
-    const variante = (caballos[w.id] && caballos[w.id].variante) || 'caballo';
-    const img = horseFrame(variante, v, fi);
+    const view = HORSE_VIEW[w.dir || 'SE'] || 'SE';
+    const back = (view === 'NE' || view === 'NW'), mirror = (view === 'SW' || view === 'NW');
+    const frame = moving ? (Math.floor(w.phase * 1.1) % HORSE_FRAMES) : 0;
+    const coat = (caballos[w.id] && caballos[w.id].tono) || '#8a5630';
+    const cv = horseBaked(back, frame, coat);
     const fx = lx * SCALE, fy = ly * SCALE;
     g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.imageSmoothingEnabled = false;
-    if (img) g.drawImage(img, Math.round(fx - m.ax), Math.round(fy - m.ay), m.w, m.h);
-    // Jinete: sprite del mecenas SENTADO, elevado hasta la silla.
-    const cv = window.HacChar ? spriteFor(w, w.dir || 'S', 0, 'sit') : null;
-    if (cv) {
-      const FEET = charFEET();
-      const dx = Math.round(fx - charW() * 0.5 + (m.riderDx || 0));
-      const dy = Math.round(fy - FEET - (m.riderY || 0));
-      g.imageSmoothingEnabled = pngOn();   // sprite pintado del jinete: suavizar (no el caballo)
-      g.drawImage(cv, dx, dy, charW(), charH());
-    }
+    g.fillStyle = 'rgba(0,0,0,.22)'; g.beginPath(); g.ellipse(fx, fy, 15 * HDRAW * 0.75, 6, 0, 0, 6.2832); g.fill();   // sombra
+    // En vistas traseras (NE/NW) el jinete va DELANTE del caballo; en frontales, detrás.
+    const drawHorseNow = () => { g.save(); g.translate(fx, fy); if (mirror) g.scale(-1, 1); g.drawImage(cv, -HCX * HDRAW, -HFEET * HDRAW, HW * HDRAW, HH * HDRAW); g.restore(); };
+    const drawRiderNow = () => {
+      const rcv = window.HacChar ? spriteFor(w, w.dir || 'S', 0, 'sit') : null; if (!rcv) return;
+      const dx = Math.round(fx - charW() * 0.5 + RIDER_DX), dy = Math.round(fy - RIDER_UP - charFEET());
+      g.imageSmoothingEnabled = pngOn(); g.drawImage(rcv, dx, dy, charW(), charH()); g.imageSmoothingEnabled = false;
+    };
+    if (back) { drawHorseNow(); drawRiderNow(); } else { drawHorseNow(); drawRiderNow(); }
     g.restore();
   }
   // Registro de VARIANTES de caballo (preparado para más caballos con distintas
@@ -1500,6 +1531,9 @@ const HacFolk = (function () {
   // VIDA del caballo: pasta un rato, camina a un punto cercano del pastizal, se para.
   // Semi-determinista (mrand por dueño) → todos los clientes lo ven parecido. Se
   // auto-sincroniza con `caballos` (crea/quita) por si el mapa llega antes que la finca.
+  const horseOf = (id) => horses.find(x => x.id === id) || null;
+  // Llama al caballo del dueño a (tx,ty) — acude a paso ligero (silbido de salida).
+  function summonHorse(id, tx, ty) { const hh = horseOf(id); if (hh) { hh.summonTo = [tx, ty]; hh.arrived = false; hh.pauseT = 0; } return !!hh; }
   function stepHorses(dt) {
     if (!wk || !wk.exitCell) return;
     const ids = Object.keys(caballos);
@@ -1507,9 +1541,17 @@ const HacFolk = (function () {
       horses = horses.filter(h => caballos[h.id]);
       ids.forEach(id => { if (!horses.find(h => h.id === id)) { const nh = makeHorse(id, caballos[id]); if (nh) horses.push(nh); } });
     }
-    const SPD = 0.62;
+    const SPD = 0.62, SUMMON_SPD = 1.5;
     horses.forEach(h => {
       const c = caballos[h.id]; if (c && c.nombre) h.nombre = c.nombre;
+      if (h.rider) { h.moving = false; return; }           // MONTADO: lo lleva el jinete (drawMount)
+      if (h.summonTo) {                                     // ACUDE al silbido del dueño
+        const dx = h.summonTo[0] - h.fx, dy = h.summonTo[1] - h.fy, d = Math.sqrt(dx * dx + dy * dy), adv = SUMMON_SPD * dt;
+        const fd = faceFromGrid(dx, dy); if (fd) h.dir = fd; h.moving = true; h.phase += dt * 4;
+        if (d <= adv || d < 0.05) { h.fx = h.summonTo[0]; h.fy = h.summonTo[1]; h.summonTo = null; h.moving = false; h.arrived = true; }
+        else { h.fx += dx / d * adv; h.fy += dy / d * adv; }
+        return;
+      }
       if (h.moving) h.phase += dt * 4;
       if (h.pauseT > 0) { h.pauseT -= dt; return; }
       if (h.moving) {
@@ -1925,6 +1967,7 @@ const HacFolk = (function () {
     if (horses.length) {                               // caballos procedurales pastando
       const HBANNER = Math.round(HFEET * HDRAW / SCALE) + 3;   // banner justo por encima de las orejas
       horses.forEach(h => {
+        if (h.rider) return;                           // MONTADO → se dibuja con el jinete (drawMount), no suelto
         actors.push({ fx: h.fx, fy: h.fy, draw: (g, lx, ly) => drawHorse(g, lx, ly, h) });
         overlays.push({ draw: (g) => { const p = logic(h.fx, h.fy); npcBanner(g, p[0], p[1] - HBANNER, h.nombre, '🐎'); } });
       });
@@ -2152,7 +2195,9 @@ const HacFolk = (function () {
     if (w.state === 'esc-cheer') return w.bowing ? '¡A la batalla!' : 'Formando en el portón';
     if (w.state === 'saludo') return enEsc ? 'Se prepara para la escaramuza' : 'Recibe tus órdenes';
     if (w.state === 'fuera') return enEsc ? 'Combatiendo en la escaramuza' : 'En expedición fuera de la finca';
-    if (w.state === 'exped-out') return enEsc ? 'Acude al portón' : 'Saliendo de la finca';
+    if (w.state === 'monta-out') return 'Sale a por su caballo';
+    if (w.state === 'silbando') return 'Silba a su caballo';
+    if (w.state === 'exped-out') return w.mounted ? 'Parte a caballo' : (enEsc ? 'Acude al portón' : 'Saliendo de la finca');
     if (w.state === 'exped-in') return 'Regresando de la expedición';
     if (w.state === 'a-debatir') return 'Se dirige al jardín a debatir';
     if (w.state === 'debate' || w.state === 'debate-frustrado') {
