@@ -508,15 +508,20 @@
         add('exped', '🐎 ' + ((c && c.nombre) || 'Caballo'), CABALLO_EXPED);
       }
       add('heridas', 'Heridas', (window.HacStats && HacStats.penHerida) ? HacStats.penHerida(myId) : 0);
+      // 🏯 Bono de hacienda por un libro de conclusiones DONADO al fundador (7 días).
+      const bh = (window.HacBuff && HacBuff.activo) ? HacBuff.activo(h.id, 'xp') : null;
+      if (bh) add('xpMision', '🏯 Donación al fundador' + (bh.donanteNombre ? ' · ' + bh.donanteNombre : ''), bh.valor);
       const totales = {};
       items.forEach(it => { totales[it.tipo] = (totales[it.tipo] || 0) + it.val; });
       return { items, totales };
     }
     // Fracción de XP extra para UNA misión: el bono cultural (政→文… 文) aplica a
     // todas; el militar (军) SOLO se suma en expediciones de dominio militar.
+    const buffHacXp = () => (window.HacBuff && HacBuff.xpActivo) ? HacBuff.xpActivo(h.id) : 0;   // 🏯 bono por libro donado al fundador
     const xpFracMision = (dom) => (bonos.xp || 0) + (dom === 'militar' ? (bonos.xpMil || 0) : 0)
       + ((miCargo && miCargo.perk.xpDom && miCargo.dom === dom) ? miCargo.perk.xpDom : 0)   // perk del oficio en su dominio
-      + ((dom === 'cultural' && tieneT('estudiante')) ? 0.08 : 0);                          // 書生 Estudiante
+      + ((dom === 'cultural' && tieneT('estudiante')) ? 0.08 : 0)                            // 書生 Estudiante
+      + buffHacXp();                                                                         // bono de hacienda (donación)
     const conBono = (base, frac) => Math.round((base || 0) * (1 + (frac || 0)));        // recompensa con bono
     const precioMercado = (item) => Math.max(1, Math.round((item.precio || 0) * (1 - bonos.mercado - (tieneT('funcionario') ? 0.06 : 0))));   // descuento 政 + 吏 Funcionario
     const pct = (f) => Math.round((f || 0) * 100);
@@ -1780,6 +1785,8 @@
         .hacp-conc-use .i{flex:0 0 auto;font-size:17px}
         .hacp-conc-use b{color:#f0e2bf}
         .hacp-conc-use .mut{color:#9a8360;font-size:12px}
+        .hacp-conc-use.hi{background:rgba(216,180,90,.09);border:1px solid rgba(216,180,90,.22);border-radius:8px;padding:6px 8px}
+        .hacp-conc-use.hi b{color:#e8c877}.hacp-conc-use.hi .mut{color:#c9a84c}
         .hacp-conc-warn{text-align:center;font-size:12.5px;color:#e2a06a;margin:11px 0 8px}
         .hacp-conc-btns{display:flex;gap:8px}
         .hacp-conc-btns .hacp-cp-btn{flex:1;padding:10px;font-size:13px}
@@ -3267,23 +3274,38 @@
     }
     // Confirmación al usar unas CONCLUSIONES: explica sus usos y evita gastarlas por error.
     let concEl = null;
+    // Nombre del señor de la casa (fundador designado por el admin), o genérico.
+    function fundadorNombre() {
+      const fid = h.mapa && h.mapa.fundador;
+      const m = fid && (h.miembros || []).find(x => (x.personajeId || x.id) === fid);
+      return (m && m.nombre) || 'el señor de la casa';
+    }
     function confirmarConclusiones(def) {
       if (concEl) concEl.remove();
       concEl = document.createElement('div');
       concEl.className = 'hacp-shop hacp-conc-ov';
       const ef = window.HacTienda ? HacTienda.efectoTexto(def) : '';
       const donable = def.donable;
+      const D = window.HacDebates, cal = def.calidad;
+      const buffPct = (donable && D && D.CALIDADES && D.CALIDADES[cal]) ? Math.round((D.CALIDADES[cal].buff || 0) * 100) : 0;
+      const fund = fundadorNombre();
+      const act = (window.HacBuff && HacBuff.activo) ? HacBuff.activo(h.id, 'xp') : null;
       concEl.innerHTML = `<div class="hacp-shop-box hacp-conc-box">
         <button type="button" class="hacp-shop-x" data-x aria-label="Cerrar">✕</button>
         <div class="hacp-conc-h"><span class="hacp-conc-ic">${def.icon || '📖'}</span><div><div class="hacp-conc-nm">${esc(def.nombre)}</div><div class="hacp-conc-zh">論議錄 · saber de un debate</div></div></div>
         <p class="hacp-conc-desc">${esc(def.desc || '')}</p>
         <div class="hacp-conc-uses">
-          <div class="hacp-conc-use"><span class="i">📖</span><div><b>Estudiarlas</b> ahora<br><span class="mut">${esc(ef).replace('Consumible · ', '')}</span></div></div>
-          <div class="hacp-conc-use"><span class="i">🏯</span><div><b>Presentarlas al fundador</b>${donable ? '' : ' <span class="mut">(solo muy buenas o reveladoras)</span>'}<br><span class="mut">${donable ? 'bono de XP para toda la hacienda (próximamente)' : 'estas no dan bono a la casa'}</span></div></div>
+          <div class="hacp-conc-use"><span class="i">📖</span><div><b>Estudiarlas</b> tú<br><span class="mut">${esc(ef).replace('Consumible · ', '')}</span></div></div>
+          <div class="hacp-conc-use${donable ? ' hi' : ''}"><span class="i">🏯</span><div><b>Presentarlas a ${esc(fund)}</b>${donable ? '' : ' <span class="mut">(solo muy buenas o reveladoras)</span>'}<br><span class="mut">${donable ? '+' + buffPct + '% XP a TODA la hacienda · 7 días' : 'estas no dan bono a la casa'}</span></div></div>
           <div class="hacp-conc-use"><span class="i">💰</span><div><b>Venderlas</b> en el mercado<br><span class="mut">por ${def.precio || 0} monedas</span></div></div>
         </div>
-        <div class="hacp-conc-warn">Estudiarlas las <b>consume</b>. ¿Seguro?</div>
-        <div class="hacp-conc-btns"><button type="button" class="hacp-cp-btn" data-keep>Conservar</button><button type="button" class="hacp-cp-btn hacp-cp-go" data-study>📖 Estudiar (consumir)</button></div>
+        ${act ? `<div class="hacp-conc-warn" style="color:#c9a84c">Ya hay un bono de <b>+${Math.round(act.valor * 100)}%</b> activo en la casa.</div>` : ''}
+        <div class="hacp-conc-warn">Cualquiera de las dos acciones <b>consume</b> el libro.</div>
+        <div class="hacp-conc-btns">
+          <button type="button" class="hacp-cp-btn" data-keep>Conservar</button>
+          <button type="button" class="hacp-cp-btn" data-study>📖 Estudiar</button>
+          ${donable ? '<button type="button" class="hacp-cp-btn hacp-cp-go" data-donate>🏯 Presentar</button>' : ''}
+        </div>
       </div>`;
       overlayHost().appendChild(concEl);
       ['pointerdown', 'pointerup', 'touchstart', 'touchend', 'click'].forEach(ev => concEl.addEventListener(ev, (e) => e.stopPropagation(), { passive: false }));
@@ -3292,6 +3314,33 @@
       concEl.querySelector('[data-x]').addEventListener('click', close);
       concEl.querySelector('[data-keep]').addEventListener('click', close);
       concEl.querySelector('[data-study]').addEventListener('click', () => { const id = def.id; close(); estudiarManual(id); });
+      const dn = concEl.querySelector('[data-donate]');
+      if (dn) dn.addEventListener('click', () => { close(); donarConclusiones(def); });
+    }
+    // Presentar (DONAR) un libro al fundador → bono de +XP a toda la hacienda 7 días (F2).
+    function donarConclusiones(def) {
+      if (!myId || !window.HacBuff || !HacBuff.presentar) { toast('Las donaciones no están disponibles ahora mismo'); return; }
+      const D = window.HacDebates, cal = def.calidad;
+      const valor = (D && D.CALIDADES && D.CALIDADES[cal]) ? (D.CALIDADES[cal].buff || 0) : 0;
+      if (!valor) { toast('Estas conclusiones no dan bono a la casa'); return; }
+      const act = HacBuff.activo && HacBuff.activo(h.id, 'xp');
+      if (act && act.valor >= valor) { toast(`La casa ya tiene un bono de +${Math.round(act.valor * 100)}% (igual o mejor). Espera a que caduque o dona uno superior.`); return; }
+      const rr = HacStats.quitarItem ? HacStats.quitarItem(myId, def.id) : { ok: false };   // consume el libro
+      if (!rr || !rr.ok) { toast((rr && rr.motivo) || 'No llevas ese libro'); return; }
+      const pctv = Math.round(valor * 100), fund = fundadorNombre();
+      HacBuff.presentar({ haciendaId: h.id, tipo: 'xp', valor, calidad: cal, donanteId: myId, donanteNombre: miNombreDeb() })
+        .then(() => {
+          toast(`🏯 Presentaste el libro a ${fund} · +${pctv}% XP a la hacienda (7 días)`);
+          if (window.HacBitacora) HacBitacora.log(myId, 'progreso', `🏯 Presentaste «${def.nombre}» a ${fund} · +${pctv}% XP a toda la hacienda durante 7 días`);
+          if (window.HacPuntos && HacPuntos.award) HacPuntos.award(h.id, myId, HacPuntos.recompensa ? HacPuntos.recompensa(30, 300) : 12);   // prestigio de casa al donante
+          return HacBuff.reload();
+        })
+        .then(() => { refresh(); if (charId) buildCharPanel(charId); })
+        .catch(e => {                                       // falló → DEVUELVE el libro (no perderlo)
+          if (HacStats.darItem) HacStats.darItem(myId, def.id);
+          if (charId) buildCharPanel(charId);
+          toast((e && e.message) || 'No se pudo presentar el libro');
+        });
     }
     // Texto transparente de energía: % + ritmo de regeneración + cuánto falta para
     // llenar (para TU mecenas; para los demás, solo el %).
@@ -4194,6 +4243,7 @@
     if (window.HacRelaciones) HacRelaciones.ready();
     if (window.HacEscaramuzas) HacEscaramuzas.ready().then(escPulse);
     if (DEB) DEB.ready().then(debPulse);
+    if (window.HacBuff) HacBuff.ready().then(() => { if (charId) refreshCharPanel(); });   // bono de hacienda (F2)
     if (window.HacOrdenes) {
       HacOrdenes.ready().then(applyOrders);
       setInterval(() => {
@@ -4205,6 +4255,8 @@
         if (window.HacRelaciones) HacRelaciones.reload();
         if (window.HacEscaramuzas) HacEscaramuzas.reload().then(escPulse);   // saca al mecenas y resuelve si toca
         if (DEB) DEB.reload().then(debPulse);                                // debates: sim, auto-accept NPC, resolución
+        if (window.HacBuff) HacBuff.reload();                                // bono de hacienda: refresca vigencia
+
         HacOrdenes.reload().then(applyOrders);
       }, 5000);
     }

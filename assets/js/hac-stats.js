@@ -299,6 +299,8 @@ const HacStats = (function () {
     if (ocupadas(mid) >= r.cap) return { ok: false, motivo: 'Mochila llena' };
     mete(r.inv, id); persist(r); return { ok: true };
   }
+  // Quita UN objeto de la mochila sin más efecto (p.ej. al DONARLO al fundador). Devuelve {ok}.
+  function quitarItem(mid, id) { const r = ensure(mid); if (!quita(r.inv, id)) return { ok: false, motivo: 'No llevas ese objeto' }; persist(r); return { ok: true }; }
   // Mete un objeto de la MOCHILA al almacén de CASA (requiere casa).
   function meterEnCasa(mid, id) {
     const r = ensure(mid);
@@ -367,6 +369,6 @@ const HacStats = (function () {
     persist(r); return { ok: true, dinero: r.dinero };
   }
 
-  return { ready, reload, dinero, ahorro, casaPos, casasReclamadas, duenoDeCasa, comprarCasa, liberarCasa, abandonar, heridas, penHerida, malherido, herir, curar, secuelas, tieneSecuela, escaramuzaCd, bonusDinero, bonusExped, usarManual, xp, nivel, progresoNivel, bonus, nivelTotal, nivelPersonaje, setNiveles, puntosTalento, talentos, puntosGastados, puntosLibres, tieneTalento, aprenderTalento, equipados, equipar, desequipar, MAX_EQUIP, award, comprar, guardar, sacar, darItem, meterEnCasa, sacarDeCasa, inventario, casaInventario, capInventario, ocupadas, recompensaExped, caballo, tieneCaballo, comprarCaballo, venderItem, DOMS, dbOk: () => ok, TABLE };
+  return { ready, reload, dinero, ahorro, casaPos, casasReclamadas, duenoDeCasa, comprarCasa, liberarCasa, abandonar, heridas, penHerida, malherido, herir, curar, secuelas, tieneSecuela, escaramuzaCd, bonusDinero, bonusExped, usarManual, xp, nivel, progresoNivel, bonus, nivelTotal, nivelPersonaje, setNiveles, puntosTalento, talentos, puntosGastados, puntosLibres, tieneTalento, aprenderTalento, equipados, equipar, desequipar, MAX_EQUIP, award, comprar, guardar, sacar, darItem, quitarItem, meterEnCasa, sacarDeCasa, inventario, casaInventario, capInventario, ocupadas, recompensaExped, caballo, tieneCaballo, comprarCaballo, venderItem, DOMS, dbOk: () => ok, TABLE };
 })();
 if (typeof window !== 'undefined') window.HacStats = HacStats;
