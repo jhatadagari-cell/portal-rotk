@@ -2980,7 +2980,10 @@
           const driftX = sp * 34 * (t / 1000), driftY = sp * 17 * (t / 1000);
           const X0 = wrap(driftX, px) - px, Y0 = wrap(driftY, py) - py;
           const ox = w / 2, oy = hh * 0.60;
-          const pathTop = hh * 0.50, pathBot = hh * 0.84;   // franja del camino (a la altura de los pies)
+          // El camino es una DIAGONAL RECTA alineada con el eje de marcha (el mismo por el que
+          // se desplaza el suelo): las tiles con |n−p|≤ROAD forman una banda de tierra centrada
+          // en pantalla (el centro siempre cae en n−p=0), con bordes limpios de rombo.
+          const ROAD = 2, roadOK = so && so.complete && so.width;
           ctx.imageSmoothingEnabled = true;
           const nHalf = Math.ceil((w / 2 + tw) / stepX) + 2, pTop = Math.ceil((oy + th) / stepY) + 2, pBot = Math.ceil((hh - oy + th) / stepY) + 2;
           for (let p = -pTop; p <= pBot; p++) {
@@ -2988,8 +2991,7 @@
               if ((n + p) & 1) continue;                  // misma paridad → rejilla iso
               const cx = ox + X0 + n * stepX, cy = oy + Y0 + p * stepY;
               if (cx < -tw || cx > w + tw || cy < -th || cy > hh + th) continue;
-              const onPath = (cy >= pathTop && cy <= pathBot) && so && so.complete && so.width;
-              const img = onPath ? so : gr;
+              const img = (roadOK && Math.abs(n - p) <= ROAD) ? so : gr;
               ctx.drawImage(img, 0, 0, img.width, img.height, cx - tw / 2, cy - faceH / 2, tw, th);
             }
           }
