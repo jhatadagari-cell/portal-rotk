@@ -2928,12 +2928,15 @@
     // Se muestra en el panel mientras la escaramuza está 'en_curso' o 'abortando'.
     // Suelo isométrico (loseta anim-ground.png) que se desplaza + N mecenas
     // andando con su ciclo de HacChar. RAF vivo solo mientras el lienzo existe.
-    let marchGround = null, marchCanvas = null, marchRAF = 0;
+    let marchGrass = null, marchSoil = null, marchCanvas = null, marchRAF = 0;
     function stopMarch() { marchCanvas = null; if (marchRAF) { cancelAnimationFrame(marchRAF); marchRAF = 0; } }
     function startMarch(cv, band) {
       stopMarch();
       const ctx = cv && cv.getContext && cv.getContext('2d'); if (!ctx) return;
-      if (!marchGround) { marchGround = new Image(); marchGround.src = 'assets/img/iso/anim-ground.png'; }
+      // Suelo: pradera de hierba con un CAMINO de tierra batida por el centro (los mecenas
+      // marchan por el camino). Tiles iso 144×72 de la finca (grass/soil).
+      if (!marchGrass) { marchGrass = new Image(); marchGrass.src = 'assets/img/iso/floor/grass.png'; }
+      if (!marchSoil) { marchSoil = new Image(); marchSoil.src = 'assets/img/iso/floor/soil.png'; }
       const back = cv.hasAttribute('data-back');          // 'abortando' → desanda el camino
       const FR = (window.HacChar && HacChar.FRAMES) || 4;
       const dir = back ? 'NW' : 'SE';                     // ida de cara (SE), vuelta de espaldas (NW)
@@ -2967,15 +2970,17 @@
         const sky = ctx.createLinearGradient(0, 0, 0, hh);
         sky.addColorStop(0, back ? '#20242c' : '#33342a'); sky.addColorStop(0.55, '#26251d'); sky.addColorStop(1, '#171410');
         ctx.fillStyle = sky; ctx.fillRect(0, 0, w, hh);
-        // Suelo isométrico desplazándose (ida: NO ; vuelta: SE).
-        const g = marchGround;
-        if (g && g.complete && g.width) {
-          const gs = 0.44, tw = g.width * gs, th = g.height * gs, faceH = tw / 2;
+        // Suelo isométrico desplazándose (ida: NO ; vuelta: SE). Hierba en toda la pradera
+        // y CAMINO de tierra batida en una franja central (donde marcha la tropa).
+        const gr = marchGrass, so = marchSoil;
+        if (gr && gr.complete && gr.width) {
+          const gs = 0.72, tw = gr.width * gs, th = gr.height * gs, faceH = tw / 2;
           const stepX = tw / 2, stepY = faceH / 2, px = 2 * stepX, py = 2 * stepY;
           const sp = back ? 1 : -1;                       // dirección del desplazamiento del suelo
           const driftX = sp * 34 * (t / 1000), driftY = sp * 17 * (t / 1000);
           const X0 = wrap(driftX, px) - px, Y0 = wrap(driftY, py) - py;
           const ox = w / 2, oy = hh * 0.60;
+          const pathTop = hh * 0.50, pathBot = hh * 0.84;   // franja del camino (a la altura de los pies)
           ctx.imageSmoothingEnabled = true;
           const nHalf = Math.ceil((w / 2 + tw) / stepX) + 2, pTop = Math.ceil((oy + th) / stepY) + 2, pBot = Math.ceil((hh - oy + th) / stepY) + 2;
           for (let p = -pTop; p <= pBot; p++) {
@@ -2983,7 +2988,9 @@
               if ((n + p) & 1) continue;                  // misma paridad → rejilla iso
               const cx = ox + X0 + n * stepX, cy = oy + Y0 + p * stepY;
               if (cx < -tw || cx > w + tw || cy < -th || cy > hh + th) continue;
-              ctx.drawImage(g, 0, 0, g.width, g.height, cx - tw / 2, cy - faceH / 2, tw, th);
+              const onPath = (cy >= pathTop && cy <= pathBot) && so && so.complete && so.width;
+              const img = onPath ? so : gr;
+              ctx.drawImage(img, 0, 0, img.width, img.height, cx - tw / 2, cy - faceH / 2, tw, th);
             }
           }
           // Bruma en los bordes para fundir el suelo con el fondo.
