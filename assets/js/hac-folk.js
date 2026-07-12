@@ -1365,14 +1365,109 @@ const HacFolk = (function () {
     }
     return cv;
   }
-  // Dibuja un caballo SUELTO. TEMPORAL: círculo rojo (placeholder) hasta tener un
-  // asset de caballo mejor.
-  const HORSE_R = 4;   // radio en px lógicos del placeholder (discreto)
+  // ── CABALLO PROCEDURAL (pixel-art, sin PNG) ──────────────────────────────
+  // Se dibuja en un lienzo lógico HW×HH y se HORNEA una vez por (vista, frame, capa),
+  // con un pase de contorno para separarlo del campo. 4 vistas iso (SE/SW frontales,
+  // NE/NW traseras) por espejo + variante trasera; ciclo de trote de 6 fotogramas.
+  const HORSE_FRAMES = 6;
+  const HW = 44, HH = 38, HFEET = 34, HCX = 22;   // lienzo lógico, pies (y) y eje (x)
+  const _hx = (c) => { c = c.replace('#', ''); return [parseInt(c.slice(0, 2), 16), parseInt(c.slice(2, 4), 16), parseInt(c.slice(4, 6), 16)]; };
+  const mixc = (a, b, t) => { const A = _hx(a), B = _hx(b); return 'rgb(' + Math.round(A[0] + (B[0] - A[0]) * t) + ',' + Math.round(A[1] + (B[1] - A[1]) * t) + ',' + Math.round(A[2] + (B[2] - A[2]) * t) + ')'; };
+  function horsePalette(coat) {
+    return {
+      base: coat, hi: mixc(coat, '#ffffff', 0.22), dk: mixc(coat, '#000000', 0.24), sh: mixc(coat, '#000000', 0.46),
+      mane: mixc(coat, '#1a0f07', 0.72), muzzle: mixc(coat, '#000000', 0.52), hoof: '#20160f', eye: '#0d0906', socks: mixc(coat, '#ffffff', 0.42),
+    };
+  }
+  // Contorno 1px oscuro (vecindad-4) para que el caballo destaque sobre la hierba.
+  function horseOutline(c) {
+    const img = c.getImageData(0, 0, HW, HH), d = img.data, out = new Uint8ClampedArray(d);
+    const al = (x, y) => (x < 0 || y < 0 || x >= HW || y >= HH) ? 0 : d[(y * HW + x) * 4 + 3];
+    for (let y = 0; y < HH; y++) for (let x = 0; x < HW; x++) {
+      const i = (y * HW + x) * 4;
+      if (d[i + 3] === 0 && (al(x - 1, y) || al(x + 1, y) || al(x, y - 1) || al(x, y + 1))) { out[i] = 26; out[i + 1] = 18; out[i + 2] = 12; out[i + 3] = 255; }
+    }
+    c.putImageData(new ImageData(out, HW, HH), 0, 0);
+  }
+  // Pinta un caballo mirando a la DERECHA (para izquierda se dibuja en espejo).
+  function paintHorse(c, back, frame, coat) {
+    const P = horsePalette(coat), px = (x, y, w, h, col) => { c.fillStyle = col; c.fillRect(x, y, w, h); };
+    const a = frame / HORSE_FRAMES * 6.2832;
+    const oxA = Math.round(Math.cos(a) * 3), liftA = Math.max(0, Math.round(Math.sin(a) * 2));
+    const oxB = Math.round(Math.cos(a + 3.1416) * 3), liftB = Math.max(0, Math.round(Math.sin(a + 3.1416) * 2));
+    const leg = (x, ox, lift, col) => {   // pata: muslo fijo + caña desplazada + casco
+      px(x, 24, 3, 6, col);
+      const footY = HFEET - lift;
+      px(x + ox, 29, 3, footY - 29, col);
+      px(x + ox, footY - 2, 3, 2, P.hoof);
+    };
+    // 1) cola (detrás del cuerpo, lado trasero = izquierda)
+    const tailF = back ? 1 : 0;
+    px(6 - tailF, 15, 3 + tailF, 5, P.mane); px(5 - tailF, 19, 3 + tailF, 5, P.mane);
+    px(5 - tailF, 23, 3, 5, P.mane); px(6 - tailF, 16, 1, 9, mixc(P.mane, '#ffffff', 0.12));
+    // 2) patas lejanas (más oscuras, detrás del cuerpo)
+    leg(12, oxA, liftA, P.sh);   // trasera lejana
+    leg(25, oxB, liftB, P.sh);   // delantera lejana
+    // 3) cuerpo (barril) + grupa + pecho
+    px(11, 15, 20, 10, P.base);
+    px(9, 16, 3, 8, P.base); px(30, 16, 3, 8, P.base);           // grupa (izq) y pecho (der)
+    px(12, 15, 18, 2, P.hi);                                     // lomo iluminado
+    px(11, 23, 20, 2, P.dk); px(13, 24, 15, 1, P.sh);            // vientre en sombra
+    px(9, 16, 3, 2, P.hi); px(9, 22, 3, 2, P.sh);                // volumen de la grupa
+    px(30, 15, 1, 1, P.dk);                                      // sombra de esquina delantera
+    if (!back) {
+      // 4F) cuello + crin + cabeza (vista frontal: se ve la cara)
+      px(27, 10, 6, 8, P.base); px(29, 8, 5, 5, P.base);         // cuello
+      px(31, 9, 2, 9, P.hi);                                     // borde delantero iluminado
+      px(27, 8, 2, 11, P.mane); px(28, 7, 2, 3, P.mane);         // crin (borde trasero)
+      px(32, 7, 6, 6, P.base);                                   // cráneo
+      px(33, 12, 4, 4, P.base); px(36, 11, 5, 5, P.base);        // carrillo + morro
+      px(38, 13, 3, 3, P.muzzle); px(40, 14, 1, 1, P.hoof);      // hocico + ollar
+      px(32, 6, 4, 2, P.base);                                   // testuz
+      px(32, 3, 2, 4, P.base); px(35, 3, 2, 4, P.base);          // orejas
+      px(32, 3, 2, 1, P.dk); px(35, 3, 2, 1, P.dk);
+      px(33, 4, 2, 3, P.mane);                                   // tupé
+      px(35, 10, 1, 1, P.eye); px(35, 9, 1, 1, mixc(P.hi, '#ffffff', 0.5));   // ojo + brillo
+      px(38, 16, 3, 1, P.dk);                                    // boca
+    } else {
+      // 4B) vista trasera: grupa hacia el observador, cuello más bajo y cabeza girada
+      px(28, 13, 6, 6, P.base); px(30, 11, 5, 4, P.base);        // cuello (arqueado, más bajo)
+      px(28, 13, 2, 6, P.mane); px(29, 11, 2, 2, P.mane);        // crin por el dorso del cuello
+      px(31, 8, 6, 5, P.base); px(35, 10, 3, 3, P.base);         // cabeza girada (se intuye el morro)
+      px(36, 11, 2, 2, P.muzzle);                                // hocico de refilón
+      px(31, 5, 2, 4, P.base); px(34, 5, 2, 4, P.base);          // orejas
+      px(31, 5, 2, 1, P.dk); px(34, 5, 2, 1, P.dk);
+      px(32, 6, 2, 2, P.mane);                                   // tupé
+      px(9, 15, 4, 3, P.hi); px(10, 18, 3, 4, P.hi);             // grupa bien iluminada de frente
+    }
+    // 5) patas cercanas (color base, delante del cuerpo)
+    leg(15, oxB, liftB, P.base);   // trasera cercana
+    leg(28, oxA, liftA, P.base);   // delantera cercana
+    horseOutline(c);
+  }
+  const horseCache = new Map();
+  function horseBaked(back, frame, coat) {
+    const key = (back ? 'B' : 'F') + frame + '|' + coat;
+    let cv = horseCache.get(key);
+    if (cv) return cv;
+    cv = document.createElement('canvas'); cv.width = HW; cv.height = HH;
+    const c = cv.getContext('2d'); c.imageSmoothingEnabled = false;
+    paintHorse(c, back, frame, coat);
+    horseCache.set(key, cv);
+    return cv;
+  }
+  // Dibuja un caballo SUELTO pastando por el campo (procedural, con sombra).
   function drawHorse(g, lx, ly, h) {
-    const fx = lx * SCALE, fy = ly * SCALE, r = HORSE_R * SCALE;
-    g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.imageSmoothingEnabled = true;
-    g.fillStyle = 'rgba(192,57,43,.9)'; g.strokeStyle = 'rgba(0,0,0,.4)'; g.lineWidth = 1 * SCALE;
-    g.beginPath(); g.arc(fx, fy - r, r, 0, 6.2832); g.fill(); g.stroke();
+    const view = HORSE_VIEW[h.dir || 'SE'] || 'SE';
+    const back = (view === 'NE' || view === 'NW'), mirror = (view === 'SW' || view === 'NW');
+    const frame = h.moving ? (Math.floor(h.phase * 1.1) % HORSE_FRAMES) : 0;
+    const coat = (caballos[h.id] && caballos[h.id].tono) || '#8a5630';
+    const cv = horseBaked(back, frame, coat);
+    const fx = lx * SCALE, fy = ly * SCALE;
+    g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.imageSmoothingEnabled = false;
+    g.fillStyle = 'rgba(0,0,0,.20)'; g.beginPath(); g.ellipse(fx, fy, 15, 4.5, 0, 0, 6.2832); g.fill();   // sombra
+    g.translate(fx, fy); if (mirror) g.scale(-1, 1);
+    g.drawImage(cv, -HCX, -HFEET, HW, HH);
     g.restore();
   }
   // Crea la encarnación de un caballo: hogar ESTABLE (semilla por dueño) en el campo
@@ -1811,10 +1906,11 @@ const HacFolk = (function () {
     });
     // Caballos sueltos: sprite como actor (con oclusión/profundidad) + su nombre encima.
     // Si su dueño está de VIAJE (lo va montando), el corcel no ronda: viaja con él.
-    if (horses.length) {                               // placeholder de círculo rojo (sin sprites)
+    if (horses.length) {                               // caballos procedurales pastando
+      const HBANNER = Math.round(HFEET / SCALE) + 3;   // banner justo por encima de las orejas
       horses.forEach(h => {
         actors.push({ fx: h.fx, fy: h.fy, draw: (g, lx, ly) => drawHorse(g, lx, ly, h) });
-        overlays.push({ draw: (g) => { const p = logic(h.fx, h.fy); npcBanner(g, p[0], p[1] - (HORSE_R * 2 + 4), h.nombre, '🐎'); } });
+        overlays.push({ draw: (g) => { const p = logic(h.fx, h.fy); npcBanner(g, p[0], p[1] - HBANNER, h.nombre, '🐎'); } });
       });
     }
     // Mecenas visibles: el sprite va como actor (con oclusión); el NOMBRE va aparte.
