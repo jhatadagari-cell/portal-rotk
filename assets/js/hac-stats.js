@@ -141,15 +141,20 @@ const HacStats = (function () {
     return { ok: true, ganado, dom: simple ? m.dom : null, xp: simple ? (m.xp || 0) : null };
   }
   function nivelTotal(mid, dom) { return nivel(mid, dom) + bonus(mid, dom) + bonusPctNiveles(mid, dom); }
-  // Slot de un item equipado: 'torso' (ropa, ranura dedicada) o 'gen' (los 3 huecos).
-  function slotDe(id) { const it = window.HacTienda && HacTienda.get(id); return it && it.slot === 'torso' ? 'torso' : 'gen'; }
-  // Equipa un objeto de la MOCHILA. La ROPA DE TORSO va en su PROPIA ranura (una sola);
-  // el resto comparte los 3 huecos generales. Devuelve {ok, motivo}.
+  // Slot de un item equipado: 'torso' (ropa) o 'arma' — ranuras DEDICADAS (una cada
+  // una) — o 'gen' (los 3 huecos generales).
+  function slotDe(id) { const it = window.HacTienda && HacTienda.get(id); return it && (it.slot === 'torso' || it.slot === 'arma') ? it.slot : 'gen'; }
+  // Equipa un objeto de la MOCHILA. Torso y Arma tienen su PROPIA ranura (una sola cada
+  // una); el resto comparte los 3 huecos generales. Las armas exigen nivel de dominio
+  // (req). Devuelve {ok, motivo}.
   function equipar(mid, id) {
     const r = ensure(mid);
-    if (!window.HacTienda || !HacTienda.equipBonus(id)) return { ok: false, motivo: 'No es equipable' };
-    if (slotDe(id) === 'torso') {
-      if (r.equipado.some(eid => slotDe(eid) === 'torso')) return { ok: false, motivo: 'Ya llevas una prenda de torso' };
+    const it = window.HacTienda ? HacTienda.get(id) : null;
+    if (!it || !HacTienda.equipBonus(id)) return { ok: false, motivo: 'No es equipable' };
+    if (it.req) { for (const d in it.req) { if (nivelTotal(mid, d) < it.req[d]) return { ok: false, motivo: 'No tienes el dominio para empuñarla' }; } }
+    const s = slotDe(id);
+    if (s === 'torso' || s === 'arma') {
+      if (r.equipado.some(eid => slotDe(eid) === s)) return { ok: false, motivo: s === 'arma' ? 'Ya llevas un arma' : 'Ya llevas una prenda de torso' };
     } else if (r.equipado.filter(eid => slotDe(eid) === 'gen').length >= MAX_EQUIP) {
       return { ok: false, motivo: 'Ya llevas 3 objetos equipados' };
     }
@@ -172,8 +177,15 @@ const HacStats = (function () {
     for (let i = 0; i < r.equipado.length; i++) { const it = HacTienda.get(r.equipado[i]); if (it && it.slot === 'torso' && it.viste) return it.viste; }
     return null;
   }
-  // Mezcla el `aspecto` base con la receta de la ropa de torso equipada (si la hay).
-  function vestir(mid, base) { const v = torsoViste(mid); return v ? Object.assign({}, base || {}, v) : (base || {}); }
+  // Mezcla el `aspecto` base con el `viste` de TODAS las piezas equipadas (ropa de
+  // torso → robe/kind/torsoLujo; arma → arma). Así el sprite refleja todo el equipo.
+  function vestir(mid, base) {
+    let out = Object.assign({}, base || {});
+    if (!window.HacTienda) return out;
+    const r = row(mid); if (!r || !r.equipado) return out;
+    r.equipado.forEach(id => { const it = HacTienda.get(id); if (it && it.viste) out = Object.assign(out, it.viste); });
+    return out;
+  }
 
   const cuenta = (arr) => arr.reduce((s, it) => s + (it.n || 1), 0);
   function quita(arr, id) { const e = arr.find(x => x.id === id); if (!e) return false; e.n = (e.n || 1) - 1; if (e.n <= 0) arr.splice(arr.indexOf(e), 1); return true; }

@@ -4236,32 +4236,40 @@
       // Bonos totales por dominio (plano + niveles del bono % de la ropa de torso).
       const tot = HacStats.DOMS.map(dom => ({ dom, b: HacStats.bonus(myId, dom) + (HacStats.bonusPctNiveles ? HacStats.bonusPctNiveles(myId, dom) : 0) }));
       const totHTML = tot.map(t => `<span class="hacp-eq-tot" style="color:${DOM_COLOR[t.dom]}">${DOM_ABBR[t.dom]} <b>${t.b > 0 ? '+' + t.b : '0'}</b></span>`).join('');
-      // La ROPA DE TORSO tiene su PROPIA ranura; el resto comparte los `max` huecos.
+      // TORSO y ARMA tienen su PROPIA ranura dedicada; el resto comparte los `max` huecos.
       const torsoId = eq.find(id => HacStats.slotDe(id) === 'torso') || null;
+      const armaId = eq.find(id => HacStats.slotDe(id) === 'arma') || null;
       const genIds = eq.filter(id => HacStats.slotDe(id) === 'gen');
-      const torsoFull = !!torsoId, genFull = genIds.length >= max;
-      // Celda-ranura del PAPER-DOLL. kind: 'torso' | 'arma' (bloqueada, futura) | 'acc'.
+      const torsoFull = !!torsoId, armaFull = !!armaId, genFull = genIds.length >= max;
+      // Celda-ranura del PAPER-DOLL. kind: 'torso' | 'arma' | 'acc'.
       const cellHTML = (id, kind) => {
-        if (kind === 'arma') return `<div class="hacp-eq-cell arma locked" title="Armas: próximamente"><span class="hacp-eq-cell-ic ghost">🗡️</span><span class="hacp-eq-cell-nm">Arma</span><span class="hacp-eq-lk">🔒 pronto</span></div>`;
         const def = id && HacTienda.get(id);
         if (def) {
           const ef = HacTienda.efectoTexto(def).replace('Equipable · ', '');
           return `<button type="button" class="hacp-eq-cell full ${kind}${def.raro ? ' rare' : ''}" data-uneq="${esc(id)}" title="${esc(def.nombre + ' · ' + ef)} · clic para quitar"><span class="hacp-eq-cell-ic">${def.icon}</span><span class="hacp-eq-cell-nm">${esc(def.nombre)}</span><span class="hacp-eq-cell-bo">${esc(ef)}</span><span class="hacp-eq-x">✕</span></button>`;
         }
-        const ghost = kind === 'torso' ? '👘' : '✦';
-        return `<div class="hacp-eq-cell empty ${kind}"><span class="hacp-eq-cell-ic ghost">${ghost}</span><span class="hacp-eq-cell-nm">${kind === 'torso' ? 'Torso' : 'Vacío'}</span></div>`;
+        const ghost = kind === 'torso' ? '👘' : kind === 'arma' ? '⚔️' : '✦';
+        const lbl = kind === 'torso' ? 'Torso' : kind === 'arma' ? 'Arma' : 'Vacío';
+        return `<div class="hacp-eq-cell empty ${kind}"><span class="hacp-eq-cell-ic ghost">${ghost}</span><span class="hacp-eq-cell-nm">${lbl}</span></div>`;
       };
       const accSlots = []; for (let i = 0; i < max; i++) accSlots.push(cellHTML(genIds[i], 'acc'));
-      // Objetos equipables en la mochila (no equipados). Se deshabilitan si su ranura está llena.
+      // Objetos equipables en la mochila (no equipados). Se deshabilitan si su ranura está
+      // llena o (armas) si no cumples el requisito de dominio.
       const ownable = HacStats.inventario(myId).filter(it => HacTienda.equipBonus(it.id));
       const list = ownable.length
-        ? ownable.map(it => { const def = HacTienda.get(it.id); const esT = def.slot === 'torso'; const full = esT ? torsoFull : genFull; return `<button type="button" class="hacp-eq-own${def.raro ? ' rare' : ''}${esT ? ' torso' : ''}" data-eq="${esc(it.id)}"${full ? ' disabled' : ''}><span class="hacp-eq-ic">${def.icon}</span><span class="hacp-eq-nm">${esc(def.nombre)}${(it.n || 1) > 1 ? ' ×' + it.n : ''}</span><span class="hacp-eq-bo">${esc(HacTienda.efectoTexto(def).replace('Equipable · ', ''))}</span></button>`; }).join('')
-        : '<span class="hacp-inv-note">No tienes objetos equipables. Cómpralos en el mercado (tratados, sellos…) o consíguelos como botín en misiones (ropas de torso).</span>';
+        ? ownable.map(it => {
+            const def = HacTienda.get(it.id), esT = def.slot === 'torso', esA = def.slot === 'arma';
+            const reqNo = esA ? reqNoCumplido(def) : null;
+            const full = (esT ? torsoFull : esA ? armaFull : genFull) || !!reqNo;
+            const tip = reqNo ? ` title="Necesitas ${DOM_GLYPH[reqNo] || reqNo} ${def.req[reqNo]}"` : '';
+            return `<button type="button" class="hacp-eq-own${def.raro ? ' rare' : ''}${esT ? ' torso' : ''}${esA ? ' arma' : ''}" data-eq="${esc(it.id)}"${full ? ' disabled' : ''}${tip}><span class="hacp-eq-ic">${def.icon}</span><span class="hacp-eq-nm">${esc(def.nombre)}${(it.n || 1) > 1 ? ' ×' + it.n : ''}${reqNo ? ' 🔒' : ''}</span><span class="hacp-eq-bo">${esc(HacTienda.efectoTexto(def).replace('Equipable · ', ''))}</span></button>`;
+          }).join('')
+        : '<span class="hacp-inv-note">No tienes objetos equipables. Cómpralos en el mercado (tratados, sellos, armas…) o consíguelos como botín (ropas de torso, armas).</span>';
       el.innerHTML = `
         <div class="hacp-shop-box hacp-eq-box">
           <button type="button" class="hacp-shop-x" data-act="equip-close" aria-label="Cerrar">✕</button>
           <div class="hacp-shop-h"><span class="hacp-shop-zh">⚔</span> Equipo de ${esc(nm)}</div>
-          <div class="hacp-shop-sub">Viste a tu mecenas: una prenda de torso, un arma (pronto) y hasta ${max} accesorios. Bonos: ${totHTML}</div>
+          <div class="hacp-shop-sub">Viste a tu mecenas: una prenda de torso, un arma y hasta ${max} accesorios. Bonos: ${totHTML}</div>
           <div class="hacp-eq-doll">
             <div class="hacp-eq-dollcol">
               <div class="hacp-eq-dolllbl">Torso 袍</div>
@@ -4270,7 +4278,7 @@
             <div class="hacp-eq-figure"><canvas class="hacp-eq-fig-cv" width="120" height="168"></canvas></div>
             <div class="hacp-eq-dollcol">
               <div class="hacp-eq-dolllbl">Arma 兵</div>
-              ${cellHTML(null, 'arma')}
+              ${cellHTML(armaId, 'arma')}
             </div>
           </div>
           <div class="hacp-eq-slotlbl">Accesorios 具 <span class="hacp-eq-cap">${genIds.length}/${max}</span></div>

@@ -61,7 +61,7 @@ const HacChar = (function () {
       // `aspecto.kind`/`aspecto.torsoLujo` permiten que una ROPA DE TORSO equipada
       // (HacTienda item.viste) redefina el atuendo del tronco sin tocar la cabeza:
       // p. ej. un guerrero (armadura) que se pone una túnica pasa a kind 'robe'.
-      kind: aspecto.kind || o.kind, prop: o.prop, cape: !!o.cape, ornate: !!o.ornate, torsoLujo: !!aspecto.torsoLujo, beard: o.beard || 0,
+      kind: aspecto.kind || o.kind, prop: o.prop, arma: aspecto.arma || null, cape: !!o.cape, ornate: !!o.ornate, torsoLujo: !!aspecto.torsoLujo, beard: o.beard || 0,
       robe, robeHi: light(robe, 0.16), robeDk: dark(robe, 0.30), robeSh: dark(robe, 0.50),
       beardC: dark(hair, 0.05),
       sash: dark(mix(robe, accent, 0.25), 0.05),
@@ -515,8 +515,64 @@ const HacChar = (function () {
     px(c - 5, top - 1, 10, 1, P.trim); px(c - 5, top, 10, 1, P.trimDk);        // cuello de la capa
   }
 
+  // ARMA equipada (兵): sustituye al prop de la aptitud cuando el mecenas empuña una.
+  // Se dibuja en la mano delantera (o como asta si es de asta). key = viste.arma.
+  function drawArma(px, P, v, g) {
+    const A = anchors(g), c = CX + Math.round(v.dx * 0.6), baseY = A.baseY, key = P.arma;
+    // Armas de ASTA: visibles incluso de espaldas (como la lanza).
+    if (key === 'ji' || key === 'jie') {
+      const hx = v.back ? c + 6 : c + 10;
+      px(hx, baseY - 46, 1, 46, P.boot); px(hx, baseY - 46, 1, 1, P.bootHi);      // asta
+      if (key === 'ji') {                                                          // alabarda 戟: punta + media luna
+        px(hx, baseY - 52, 1, 6, P.steelHi); px(hx - 1, baseY - 51, 3, 1, P.steel); px(hx - 1, baseY - 49, 3, 1, P.steelDk);
+        px(hx - 3, baseY - 47, 1, 5, P.steel); px(hx - 4, baseY - 46, 1, 3, P.steelHi); px(hx - 2, baseY - 44, 2, 1, P.steelDk);  // media luna
+        px(hx - 1, baseY - 41, 3, 1, P.trim); px(hx - 1, baseY - 40, 3, 1, P.trimDk);
+      } else {                                                                     // vara de mando 節: pomo + borlas
+        px(hx - 1, baseY - 49, 3, 3, P.gold); px(hx, baseY - 51, 1, 2, P.goldHi);
+        for (let i = 0; i < 6; i++) px(hx - 2 + (i % 2) * 4, baseY - 45 + i, 1, 1, (i % 2) ? '#a83a2e' : P.trim);   // borlas
+      }
+      return;
+    }
+    if (v.back) return;                                                            // el resto no se ve de espaldas
+    const handY = baseY - 17 + (g.step > 0 ? -1 : 1);
+    const hx = v.side >= 1 ? c + 6 : c + shHalfOf(v) + 4;
+    switch (key) {
+      case 'jian':                                                                 // espada recta 劍
+        px(hx, handY - 18, 2, 18, P.steel); px(hx, handY - 18, 1, 18, P.steelHi); px(hx, handY - 19, 2, 1, light(P.steelHi, 0.3));
+        px(hx - 1, handY, 4, 1, P.gold); px(hx, handY + 1, 2, 4, P.boot); px(hx, handY + 5, 2, 1, P.goldHi);
+        break;
+      case 'dao':                                                                  // sable curvo 刀
+        for (let i = 0; i < 16; i++) { const off = Math.round(Math.sin(i / 16 * 1.25) * 2); px(hx + off, handY - 16 + i, 2, 1, P.steel); px(hx + off, handY - 16 + i, 1, 1, P.steelHi); }
+        px(hx - 1, handY, 4, 1, P.gold); px(hx, handY + 1, 2, 4, P.boot);
+        break;
+      case 'fan2':                                                                 // abanico de plumas 羽扇
+        px(hx, handY, 1, 6, P.boot);
+        px(hx - 3, handY - 9, 8, 10, '#f2ecdd'); px(hx - 3, handY - 9, 8, 1, '#d8cfb4'); px(hx - 3, handY - 9, 1, 10, P.gold);
+        for (let i = 0; i < 10; i += 2) px(hx, handY - 9 + i, 1, 1, '#cdbf9c');
+        break;
+      case 'dizi':                                                                 // flauta de jade 玉笛
+        px(hx - 5, handY - 1, 10, 2, P.jade); px(hx - 5, handY - 1, 10, 1, light(P.jade, 0.25));
+        for (let i = -3; i <= 3; i += 2) px(hx + i, handY, 1, 1, dark(P.jade, 0.4));
+        px(hx + 4, handY - 1, 1, 3, '#a83a2e');
+        break;
+      case 'bi':                                                                   // pincel del juez 判官筆
+        px(hx, handY - 14, 2, 12, '#c8462f'); px(hx, handY - 15, 2, 1, P.gold);
+        px(hx, handY - 2, 2, 5, P.ink); px(hx, handY + 3, 2, 2, dark(P.ink, 0.2));
+        break;
+      case 'hu2':                                                                  // tabla de audiencia 笏
+        px(hx, handY - 10, 3, 15, '#efe9d8'); px(hx, handY - 10, 3, 1, P.jade); px(hx + 2, handY - 9, 1, 13, dark('#efe9d8', 0.15));
+        break;
+      case 'bian':                                                                 // fusta/maza segmentada 鞭
+        px(hx, handY - 13, 2, 14, P.steelDk);
+        for (let i = 0; i < 4; i++) px(hx, handY - 12 + i * 3, 2, 1, P.steelHi);
+        px(hx - 1, handY, 4, 1, P.gold); px(hx, handY + 1, 2, 3, P.boot);
+        break;
+    }
+  }
+
   // Prop por aptitud. Por la espalda solo asoma la lanza.
   function prop(px, P, v, g) {
+    if (P.arma) { drawArma(px, P, v, g); return; }
     const A = anchors(g), c = CX + Math.round(v.dx * 0.6), baseY = A.baseY;
     if (P.prop === 'spear') {
       const hx = v.back ? c + 6 : c + 10;

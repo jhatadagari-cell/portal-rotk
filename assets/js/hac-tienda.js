@@ -118,6 +118,22 @@ const HacTienda = (function () {
       efecto: { equip: { pct: { cultural: 0.05, administrativo: 0.05 } } },   viste: { kind: 'robe', torsoLujo: true, robe: '#5b2c83', accent: '#e6c66a' }, desc: 'Vestidura de alto funcionario letrado. Equípala para +5% Cultural 文 y +5% Administrativo 政.' },
     { id: 'ropa-am',  nombre: 'Sobreveste de Intendencia',  zh: '屯袍', icon: '👘', tier: 3, tipo: 'equipo', slot: 'torso', oculto: true, precio: 80,
       efecto: { equip: { pct: { administrativo: 0.05, militar: 0.05 } } },    viste: { kind: 'robe', torsoLujo: true, robe: '#6a5a2c', accent: '#a83a2e' }, desc: 'Sobreveste de campaña y avituallamiento. Equípala para +5% Administrativo 政 y +5% Militar 武.' },
+
+    // ── ARMAS (兵 · slot dedicado 'arma') ────────────────────────────────────────
+    //   3 por dominio. Por AHORA su efecto es +10% de su dominio (como las túnicas,
+    //   vía equip.pct); en el futuro tendrán además efectos en el combate por turnos.
+    //   Requieren nivel del dominio (`req`) para empuñarlas. Se COMPRAN en fincas de
+    //   nivel alto y CAEN (raras) como botín. `viste.arma` = cómo se pinta en la mano
+    //   del mecenas (HacChar la dibuja sustituyendo al prop de la aptitud).
+    { id: 'arma-mil-1', nombre: 'Espada recta',     zh: '劍',   icon: '🗡️', tier: 5, tipo: 'arma', slot: 'arma', req: { militar: 3 },        precio: 190, efecto: { equip: { pct: { militar: 0.10 } } },        viste: { arma: 'jian' }, desc: 'Hoja recta de doble filo. Equípala para +10% Militar 武. Requiere 武 3.' },
+    { id: 'arma-mil-2', nombre: 'Sable curvo',      zh: '刀',   icon: '⚔️', tier: 5, tipo: 'arma', slot: 'arma', req: { militar: 4 },        precio: 230, efecto: { equip: { pct: { militar: 0.10 } } },        viste: { arma: 'dao' },  desc: 'Sable de un solo filo, temible al galope. +10% Militar 武. Requiere 武 4.' },
+    { id: 'arma-mil-3', nombre: 'Alabarda',         zh: '戟',   icon: '🔱', tier: 6, tipo: 'arma', slot: 'arma', req: { militar: 5 },        precio: 290, efecto: { equip: { pct: { militar: 0.10 } } },        viste: { arma: 'ji' },   desc: 'Asta con media luna, arma de campeones. +10% Militar 武. Requiere 武 5.' },
+    { id: 'arma-cul-1', nombre: 'Abanico de plumas', zh: '羽扇', icon: '🪭', tier: 5, tipo: 'arma', slot: 'arma', req: { cultural: 3 },       precio: 190, efecto: { equip: { pct: { cultural: 0.10 } } },       viste: { arma: 'fan2' }, desc: 'El abanico del estratega sereno. +10% Cultural 文. Requiere 文 3.' },
+    { id: 'arma-cul-2', nombre: 'Flauta de jade',   zh: '玉笛', icon: '🪈', tier: 5, tipo: 'arma', slot: 'arma', req: { cultural: 4 },       precio: 230, efecto: { equip: { pct: { cultural: 0.10 } } },       viste: { arma: 'dizi' }, desc: 'Flauta de jade que templa el ánimo. +10% Cultural 文. Requiere 文 4.' },
+    { id: 'arma-cul-3', nombre: 'Pincel del juez',  zh: '判官筆', icon: '🖌️', tier: 6, tipo: 'arma', slot: 'arma', req: { cultural: 5 },      precio: 290, efecto: { equip: { pct: { cultural: 0.10 } } },       viste: { arma: 'bi' },   desc: 'Pincel de mango recio, sentencia y arma. +10% Cultural 文. Requiere 文 5.' },
+    { id: 'arma-adm-1', nombre: 'Tabla de audiencia', zh: '笏', icon: '🪧', tier: 5, tipo: 'arma', slot: 'arma', req: { administrativo: 3 }, precio: 190, efecto: { equip: { pct: { administrativo: 0.10 } } }, viste: { arma: 'hu2' },  desc: 'Placa de corte, símbolo de mando. +10% Administrativo 政. Requiere 政 3.' },
+    { id: 'arma-adm-2', nombre: 'Vara de mando',    zh: '節',   icon: '🪄', tier: 5, tipo: 'arma', slot: 'arma', req: { administrativo: 4 }, precio: 230, efecto: { equip: { pct: { administrativo: 0.10 } } }, viste: { arma: 'jie' },  desc: 'Bastón con borlas, insignia de autoridad. +10% Administrativo 政. Requiere 政 4.' },
+    { id: 'arma-adm-3', nombre: 'Fusta de oficial', zh: '鞭',   icon: '🪢', tier: 6, tipo: 'arma', slot: 'arma', req: { administrativo: 5 }, precio: 290, efecto: { equip: { pct: { administrativo: 0.10 } } }, viste: { arma: 'bian' }, desc: 'Fusta trenzada de mando y castigo. +10% Administrativo 政. Requiere 政 5.' },
   ].concat(_conclusiones));
 
   const byId = {}; CATALOGO.forEach(i => { byId[i.id] = i; });

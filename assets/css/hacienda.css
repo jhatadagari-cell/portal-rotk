@@ -280,6 +280,10 @@ html.hacp-pseudofs, html.hacp-pseudofs body{ overflow:hidden; }
 .hacp-eq-cell.torso.full{ background:rgba(127,201,160,.14); border-color:#7fc9a0; }
 .hacp-eq-cell.torso.full:hover{ background:rgba(127,201,160,.24); border-color:#a6ddc2; }
 .hacp-eq-cell.arma.locked{ border:1px dashed rgba(255,255,255,.16); color:var(--parch2); opacity:.55; cursor:not-allowed; }
+.hacp-eq-cell.arma.empty{ border-color:rgba(154,164,174,.4); }
+.hacp-eq-cell.arma.full{ background:rgba(154,164,174,.14); border-color:#9aa4ae; }
+.hacp-eq-cell.arma.full:hover{ background:rgba(154,164,174,.24); border-color:#c0c8d0; }
+.hacp-eq-own.arma{ border-color:rgba(154,164,174,.35); }
 .hacp-eq-cell.rare{ border-color:#5aa6e6 !important; box-shadow:0 0 0 1px #5aa6e6,0 0 9px rgba(90,166,230,.5); background:rgba(90,166,230,.12); }
 .hacp-eq-cell-ic{ font-size:24px; line-height:1; }
 .hacp-eq-cell-ic.ghost{ opacity:.4; filter:grayscale(.4); }

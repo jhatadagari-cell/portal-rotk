@@ -178,7 +178,7 @@ const HacFolk = (function () {
     // de caché y se dibujan siempre (finca + retrato del panel), no solo en el peregrinaje.
     const sec = (window.HacStats && HacStats.secuelas) ? HacStats.secuelas(w.id) : [];
     const secKey = sec.length ? sec.slice().sort().join(',') : '';
-    const key = (w.aptitud || '_') + '|' + (a.robe || '') + '|' + (a.accent || '') + '|' + (a.kind || '') + (a.torsoLujo ? 'L' : '') + '|' + (a.piel || 0) + '|' + (a.pelo || 0) + '|' + dir + '|' + frame + '|' + (pose || 's') + (secKey ? '|' + secKey : '');
+    const key = (w.aptitud || '_') + '|' + (a.robe || '') + '|' + (a.accent || '') + '|' + (a.kind || '') + (a.torsoLujo ? 'L' : '') + '|' + (a.arma || '') + '|' + (a.piel || 0) + '|' + (a.pelo || 0) + '|' + dir + '|' + frame + '|' + (pose || 's') + (secKey ? '|' + secKey : '');
     let cv = spriteCache.get(key);
     if (!cv && window.HacChar) {
       cv = document.createElement('canvas');
