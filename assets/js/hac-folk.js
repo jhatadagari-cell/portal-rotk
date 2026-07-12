@@ -2297,6 +2297,25 @@ const HacFolk = (function () {
     g.clearRect(0, 0, canvas.width, canvas.height);
     const w = walkers.find(x => x.id === id);
     if (!w) return;
+    // A CABALLO: retrato compuesto (caballo + jinete). Vale para el flag `mounted` en vivo
+    // y para cuando está de expedición fuera (state 'fuera') teniendo caballo (p.ej. tras
+    // recargar, donde la fase de montar no se re-ejecuta).
+    if (caballos[w.id] && (isMounted(w) || w.state === 'fuera')) {
+      const coat = caballos[w.id].tono || '#8a5630';
+      const hcv = horseBaked(false, 0, coat);
+      const NWp = HW * HDRAW, NHp = HH * HDRAW, compW = NWp, compH = RIDER_UP + charH();
+      const tmp = document.createElement('canvas'); tmp.width = compW; tmp.height = compH;
+      const tg = tmp.getContext('2d'); tg.imageSmoothingEnabled = false;
+      const fx = compW / 2, fy = compH;
+      tg.drawImage(hcv, Math.round(fx - HCX * HDRAW), Math.round(fy - HFEET * HDRAW), NWp, NHp);
+      const rcv = spriteFor(w, 'SE', 0, 'sit');
+      if (rcv) { tg.imageSmoothingEnabled = pngOn(); tg.drawImage(rcv, Math.round(fx - charW() * 0.5), Math.round(fy - RIDER_UP - charFEET()), charW(), charH()); }
+      const s = Math.min(canvas.width / compW, canvas.height / compH);
+      const dw = Math.round(compW * s), dh = Math.round(compH * s);
+      g.imageSmoothingEnabled = false;
+      g.drawImage(tmp, Math.round((canvas.width - dw) / 2), canvas.height - dh, dw, dh);
+      return;
+    }
     // Retrato = pose DIGNA fija, no el frame de andar en vivo (quedaba a media zancada,
     // con la túnica abierta y a menudo de espaldas). Siempre de pie y de cara al espectador
     // (vista frontal SW/SE según hacia dónde mire), salvo si está tumbado/saludando.
