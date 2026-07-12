@@ -1235,7 +1235,7 @@
       if (debEl) return debEl;
       debEl = document.createElement('div');
       debEl.className = 'hacp-shop hacp-deb-ov'; debEl.hidden = true;
-      vp.appendChild(debEl);
+      overlayHost().appendChild(debEl);   // en móvil → body (si no, queda tras la sección activa e invisible)
       ['pointerdown', 'pointerup', 'wheel', 'click'].forEach(ev => debEl.addEventListener(ev, (e) => e.stopPropagation(), { passive: false }));
       debEl.addEventListener('click', (e) => { if (e.target === debEl) debEl.hidden = true; });
       return debEl;
@@ -1334,7 +1334,7 @@
       const hostGana = oc.ganador === d.hostId;
       const el = document.createElement('div');
       el.className = 'hacp-shop hacp-deb-rev';
-      vp.appendChild(el);
+      overlayHost().appendChild(el);   // en móvil → body (visible sobre cualquier sección)
       const pH = Math.round(oc.pHost * 100), pI = 100 - pH;
       const domTxt = (t ? t.doms : []).map(dm => DOM_GLYPH[dm]).join('');
       el.innerHTML = `<div class="hacp-shop-box hacp-deb-revbox">
@@ -1435,7 +1435,7 @@
       if (debjEl) return debjEl;
       debjEl = document.createElement('div');
       debjEl.className = 'hacp-shop hacp-debj'; debjEl.hidden = true;
-      vp.appendChild(debjEl);
+      overlayHost().appendChild(debjEl);   // en móvil → body (visible sobre cualquier sección)
       ['pointerdown', 'pointerup', 'wheel', 'click'].forEach(ev => debjEl.addEventListener(ev, (e) => e.stopPropagation(), { passive: false }));
       return debjEl;
     }
