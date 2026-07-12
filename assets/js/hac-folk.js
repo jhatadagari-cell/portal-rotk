@@ -453,7 +453,7 @@ const HacFolk = (function () {
   // campo `errand` no se serializa, así que un snapshot lo descarta sin problema.
   function goHome(id, buildingId, onArrive) {
     const w = walkers.find(x => x.id === id); if (!w || !wk) return false;
-    if (w.onMission || ['exped-out', 'exped-in', 'fuera', 'saludo', 'esc-cheer', 'monta-out', 'silbando'].indexOf(w.state) >= 0) return false;
+    if (w.onMission || ['exped-out', 'exped-in', 'fuera', 'saludo', 'esc-cheer', 'esc-form', 'monta-out', 'silbando'].indexOf(w.state) >= 0) return false;
     const b = buildingId ? wk.buildings.get(buildingId) : null;
     const callNow = () => { if (onArrive) try { onArrive(); } catch (e) {} };
     if (!b || !b.approachKey) { callNow(); return 'now'; }
@@ -471,7 +471,7 @@ const HacFolk = (function () {
   // 'walking' / 'now' (ya está) / false (ocupado/sin ruta).
   function consultar(id, buildingId) {
     const w = walkers.find(x => x.id === id); if (!w || !wk) return false;
-    if (w.onMission || ['exped-out', 'exped-in', 'fuera', 'saludo', 'esc-cheer', 'monta-out', 'silbando'].indexOf(w.state) >= 0) return false;
+    if (w.onMission || ['exped-out', 'exped-in', 'fuera', 'saludo', 'esc-cheer', 'esc-form', 'monta-out', 'silbando'].indexOf(w.state) >= 0) return false;
     const b = buildingId ? wk.buildings.get(buildingId) : null;
     if (!b || !b.approachKey) return false;
     if (w.state === 'consultando' && w.consultBid === b.id) return 'now';   // ya está allí
@@ -651,19 +651,19 @@ const HacFolk = (function () {
       // (sincronizado). Si no, "sale del mapa" (oculto) hasta cumplir la duración.
       const em = escMap[w.id], t0 = nowSimMs();
       if (em && t0 < em.inicioMs + ESC_MUSTER_MS) {
-        w.moving = false; w.path = null; w.state = 'esc-cheer'; w.bowing = false; w.speech = null;
-        w._escEnd = em.inicioMs + ESC_MUSTER_MS; w.dir = 'S';
+        w.moving = false; w.bowing = false; w.speech = null; w._escEnd = em.inicioMs + ESC_MUSTER_MS; w.dir = 'S';
+        // CAMINA (no se teletransporta) a su sitio de formación: los CON caballo, fuera del
+        // vano (offset por idx, sin solaparse) para silbar y montar; los de a pie, en el vano.
         const e = wk.exitCell;
         if (caballos[w.id] && wk.outNear) {
-          // CON CABALLO: se planta FUERA del vano (separado por su idx, sin solaparse),
-          // silba y llama a su montura para montar durante la concentración.
           const off = (em.idx - (em.n - 1) / 2) * 1.2;
-          w.fx = wk.outNear[0] + off; w.fy = wk.outNear[1]; w.tx = w.fx; w.ty = w.fy;
-          w._escHorse = 'summon'; w.whistleT = 1.2; w._mountWait = 0; w.speech = '♪ ♫'; w.speechT = 99;
-          summonHorse(w.id, w.fx + 0.85, w.fy + 0.1);
+          w._formSpot = [wk.outNear[0] + off, wk.outNear[1]]; w._escHorse = 'pending';
         } else if (e) {
-          const off = (em.idx - (em.n - 1) / 2) * 0.85; w.fx = e[0] + off; w.fy = e[1]; w.tx = w.fx; w.ty = w.fy; w._escHorse = null;
-        }
+          const off = (em.idx - (em.n - 1) / 2) * 0.85;
+          w._formSpot = [e[0] + off, e[1]]; w._escHorse = null;
+        } else { w._formSpot = null; w._escHorse = null; }
+        if (w._formSpot) { w.path = [w._formSpot]; w.state = 'esc-form'; }
+        else { w.state = 'esc-cheer'; w.path = null; }
       } else {
         w.moving = false; w.path = null; w.state = 'fuera';
         const o = escOrder(w) || w.order, endOut = o ? o.startMs + (o.durMs || 120000) : t0;
@@ -674,6 +674,13 @@ const HacFolk = (function () {
       w.state = 'silbando'; w.moving = false; w.path = null; w.dir = 'S';
       w.speech = '♪ ♫'; w.speechT = 99; w.whistleT = 1.3; w._mountWait = 0;
       summonHorse(w.id, w.fx + 1.0, w.fy + 0.1);
+    } else if (w.state === 'esc-form') {
+      // Llegó a su sitio de formación. Los de a pie esperan; los de caballo silban y llaman.
+      w.state = 'esc-cheer'; w.moving = false; w.path = null; w.dir = 'S';
+      if (w._escHorse === 'pending') {
+        w._escHorse = 'summon'; w.whistleT = 1.2; w._mountWait = 0; w.speech = '♪ ♫'; w.speechT = 99;
+        summonHorse(w.id, w.fx + 0.85, w.fy + 0.1);
+      }
     } else if (w.state === 'exped-in') {
       endMission(w);   // de vuelta dentro de la finca → misión cumplida
     } else if (w.state === 'saliendo') {
@@ -1108,7 +1115,7 @@ const HacFolk = (function () {
       // muralla) y no está en tránsito de expedición, que vuelva a entrar. OJO: se
       // comprueba por LÍMITES de rejilla, no por `set` (hay muchas celdas válidas
       // fuera de `set`: puertas, bordes… comprobarlo así mandaba a TODOS al portón).
-      if (['exped-out', 'exped-in', 'fuera', 'monta-out', 'silbando', 'esc-cheer'].indexOf(w.state) < 0 && !w.insideId && fueraDeFinca(w)) enterFromOutside(w);
+      if (['exped-out', 'exped-in', 'fuera', 'monta-out', 'silbando', 'esc-cheer', 'esc-form'].indexOf(w.state) < 0 && !w.insideId && fueraDeFinca(w)) enterFromOutside(w);
       const inDebate = debateGate(w);   // un debate en curso tiene prioridad sobre órdenes
       if (!inDebate) missionGate(w);
       switch (w.state) {
@@ -1138,6 +1145,7 @@ const HacFolk = (function () {
           break;
         case 'saludo': { w.phase += dt * 0.5; w.missionTimer -= dt; if (w.missionTimer <= 0) { w.bowing = false; const so = escOrder(w) || w.order; (so && so.tipo === 'expedicion') ? startExpedition(w) : startMissionVisit(w); } break; }
         case 'monta-out': followPath(w, dt, SPD); break;
+        case 'esc-form': followPath(w, dt, escMap[w.id] ? SPD * ESC_RUSH : SPD); break;
         case 'silbando': {
           w.phase += dt * 0.5;
           if (w.whistleT > 0) w.whistleT -= dt;
@@ -2221,6 +2229,7 @@ const HacFolk = (function () {
     if (w.state === 'esc-cheer') return w.bowing ? '¡A la batalla!' : 'Formando en el portón';
     if (w.state === 'saludo') return enEsc ? 'Se prepara para la escaramuza' : 'Recibe tus órdenes';
     if (w.state === 'fuera') return enEsc ? 'Combatiendo en la escaramuza' : 'En expedición fuera de la finca';
+    if (w.state === 'esc-form') return 'Toma posición en el portón';
     if (w.state === 'monta-out') return 'Sale a por su caballo';
     if (w.state === 'silbando') return 'Silba a su caballo';
     if (w.state === 'exped-out') return w.mounted ? 'Parte a caballo' : (enEsc ? 'Acude al portón' : 'Saliendo de la finca');
