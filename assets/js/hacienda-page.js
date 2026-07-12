@@ -1092,7 +1092,9 @@
       const sig = JSON.stringify(map);
       if (sig !== lastDebSig) { lastDebSig = sig; HacFolk.setDebate(map); }
     }
-    function afterDebChange() { syncDebateFolk(); refreshCharPanel(); renderDebAlert(); if (mShell && mShell.refreshDeb) mShell.refreshDeb(); }
+    // Fuerza el rebuild del panel (charSig='') además de refrescar: garantiza que una
+    // invitación aceptada/rechazada desaparezca ya, sin depender de que sigOf lo detecte.
+    function afterDebChange() { syncDebateFolk(); charSig = ''; refreshCharPanel(); renderDebAlert(); if (mShell && mShell.refreshDeb) mShell.refreshDeb(); }
     // Auto-acepta las invitaciones a NPC (sin dueño) que YO envié, tras ~5 s.
     const _npcTried = {};
     function debNpcAutoAccept() {
@@ -1408,6 +1410,7 @@
     // en 60 s, la IA elige (determinista). Cada ronda mueve el tira y afloja (abajo).
     let debjEl = null, debjId = null, debjIv = null, debjAnimTimer = null, debjFrame = 0;
     let debjShownRound = -1, debjShownP = null, debjAnimating = false;   // para la animación de clash
+    let _debjRenderSig = null;   // firma estructural: solo se reconstruye la ventana si cambia (si no, solo tic-tac)
     const skillDe = (pjId, tema) => debNivel(pjId, tema);
     const stanceOf = (id) => (DEB.STANCES || []).find(s => s.id === id) || { zh: '?', nombre: '?' };
     // Aptitud + aspecto del personaje (para dibujarlo con HacChar). NPC → color de la casa.
@@ -1454,7 +1457,7 @@
     function abrirDebateJuego() {
       const d = DEB && DEB.miDebate(h.id, myId);
       if (!d) { toast('No tienes un debate en curso'); return; }
-      debjId = d.id; debjAnimating = false;
+      debjId = d.id; debjAnimating = false; _debjRenderSig = null;   // fuerza el primer render completo
       // No re-animar rondas ya resueltas al abrir: arranca "al día".
       const t0 = DEB.tug(d, debProb(debNivel(d.hostId, d.tema), debNivel(d.invitadoId, d.tema)));
       debjShownRound = t0.rondas.length; debjShownP = t0.p;
@@ -1502,6 +1505,15 @@
       const info = completo ? null : DEB.turnInfo(i);
       const miTurno = !completo && DEB.turnActorId(d, i) === myId;
       const round = completo ? DEB.ROUNDS : (info.round + 1);
+      // Si NADA estructural cambió (mismo turno/jugadas), NO reconstruyas: solo actualiza la
+      // cuenta atrás. Reconstruir cada segundo destruía los botones de postura al pulsarlos.
+      const structSig = [DEB.jugCount(d), completo ? 1 : 0, miTurno ? 1 : 0, i, rondas.length, d.estado].join('|');
+      if (!newlyDone && structSig === _debjRenderSig) {
+        const cdEl = el.querySelector('.hacp-deb-countdown');
+        if (cdEl && !completo) cdEl.textContent = Math.max(0, Math.ceil((DEB.turnoDeadline(d) - clock()) / 1000)) + 's';
+        return;
+      }
+      _debjRenderSig = structSig;
       // Bocadillos: SOLO la última ronda YA CERRADA (ambas jugadas), que se revela en el
       // choque. La ronda en curso queda OCULTA: ambos eligen A CIEGAS (leer la frase del
       // rival = conocer su postura, y el piedra-papel-tijera perdería todo el sentido).
@@ -1710,7 +1722,7 @@
         .hacp-debj-arg:hover{border-color:#d8b45a;background:#2c1f10}
         .hacp-debj-arg:active{transform:translateY(1px)}
         .hacp-debj-arg .zh{font:700 22px 'Noto Serif SC',serif;line-height:1}
-        .hacp-debj-arg.t-ofensiva .zh{color:#e0715a}.hacp-debj-arg.t-cautelosa .zh{color:#6fb0e0}.hacp-debj-arg.t-ingeniosa .zh{color:#9cc47a}
+        .hacp-debj-arg.t-ofensiva .zh{color:#e0715a}.hacp-debj-arg.t-cautelosa .zh{color:#8ac06a}.hacp-debj-arg.t-ingeniosa .zh{color:#5aa6e6}
         .hacp-debj-arg .nb{font:700 12px system-ui;color:#efe2c2}
         .hacp-debj-arg .beat{font-size:10px;color:#9a8360}.hacp-debj-arg .beat b{font:700 12px 'Noto Serif SC',serif;color:#d8c8a4}
         .hacp-debj-arg .ph{font-size:11px;line-height:1.25;color:#b39a72}
@@ -1722,7 +1734,7 @@
         .hacp-rps .rps-t{color:#8a6a3a;margin-right:3px}
         .hacp-rps .rps-chip{display:inline-flex;align-items:center;gap:4px;background:rgba(0,0,0,.28);border:1px solid rgba(216,180,90,.18);border-radius:999px;padding:2px 9px;color:#d8c8a4}
         .hacp-rps .rps-chip b{font:700 14px 'Noto Serif SC',serif}
-        .hacp-rps .rps-chip.t-ofensiva b{color:#e0715a}.hacp-rps .rps-chip.t-cautelosa b{color:#6fb0e0}.hacp-rps .rps-chip.t-ingeniosa b{color:#9cc47a}
+        .hacp-rps .rps-chip.t-ofensiva b{color:#e0715a}.hacp-rps .rps-chip.t-cautelosa b{color:#8ac06a}.hacp-rps .rps-chip.t-ingeniosa b{color:#5aa6e6}
         .hacp-rps .rps-arrow{color:#8a6a3a;font-size:9px}
         .hacp-rps .rps-loop{font:700 14px 'Noto Serif SC',serif;color:#e0715a;opacity:.55}
         /* ── CHOQUE DE IDEAS: caras en primer plano, impacto y veredicto (cinemático) ── */
@@ -1741,7 +1753,7 @@
         .cl-face{width:100px;height:100px;border-radius:50%;overflow:hidden;position:relative;margin:0 auto;border:3px solid #6a4a24;background:radial-gradient(circle at 50% 32%,#3a2a18,#150d07);box-shadow:inset 0 0 14px rgba(0,0,0,.65)}
         .cl-face canvas{position:absolute;left:50%;top:-10px;transform:translateX(-50%);height:168px;width:auto;image-rendering:pixelated}
         .cl-badge{font:700 22px 'Noto Serif SC',serif;line-height:1;margin-top:2px}
-        .cl-med.t-ofensiva .cl-badge{color:#e0715a}.cl-med.t-cautelosa .cl-badge{color:#6fb0e0}.cl-med.t-ingeniosa .cl-badge{color:#9cc47a}
+        .cl-med.t-ofensiva .cl-badge{color:#e0715a}.cl-med.t-cautelosa .cl-badge{color:#8ac06a}.cl-med.t-ingeniosa .cl-badge{color:#5aa6e6}
         .cl-nm{font-weight:700;font-size:13px;color:#efe2c2}
         .cl-st{font-size:11px;color:#b39a72}
         .cl-med.win{transform:scale(1.18);filter:drop-shadow(0 0 18px rgba(232,192,96,.85));z-index:2}
@@ -3410,7 +3422,7 @@
             const remD = Math.max(0, Math.ceil((enDeb.finMs - clock()) / 1000));
             const miTurno = DEB && !DEB.juegoCompleto(enDeb) && DEB.turnActorId(enDeb, DEB.turnoActual(enDeb)) === myId;
             const argLbl = DEB && DEB.juegoCompleto(enDeb) ? 'Ver debate' : (miTurno ? '¡Tu turno! Argumentar →' : 'Argumentar →');
-            mision = `<div class="hacp-cp-mis hacp-cp-mis-on hacp-deb-invite">${debLbl}<span class="hacp-cp-flag">Debatiendo de <b>${esc(tt ? tt.nombre : enDeb.tema)}</b> · queda <b class="hacp-deb-countdown">${fmtClock(remD)}</b></span><div class="r"><button type="button" class="hacp-cp-btn hacp-cp-go${miTurno ? ' hacp-mo-mis' : ''}" data-act="debj">${argLbl}</button></div></div>`;
+            mision = `<div class="hacp-cp-mis hacp-cp-mis-on hacp-deb-invite">${debLbl}<span class="hacp-cp-flag">Debatiendo de <b>${esc(tt ? tt.nombre : enDeb.tema)}</b> · queda <b class="hacp-deb-countdown" id="hacp-cp-debrest">${fmtClock(remD)}</b></span><div class="r"><button type="button" class="hacp-cp-btn hacp-cp-go${miTurno ? ' hacp-mo-mis' : ''}" data-act="debj">${argLbl}</button></div></div>`;
           } else if (invSent) {
             const tt = debTema(invSent.tema);
             mision = `<div class="hacp-cp-mis hacp-deb-invite">${debLbl}<span class="hacp-cp-flag">Reto enviado a <b>${esc(invSent.invitadoNombre || '…')}</b> <span style="opacity:.7">(${esc(tt ? tt.nombre : invSent.tema)})</span> · esperando respuesta…</span><div class="r"><button type="button" class="hacp-cp-btn" data-act="deb-cancel" data-id="${esc(invSent.id)}">Cancelar invitación</button></div></div>`;
@@ -3545,6 +3557,9 @@
       const st = charEl.querySelector('#hacp-cp-stats'); const sig = JSON.stringify(d.stats || 0);
       if (st && sig !== lastStatsSig) { lastStatsSig = sig; st.outerHTML = statsHTML(d); }
       const rt = charEl.querySelector('#hacp-cp-rest'); if (rt && d.activa) rt.textContent = fmtClock(d.rest);
+      // Cuenta atrás del debate en curso (si no, se quedaba congelada hasta el siguiente rebuild).
+      const dr = charEl.querySelector('#hacp-cp-debrest');
+      if (dr && DEB && myId) { const dd = DEB.miDebate(h.id, myId); if (dd) dr.textContent = fmtClock(Math.max(0, Math.ceil((dd.finMs - clock()) / 1000))); }
     }
 
     // ── Tienda del mercado (overlay) ─────────────────────────────────────────
