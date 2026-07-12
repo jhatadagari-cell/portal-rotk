@@ -550,9 +550,14 @@ const HacFolk = (function () {
   // un par de pasos adentro. La misión termina AQUÍ (endMission → recompensa): así el
   // mecenas cobra justo al reaparecer en la finca, sin recorrer todo el recinto hasta
   // una celda lejana. Desde dentro, retoma el paseo normal por su cuenta.
+  // Desmonta: suelta al corcel, que reaparece pastando fuera (junto a su querencia).
+  function dismount(w) {
+    w._escHorse = null; if (!w.mounted) return; w.mounted = false;
+    const hh = horseOf(w.id);
+    if (hh) { hh.rider = null; hh.summonTo = null; hh.arrived = false; hh.fx = hh.homeX; hh.fy = hh.homeY; hh.tx = hh.fx; hh.ty = hh.fy; hh.moving = false; hh.pauseT = 1 + mrand(hh) * 3; }
+  }
   function startReturn(w) {
-    // Desmonta (si volvía a caballo): suelta al corcel, que retoma su pastoreo fuera.
-    if (w.mounted) { w.mounted = false; const hh = horseOf(w.id); if (hh) { hh.rider = null; hh.summonTo = null; hh.arrived = false; hh.fx = hh.homeX; hh.fy = hh.homeY; hh.tx = hh.fx; hh.ty = hh.fy; hh.moving = false; hh.pauseT = 1 + mrand(hh) * 3; } }
+    dismount(w);   // si volvía a caballo, desmonta y libera al corcel
     const e = wk.exitCell || [Math.round(w.fx), Math.round(w.fy)];
     const far = wk.outFar || e;
     w.fx = far[0]; w.fy = far[1]; w.tx = far[0]; w.ty = far[1];        // reaparece FUERA, a lo lejos
@@ -649,7 +654,16 @@ const HacFolk = (function () {
         w.moving = false; w.path = null; w.state = 'esc-cheer'; w.bowing = false; w.speech = null;
         w._escEnd = em.inicioMs + ESC_MUSTER_MS; w.dir = 'S';
         const e = wk.exitCell;
-        if (e) { const off = (em.idx - (em.n - 1) / 2) * 0.85; w.fx = e[0] + off; w.fy = e[1]; w.tx = w.fx; w.ty = w.fy; }
+        if (caballos[w.id] && wk.outNear) {
+          // CON CABALLO: se planta FUERA del vano (separado por su idx, sin solaparse),
+          // silba y llama a su montura para montar durante la concentración.
+          const off = (em.idx - (em.n - 1) / 2) * 1.2;
+          w.fx = wk.outNear[0] + off; w.fy = wk.outNear[1]; w.tx = w.fx; w.ty = w.fy;
+          w._escHorse = 'summon'; w.whistleT = 1.2; w._mountWait = 0; w.speech = '♪ ♫'; w.speechT = 99;
+          summonHorse(w.id, w.fx + 0.85, w.fy + 0.1);
+        } else if (e) {
+          const off = (em.idx - (em.n - 1) / 2) * 0.85; w.fx = e[0] + off; w.fy = e[1]; w.tx = w.fx; w.ty = w.fy; w._escHorse = null;
+        }
       } else {
         w.moving = false; w.path = null; w.state = 'fuera';
         const o = escOrder(w) || w.order, endOut = o ? o.startMs + (o.durMs || 120000) : t0;
@@ -1046,7 +1060,7 @@ const HacFolk = (function () {
   function endMission(w) {
     const eo = escOrder(w) || w.order;
     if (eo) w.missionDoneFor = eo.startMs;   // marca ESTA orden como cumplida (no re-activar)
-    w.onMission = false; w.bowing = false; w.missionTask = null;
+    w.onMission = false; w.bowing = false; w.missionTask = null; dismount(w);   // por si acabó montado
     // Si terminó FUERA de la finca (expedición cumplida/cortada fuera), que entre.
     if (!w.insideId && fueraDeFinca(w)) { enterFromOutside(w); return; }
     if (w.insideId) startLeave(w);
@@ -1094,7 +1108,7 @@ const HacFolk = (function () {
       // muralla) y no está en tránsito de expedición, que vuelva a entrar. OJO: se
       // comprueba por LÍMITES de rejilla, no por `set` (hay muchas celdas válidas
       // fuera de `set`: puertas, bordes… comprobarlo así mandaba a TODOS al portón).
-      if (['exped-out', 'exped-in', 'fuera', 'monta-out', 'silbando'].indexOf(w.state) < 0 && !w.insideId && fueraDeFinca(w)) enterFromOutside(w);
+      if (['exped-out', 'exped-in', 'fuera', 'monta-out', 'silbando', 'esc-cheer'].indexOf(w.state) < 0 && !w.insideId && fueraDeFinca(w)) enterFromOutside(w);
       const inDebate = debateGate(w);   // un debate en curso tiene prioridad sobre órdenes
       if (!inDebate) missionGate(w);
       switch (w.state) {
@@ -1142,16 +1156,28 @@ const HacFolk = (function () {
         case 'exped-out': followPath(w, dt, escMap[w.id] ? SPD * ESC_RUSH : SPD); break;
         case 'exped-in': followPath(w, dt, SPD); break;
         case 'esc-cheer': {
-          // Espera en la puerta; en la sub-ventana final, 拱手 + grito al unísono.
+          // Los de a pie esperan en la puerta; los de caballo, fuera, silban y montan.
+          // En la sub-ventana final, todos gritan al unísono; luego salen juntos.
           w.phase += dt * 0.5;
-          if (w.speechT > 0) { w.speechT -= dt; if (w.speechT <= 0) w.speech = null; }
+          if (w.speechT > 0) { w.speechT -= dt; if (w.speechT <= 0 && w._escHorse !== 'summon') w.speech = null; }
           const t0 = nowSimMs(), end = w._escEnd || t0;
-          if (t0 >= end - ESC_CHEER_MS && !w.bowing) { w.bowing = true; w.speech = escCheerFor(w); w.speechT = ESC_CHEER_MS / 1000; w.dir = 'S'; }
+          // Fase CABALLO: acude la montura y monta (mientras dure el silbido).
+          if (w._escHorse === 'summon') {
+            if (w.whistleT > 0) w.whistleT -= dt;
+            w._mountWait = (w._mountWait || 0) + dt;
+            const hh = horseOf(w.id), llegado = hh && hh.arrived;
+            if (hh && !llegado) { const fd = faceFromGrid(hh.fx - w.fx, hh.fy - w.fy); if (fd) w.dir = fd; }
+            if ((llegado && w.whistleT <= 0) || w._mountWait > 9) {
+              if (hh) { hh.rider = w.id; hh.summonTo = null; }
+              w.mounted = !!hh; w._escHorse = 'ready'; w.speech = null; w.speechT = 0; w.dir = 'S';
+            }
+          }
+          if (w._escHorse !== 'summon' && t0 >= end - ESC_CHEER_MS && !w.bowing) { w.bowing = true; w.speech = escCheerFor(w); w.speechT = ESC_CHEER_MS / 1000; w.dir = 'S'; }
           if (t0 >= end) {
-            // Grito hecho: SALEN JUNTOS cruzando el portón hacia el campo.
-            w.bowing = false; w.speech = null;
+            // Grito hecho: SALEN JUNTOS hacia el campo (los montados ya están fuera).
+            w.bowing = false; w.speech = null; w._escHorse = null;
             const out = [];
-            if (wk.outNear) out.push(wk.outNear);
+            if (wk.outNear && !w.mounted) out.push(wk.outNear);
             if (wk.outFar) out.push(wk.outFar);
             if (out.length) { w.path = out; w.state = 'exped-out'; w.moving = false; }
             else {
