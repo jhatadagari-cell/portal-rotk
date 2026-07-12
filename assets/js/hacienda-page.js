@@ -1092,7 +1092,7 @@
       const sig = JSON.stringify(map);
       if (sig !== lastDebSig) { lastDebSig = sig; HacFolk.setDebate(map); }
     }
-    function afterDebChange() { syncDebateFolk(); refreshCharPanel(); renderDebAlert(); }
+    function afterDebChange() { syncDebateFolk(); refreshCharPanel(); renderDebAlert(); if (mShell && mShell.refreshDeb) mShell.refreshDeb(); }
     // Auto-acepta las invitaciones a NPC (sin dueño) que YO envié, tras ~5 s.
     const _npcTried = {};
     function debNpcAutoAccept() {
@@ -4128,7 +4128,7 @@
     }
     // Tic de 1 s: refresca SOLO el panel del personaje (cuenta atrás de expedición y
     // energía/regeneración se derivan del reloj de servidor → tienen que verse vivos).
-    setInterval(() => { if (charId) refreshCharPanel(); if (escVisible) escTick(); pulseMisNav(); pulseHaciendaNav(); pulseEscNav(); renderDebAlert(); }, 1000);
+    setInterval(() => { if (charId) refreshCharPanel(); if (escVisible) escTick(); pulseMisNav(); pulseHaciendaNav(); pulseEscNav(); renderDebAlert(); if (mShell && mShell.refreshDeb) mShell.refreshDeb(); }, 1000);
 
     // Popup con la gente que hay dentro de un edificio (al pulsar su banner).
     function showPop(x, y, sign) {
@@ -4306,28 +4306,43 @@
         sec.querySelectorAll('.hacp-mtab-body').forEach(b => { b.hidden = (b.dataset.mtb !== t.dataset.mt); });
         if (t.dataset.mt === 'exped') renderExped(); else renderInternas();
       }));
+      let _internasSig = null;
       function renderInternas() {
-        const body = sec.querySelector('[data-mtb="internas"]');
-        if (!myId) { body.innerHTML = '<div class="hacp-inv-note">Entra con tu mecenas para debatir.</div>'; return; }
-        const invPend = DEB && DEB.miInvitacionPendiente(h.id, myId, clock());
-        const enDeb = DEB && DEB.miDebate(h.id, myId);
-        const invSent = DEB && DEB.miInvitacionEnviada(h.id, myId);
-        const cd = DEB ? DEB.cooldownRestanteMs(h.id, myId, clock()) : 0;
-        const hayJard = gardensFinca().length > 0;
+        const body = sec.querySelector('[data-mtb="internas"]'); if (!body) return;
         let inner;
-        if (!DEB) inner = '<div class="hacp-inv-note">Los debates aún no están disponibles.</div>';
-        else if (invPend) { const tt = debTema(invPend.tema); inner = `<div class="hacp-mrow"><div class="hacp-mrow-main"><b>🗣 ${esc(invPend.hostNombre || 'Alguien')} te reta</b><span>Debate de ${esc(tt ? tt.nombre : invPend.tema)}</span></div><div style="display:flex;gap:6px"><button class="hacp-cp-btn hacp-cp-go" data-deb-yes="${esc(invPend.id)}">Aceptar</button><button class="hacp-cp-btn" data-deb-no="${esc(invPend.id)}">Rechazar</button></div></div>`; }
-        else if (enDeb) { const tt = debTema(enDeb.tema), remD = Math.max(0, Math.ceil((enDeb.finMs - clock()) / 1000)); inner = `<div class="hacp-mrow"><div class="hacp-mrow-main"><b>🗣 Debate de ${esc(tt ? tt.nombre : enDeb.tema)}</b><span>en el jardín · queda ${fmtClock(remD)}</span></div><button class="hacp-cp-btn hacp-cp-go" data-deb-play="1">Argumentar</button></div>`; }
-        else if (invSent) inner = `<div class="hacp-mrow"><div class="hacp-mrow-main"><b>🗣 Reto enviado a ${esc(invSent.invitadoNombre || '…')}</b><span>esperando respuesta…</span></div><button class="hacp-cp-btn" data-deb-cancel="${esc(invSent.id)}">Cancelar</button></div>`;
-        else if (cd > 0) inner = `<div class="hacp-inv-note">Tu mecenas reposa tras el último debate · disponible en ${fmtClock(Math.ceil(cd / 1000))}.</div>`;
-        else if (!hayJard) inner = '<div class="hacp-inv-note">Construye un <b>Jardín</b> en la finca para poder debatir.</div>';
-        else inner = `<div class="hacp-mrow"><div class="hacp-mrow-main"><b>🗣 Invitar a debatir</b><span>Reta a otro mecenas a un debate de 5 min en el jardín · XP + posible libro · prestigio al ganador.</span></div><button class="hacp-cp-btn hacp-cp-go" data-deb-open="1">Invitar</button></div>`;
-        body.innerHTML = inner;
+        if (!myId) inner = '<div class="hacp-inv-note">Entra con tu mecenas para debatir.</div>';
+        else if (!DEB) inner = '<div class="hacp-inv-note">Los debates aún no están disponibles.</div>';
+        else {
+          const invPend = DEB.miInvitacionPendiente(h.id, myId, clock());
+          const enDeb = DEB.miDebate(h.id, myId);
+          const invSent = DEB.miInvitacionEnviada(h.id, myId);
+          const cd = DEB.cooldownRestanteMs(h.id, myId, clock());
+          const hayJard = gardensFinca().length > 0;
+          if (invPend) { const tt = debTema(invPend.tema); inner = `<div class="hacp-mrow"><div class="hacp-mrow-main"><b>🗣 ${esc(invPend.hostNombre || 'Alguien')} te reta</b><span>Debate de ${esc(tt ? tt.nombre : invPend.tema)}</span></div><div style="display:flex;gap:6px"><button class="hacp-cp-btn hacp-cp-go" data-deb-yes="${esc(invPend.id)}">Aceptar</button><button class="hacp-cp-btn" data-deb-no="${esc(invPend.id)}">Rechazar</button></div></div>`; }
+          else if (enDeb) {
+            const tt = debTema(enDeb.tema), remM = Math.max(1, Math.ceil((enDeb.finMs - clock()) / 60000)), done = DEB.juegoCompleto(enDeb);
+            const sub = done ? `argumentos hechos · veredicto en ~${remM} min` : `en el jardín · queda ~${remM} min`;
+            inner = `<div class="hacp-mrow"><div class="hacp-mrow-main"><b>🗣 Debate de ${esc(tt ? tt.nombre : enDeb.tema)}</b><span>${sub}</span></div><button class="hacp-cp-btn hacp-cp-go" data-deb-play="1">${done ? 'Ver debate' : 'Argumentar'}</button></div>`;
+          }
+          else if (invSent) inner = `<div class="hacp-mrow"><div class="hacp-mrow-main"><b>🗣 Reto enviado a ${esc(invSent.invitadoNombre || '…')}</b><span>esperando respuesta…</span></div><button class="hacp-cp-btn" data-deb-cancel="${esc(invSent.id)}">Cancelar</button></div>`;
+          else if (cd > 0) inner = `<div class="hacp-inv-note">Tu mecenas reposa tras el último debate · disponible en ${fmtClock(Math.ceil(cd / 1000))}.</div>`;
+          else if (!hayJard) inner = '<div class="hacp-inv-note">Construye un <b>Jardín</b> en la finca para poder debatir.</div>';
+          else inner = `<div class="hacp-mrow"><div class="hacp-mrow-main"><b>🗣 Invitar a debatir</b><span>Reta a otro mecenas a un debate de 5 min en el jardín · XP + posible libro · prestigio al ganador.</span></div><button class="hacp-cp-btn hacp-cp-go" data-deb-open="1">Invitar</button></div>`;
+        }
+        if (inner === _internasSig) return;   // sin cambios → no reconstruir (no parpadea ni se comen los taps)
+        _internasSig = inner; body.innerHTML = inner;
         const op = body.querySelector('[data-deb-open]'); if (op) op.addEventListener('click', () => { abrirInvitarDebate(); });
         const pl = body.querySelector('[data-deb-play]'); if (pl) pl.addEventListener('click', () => { abrirDebateJuego(); });
         const cn = body.querySelector('[data-deb-cancel]'); if (cn) cn.addEventListener('click', () => { rechazarDebate(cn.dataset.debCancel); renderInternas(); });
         const yy = body.querySelector('[data-deb-yes]'); if (yy) yy.addEventListener('click', () => { aceptarDebate(yy.dataset.debYes); renderInternas(); });
         const nn = body.querySelector('[data-deb-no]'); if (nn) nn.addEventListener('click', () => { rechazarDebate(nn.dataset.debNo); renderInternas(); });
+      }
+      // Refresca la fila de debate de Misiones si es la vista activa (la llama el latido de 1 s).
+      function refreshMobileDeb() {
+        if (mActive !== 'misiones') return;
+        const at = sec.querySelector('.hacp-mtab.on');
+        if (at && at.dataset.mt === 'exped') return;   // la pestaña de expediciones se gestiona sola
+        renderInternas();
       }
       function renderExped() {
         const body = sec.querySelector('[data-mtb="exped"]');
@@ -4348,7 +4363,7 @@
         sec.hidden = false;
         if (id) { charId = id; buildCharPanel(id); startAvatar(); }
       }
-      mShell = { showChar, go: (s) => mgo(s) };
+      mShell = { showChar, go: (s) => mgo(s), refreshDeb: refreshMobileDeb };
 
       function mgo(id) {
         // Cierra cualquier modal (tienda/equipo/casa/abandonar) y el popup de edificio.
