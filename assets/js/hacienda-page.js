@@ -3220,7 +3220,7 @@
           const val = map ? man.xp[dks[0]] : man.xp, col = map ? 'var(--gold)' : (DOM_COLOR[man.dom] || 'var(--gold)');
           return `<button type="button" class="hacp-slot full manual" data-usar="${esc(def.id)}" title="${esc(def.nombre)} · toca para usar (${esc(HacTienda.efectoTexto(def))})">${def.icon || '∎'}<span class="hacp-slot-xp" style="color:${col}">${glyphs} +${val} XP</span></button>`;
         }
-        return `<div class="hacp-slot full" title="${esc(def.nombre)} ${esc(def.zh || '')}">${def.icon || '∎'}</div>`;
+        return `<div class="hacp-slot full${def.raro ? ' rare' : ''}" title="${esc(def.nombre)} ${esc(def.zh || '')}${def.raro ? ' · RARO' : ''}">${def.icon || '∎'}</div>`;
       }).join('');
       const canStore = hasHome && d.mine && d.money > 0;
       const canTake = hasHome && d.mine && d.ahorro > 0;
@@ -3333,6 +3333,17 @@
           toast(`🏯 Presentaste el libro a ${fund} · +${pctv}% XP a la hacienda (7 días)`);
           if (window.HacBitacora) HacBitacora.log(myId, 'progreso', `🏯 Presentaste «${def.nombre}» a ${fund} · +${pctv}% XP a toda la hacienda durante 7 días`);
           if (window.HacPuntos && HacPuntos.award) HacPuntos.award(h.id, myId, HacPuntos.recompensa ? HacPuntos.recompensa(30, 300) : 12);   // prestigio de casa al donante
+          // Ideas REVELADORAS → el fundador puede recompensarte con una RELIQUIA RARA (baja prob.).
+          if (cal === 'reveladoras' && window.HacTienda && HacTienda.raroAleatorio && Math.random() < 0.25) {
+            const rid = HacTienda.raroAleatorio(), rdef = rid && HacTienda.get(rid);
+            if (rdef && HacStats.darItem) {
+              const gg = HacStats.darItem(myId, rid);
+              if (gg && gg.ok) {
+                toast(`🎁 ${fund} te obsequia ${rdef.icon || ''} ${rdef.nombre} · ¡objeto RARO!`);
+                if (window.HacBitacora) HacBitacora.log(myId, 'progreso', `🎁 ${fund} te obsequió ${rdef.icon || ''} «${rdef.nombre}» (objeto RARO) por presentarle unas ideas tan reveladoras`);
+              }
+            }
+          }
           return HacBuff.reload();
         })
         .then(() => { refresh(); if (charId) buildCharPanel(charId); })
@@ -4091,13 +4102,13 @@
       for (let i = 0; i < max; i++) {
         const id = eq[i], def = id && HacTienda.get(id);
         slots.push(def
-          ? `<button type="button" class="hacp-eq-slot full" data-uneq="${esc(id)}" title="${esc(def.nombre)} · clic para quitar"><span class="hacp-eq-ic">${def.icon}</span><span class="hacp-eq-nm">${esc(def.nombre)}</span><span class="hacp-eq-bo">${esc(HacTienda.efectoTexto(def).replace('Equipable · ', ''))}</span><span class="hacp-eq-x">✕</span></button>`
+          ? `<button type="button" class="hacp-eq-slot full${def.raro ? ' rare' : ''}" data-uneq="${esc(id)}" title="${esc(def.nombre)} · clic para quitar"><span class="hacp-eq-ic">${def.icon}</span><span class="hacp-eq-nm">${esc(def.nombre)}</span><span class="hacp-eq-bo">${esc(HacTienda.efectoTexto(def).replace('Equipable · ', ''))}</span><span class="hacp-eq-x">✕</span></button>`
           : `<div class="hacp-eq-slot empty">Ranura libre</div>`);
       }
       // Objetos equipables en la mochila (no equipados).
       const ownable = HacStats.inventario(myId).filter(it => HacTienda.equipBonus(it.id));
       const list = ownable.length
-        ? ownable.map(it => { const def = HacTienda.get(it.id); const full = eq.length >= max; return `<button type="button" class="hacp-eq-own" data-eq="${esc(it.id)}"${full ? ' disabled' : ''}><span class="hacp-eq-ic">${def.icon}</span><span class="hacp-eq-nm">${esc(def.nombre)}${(it.n || 1) > 1 ? ' ×' + it.n : ''}</span><span class="hacp-eq-bo">${esc(HacTienda.efectoTexto(def).replace('Equipable · ', ''))}</span></button>`; }).join('')
+        ? ownable.map(it => { const def = HacTienda.get(it.id); const full = eq.length >= max; return `<button type="button" class="hacp-eq-own${def.raro ? ' rare' : ''}" data-eq="${esc(it.id)}"${full ? ' disabled' : ''}><span class="hacp-eq-ic">${def.icon}</span><span class="hacp-eq-nm">${esc(def.nombre)}${(it.n || 1) > 1 ? ' ×' + it.n : ''}</span><span class="hacp-eq-bo">${esc(HacTienda.efectoTexto(def).replace('Equipable · ', ''))}</span></button>`; }).join('')
         : '<span class="hacp-inv-note">No tienes objetos equipables. Cómpralos en el mercado (tratados de armas, clásicos, códigos legales…).</span>';
       el.innerHTML = `
         <div class="hacp-shop-box hacp-eq-box">

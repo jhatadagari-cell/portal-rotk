@@ -92,6 +92,13 @@ const HacTienda = (function () {
     { id: 'comp-mil', nombre: 'Compendio militar',       zh: '武經', icon: '📕', tier: 4, precio: 80, tipo: 'manual', efecto: { manual: { dom: 'militar', xp: 130 } },        desc: 'Gran obra de estrategia. Úsalo para +130 XP Militar.' },
     { id: 'comp-cul', nombre: 'Compendio cultural',      zh: '文淵', icon: '📗', tier: 4, precio: 80, tipo: 'manual', efecto: { manual: { dom: 'cultural', xp: 130 } },       desc: 'Suma del saber letrado. Úsalo para +130 XP Cultural.' },
     { id: 'comp-adm', nombre: 'Compendio administrativo', zh: '政要', icon: '📘', tier: 4, precio: 80, tipo: 'manual', efecto: { manual: { dom: 'administrativo', xp: 130 } }, desc: 'Tratado de gobierno. Úsalo para +130 XP Administrativo.' },
+    // ── RELIQUIAS RARAS (rareza superior): NO se compran (oculto) → se ENCUENTRAN en
+    //    misiones (baja probabilidad) o las regala tu señor. Contorno azul de "raro".
+    //    Dan +3 a un stat, o +1/+1/+1 a los tres. tier alto = salen poco como botín.
+    { id: 'raro-mil', nombre: 'Alabarda del general',   zh: '名將戟', icon: '🗡️', tier: 3, tipo: 'equipo', raro: true, oculto: true, precio: 140, efecto: { equip: { militar: 3 } },                          desc: 'Reliquia de un gran general. Equípala para +3 武. (Raro)' },
+    { id: 'raro-cul', nombre: 'Tratado perdido',        zh: '秘典',   icon: '📜', tier: 3, tipo: 'equipo', raro: true, oculto: true, precio: 140, efecto: { equip: { cultural: 3 } },                         desc: 'Un saber casi olvidado. Equípalo para +3 文. (Raro)' },
+    { id: 'raro-adm', nombre: 'Sello imperial',         zh: '玉璽',   icon: '🔶', tier: 3, tipo: 'equipo', raro: true, oculto: true, precio: 140, efecto: { equip: { administrativo: 3 } },                   desc: 'Autoridad de la corte. Equípalo para +3 政. (Raro)' },
+    { id: 'raro-tri', nombre: 'Estandarte del dragón',  zh: '臥龍',   icon: '🐉', tier: 4, tipo: 'equipo', raro: true, oculto: true, precio: 180, efecto: { equip: { militar: 1, cultural: 1, administrativo: 1 } }, desc: 'La marca de un genio integral. Equípalo para +1 武 +1 文 +1 政. (Raro)' },
   ].concat(_conclusiones));
 
   const byId = {}; CATALOGO.forEach(i => { byId[i.id] = i; });
@@ -142,8 +149,19 @@ const HacTienda = (function () {
     for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor((rng ? rng.next() : Math.random()) * (i + 1)); const t = pool[i]; pool[i] = pool[j]; pool[j] = t; }
     return fijos.concat(pool.slice(0, n)).sort((a, b) => a.tier - b.tier);
   }
+  // Reliquias RARAS (contorno azul). No se compran; se encuentran/regalan.
+  const RARE_LOOT_CHANCE = 0.05;   // 5 % del botín de misión es una reliquia rara
+  const esRaro = (id) => !!(byId[id] && byId[id].raro);
+  const raros = () => CATALOGO.filter(i => i.raro);
+  function raroAleatorio(rng) {                       // una reliquia rara al azar (regalo del fundador, etc.)
+    const pool = raros(); if (!pool.length) return null;
+    return pool[Math.floor((rng ? rng.next() : Math.random()) * pool.length)].id;
+  }
   // Botín aleatorio PONDERADO por tier (los de mayor tier salen menos), de ≤ tier.
+  // Con baja probabilidad, en su lugar cae una RELIQUIA RARA (de tier cercano).
   function botinAleatorio(tier) {
+    const raroPool = raros().filter(i => (i.tier || 1) <= (tier || 1) + 1);
+    if (raroPool.length && Math.random() < RARE_LOOT_CHANCE) return raroPool[Math.floor(Math.random() * raroPool.length)].id;
     const pool = disponibles(tier).filter(i => i.tipo !== 'caballo'); if (!pool.length) return null;   // el caballo no cae como botín (es compra única)
     const w = pool.map(i => 1 / Math.pow(2, (i.tier || 1) - 1));
     let tot = 0; w.forEach(x => tot += x); let r = Math.random() * tot;
@@ -151,6 +169,6 @@ const HacTienda = (function () {
     return pool[pool.length - 1].id;
   }
 
-  return { CATALOGO, get, disponibles, bloqueados, efectoTexto, equipBonus, manualDe, stockDelDia, botinAleatorio, COUNT_BY_TIER, GLIFOS: G };
+  return { CATALOGO, get, disponibles, bloqueados, efectoTexto, equipBonus, manualDe, stockDelDia, botinAleatorio, esRaro, raroAleatorio, COUNT_BY_TIER, GLIFOS: G };
 })();
 if (typeof window !== 'undefined') window.HacTienda = HacTienda;

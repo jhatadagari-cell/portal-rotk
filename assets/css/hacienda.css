@@ -355,6 +355,10 @@ html.hacp-pseudofs, html.hacp-pseudofs body{ overflow:hidden; }
 .hacp-inv-cap b{ color:var(--parch); }
 .hacp-inv-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:5px; margin-bottom:9px; }
 .hacp-slot{ aspect-ratio:1; border-radius:4px; background:rgba(255,255,255,.03); border:1px solid rgba(201,168,76,.18); }
+/* ── Rareza RARA (contorno azul + brillo) para objetos superiores ── */
+.hacp-slot.rare, .hacp-eq-slot.full.rare, .hacp-eq-own.rare{ border-color:#5aa6e6 !important; box-shadow:0 0 0 1px #5aa6e6, 0 0 9px rgba(90,166,230,.5); background:rgba(90,166,230,.12); }
+.hacp-eq-slot.full.rare:hover, .hacp-eq-own.rare:hover{ border-color:#8ac4f2 !important; background:rgba(90,166,230,.2); }
+.hacp-eq-own.rare .hacp-eq-nm, .hacp-eq-slot.full.rare .hacp-eq-nm{ color:#bfe0ff; }
 .hacp-store{ display:block; width:100%; text-align:center; }
 .hacp-buyhome,.hacp-gohome{ display:block; width:100%; text-align:center; }
 .hacp-home-row{ display:flex; gap:6px; }
