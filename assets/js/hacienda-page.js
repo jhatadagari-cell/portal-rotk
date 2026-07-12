@@ -1148,7 +1148,16 @@
       if (DEB.turnActorId(d, i) === myId) { const key = d.id + '#' + i; if (_turnNotified !== key) { _turnNotified = key; toast('🗣 Tu turno en el debate · argumenta'); } }
     }
     // Pulso de debates (poll): sim, auto-accept NPC, resolución, notificaciones, avisos.
-    function debPulse() { if (!DEB) return; syncDebateFolk(); debNpcAutoAccept(); maybeResolveDebate(); debNotify(); debTurnNotify(); renderDebAlert(); }
+    // Si el turno activo agotó sus 60 s, la IA juega por él AUNQUE nadie tenga la ventana
+    // abierta → el debate avanza y no se queda un "tu turno" colgado un buen rato.
+    function debAutoAdvance() {
+      if (!DEB || !myId) return;
+      const d = DEB.miDebate(h.id, myId);
+      if (!d || DEB.juegoCompleto(d) || clock() <= DEB.turnoDeadline(d)) return;
+      const i = DEB.turnoActual(d), actor = DEB.turnActorId(d, i);
+      DEB.jugar(d.id, i, DEB.iaStance(d, i, debNivel(actor, d.tema))).then(() => DEB.reload().then(() => { syncDebateFolk(); renderDebAlert(); })).catch(() => {});
+    }
+    function debPulse() { if (!DEB) return; syncDebateFolk(); debNpcAutoAccept(); maybeResolveDebate(); debAutoAdvance(); debNotify(); debTurnNotify(); renderDebAlert(); }
     // Firma del estado de MI debate (invitación recibida / enviada / en curso / mi turno):
     // alimenta `sigOf` para que el panel se RECONSTRUYA solo cuando algo cambia (sin refrescar
     // el navegador) y `renderDebAlert` para el aviso flotante.
@@ -1162,32 +1171,40 @@
     }
     // Aviso FLOTANTE que parpadea: te retan a debatir (aceptar/rechazar) o es tu turno
     // (argumentar). Siempre visible sobre el mapa aunque el panel del personaje esté cerrado.
-    let debAlertEl = null;
+    let debAlertEl = null, _debAlertSig = '';
     function ensureDebAlertEl() {
       if (debAlertEl) return debAlertEl;
       debAlertEl = document.createElement('div');
       debAlertEl.className = 'hacp-deb-alert'; debAlertEl.hidden = true;
       vp.appendChild(debAlertEl);
+      // Sin esto el mapa (que arrastra/zooma con punteros sobre vp) se come los taps de los botones.
+      ['pointerdown', 'pointerup', 'touchstart', 'touchend', 'click'].forEach(ev => debAlertEl.addEventListener(ev, (e) => e.stopPropagation(), { passive: false }));
       return debAlertEl;
     }
     function renderDebAlert() {
-      if (!DEB || !myId) { if (debAlertEl) debAlertEl.hidden = true; return; }
-      const el = ensureDebAlertEl();
-      const inv = DEB.miInvitacionPendiente(h.id, myId, clock());
-      const dd = DEB.miDebate(h.id, myId);
+      const inv = (DEB && myId) ? DEB.miInvitacionPendiente(h.id, myId, clock()) : null;
+      const dd = (DEB && myId) ? DEB.miDebate(h.id, myId) : null;
       const myTurn = dd && !DEB.juegoCompleto(dd) && DEB.turnActorId(dd, DEB.turnoActual(dd)) === myId;
       const juegoAbierto = debjEl && !debjEl.hidden;
-      if (inv) {
-        const t = debTema(inv.tema);
-        el.innerHTML = `<span class="ic">🗣</span><span class="tx"><b>${esc(inv.hostNombre || 'Alguien')}</b> te reta a debatir<br><span class="sb">${esc(t ? t.nombre : inv.tema)}</span></span><div class="bt"><button type="button" data-da="yes" data-id="${esc(inv.id)}">Aceptar</button><button type="button" class="sec" data-da="no" data-id="${esc(inv.id)}">Rechazar</button></div>`;
-      } else if (dd && myTurn && !juegoAbierto) {
-        const t = debTema(dd.tema);
-        el.innerHTML = `<span class="ic">🗣</span><span class="tx"><b>Tu turno</b> en el debate<br><span class="sb">${esc(t ? t.nombre : dd.tema)}</span></span><div class="bt"><button type="button" data-da="play">Argumentar →</button></div>`;
-      } else { el.hidden = true; return; }
+      let mode = '', id = '', tema = '', who = '';
+      if (inv) { mode = 'inv'; id = inv.id; tema = inv.tema; who = inv.hostNombre || 'Alguien'; }
+      else if (dd && myTurn && !juegoAbierto) { mode = 'turn'; id = dd.id; tema = dd.tema; }
+      // Solo reconstruye si cambia el contenido: reconstruir cada segundo destruía los
+      // botones justo cuando se tocaban (parecía que "no hacían nada").
+      const sig = [mode, id, tema, who].join('|');
+      if (sig === _debAlertSig) return;
+      _debAlertSig = sig;
+      if (!mode) { if (debAlertEl) debAlertEl.hidden = true; return; }
+      const el = ensureDebAlertEl(), t = debTema(tema);
+      if (mode === 'inv') {
+        el.innerHTML = `<span class="ic">🗣</span><span class="tx"><b>${esc(who)}</b> te reta a debatir<br><span class="sb">${esc(t ? t.nombre : tema)}</span></span><div class="bt"><button type="button" data-da="yes" data-id="${esc(id)}">Aceptar</button><button type="button" class="sec" data-da="no" data-id="${esc(id)}">Rechazar</button></div>`;
+      } else {
+        el.innerHTML = `<span class="ic">🗣</span><span class="tx"><b>Tu turno</b> en el debate<br><span class="sb">${esc(t ? t.nombre : tema)}</span></span><div class="bt"><button type="button" data-da="play">Argumentar →</button></div>`;
+      }
       el.hidden = false;
-      const y = el.querySelector('[data-da="yes"]'); if (y) y.onclick = () => { el.hidden = true; aceptarDebate(y.dataset.id); };
-      const n = el.querySelector('[data-da="no"]'); if (n) n.onclick = () => { el.hidden = true; rechazarDebate(n.dataset.id); };
-      const p = el.querySelector('[data-da="play"]'); if (p) p.onclick = () => { el.hidden = true; abrirDebateJuego(); };
+      const y = el.querySelector('[data-da="yes"]'); if (y) y.onclick = () => { debAlertEl.hidden = true; _debAlertSig = ''; aceptarDebate(y.dataset.id); };
+      const n = el.querySelector('[data-da="no"]'); if (n) n.onclick = () => { debAlertEl.hidden = true; _debAlertSig = ''; rechazarDebate(n.dataset.id); };
+      const p = el.querySelector('[data-da="play"]'); if (p) p.onclick = () => { debAlertEl.hidden = true; _debAlertSig = ''; abrirDebateJuego(); };
     }
 
     // ── UI: overlay para INVITAR (elige invitado + tema con % + jardín) ──
