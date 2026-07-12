@@ -1290,7 +1290,7 @@
     function rechazarDebate(id) { if (!DEB) return; const mia = DEB.byId(id); const soyHost = mia && mia.hostId === myId; DEB.rechazar(id, myId).then(() => { toast(soyHost ? '🗣 Invitación cancelada' : 'Invitación rechazada'); return DEB.reload().then(afterDebChange); }).catch(() => {}); }
 
     // ── Widget de SUSPENSE: barra que rebota izq↔der y se para en el ganador ──
-    function mostrarRevelacionDebate(d, oc) {
+    function mostrarRevelacionDebate(d, oc, mine) {
       const t = debTema(d.tema);
       const hostGana = oc.ganador === d.hostId;
       const el = document.createElement('div');
@@ -1299,6 +1299,7 @@
       const pH = Math.round(oc.pHost * 100), pI = 100 - pH;
       const domTxt = (t ? t.doms : []).map(dm => DOM_GLYPH[dm]).join('');
       el.innerHTML = `<div class="hacp-shop-box hacp-deb-revbox">
+        <button type="button" class="hacp-shop-x" data-act="x" aria-label="Cerrar">✕</button>
         <div class="hacp-deb-revhead"><span class="hacp-deb-seal">論</span>Debate de ${esc(t ? t.nombre : d.tema)}</div>
         <div class="hacp-deb-arena" id="deb-arena">
           <div class="hacp-deb-banners">
@@ -1311,6 +1312,7 @@
         <div class="hacp-deb-reward" id="deb-reward"></div>
         <button type="button" class="hacp-deb-cta" data-act="cerrar" style="display:none">Continuar</button>
       </div>`;
+      el.querySelector('[data-act="x"]').addEventListener('click', () => el.remove());   // cerrable siempre, incluso durante la animación
       const arena = el.querySelector('#deb-arena'); arena.classList.add('shake');
       const cv = el.querySelector('.hacp-deb-cord'), g = cv.getContext('2d'), W = cv.width, H = cv.height, cy = H / 2;
       const zoneH = W * oc.pHost;                                  // zona del anfitrión (izq) ∝ odds
