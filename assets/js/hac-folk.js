@@ -171,12 +171,14 @@ const HacFolk = (function () {
       const png = HacChar.sprite(dir, pose, frame);
       if (png) return png;
     }
-    const a = w.aspecto || {};
+    // Aspecto base + ROPA DE TORSO equipada (fusión EN VIVO, como las secuelas): así
+    // equipar/quitar una prenda se refleja al instante y entra en la clave de caché.
+    const a = (window.HacStats && HacStats.vestir) ? HacStats.vestir(w.id, w.aspecto || {}) : (w.aspecto || {});
     // SECUELAS permanentes (manco/tuerto…): forman parte del aspecto → entran en la clave
     // de caché y se dibujan siempre (finca + retrato del panel), no solo en el peregrinaje.
     const sec = (window.HacStats && HacStats.secuelas) ? HacStats.secuelas(w.id) : [];
     const secKey = sec.length ? sec.slice().sort().join(',') : '';
-    const key = (w.aptitud || '_') + '|' + (a.robe || '') + '|' + (a.piel || 0) + '|' + (a.pelo || 0) + '|' + dir + '|' + frame + '|' + (pose || 's') + (secKey ? '|' + secKey : '');
+    const key = (w.aptitud || '_') + '|' + (a.robe || '') + '|' + (a.accent || '') + '|' + (a.kind || '') + (a.torsoLujo ? 'L' : '') + '|' + (a.piel || 0) + '|' + (a.pelo || 0) + '|' + dir + '|' + frame + '|' + (pose || 's') + (secKey ? '|' + secKey : '');
     let cv = spriteCache.get(key);
     if (!cv && window.HacChar) {
       cv = document.createElement('canvas');
@@ -385,6 +387,8 @@ const HacFolk = (function () {
       // tiene personaje vinculado, modelo por defecto con el color de la casa.
       const pj = (m.personajeId && window.HacPersonajes && HacPersonajes.get) ? HacPersonajes.get(m.personajeId) : null;
       const aptitud = pj ? pj.aptitud : '';
+      // Aspecto BASE del personaje. La ROPA DE TORSO equipada se fusiona EN VIVO en
+      // spriteFor() (como las secuelas), para que equipar/quitar se vea sin re-spawn.
       const aspecto = pj ? (pj.aspecto || {}) : { robe: color };
       // Prestigio TOTAL = base (admin) + ganado en misiones/escaramuzas, para que el
       // cargo del mecenas que camina por la finca refleje lo jugado, no solo la base.

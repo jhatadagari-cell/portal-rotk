@@ -58,11 +58,14 @@ const HacChar = (function () {
     const skin = SKINS[(Number(aspecto.piel) || 0) % SKINS.length];
     const hair = HAIRS[(Number(aspecto.pelo) || 0) % HAIRS.length];
     return {
-      kind: o.kind, prop: o.prop, cape: !!o.cape, ornate: !!o.ornate, beard: o.beard || 0,
+      // `aspecto.kind`/`aspecto.torsoLujo` permiten que una ROPA DE TORSO equipada
+      // (HacTienda item.viste) redefina el atuendo del tronco sin tocar la cabeza:
+      // p. ej. un guerrero (armadura) que se pone una túnica pasa a kind 'robe'.
+      kind: aspecto.kind || o.kind, prop: o.prop, cape: !!o.cape, ornate: !!o.ornate, torsoLujo: !!aspecto.torsoLujo, beard: o.beard || 0,
       robe, robeHi: light(robe, 0.16), robeDk: dark(robe, 0.30), robeSh: dark(robe, 0.50),
       beardC: dark(hair, 0.05),
       sash: dark(mix(robe, accent, 0.25), 0.05),
-      trim: accent, trimDk: dark(accent, 0.3),
+      trim: accent, trimHi: light(accent, 0.22), trimDk: dark(accent, 0.3),
       skin, skinHi: light(skin, 0.13), skinDk: dark(skin, 0.22),
       hair, hairHi: light(hair, 0.18),
       steel: '#9aa4ae', steelHi: '#cfd6dd', steelDk: '#565e68',
@@ -283,6 +286,8 @@ const HacChar = (function () {
     } else {
       // Hombros + cuello.
       px(c - shHalf, top, shHalf * 2, 2, P.robeHi);
+      // ROPA DE TORSO fina (torsoLujo): charreteras de acento en ambos hombros.
+      if (P.torsoLujo) { px(c - shHalf, top, 3, 2, P.trim); px(c + shHalf - 3, top, 3, 2, P.trim); px(c - shHalf, top, 3, 1, P.trimHi); px(c + shHalf - 3, top, 3, 1, P.trimHi); }
       // Solapa cruzada (jiaoling) con ribete.
       if (!v.back) {
         for (let i = 0; i < 12; i++) px(c - 6 + i + Math.round(v.dx * 0.5), top + 2 + i, 2, 1, i < 2 ? P.skinDk : P.trim);
@@ -300,6 +305,8 @@ const HacChar = (function () {
       px(c - hemHalf + 1, beltY + 2, hemHalf * 2 - 2, 1, dark(P.sash, 0.2));
       if (v.front) { px(c - 2, beltY + 2, 4, 4, P.trim); px(c - 1, beltY + 6, 2, 3, P.trimDk); }  // nudo + caída
       if (P.ornate) { px(c - hemHalf, hemY - 2, hemHalf * 2, 1, P.gold); px(c - hemHalf, hemY - 1, hemHalf * 2, 1, P.goldHi); if (v.front) px(c - 1, beltY + 2, 2, 3, P.jade); }
+      // ROPA DE TORSO fina: banda de ribete en el bajo (si no es ya la ornamentada dorada).
+      else if (P.torsoLujo) { px(c - hemHalf, hemY - 2, hemHalf * 2, 1, P.trimDk); px(c - hemHalf, hemY - 1, hemHalf * 2, 1, P.trim); }
       // Pliegues verticales de la falda.
       const sTop = beltY + 4;
       px(c - Math.round(hemHalf * 0.5), sTop, 1, hemY - sTop, P.robeDk);

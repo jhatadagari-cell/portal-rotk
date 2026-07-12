@@ -32,6 +32,7 @@ create table if not exists public.mecenas_stats (
   equipado           jsonb   not null default '[]'::jsonb, -- objetos EQUIPADOS en el personaje (máx 3) [id, …]
   heridas            integer not null default 0,          -- heridas del personaje (0..3); sin efecto aún, se reciben al fracasar escaramuzas
   escaramuza_cd      bigint  not null default 0,           -- ms: hasta cuándo no puede montar/unirse a otra escaramuza (cooldown 1h)
+  venta_cd           jsonb   not null default '{}'::jsonb, -- enfriamiento de VENTA por objeto {itemId: untilMs}: si el mercader se marcha al regatear, ese objeto no se puede vender en 24 h
   actualizado        timestamptz not null default now()
 );
 
@@ -44,6 +45,7 @@ alter table public.mecenas_stats add column if not exists casa_inv jsonb not nul
 alter table public.mecenas_stats add column if not exists equipado jsonb not null default '[]'::jsonb;
 alter table public.mecenas_stats add column if not exists heridas integer not null default 0;
 alter table public.mecenas_stats add column if not exists escaramuza_cd bigint not null default 0;
+alter table public.mecenas_stats add column if not exists venta_cd jsonb not null default '{}'::jsonb;
 
 alter table public.mecenas_stats enable row level security;
 

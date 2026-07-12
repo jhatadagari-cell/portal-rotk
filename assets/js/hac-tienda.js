@@ -99,6 +99,25 @@ const HacTienda = (function () {
     { id: 'raro-cul', nombre: 'Tratado perdido',        zh: '秘典',   icon: '📜', tier: 3, tipo: 'equipo', raro: true, oculto: true, precio: 140, efecto: { equip: { cultural: 3 } },                         desc: 'Un saber casi olvidado. Equípalo para +3 文. (Raro)' },
     { id: 'raro-adm', nombre: 'Sello imperial',         zh: '玉璽',   icon: '🔶', tier: 3, tipo: 'equipo', raro: true, oculto: true, precio: 140, efecto: { equip: { administrativo: 3 } },                   desc: 'Autoridad de la corte. Equípalo para +3 政. (Raro)' },
     { id: 'raro-tri', nombre: 'Estandarte del dragón',  zh: '臥龍',   icon: '🐉', tier: 4, tipo: 'equipo', raro: true, oculto: true, precio: 180, efecto: { equip: { militar: 1, cultural: 1, administrativo: 1 } }, desc: 'La marca de un genio integral. Equípalo para +1 武 +1 文 +1 政. (Raro)' },
+
+    // ── ROPAS DE TORSO (指袍 · slot dedicado 'torso') ────────────────────────────
+    //   Indumentaria que se lleva en su PROPIA ranura (aparte de los 3 objetos).
+    //   Dan un +% al nivel de un dominio (o +5%/+5% combinado) — no un +N plano.
+    //   Rareza COMÚN, pero NO se compran (oculto): caen como botín MEDIANAMENTE
+    //   RARO en misiones (ROPA_LOOT_CHANCE). `viste` = receta visual que HacChar
+    //   aplica al torso (kind robe + colores + ribete), conservando cabeza/piel/pelo.
+    { id: 'ropa-mil', nombre: 'Casaca del Guerrero',       zh: '戰袍', icon: '👘', tier: 2, tipo: 'equipo', slot: 'torso', oculto: true, precio: 60,
+      efecto: { equip: { pct: { militar: 0.10 } } },                          viste: { kind: 'robe', torsoLujo: true, robe: '#8f3128', accent: '#c3c8d0' }, desc: 'Recia casaca de campaña ribeteada en acero. Equípala para +10% Militar 武.' },
+    { id: 'ropa-cul', nombre: 'Túnica del Erudito',         zh: '儒袍', icon: '👘', tier: 2, tipo: 'equipo', slot: 'torso', oculto: true, precio: 60,
+      efecto: { equip: { pct: { cultural: 0.10 } } },                         viste: { kind: 'robe', torsoLujo: true, robe: '#2f5a6e', accent: '#bfe0d8' }, desc: 'Túnica de letrado de mangas amplias y cuello de jade. Equípala para +10% Cultural 文.' },
+    { id: 'ropa-adm', nombre: 'Toga del Oficial',           zh: '官袍', icon: '👘', tier: 2, tipo: 'equipo', slot: 'torso', oculto: true, precio: 60,
+      efecto: { equip: { pct: { administrativo: 0.10 } } },                   viste: { kind: 'robe', torsoLujo: true, robe: '#264f39', accent: '#d8b65a' }, desc: 'Toga de corte con ribete dorado. Equípala para +10% Administrativo 政.' },
+    { id: 'ropa-mc',  nombre: 'Manto del Estratega',        zh: '韜袍', icon: '👘', tier: 3, tipo: 'equipo', slot: 'torso', oculto: true, precio: 80,
+      efecto: { equip: { pct: { militar: 0.05, cultural: 0.05 } } },          viste: { kind: 'robe', torsoLujo: true, robe: '#4b4f70', accent: '#e7e0cc' }, desc: 'Manto sobrio de quien domina armas y letras. Equípalo para +5% Militar 武 y +5% Cultural 文.' },
+    { id: 'ropa-ca',  nombre: 'Vestidura Ministerial',      zh: '卿袍', icon: '👘', tier: 3, tipo: 'equipo', slot: 'torso', oculto: true, precio: 80,
+      efecto: { equip: { pct: { cultural: 0.05, administrativo: 0.05 } } },   viste: { kind: 'robe', torsoLujo: true, robe: '#5b2c83', accent: '#e6c66a' }, desc: 'Vestidura de alto funcionario letrado. Equípala para +5% Cultural 文 y +5% Administrativo 政.' },
+    { id: 'ropa-am',  nombre: 'Sobreveste de Intendencia',  zh: '屯袍', icon: '👘', tier: 3, tipo: 'equipo', slot: 'torso', oculto: true, precio: 80,
+      efecto: { equip: { pct: { administrativo: 0.05, militar: 0.05 } } },    viste: { kind: 'robe', torsoLujo: true, robe: '#6a5a2c', accent: '#a83a2e' }, desc: 'Sobreveste de campaña y avituallamiento. Equípala para +5% Administrativo 政 y +5% Militar 武.' },
   ].concat(_conclusiones));
 
   const byId = {}; CATALOGO.forEach(i => { byId[i.id] = i; });
@@ -113,11 +132,13 @@ const HacTienda = (function () {
     const e = item.efecto || {};
     if (e.energia) return `+${e.energia} de energía ⚡`;
     if (e.equip) {
-      const parts = Object.keys(e.equip).map(d => {
+      const parts = [];
+      Object.keys(e.equip).forEach(d => {
+        if (d === 'pct') { Object.keys(e.equip.pct).forEach(dd => parts.push(`+${Math.round(e.equip.pct[dd] * 100)}% ${NOM[dd] || dd}`)); return; }
         const v = e.equip[d];
-        if (d === 'dineroPct') return `+${Math.round(v * 100)}% dinero`;
-        if (d === 'expedPct') return `−${Math.round(v * 100)}% tiempo de expedición`;
-        return `+${v} ${NOM[d] || d}`;
+        if (d === 'dineroPct') { parts.push(`+${Math.round(v * 100)}% dinero`); return; }
+        if (d === 'expedPct') { parts.push(`−${Math.round(v * 100)}% tiempo de expedición`); return; }
+        parts.push(`+${v} ${NOM[d] || d}`);
       });
       return 'Equipable · ' + parts.join(' · ');
     }
@@ -151,6 +172,8 @@ const HacTienda = (function () {
   }
   // Reliquias RARAS (contorno azul). No se compran; se encuentran/regalan.
   const RARE_LOOT_CHANCE = 0.05;   // 5 % del botín de misión es una reliquia rara
+  const ROPA_LOOT_CHANCE = 0.14;   // ~14 % del botín es una ROPA DE TORSO (medianamente raro)
+  const ropasTorso = () => CATALOGO.filter(i => i.slot === 'torso');
   const esRaro = (id) => !!(byId[id] && byId[id].raro);
   const raros = () => CATALOGO.filter(i => i.raro);
   function raroAleatorio(rng) {                       // una reliquia rara al azar (regalo del fundador, etc.)
@@ -162,6 +185,9 @@ const HacTienda = (function () {
   function botinAleatorio(tier) {
     const raroPool = raros().filter(i => (i.tier || 1) <= (tier || 1) + 1);
     if (raroPool.length && Math.random() < RARE_LOOT_CHANCE) return raroPool[Math.floor(Math.random() * raroPool.length)].id;
+    // ROPA DE TORSO: canal propio, medianamente raro. Ocultas → no salen por el pool común.
+    const ropaPool = ropasTorso();
+    if (ropaPool.length && Math.random() < ROPA_LOOT_CHANCE) return ropaPool[Math.floor(Math.random() * ropaPool.length)].id;
     const pool = disponibles(tier).filter(i => i.tipo !== 'caballo'); if (!pool.length) return null;   // el caballo no cae como botín (es compra única)
     const w = pool.map(i => 1 / Math.pow(2, (i.tier || 1) - 1));
     let tot = 0; w.forEach(x => tot += x); let r = Math.random() * tot;
@@ -169,6 +195,6 @@ const HacTienda = (function () {
     return pool[pool.length - 1].id;
   }
 
-  return { CATALOGO, get, disponibles, bloqueados, efectoTexto, equipBonus, manualDe, stockDelDia, botinAleatorio, esRaro, raroAleatorio, COUNT_BY_TIER, GLIFOS: G };
+  return { CATALOGO, get, disponibles, bloqueados, efectoTexto, equipBonus, manualDe, stockDelDia, botinAleatorio, esRaro, raroAleatorio, ropasTorso, COUNT_BY_TIER, GLIFOS: G };
 })();
 if (typeof window !== 'undefined') window.HacTienda = HacTienda;

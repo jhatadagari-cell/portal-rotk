@@ -250,6 +250,15 @@ html.hacp-pseudofs, html.hacp-pseudofs body{ overflow:hidden; }
 /* Menú de Equipo (reusa overlay .hacp-shop). */
 .hacp-eq-box{ width:min(440px,94%); }
 .hacp-eq-slots{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:4px 0 14px; }
+/* Ranura DEDICADA de ropa de torso (separada de los 3 objetos). */
+.hacp-eq-slotlbl{ font:700 9.5px 'Cinzel Decorative',serif; letter-spacing:.08em; text-transform:uppercase; color:var(--hac,var(--gold)); opacity:.75; margin:2px 0 4px; }
+.hacp-eq-torso{ margin:0 0 10px; }
+.hacp-eq-torso .hacp-eq-slot{ min-height:64px; }
+.hacp-eq-slot.torso{ border-style:solid; border-color:rgba(127,201,160,.5); }
+.hacp-eq-slot.empty.torso{ border-style:dashed; border-color:rgba(127,201,160,.35); }
+.hacp-eq-slot.full.torso{ background:rgba(127,201,160,.14); border-color:#7fc9a0; }
+.hacp-eq-slot.full.torso:hover{ background:rgba(127,201,160,.24); border-color:#a6ddc2; }
+.hacp-eq-own.torso{ border-color:rgba(127,201,160,.35); }
 .hacp-eq-slot{ display:flex; flex-direction:column; align-items:center; gap:2px; min-height:78px; justify-content:center;
   border-radius:8px; padding:8px 6px; box-sizing:border-box; text-align:center; }
 .hacp-eq-slot.empty{ border:1px dashed rgba(201,168,76,.3); color:var(--parch2); font-size:10.5px; opacity:.7; }
@@ -787,13 +796,58 @@ button.hacp-slot.manual:hover{ background:rgba(201,168,76,.24); }
 .hacp-shop-tab.on{ background:rgba(201,168,76,.2); color:var(--gold); border-color:var(--gold); }
 .hacp-shop-tab:hover{ color:#fff; }
 /* ── Regateo de venta ── */
-.hacp-venta-ic{ font-size:40px; text-align:center; margin:2px 0 6px; }
-.hacp-venta-deal{ display:flex; gap:10px; margin:6px 0 4px; }
-.hacp-venta-side{ flex:1; text-align:center; background:rgba(0,0,0,.24); border:1px solid rgba(201,168,76,.28); border-radius:10px; padding:9px 6px; }
-.hacp-venta-side span{ display:block; font-size:11px; color:var(--parch2,#c9bda6); margin-bottom:3px; }
-.hacp-venta-side b{ font:800 20px 'Noto Serif SC',serif; color:var(--gold); font-variant-numeric:tabular-nums; }
-.hacp-venta-side.dim b{ color:var(--parch2,#c9bda6); }
-.hacp-venta-cur{ transition:color .15s; }
+/* Tarjeta de venta: dos acciones (rápido / regatear) + estado de enfriamiento. */
+.hacp-venta-acts{ display:flex; flex-direction:column; gap:4px; }
+.hacp-item-buy.ghost{ background:rgba(255,255,255,.05); border:1px solid rgba(201,168,76,.3); color:var(--parch); }
+.hacp-item-buy.ghost:hover{ background:rgba(201,168,76,.2); }
+.hacp-item.enfriado{ opacity:.6; }
+.hacp-item.enfriado .hacp-item-ef{ color:#7fb0d8; }
+.hacp-item-qty{ color:var(--parch2,#c9bda6); font-weight:700; }
+
+/* ── Regateo (duelo por rondas) ─────────────────────────────────────────────── */
+.hacp-reg-box{ width:min(500px,95%); }
+.hacp-reg-arena{ position:relative; display:flex; align-items:flex-end; justify-content:space-between; gap:6px; margin:8px 0 4px; }
+.hacp-reg-fig{ display:flex; flex-direction:column; align-items:center; width:118px; position:relative; transition:transform .3s; }
+.hacp-reg-fig canvas{ image-rendering:pixelated; width:auto; height:150px; }
+.hacp-reg-fig .nm{ font:700 11px 'Noto Sans SC',sans-serif; color:var(--parch2,#c9bda6); margin-top:2px; }
+.hacp-reg-fig.win{ transform:translateY(-4px) scale(1.06); }
+.hacp-reg-fig.lose{ transform:translateY(2px) scale(.95); filter:saturate(.6) brightness(.85); }
+.hacp-reg-bub{ position:absolute; top:-6px; max-width:150px; font-size:10.5px; line-height:1.25; background:#f3e9cf; color:#2a2016; border-radius:8px; padding:5px 8px; box-shadow:0 3px 10px rgba(0,0,0,.4); animation:reg-bub .25s ease-out both; z-index:3; }
+.hacp-reg-bub.mer{ left:52%; } .hacp-reg-bub.yo{ right:52%; }
+.hacp-reg-mid{ flex:1; align-self:center; text-align:center; position:relative; padding:0 2px; }
+.hacp-reg-price{ line-height:1; }
+.hacp-reg-price span{ display:block; font-size:10px; text-transform:uppercase; letter-spacing:.08em; color:var(--parch2,#c9bda6); }
+.hacp-reg-cur{ font:900 30px 'Noto Serif SC',serif; color:var(--gold); font-variant-numeric:tabular-nums; transition:color .2s; }
+.hacp-reg-box.clashing .hacp-reg-cur{ animation:reg-pop .4s ease-out; }
+.hacp-reg-beam{ height:12px; border-radius:7px; background:linear-gradient(90deg,rgba(192,82,74,.45),rgba(192,82,74,.2)); border:1px solid rgba(201,168,76,.4); margin:8px 0 4px; overflow:hidden; }
+.hacp-reg-beam .fill{ display:block; height:100%; background:linear-gradient(90deg,#b98f36,#f0d98a); box-shadow:0 0 8px rgba(240,217,138,.55); transition:width .7s cubic-bezier(.4,1.3,.5,1); }
+.hacp-reg-beamlbl{ display:flex; justify-content:space-between; font-size:10px; color:var(--parch2,#c9bda6); }
+.hacp-reg-clash{ position:absolute; top:38%; left:50%; transform:translate(-50%,-50%); font:900 46px 'Noto Serif SC',serif; text-shadow:0 0 18px rgba(0,0,0,.6); pointer-events:none; z-index:4; animation:reg-flash .6s ease-out; }
+.hacp-reg-clash.l{ left:15%; color:#e0907a; } .hacp-reg-clash.r{ left:85%; color:#7fc9a0; } .hacp-reg-clash.c{ color:#f0d98a; }
+.hacp-reg-delta{ position:absolute; top:2px; left:50%; transform:translateX(-50%); font:900 18px 'Noto Serif SC',serif; font-variant-numeric:tabular-nums; pointer-events:none; animation:reg-delta 1.2s ease-out both; }
+.hacp-reg-delta.up{ color:#7fc9a0; } .hacp-reg-delta.down{ color:#e0907a; }
+.hacp-reg-hint{ text-align:center; font-size:12px; color:var(--parch,#e8dcc0); margin:6px 0; min-height:16px; }
+.hacp-reg-hint.bad{ color:#e0907a; }
+.hacp-reg-pac{ display:inline-flex; gap:3px; vertical-align:middle; margin-left:4px; }
+.hacp-reg-pac i{ width:8px; height:8px; border-radius:50%; background:rgba(255,255,255,.15); display:inline-block; }
+.hacp-reg-pac i.on{ background:#c0524a; box-shadow:0 0 5px rgba(192,82,74,.6); }
+.hacp-reg-tacs{ display:grid; grid-template-columns:repeat(3,1fr); gap:7px; margin-bottom:8px; }
+.hacp-reg-tac{ display:flex; flex-direction:column; align-items:center; gap:2px; cursor:pointer; padding:8px 4px 7px;
+  background:rgba(201,168,76,.1); border:1px solid rgba(201,168,76,.35); border-radius:9px; color:var(--parch,#e8dcc0); transition:background .12s,transform .12s; }
+.hacp-reg-tac:hover{ background:rgba(201,168,76,.24); transform:translateY(-2px); }
+.hacp-reg-tac .zh{ font:800 20px 'Noto Serif SC',serif; color:var(--gold); }
+.hacp-reg-tac .nb{ font:700 12px 'Noto Sans SC',sans-serif; }
+.hacp-reg-tac .beat{ font-size:9.5px; color:var(--parch2,#c9bda6); }
+.hacp-reg-tac.t-presionar .zh{ color:#e0907a; } .hacp-reg-tac.t-halagar .zh{ color:#7fc9a0; } .hacp-reg-tac.t-farol .zh{ color:#7fb0d8; }
+.hacp-reg-close{ display:flex; gap:8px; justify-content:center; }
+.hacp-reg-acts{ margin-top:2px; }
+.hacp-reg-acts .hacp-suc-confirm, .hacp-reg-close{ margin-top:0; }
+.hacp-reg-wait{ text-align:center; font-size:22px; color:var(--parch2,#c9bda6); letter-spacing:.2em; padding:10px 0; animation:reg-wait 1s infinite; }
+@keyframes reg-flash{ 0%{ transform:translate(-50%,-50%) scale(.3); opacity:0; } 40%{ transform:translate(-50%,-50%) scale(1.25); opacity:1; } 100%{ transform:translate(-50%,-50%) scale(1); opacity:0; } }
+@keyframes reg-delta{ 0%{ transform:translateX(-50%) translateY(6px); opacity:0; } 25%{ opacity:1; } 100%{ transform:translateX(-50%) translateY(-22px); opacity:0; } }
+@keyframes reg-pop{ 0%{ transform:scale(1); } 45%{ transform:scale(1.22); } 100%{ transform:scale(1); } }
+@keyframes reg-bub{ 0%{ transform:translateY(4px) scale(.9); opacity:0; } 100%{ transform:translateY(0) scale(1); opacity:1; } }
+@keyframes reg-wait{ 0%,100%{ opacity:.35; } 50%{ opacity:1; } }
 /* ── Botón de bufos (junto al dinero) ── */
 .hacp-cp-bufbtn{ display:inline-flex; align-items:center; gap:3px; margin-left:2px; padding:2px 8px; font:700 11px 'Noto Serif SC',serif;
   color:var(--gold); background:rgba(201,168,76,.14); border:1px solid rgba(201,168,76,.4); border-radius:7px; cursor:pointer; vertical-align:middle; transition:background .15s,color .15s; }

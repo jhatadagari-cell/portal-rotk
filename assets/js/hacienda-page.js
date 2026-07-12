@@ -1427,7 +1427,8 @@
     function debateAspecto(pjId) {
       const m = (h.miembros || []).find(x => walkerIdOf(x) === pjId);
       const pj = (m && m.personajeId && window.HacPersonajes && HacPersonajes.get) ? HacPersonajes.get(m.personajeId) : null;
-      return { aptitud: pj ? pj.aptitud : '', aspecto: pj ? (pj.aspecto || {}) : { robe: (m && m.color) || color } };
+      const base = pj ? (pj.aspecto || {}) : { robe: (m && m.color) || color };
+      return { aptitud: pj ? pj.aptitud : '', aspecto: (window.HacStats && HacStats.vestir) ? HacStats.vestir(pjId, base) : base };
     }
     function pintarRetrato(cv, pjId, dir, gesture, frame, scale) {
       if (!window.HacChar || !HacChar.draw) return;
@@ -2076,7 +2077,8 @@
     // Actor para las viñetas (aptitud/aspecto del personaje; color de casa si falta).
     function escAnimActor(memberId, mio) {
       const pj = (window.HacPersonajes && HacPersonajes.get) ? HacPersonajes.get(memberId) : null;
-      return { aptitud: pj ? pj.aptitud : '', aspecto: pj ? (pj.aspecto || {}) : { robe: color }, mio: !!mio };
+      const base = pj ? (pj.aspecto || {}) : { robe: color };
+      return { aptitud: pj ? pj.aptitud : '', aspecto: (window.HacStats && HacStats.vestir) ? HacStats.vestir(memberId, base) : base, mio: !!mio };
     }
     // Abre el overlay y REVIVE el encuentro `slot` de una banda resuelta: reproduce la
     // viñeta y, al llegar al clímax, revela «¡Éxito!»/«Fracasó» + lo conseguido.
@@ -2944,7 +2946,8 @@
       const members = (band.miembros || []).map(m => {
         const pj = (window.HacPersonajes && HacPersonajes.get) ? HacPersonajes.get(m.id) : null;
         const sec = (window.HacStats && HacStats.secuelas) ? HacStats.secuelas(m.id) : [];
-        return { id: m.id, aptitud: pj ? pj.aptitud : '', aspecto: pj ? (pj.aspecto || {}) : { robe: color }, mio: m.id === myId, hurt: pereg && m.id === band.hostId, secuelas: sec };
+        const base = pj ? (pj.aspecto || {}) : { robe: color };
+        return { id: m.id, aptitud: pj ? pj.aptitud : '', aspecto: (window.HacStats && HacStats.vestir) ? HacStats.vestir(m.id, base) : base, mio: m.id === myId, hurt: pereg && m.id === band.hostId, secuelas: sec };
       });
       const sprCache = new Map();
       function spr(mem, frame) {
@@ -3206,7 +3209,7 @@
       const ahorro = (window.HacStats && HacStats.ahorro) ? HacStats.ahorro(id) : 0;   // dinero a salvo en casa
       // "Poder personal": nivel 武/文/政 derivado del XP de cada dominio.
       const stats = (window.HacStats && HacStats.progresoNivel)
-        ? HacStats.DOMS.map(dom => { const p = HacStats.progresoNivel(id, dom); const b = HacStats.bonus ? HacStats.bonus(id, dom) : 0; return { dom, nivel: p.nivel, bonus: b, total: p.nivel + b, pct: p.pct, xp: p.xp, falta: p.falta }; })
+        ? HacStats.DOMS.map(dom => { const p = HacStats.progresoNivel(id, dom); const b = (HacStats.bonus ? HacStats.bonus(id, dom) : 0) + (HacStats.bonusPctNiveles ? HacStats.bonusPctNiveles(id, dom) : 0); return { dom, nivel: p.nivel, bonus: b, total: p.nivel + b, pct: p.pct, xp: p.xp, falta: p.falta }; })
         : null;
       const equipN = (window.HacStats && HacStats.equipados) ? HacStats.equipados(id).length : 0;
       const heridas = (window.HacStats && HacStats.heridas) ? HacStats.heridas(id) : 0;
@@ -3748,10 +3751,9 @@
       let body;
       if (shopMode === 'vender') {
         const inv = (window.HacStats && HacStats.inventario) ? HacStats.inventario(myId) : [];
-        const cards = [];
-        inv.forEach(it => { const def = HacTienda.get(it.id); if (def) for (let k = 0; k < (it.n || 1); k++) cards.push(def); });
-        body = `<div class="hacp-shop-sub">Regatea con el mercader para sacar más por lo que llevas · tu labia depende de 文·政.</div>
-          ${cards.length ? `<div class="hacp-shop-grid">${cards.map(d => ventaCardHTML(d)).join('')}</div>`
+        const cards = inv.map(it => { const def = HacTienda.get(it.id); return def ? ventaCardHTML(def, it.n || 1) : ''; }).filter(Boolean);
+        body = `<div class="hacp-shop-sub">Véndelo rápido a precio fijo, o <b>regatea</b> con el mercader para sacar más… con riesgo. Tu labia depende de 文·政.</div>
+          ${cards.length ? `<div class="hacp-shop-grid">${cards.join('')}</div>`
             : `<div class="hacp-shop-note">No llevas nada que vender en la mochila.</div>`}`;
       } else {
         const disp = HacTienda.stockDelDia ? HacTienda.stockDelDia(tier, h.id) : HacTienda.disponibles(tier);
@@ -3772,15 +3774,30 @@
       el.querySelectorAll('[data-mode]').forEach(b => b.addEventListener('click', () => { shopMode = b.dataset.mode; buildShop(); }));
       el.querySelectorAll('[data-buy]').forEach(b => b.addEventListener('click', () => buyItem(HacTienda.get(b.dataset.buy))));
       el.querySelectorAll('[data-sell]').forEach(b => b.addEventListener('click', () => abrirRegateo(HacTienda.get(b.dataset.sell))));
+      el.querySelectorAll('[data-sellfast]').forEach(b => b.addEventListener('click', () => venderRapido(HacTienda.get(b.dataset.sellfast))));
     }
-    function ventaCardHTML(item) {
+    function ventaCardHTML(item, n) {
+      const enfriado = (window.HacStats && HacStats.ventaEnfriada) ? HacStats.ventaEnfriada(myId, item.id) : false;
+      const qty = (n || 1) > 1 ? ` <span class="hacp-item-qty">×${n}</span>` : '';
+      if (enfriado) {
+        const h = Math.max(1, Math.ceil((HacStats.ventaCdRestanteMs(myId, item.id) || 0) / 3600000));
+        return `<div class="hacp-item t-venta enfriado">
+          <div class="hacp-item-ic">${item.icon || '∎'}</div>
+          <div class="hacp-item-main">
+            <div class="hacp-item-name">${esc(item.nombre)}${qty} <span class="zh">${esc(item.zh || '')}</span></div>
+            <div class="hacp-item-ef">🧊 El mercader no lo quiere · ~${h} h</div>
+          </div></div>`;
+      }
       return `<div class="hacp-item t-venta">
         <div class="hacp-item-ic">${item.icon || '∎'}</div>
         <div class="hacp-item-main">
-          <div class="hacp-item-name">${esc(item.nombre)} <span class="zh">${esc(item.zh || '')}</span></div>
-          <div class="hacp-item-ef">Ofrecen desde 💰 ${ventaOferta(item)}</div>
+          <div class="hacp-item-name">${esc(item.nombre)}${qty} <span class="zh">${esc(item.zh || '')}</span></div>
+          <div class="hacp-item-ef">Rápido 💰 ${ventaRapida(item)} · o regatea (hasta 💰 ${ventaTope(item)})</div>
         </div>
-        <button type="button" class="hacp-item-buy" data-sell="${esc(item.id)}">💰 Vender</button></div>`;
+        <div class="hacp-venta-acts">
+          <button type="button" class="hacp-item-buy ghost" data-sellfast="${esc(item.id)}">💰 ${ventaRapida(item)}</button>
+          <button type="button" class="hacp-item-buy" data-sell="${esc(item.id)}">Regatear</button>
+        </div></div>`;
     }
     function openShop() { if (!hasMarket) return; buildShop(); ensureShopEl().hidden = false; }
     function closeShop() { if (shopEl) shopEl.hidden = true; }
@@ -3803,73 +3820,165 @@
       if (charId) buildCharPanel(charId);   // refresca monedero/inventario/energía
     }
 
-    // ── VENTA con REGATEO ────────────────────────────────────────────────────
-    // El mercader arranca por DEBAJO del valor; tú aspiras a un TOPE = valor × mult,
-    // con mult 1.75 para objetos ≤100 monedas y bajando (≈1.5 a las 1000) para que un
-    // objeto caro no se venda desproporcionado. Cada «Regatear» empuja su oferta hacia
-    // tu tope, con probabilidad de que CEDA (alta al principio; mejora con 文·政) o se
-    // PLANTE. Futuro: objetos que suban esa labia (HacStats.bonusRegateo).
+    // ── VENTA: rápida (precio fijo) o REGATEO por rondas ─────────────────────────
+    //   Regatear es un DUELO de tira y afloja (piedra-papel-tijera de tácticas), como
+    //   el debate: cada ronda tu oferta SUBE o BAJA. Puede acabar en un gran trato… o
+    //   en que el mercader se harte y se marche (y entonces ese objeto no se puede
+    //   vender en 24 h). La labia 文·政 da ventaja, no certeza.
     const valorItem = (item) => Math.max(1, item.precio | 0);
-    const ventaMult = (v) => Math.max(1.15, Math.min(1.75, 2.25 - 0.25 * Math.log10(Math.max(1, v))));
-    const ventaTope = (item) => Math.round(valorItem(item) * ventaMult(valorItem(item)));
-    const ventaOferta = (item) => Math.max(1, Math.round(valorItem(item) * 0.5));
+    const ventaMult = (v) => Math.max(1.4, Math.min(2.0, 2.5 - 0.25 * Math.log10(Math.max(1, v))));   // techo del trato
+    const ventaTope = (item) => Math.round(valorItem(item) * ventaMult(valorItem(item)));             // TRATO REDONDO (máx)
+    const ventaSuelo = (item) => Math.max(1, Math.round(valorItem(item) * 0.4));                       // SUELO (si baja aquí, se marcha)
+    const ventaRapida = (item) => Math.max(1, Math.round(valorItem(item) * 0.8));                      // venta rápida sin riesgo
     function regateoLabia() {
       if (!window.HacStats || !HacStats.nivelTotal) return 0;
       return HacStats.nivelTotal(myId, 'cultural') + HacStats.nivelTotal(myId, 'administrativo')
         + (HacStats.bonusRegateo ? HacStats.bonusRegateo(myId) : 0);
     }
-    let ventaEl = null;
+    const ventaJusta = (item, labia) => {   // oferta INICIAL: justa, mejor con labia
+      const v = valorItem(item);
+      return Math.max(ventaSuelo(item) + 1, Math.min(ventaTope(item) - 1, Math.round(v * (0.85 + Math.min(0.25, labia * 0.006)))));
+    };
+    // Tácticas de regateo (piedra-papel-tijera cíclico). `gesto` = pose de HacChar.
+    const REG_TAC = [
+      { id: 'presionar', nombre: 'Presionar', zh: '压', vence: 'halagar',   gesto: 'ofensiva',  yo: '«Vale el doble y lo sabes.»',            mer: '«Es lo que hay, o lo dejas.»' },
+      { id: 'halagar',   nombre: 'Halagar',   zh: '誉', vence: 'farol',     gesto: 'ingeniosa', yo: '«Una pieza así merece tu mejor precio.»', mer: '«Para un cliente como tú… en fin.»' },
+      { id: 'farol',     nombre: 'Farol',     zh: '佯', vence: 'presionar', gesto: 'cautelosa', yo: '«Me lo llevo a otro mercado, entonces.»', mer: '«Anda, vete… ya volverás.»' },
+    ];
+    const regTacBy = {}; REG_TAC.forEach(t => { regTacBy[t.id] = t; });
+    const regVence = (a, b) => !!regTacBy[a] && regTacBy[a].vence === b;
+    const REG_PACIENCIA = 4;
+    // Aspecto del mercader (coherente con el de la finca) y del jugador (vestido).
+    const REG_MERC = { robe: '#3f6e9c', accent: '#d4a83a', piel: 1, pelo: 1 };
+    function regYoAspecto() {
+      const m = (h.miembros || []).find(x => (x.personajeId || x.id) === myId);
+      const pj = (m && m.personajeId && window.HacPersonajes && HacPersonajes.get) ? HacPersonajes.get(m.personajeId) : null;
+      const base = pj ? (pj.aspecto || {}) : { robe: color };
+      return { aptitud: pj ? pj.aptitud : '', aspecto: (window.HacStats && HacStats.vestir) ? HacStats.vestir(myId, base) : base };
+    }
+    let ventaEl = null, regAnimT = null;
     function ensureVentaEl() {
       if (ventaEl) return ventaEl;
-      ventaEl = document.createElement('div'); ventaEl.className = 'hacp-suc-ov hacp-venta-ov'; ventaEl.hidden = true;
+      ventaEl = document.createElement('div'); ventaEl.className = 'hacp-suc-ov hacp-reg-ov'; ventaEl.hidden = true;
       overlayHost().appendChild(ventaEl);
       ['pointerdown', 'pointerup', 'wheel', 'click'].forEach(ev => ventaEl.addEventListener(ev, (e) => e.stopPropagation(), { passive: false }));
       return ventaEl;
     }
-    function cerrarVenta() { if (ventaEl) ventaEl.hidden = true; }
+    function cerrarVenta() { if (regAnimT) { clearTimeout(regAnimT); regAnimT = null; } if (ventaEl) ventaEl.hidden = true; }
+    // Venta rápida: precio fijo, sin riesgo (para deshacerte de botín sin jugar).
+    function venderRapido(item) {
+      if (!item || !myId || !window.HacStats) return;
+      const p = ventaRapida(item);
+      const res = HacStats.venderItem(myId, item.id, p);
+      if (!res.ok) { toast(res.motivo || 'No se pudo vender'); return; }
+      toast(`💰 Vendiste ${item.nombre} por ${p}`);
+      if (window.HacBitacora) HacBitacora.log(myId, 'venta', `💰 Vendiste ${item.nombre} por ${p} monedas`);
+      buildShop(); if (charId) buildCharPanel(charId);
+    }
     function abrirRegateo(item) {
       if (!item || !myId) return;
-      const st = { item, tope: ventaTope(item), cur: ventaOferta(item), ronda: 0, planted: false };
+      if (window.HacStats && HacStats.ventaEnfriada && HacStats.ventaEnfriada(myId, item.id)) { toast('🧊 El mercader no quiere comprarte eso todavía'); return; }
+      const labia = regateoLabia();
+      const st = { item, labia, suelo: ventaSuelo(item), tope: ventaTope(item), precio: ventaJusta(item, labia), yo: regYoAspecto(), ronda: 0, paciencia: REG_PACIENCIA, fin: null, last: null, anim: false };
       renderRegateo(ensureVentaEl(), st);
-      ventaEl.hidden = false;
+      ensureVentaEl().hidden = false;
     }
-    function regatear(st) {
-      const skill = regateoLabia();
+    // Resuelve una ronda: elige la táctica del mercader a ciegas, aplica el RPS y
+    // mueve la oferta ± según el rango. La labia agranda las subidas y suaviza las bajadas.
+    function regRonda(st, mine) {
       st.ronda++;
-      const gap = st.tope - st.cur;
-      if (gap <= 0) { st.planted = true; return; }
-      const step = Math.max(1, Math.ceil(gap * (0.45 + Math.min(0.25, skill * 0.008))));
-      const base = [0.98, 0.72, 0.52, 0.36, 0.24][Math.min(4, st.ronda - 1)];   // cede menos cada ronda
-      const p = Math.max(0.05, Math.min(0.97, base + Math.min(0.30, skill * 0.01)));   // …pero 文·政 lo mejora
-      if (Math.random() < p) { st.cur = Math.min(st.tope, st.cur + step); if (st.cur >= st.tope) st.planted = true; }
-      else st.planted = true;   // «no doy más»
+      const foe = REG_TAC[(Math.random() * REG_TAC.length) | 0].id;
+      let win = 'tie';
+      if (regVence(mine, foe)) win = 'me'; else if (regVence(foe, mine)) win = 'foe';
+      const rango = st.tope - st.suelo, lf = Math.min(0.4, st.labia * 0.012);
+      const up = Math.max(1, Math.round(rango * (0.20 + lf * 0.30)));
+      const down = Math.max(1, Math.round(rango * (0.20 - lf * 0.12)));
+      const antes = st.precio;
+      if (win === 'me') st.precio = Math.min(st.tope, st.precio + up);
+      else if (win === 'foe') st.precio = Math.max(st.suelo, st.precio - down);
+      st.paciencia--;
+      st.last = { mine, foe, win, delta: st.precio - antes };
+      if (st.precio <= st.suelo) st.fin = 'marcha';          // hundido → el mercader se harta
+      else if (st.paciencia <= 0) st.fin = 'trato';          // sin paciencia → cierra a la oferta actual
+    }
+    function regPct(st) { return Math.max(0, Math.min(100, Math.round(100 * (st.precio - st.suelo) / Math.max(1, st.tope - st.suelo)))); }
+    // Dibuja los dos retratos con el gesto adecuado a la fase.
+    function regRetratos(el, st) {
+      if (!window.HacChar || !HacChar.draw) return;
+      const mer = el.querySelector('canvas[data-reg="mer"]'), yo = el.querySelector('canvas[data-reg="yo"]');
+      let gMer = null, gYo = null;
+      if (st.anim && st.last) {
+        gYo = regTacBy[st.last.mine].gesto; gMer = regTacBy[st.last.foe].gesto;
+        if (st.last.win === 'me') gMer = 'frustrado';
+        if (st.last.win === 'foe') gYo = 'frustrado';
+      } else if (st.fin === 'marcha') { gMer = 'frustrado'; }
+      try {
+        if (mer) HacChar.draw(mer, { aptitud: '', aspecto: REG_MERC, dir: 'SE', pose: 'stand', gesture: gMer, frame: 0, scale: 3 });
+        if (yo) HacChar.draw(yo, { aptitud: st.yo.aptitud, aspecto: st.yo.aspecto, dir: 'SW', pose: 'stand', gesture: gYo, frame: 0, scale: 3 });
+      } catch (e) {}
     }
     function renderRegateo(el, st) {
-      const it = st.item, skill = regateoLabia();
-      el.innerHTML = `<div class="hacp-suc-box hacp-venta-box">
-        <div class="hacp-suc-eyebrow">💰 Vender · ${esc(it.nombre)} <span class="zh">${esc(it.zh || '')}</span></div>
-        <div class="hacp-venta-ic">${it.icon || '∎'}</div>
-        <div class="hacp-venta-deal">
-          <div class="hacp-venta-side"><span>El mercader ofrece</span><b class="hacp-venta-cur">💰 ${st.cur}</b></div>
-          <div class="hacp-venta-side dim"><span>Aspiras a</span><b>💰 ${st.tope}</b></div>
+      const it = st.item, pct = regPct(st), acabado = !!st.fin;
+      const dots = Array.from({ length: REG_PACIENCIA }, (_, i) => `<i class="${i < st.paciencia ? 'on' : ''}"></i>`).join('');
+      const clash = st.anim && st.last;
+      const burbYo = clash ? `<div class="hacp-reg-bub yo">${esc(regTacBy[st.last.mine].yo)}</div>` : '';
+      const burbMer = clash ? `<div class="hacp-reg-bub mer">${esc(regTacBy[st.last.foe].mer)}</div>` : '';
+      const flash = clash ? `<div class="hacp-reg-clash ${st.last.win === 'me' ? 'r' : st.last.win === 'foe' ? 'l' : 'c'}">${st.last.win === 'me' ? '＋' : st.last.win === 'foe' ? '－' : '⚔'}</div>` : '';
+      const deltaTxt = clash && st.last.delta ? `<div class="hacp-reg-delta ${st.last.delta > 0 ? 'up' : 'down'}">${st.last.delta > 0 ? '+' : ''}${st.last.delta}</div>` : '';
+      let estado;
+      if (st.fin === 'marcha') estado = `<div class="hacp-reg-hint bad">🧔 «¡Se acabó, no te compro nada!» · no aceptará este objeto en 24 h</div>`;
+      else if (st.fin === 'trato') estado = `<div class="hacp-reg-hint">🧔 «Última palabra. ${st.precio} y cerramos.»</div>`;
+      else if (clash) estado = `<div class="hacp-reg-hint">Ronda ${st.ronda}: <b>${st.last.win === 'me' ? 'ganas terreno' : st.last.win === 'foe' ? 'cede tu oferta' : 'tablas'}</b></div>`;
+      else estado = `<div class="hacp-reg-hint">Tu labia 〔文·政〕 <b>${st.labia}</b> · paciencia del mercader <span class="hacp-reg-pac">${dots}</span></div>`;
+      el.innerHTML = `<div class="hacp-suc-box hacp-reg-box${clash ? ' clashing' : ''}">
+        <div class="hacp-suc-eyebrow">💰 Regateo · ${esc(it.nombre)} <span class="zh">${esc(it.zh || '')}</span></div>
+        <div class="hacp-reg-arena">
+          <div class="hacp-reg-fig mer${clash && st.last.win === 'foe' ? ' win' : clash && st.last.win === 'me' ? ' lose' : ''}"><canvas data-reg="mer"></canvas><span class="nm">Mercader</span>${burbMer}</div>
+          <div class="hacp-reg-mid">
+            <div class="hacp-reg-price"><span>oferta</span><b class="hacp-reg-cur">💰 ${st.precio}</b></div>
+            <div class="hacp-reg-beam"><i class="fill" style="width:${pct}%"></i></div>
+            <div class="hacp-reg-beamlbl"><span>suelo ${st.suelo}</span><span>trato ${st.tope}</span></div>
+            ${deltaTxt}
+          </div>
+          <div class="hacp-reg-fig yo${clash && st.last.win === 'me' ? ' win' : clash && st.last.win === 'foe' ? ' lose' : ''}"><canvas data-reg="yo"></canvas><span class="nm">Tú</span>${burbYo}</div>
+          ${flash}
         </div>
-        <div class="hacp-suc-hint">${st.planted ? '🧔 «Es mi última palabra, ni una moneda más.»' : `Tu labia 〔文·政〕: <b>${skill}</b> · regatea para subir la oferta`}</div>
-        <div class="hacp-suc-confirm">
-          <button type="button" class="hacp-cp-btn hacp-suc-cancel" data-v-cancel>Dejarlo</button>
-          ${st.planted ? '' : `<button type="button" class="hacp-cp-btn" data-v-regatear>Regatear</button>`}
-          <button type="button" class="hacp-cp-btn hacp-suc-ok" data-v-ok>Vender 💰 ${st.cur}</button>
-        </div></div>`;
-      el.querySelector('[data-v-cancel]').addEventListener('click', cerrarVenta);
-      const rb = el.querySelector('[data-v-regatear]');
-      if (rb) rb.addEventListener('click', () => { regatear(st); renderRegateo(el, st); });
-      el.querySelector('[data-v-ok]').addEventListener('click', () => {
-        const res = HacStats.venderItem(myId, it.id, st.cur);
+        ${estado}
+        <div class="hacp-reg-acts">${
+          acabado
+            ? (st.fin === 'marcha'
+                ? `<button type="button" class="hacp-cp-btn hacp-suc-cancel" data-v-close>Cerrar</button>`
+                : `<button type="button" class="hacp-cp-btn hacp-suc-cancel" data-v-close>Dejarlo</button><button type="button" class="hacp-cp-btn hacp-suc-ok" data-v-ok>Aceptar 💰 ${st.precio}</button>`)
+            : clash
+              ? `<div class="hacp-reg-wait">…</div>`
+              : `<div class="hacp-reg-tacs">${REG_TAC.map(t => `<button type="button" class="hacp-reg-tac t-${t.id}" data-tac="${t.id}"><span class="zh">${t.zh}</span><span class="nb">${esc(t.nombre)}</span><span class="beat">vence a ${esc(regTacBy[t.vence].zh)}</span></button>`).join('')}</div>
+                 <div class="hacp-reg-close"><button type="button" class="hacp-cp-btn hacp-suc-cancel" data-v-cancel>Dejarlo</button><button type="button" class="hacp-cp-btn hacp-suc-ok" data-v-ok>Aceptar 💰 ${st.precio}</button></div>`
+        }</div></div>`;
+      regRetratos(el, st);
+      const close = el.querySelector('[data-v-close]'); if (close) close.addEventListener('click', cerrarVenta);
+      const cancel = el.querySelector('[data-v-cancel]'); if (cancel) cancel.addEventListener('click', cerrarVenta);
+      const ok = el.querySelector('[data-v-ok]');
+      if (ok) ok.addEventListener('click', () => {
+        const res = HacStats.venderItem(myId, it.id, st.precio);
         if (!res.ok) { toast(res.motivo || 'No se pudo vender'); return; }
         cerrarVenta();
-        toast(`💰 Vendiste ${it.nombre} por ${st.cur}`);
-        if (window.HacBitacora) HacBitacora.log(myId, 'venta', `💰 Vendiste ${it.nombre} por ${st.cur} monedas`);
+        toast(`💰 Vendiste ${it.nombre} por ${st.precio}`);
+        if (window.HacBitacora) HacBitacora.log(myId, 'venta', `💰 Regateaste ${it.nombre} y lo vendiste por ${st.precio} monedas`);
         buildShop(); if (charId) buildCharPanel(charId);
       });
+      el.querySelectorAll('[data-tac]').forEach(b => b.addEventListener('click', () => {
+        if (st.anim || st.fin) return;
+        regRonda(st, b.dataset.tac);
+        st.anim = true; renderRegateo(el, st);   // fase de choque (gestos + destello + barra)
+        regAnimT = setTimeout(() => {
+          st.anim = false;
+          if (st.fin === 'marcha' && window.HacStats && HacStats.enfriarVenta) {
+            HacStats.enfriarVenta(myId, it.id);
+            if (window.HacBitacora) HacBitacora.log(myId, 'venta', `🧊 El mercader se hartó de regatear por ${it.nombre}`);
+          }
+          renderRegateo(el, st);
+        }, 1500);
+      }));
     }
 
     // ── Bautizo del CABALLO (compra única) ───────────────────────────────────
@@ -4109,28 +4218,35 @@
       const eq = HacStats.equipados(myId);
       const max = HacStats.MAX_EQUIP || 3;
       const me = HacFolk.list().find(w => w.id === myId), nm = me ? me.name : 'tu mecenas';
-      // Bonos totales por dominio (de lo equipado).
-      const tot = HacStats.DOMS.map(dom => ({ dom, b: HacStats.bonus(myId, dom) }));
+      // Bonos totales por dominio (plano + niveles del bono % de la ropa de torso).
+      const tot = HacStats.DOMS.map(dom => ({ dom, b: HacStats.bonus(myId, dom) + (HacStats.bonusPctNiveles ? HacStats.bonusPctNiveles(myId, dom) : 0) }));
       const totHTML = tot.map(t => `<span class="hacp-eq-tot" style="color:${DOM_COLOR[t.dom]}">${DOM_ABBR[t.dom]} <b>${t.b > 0 ? '+' + t.b : '0'}</b></span>`).join('');
-      // Ranuras equipadas.
-      const slots = [];
-      for (let i = 0; i < max; i++) {
-        const id = eq[i], def = id && HacTienda.get(id);
-        slots.push(def
-          ? `<button type="button" class="hacp-eq-slot full${def.raro ? ' rare' : ''}" data-uneq="${esc(id)}" title="${esc(def.nombre)} · clic para quitar"><span class="hacp-eq-ic">${def.icon}</span><span class="hacp-eq-nm">${esc(def.nombre)}</span><span class="hacp-eq-bo">${esc(HacTienda.efectoTexto(def).replace('Equipable · ', ''))}</span><span class="hacp-eq-x">✕</span></button>`
-          : `<div class="hacp-eq-slot empty">Ranura libre</div>`);
-      }
-      // Objetos equipables en la mochila (no equipados).
+      // La ROPA DE TORSO tiene su PROPIA ranura; el resto comparte los `max` huecos.
+      const torsoId = eq.find(id => HacStats.slotDe(id) === 'torso') || null;
+      const genIds = eq.filter(id => HacStats.slotDe(id) === 'gen');
+      const torsoFull = !!torsoId, genFull = genIds.length >= max;
+      const slotHTML = (id, kind) => {
+        const def = id && HacTienda.get(id);
+        const extra = kind === 'torso' ? ' torso' : '';
+        return def
+          ? `<button type="button" class="hacp-eq-slot full${extra}${def.raro ? ' rare' : ''}" data-uneq="${esc(id)}" title="${esc(def.nombre)} · clic para quitar"><span class="hacp-eq-ic">${def.icon}</span><span class="hacp-eq-nm">${esc(def.nombre)}</span><span class="hacp-eq-bo">${esc(HacTienda.efectoTexto(def).replace('Equipable · ', ''))}</span><span class="hacp-eq-x">✕</span></button>`
+          : `<div class="hacp-eq-slot empty${extra}">${kind === 'torso' ? 'Sin ropa de torso' : 'Ranura libre'}</div>`;
+      };
+      const genSlots = []; for (let i = 0; i < max; i++) genSlots.push(slotHTML(genIds[i], 'gen'));
+      // Objetos equipables en la mochila (no equipados). Se deshabilitan si su ranura está llena.
       const ownable = HacStats.inventario(myId).filter(it => HacTienda.equipBonus(it.id));
       const list = ownable.length
-        ? ownable.map(it => { const def = HacTienda.get(it.id); const full = eq.length >= max; return `<button type="button" class="hacp-eq-own${def.raro ? ' rare' : ''}" data-eq="${esc(it.id)}"${full ? ' disabled' : ''}><span class="hacp-eq-ic">${def.icon}</span><span class="hacp-eq-nm">${esc(def.nombre)}${(it.n || 1) > 1 ? ' ×' + it.n : ''}</span><span class="hacp-eq-bo">${esc(HacTienda.efectoTexto(def).replace('Equipable · ', ''))}</span></button>`; }).join('')
-        : '<span class="hacp-inv-note">No tienes objetos equipables. Cómpralos en el mercado (tratados de armas, clásicos, códigos legales…).</span>';
+        ? ownable.map(it => { const def = HacTienda.get(it.id); const esT = def.slot === 'torso'; const full = esT ? torsoFull : genFull; return `<button type="button" class="hacp-eq-own${def.raro ? ' rare' : ''}${esT ? ' torso' : ''}" data-eq="${esc(it.id)}"${full ? ' disabled' : ''}><span class="hacp-eq-ic">${def.icon}</span><span class="hacp-eq-nm">${esc(def.nombre)}${(it.n || 1) > 1 ? ' ×' + it.n : ''}</span><span class="hacp-eq-bo">${esc(HacTienda.efectoTexto(def).replace('Equipable · ', ''))}</span></button>`; }).join('')
+        : '<span class="hacp-inv-note">No tienes objetos equipables. Cómpralos en el mercado (tratados, sellos…) o consíguelos como botín en misiones (ropas de torso).</span>';
       el.innerHTML = `
         <div class="hacp-shop-box hacp-eq-box">
           <button type="button" class="hacp-shop-x" data-act="equip-close" aria-label="Cerrar">✕</button>
           <div class="hacp-shop-h"><span class="hacp-shop-zh">⚔</span> Equipo de ${esc(nm)}</div>
-          <div class="hacp-shop-sub">Equipa hasta ${max} objetos. Suman a tus dominios mientras los llevas. Bonos: ${totHTML}</div>
-          <div class="hacp-eq-slots">${slots.join('')}</div>
+          <div class="hacp-shop-sub">Una prenda de torso + hasta ${max} objetos. Suman a tus dominios mientras los llevas. Bonos: ${totHTML}</div>
+          <div class="hacp-eq-slotlbl">Torso 袍</div>
+          <div class="hacp-eq-torso">${slotHTML(torsoId, 'torso')}</div>
+          <div class="hacp-eq-slotlbl">Objetos 具</div>
+          <div class="hacp-eq-slots">${genSlots.join('')}</div>
           <div class="hacp-eq-h">En la mochila</div>
           <div class="hacp-eq-list">${list}</div>
         </div>`;

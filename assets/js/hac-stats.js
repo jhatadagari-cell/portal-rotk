@@ -45,7 +45,7 @@ const HacStats = (function () {
       casaPos: r.casa_pos || null, casaInv: parseInv(r.casa_inv), equipado: parseInv(r.equipado),
       heridas: Math.max(0, Math.min(3, Number(r.heridas) || 0)),
       secuelas: parseInv(r.secuelas),
-      escaramuzaCd: Number(r.escaramuza_cd) || 0, sendas: parseObj(r.sendas),
+      escaramuzaCd: Number(r.escaramuza_cd) || 0, ventaCd: parseObj(r.venta_cd), sendas: parseObj(r.sendas),
       caballo: (r.caballo && typeof r.caballo === 'object') ? r.caballo : (r.caballo ? (function () { try { return JSON.parse(r.caballo); } catch (e) { return null; } })() : null),
     };
   }
@@ -65,7 +65,7 @@ const HacStats = (function () {
   function reload() { readyPromise = load(); return readyPromise; }
 
   function row(mid) { return cache.find(r => r.miembroId === mid) || null; }
-  function ensure(mid) { let r = row(mid); if (!r) { r = { miembroId: mid, dinero: 0, militar: 0, cultural: 0, administrativo: 0, cap: 8, inv: [], ahorro: 0, casaPos: null, casaInv: [], equipado: [], heridas: 0, secuelas: [], sendas: {}, caballo: null }; cache.push(r); } if (!r.sendas) r.sendas = {}; return r; }
+  function ensure(mid) { let r = row(mid); if (!r) { r = { miembroId: mid, dinero: 0, militar: 0, cultural: 0, administrativo: 0, cap: 8, inv: [], ahorro: 0, casaPos: null, casaInv: [], equipado: [], heridas: 0, secuelas: [], sendas: {}, caballo: null, ventaCd: {} }; cache.push(r); } if (!r.sendas) r.sendas = {}; if (!r.ventaCd) r.ventaCd = {}; return r; }
   // HERIDAS (0..3). Se infligen al fracasar/arriesgar en expediciones y escaramuzas.
   // PESAN: penalizan la recompensa (dinero+XP) y suben el riesgo; a 3 el mecenas
   // está MALHERIDO y no puede salir de la finca hasta curarse.
@@ -110,6 +110,17 @@ const HacStats = (function () {
   // (suma de expedPct, tope 0.6 para no llegar a 0). Fracciones (0.05 = 5%).
   function bonusDinero(mid) { const r = row(mid); if (!r || !window.HacTienda) return 0; let s = 0; r.equipado.forEach(id => { const b = HacTienda.equipBonus(id); if (b && b.dineroPct) s += b.dineroPct; }); return s; }
   function bonusExped(mid) { const r = row(mid); if (!r || !window.HacTienda) return 0; let s = 0; r.equipado.forEach(id => { const b = HacTienda.equipBonus(id); if (b && b.expedPct) s += b.expedPct; }); return Math.min(0.6, s); }
+  // Bono PORCENTUAL a un DOMINIO por la ROPA DE TORSO equipada (fracción, 0.10 = 10%).
+  // Distinto del bono plano +N: escala con el nivel del personaje.
+  function bonusPct(mid, dom) { const r = row(mid); if (!r || !window.HacTienda) return 0; let p = 0; r.equipado.forEach(id => { const b = HacTienda.equipBonus(id); if (b && b.pct && b.pct[dom]) p += b.pct[dom]; }); return p; }
+  // El bono % traducido a NIVELES enteros que suma al dominio. SUELO de +1 al llevar
+  // prenda (si ya tienes al menos nivel 1 en ese dominio), para que se note siempre;
+  // a niveles altos manda el %.
+  function bonusPctNiveles(mid, dom) {
+    const pct = bonusPct(mid, dom); if (pct <= 0) return 0;
+    const base = nivel(mid, dom) + bonus(mid, dom); if (base <= 0) return 0;
+    return Math.max(1, Math.round(base * pct));
+  }
   // Usa un MANUAL de la mochila: +XP fija y se consume. Admite dos formas de efecto:
   //   { dom, xp }              → clásico, un solo dominio.
   //   { xp: { dom: n, … } }    → multi-dominio (libros de conclusiones de combo).
@@ -129,12 +140,19 @@ const HacStats = (function () {
     const simple = !(m.xp && typeof m.xp === 'object');
     return { ok: true, ganado, dom: simple ? m.dom : null, xp: simple ? (m.xp || 0) : null };
   }
-  function nivelTotal(mid, dom) { return nivel(mid, dom) + bonus(mid, dom); }
-  // Equipa un objeto de la MOCHILA (máx 3). Devuelve {ok, motivo}.
+  function nivelTotal(mid, dom) { return nivel(mid, dom) + bonus(mid, dom) + bonusPctNiveles(mid, dom); }
+  // Slot de un item equipado: 'torso' (ropa, ranura dedicada) o 'gen' (los 3 huecos).
+  function slotDe(id) { const it = window.HacTienda && HacTienda.get(id); return it && it.slot === 'torso' ? 'torso' : 'gen'; }
+  // Equipa un objeto de la MOCHILA. La ROPA DE TORSO va en su PROPIA ranura (una sola);
+  // el resto comparte los 3 huecos generales. Devuelve {ok, motivo}.
   function equipar(mid, id) {
     const r = ensure(mid);
     if (!window.HacTienda || !HacTienda.equipBonus(id)) return { ok: false, motivo: 'No es equipable' };
-    if (r.equipado.length >= MAX_EQUIP) return { ok: false, motivo: 'Ya llevas 3 objetos equipados' };
+    if (slotDe(id) === 'torso') {
+      if (r.equipado.some(eid => slotDe(eid) === 'torso')) return { ok: false, motivo: 'Ya llevas una prenda de torso' };
+    } else if (r.equipado.filter(eid => slotDe(eid) === 'gen').length >= MAX_EQUIP) {
+      return { ok: false, motivo: 'Ya llevas 3 objetos equipados' };
+    }
     if (!quita(r.inv, id)) return { ok: false, motivo: 'No lo tienes en la mochila' };
     r.equipado.push(id); persist(r); return { ok: true };
   }
@@ -145,11 +163,24 @@ const HacStats = (function () {
     if (cuenta(r.inv) >= r.cap) return { ok: false, motivo: 'Mochila llena' };
     r.equipado.splice(i, 1); mete(r.inv, id); persist(r); return { ok: true };
   }
+  // Receta visual de la ROPA DE TORSO equipada (item.viste de HacTienda), o null.
+  // La consumen los dibujadores de sprites para vestir al mecenas conservando la
+  // cabeza. Como la caché de HacStats es pública, funciona para CUALQUIER mecenas.
+  function torsoViste(mid) {
+    if (!window.HacTienda) return null;
+    const r = row(mid); if (!r || !r.equipado) return null;
+    for (let i = 0; i < r.equipado.length; i++) { const it = HacTienda.get(r.equipado[i]); if (it && it.slot === 'torso' && it.viste) return it.viste; }
+    return null;
+  }
+  // Mezcla el `aspecto` base con la receta de la ropa de torso equipada (si la hay).
+  function vestir(mid, base) { const v = torsoViste(mid); return v ? Object.assign({}, base || {}, v) : (base || {}); }
+
   const cuenta = (arr) => arr.reduce((s, it) => s + (it.n || 1), 0);
   function quita(arr, id) { const e = arr.find(x => x.id === id); if (!e) return false; e.n = (e.n || 1) - 1; if (e.n <= 0) arr.splice(arr.indexOf(e), 1); return true; }
   function mete(arr, id) { const e = arr.find(x => x.id === id); if (e) e.n = (e.n || 1) + 1; else arr.push({ id, n: 1 }); }
 
   let caballoCol = true;   // false si la columna `caballo` aún no existe (falta caballo.sql)
+  let ventaCdCol = true;   // false si la columna `venta_cd` aún no existe (falta el ALTER de mecenas_stats.sql)
   async function persist(r) {
     // ── SEGURIDAD ANTI-PISOTÓN ────────────────────────────────────────────
     // persist() hace un UPSERT de la FILA COMPLETA (xp, dinero, inventario…).
@@ -175,11 +206,17 @@ const HacStats = (function () {
         casa_pos: r.casaPos, casa_inv: r.casaInv, equipado: r.equipado, heridas: r.heridas || 0, sendas: r.sendas || {}, actualizado: new Date().toISOString(),
       };
       if (caballoCol) rowData.caballo = r.caballo || null;
+      if (ventaCdCol) rowData.venta_cd = r.ventaCd || {};
       let { error } = await client.from(TABLE).upsert(rowData);
       // Si la columna `caballo` no existe todavía, reintenta SIN ella para no perder
       // el resto de stats (el caballo no persistirá hasta ejecutar caballo.sql).
       if (error && caballoCol && /caballo/i.test(String(error.message || ''))) {
         caballoCol = false; delete rowData.caballo;
+        ({ error } = await client.from(TABLE).upsert(rowData));
+      }
+      // Ídem para `venta_cd` (falta ejecutar el ALTER de mecenas_stats.sql).
+      if (error && ventaCdCol && /venta_cd/i.test(String(error.message || ''))) {
+        ventaCdCol = false; delete rowData.venta_cd;
         ({ error } = await client.from(TABLE).upsert(rowData));
       }
       if (error) throw error;
@@ -364,11 +401,23 @@ const HacStats = (function () {
   // VENDER un objeto de la mochila por `precio` (lo negocia la página con el regateo).
   function venderItem(mid, id, precio) {
     const r = ensure(mid);
+    if (ventaEnfriada(mid, id)) return { ok: false, motivo: 'El mercader no quiere comprarte eso todavía' };
     if (!quita(r.inv, id)) return { ok: false, motivo: 'No llevas ese objeto' };
     r.dinero += Math.max(0, precio | 0);
     persist(r); return { ok: true, dinero: r.dinero };
   }
+  // ── ENFRIAMIENTO DE VENTA por objeto ────────────────────────────────────────
+  // Si el mercader se marcha al regatear (mal resultado), ese objeto no se puede
+  // vender (ni rápido ni regateando) durante 24 h. Clave = id de item → ms límite.
+  const VENTA_CD_MS = 24 * 60 * 60 * 1000;
+  function nowMs() { return (typeof window !== 'undefined' && window.HacClock && HacClock.now) ? HacClock.now() : Date.now(); }
+  function ventaCd(mid, id) { const r = row(mid); if (!r || !r.ventaCd) return 0; const t = Number(r.ventaCd[id]) || 0; return t > nowMs() ? t : 0; }
+  function ventaEnfriada(mid, id) { return ventaCd(mid, id) > 0; }
+  function ventaCdRestanteMs(mid, id) { const t = ventaCd(mid, id); return t ? Math.max(0, t - nowMs()) : 0; }
+  function enfriarVenta(mid, id) { const r = ensure(mid); r.ventaCd[id] = nowMs() + VENTA_CD_MS; persist(r); return r.ventaCd[id]; }
+  // Bono de LABIA por objetos equipados (gancho `equip.regateo`); 0 si ninguno lo da.
+  function bonusRegateo(mid) { const r = row(mid); if (!r || !window.HacTienda) return 0; let s = 0; r.equipado.forEach(id => { const b = HacTienda.equipBonus(id); if (b && b.regateo) s += b.regateo; }); return s; }
 
-  return { ready, reload, dinero, ahorro, casaPos, casasReclamadas, duenoDeCasa, comprarCasa, liberarCasa, abandonar, heridas, penHerida, malherido, herir, curar, secuelas, tieneSecuela, escaramuzaCd, bonusDinero, bonusExped, usarManual, xp, nivel, progresoNivel, bonus, nivelTotal, nivelPersonaje, setNiveles, puntosTalento, talentos, puntosGastados, puntosLibres, tieneTalento, aprenderTalento, equipados, equipar, desequipar, MAX_EQUIP, award, comprar, guardar, sacar, darItem, quitarItem, meterEnCasa, sacarDeCasa, inventario, casaInventario, capInventario, ocupadas, recompensaExped, caballo, tieneCaballo, comprarCaballo, venderItem, DOMS, dbOk: () => ok, TABLE };
+  return { ready, reload, dinero, ahorro, casaPos, casasReclamadas, duenoDeCasa, comprarCasa, liberarCasa, abandonar, heridas, penHerida, malherido, herir, curar, secuelas, tieneSecuela, escaramuzaCd, bonusDinero, bonusExped, usarManual, xp, nivel, progresoNivel, bonus, nivelTotal, nivelPersonaje, setNiveles, puntosTalento, talentos, puntosGastados, puntosLibres, tieneTalento, aprenderTalento, equipados, equipar, desequipar, slotDe, MAX_EQUIP, bonusPct, bonusPctNiveles, torsoViste, vestir, award, comprar, guardar, sacar, darItem, quitarItem, meterEnCasa, sacarDeCasa, inventario, casaInventario, capInventario, ocupadas, recompensaExped, caballo, tieneCaballo, comprarCaballo, venderItem, ventaCd, ventaEnfriada, ventaCdRestanteMs, enfriarVenta, bonusRegateo, DOMS, dbOk: () => ok, TABLE };
 })();
 if (typeof window !== 'undefined') window.HacStats = HacStats;
