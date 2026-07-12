@@ -1351,7 +1351,10 @@
         <div class="hacp-deb-reward" id="deb-reward"></div>
         <button type="button" class="hacp-deb-cta" data-act="cerrar" style="display:none">Continuar</button>
       </div>`;
-      el.querySelector('[data-act="x"]').addEventListener('click', () => el.remove());   // cerrable siempre, incluso durante la animación
+      // Cerrar el resultado cierra TAMBIÉN el mini-juego que quedaba detrás (si no, «Continuar»
+      // parecía no hacer nada: el diálogo del debate seguía abierto por debajo).
+      const closeReveal = () => { if (el.parentNode) el.remove(); if (typeof cerrarDebateJuego === 'function') cerrarDebateJuego(); };
+      el.querySelector('[data-act="x"]').addEventListener('click', closeReveal);   // cerrable siempre, incluso durante la animación
       const arena = el.querySelector('#deb-arena'); arena.classList.add('shake');
       const cv = el.querySelector('.hacp-deb-cord'), g = cv.getContext('2d'), W = cv.width, H = cv.height, cy = H / 2;
       const zoneH = W * oc.pHost;                                  // zona del anfitrión (izq) ∝ odds
@@ -1384,8 +1387,8 @@
           if (mine.libro) parts.push('📔 Conclusiones ' + ((DEB.CALIDADES[mine.libro] || {}).nombre || mine.libro));
           rewEl.innerHTML = (mine.won ? 'Ganas · ' : 'Te llevas · ') + parts.map(p => `<b>${esc(p)}</b>`).join(' · ');
         }
-        btn.style.display = ''; btn.addEventListener('click', () => el.remove());
-        setTimeout(() => { if (el.parentNode) el.remove(); }, 11000);
+        btn.style.display = ''; btn.addEventListener('click', closeReveal);
+        setTimeout(closeReveal, 11000);
       }
       if (reduced) { finish(); return; }
       function tick(ts) {
@@ -1413,10 +1416,19 @@
       const pj = (m && m.personajeId && window.HacPersonajes && HacPersonajes.get) ? HacPersonajes.get(m.personajeId) : null;
       return { aptitud: pj ? pj.aptitud : '', aspecto: pj ? (pj.aspecto || {}) : { robe: (m && m.color) || color } };
     }
-    function pintarRetrato(cv, pjId, dir, gesture, frame) {
+    function pintarRetrato(cv, pjId, dir, gesture, frame, scale) {
       if (!window.HacChar || !HacChar.draw) return;
       const a = debateAspecto(pjId);
-      try { HacChar.draw(cv, { aptitud: a.aptitud, aspecto: a.aspecto, dir, pose: 'stand', gesture: gesture || null, frame: frame || 0, scale: 3 }); } catch (e) {}
+      try { HacChar.draw(cv, { aptitud: a.aptitud, aspecto: a.aspecto, dir, pose: 'stand', gesture: gesture || null, frame: frame || 0, scale: scale || 3 }); } catch (e) {}
+    }
+    // Leyenda del piedra-papel-tijera: 攻 ▶ 守 ▶ 変 ▶ (攻). Cada postura vence a la siguiente.
+    function rpsLegendHTML() {
+      const S = DEB.STANCES;
+      const chip = (s) => `<span class="rps-chip t-${s.id}"><b>${esc(s.zh)}</b> ${esc(s.nombre)}</span>`;
+      // ordena en el ciclo de vencer: ofensiva→cautelosa→ingeniosa→(ofensiva)
+      const order = ['ofensiva', 'cautelosa', 'ingeniosa'].map(id => S.find(s => s.id === id)).filter(Boolean);
+      const first = order[0];
+      return `<div class="hacp-rps"><span class="rps-t">¿Cómo se gana?</span>${order.map(chip).join('<span class="rps-arrow">▶</span>')}<span class="rps-arrow">▶</span><span class="rps-loop">${esc(first.zh)}</span></div>`;
     }
     // Reparte el gesto de cada retrato: el que tiene el turno ARGUMENTA (boca/brazo
     // en movimiento), el otro escucha. Repintado por un timer ligero (~3 fps).
@@ -1509,7 +1521,7 @@
         const rem = Math.max(0, Math.ceil((DEB.turnoDeadline(d) - clock()) / 1000));
         if (miTurno) {
           prompt = `Tu turno · elige tu argumento <span style="opacity:.55">· a ciegas</span> <span class="hacp-deb-countdown">${rem}s</span>`;
-          choices = '<div class="hacp-debj-choices">' + DEB.STANCES.map(s => `<button type="button" class="hacp-debj-arg t-${s.id}" data-st="${s.id}"><span class="zh">${s.zh}</span><span class="nb">${esc(s.nombre)}</span><span class="ph">${esc(DEB.frase(d.tema, info.rol, s.id, i, d.id))}</span></button>`).join('') + '</div>';
+          choices = '<div class="hacp-debj-choices">' + DEB.STANCES.map(s => `<button type="button" class="hacp-debj-arg t-${s.id}" data-st="${s.id}"><span class="zh">${s.zh}</span><span class="nb">${esc(s.nombre)}</span><span class="beat">vence a <b>${esc(stanceOf(s.vence).zh)}</b></span><span class="ph">${esc(DEB.frase(d.tema, info.rol, s.id, i, d.id))}</span></button>`).join('') + '</div>';
         } else {
           const nm = actorId === d.hostId ? d.hostNombre : d.invitadoNombre;
           prompt = `Argumento planteado en secreto · espera a <b>${esc(nm || 'tu rival')}</b> <span class="hacp-deb-countdown">${rem}s</span>`;
@@ -1532,6 +1544,7 @@
         </div>
         ${flash}
         <div class="hacp-debj-turn">${prompt}</div>
+        ${!completo ? rpsLegendHTML() : ''}
         ${choices}
         <div class="hacp-deb-beam"><i class="me" style="width:${pH}%"></i><i class="foe" style="width:${100 - pH}%"></i></div>
         <div class="hacp-deb-beamlbl"><span>${esc(d.hostNombre || 'Anfitrión')} ${pH}%</span><span class="mut">tira y afloja</span><span>${esc(d.invitadoNombre || 'Invitado')} ${100 - pH}%</span></div>
@@ -1547,43 +1560,49 @@
         playClashDebate(d, round, oldP, p);
       }
     }
-    // Animación del choque de una ronda: ambas posturas entran, chocan, gana una, y la balanza se mueve.
+    // CHOQUE DE IDEAS de una ronda: las CARAS entran en primer plano con su postura, chocan
+    // (sacudida + destello), y se revela quién vence a quién (RPS) y cómo se mueve la balanza.
+    // Fases lentas y con énfasis: entrada → impacto → veredicto → respiro.
     function playClashDebate(d, round, oldP, newP) {
       const box = debjEl && debjEl.querySelector('.hacp-debj-box'); if (!box) return;
       debjAnimating = true;
-      const aH = round.r % 2 === 0;                       // ¿preguntó el host esta ronda?
+      const aH = round.r % 2 === 0;                       // ¿abrió la ronda el host?
       const hostStance = aH ? round.ask : round.resp, invStance = aH ? round.resp : round.ask;
-      const hs = stanceOf(hostStance), is = stanceOf(invStance);
+      const hs = stanceOf(hostStance), is = stanceOf(invStance), tie = round.lado === 'tie';
       const winName = round.lado === 'host' ? (d.hostNombre || 'Anfitrión') : (d.invitadoNombre || 'Invitado');
       const winStance = round.lado === 'host' ? hs : is, loseStance = round.lado === 'host' ? is : hs;
-      const verdict = round.lado === 'tie'
-        ? 'Tablas · la balanza no se mueve'
-        : `<b>${esc(winStance.zh)} ${esc(winStance.nombre)}</b> vence a ${esc(loseStance.zh)} ${esc(loseStance.nombre)} · ventaja para <b>${esc(winName)}</b>`;
+      const verdict = tie
+        ? `<span class="tie">Tablas · <b>${esc(hs.zh)}</b> y <b>${esc(is.zh)}</b> se anulan · la balanza no se mueve</span>`
+        : `<b class="w">${esc(winStance.zh)} ${esc(winStance.nombre)}</b> <span class="beats">vence a</span> <span class="l">${esc(loseStance.zh)} ${esc(loseStance.nombre)}</span><br><span class="adv">ventaja para <b>${esc(winName)}</b></span>`;
       const cl = document.createElement('div'); cl.className = 'hacp-debj-clash';
-      cl.innerHTML = `<div class="row">
-        <div class="cl-side a t-${hostStance}" id="cl-a"><span class="zh">${esc(hs.zh)}</span><span class="nm">${esc(hs.nombre)}</span><span class="who">${esc(d.hostNombre || 'Anfitrión')}</span></div>
-        <div class="cl-spark">⚔</div>
-        <div class="cl-side b t-${invStance}" id="cl-b"><span class="zh">${esc(is.zh)}</span><span class="nm">${esc(is.nombre)}</span><span class="who">${esc(d.invitadoNombre || 'Invitado')}</span></div>
-      </div><div class="cl-verdict">${verdict}</div>`;
+      cl.innerHTML = `
+        <div class="cl-round">Ronda ${round.r + 1} de ${DEB.ROUNDS}</div>
+        <div class="cl-stage" id="cl-stage">
+          <div class="cl-med a t-${hostStance}" id="cl-a"><div class="cl-face"><canvas data-clpj="host"></canvas></div><div class="cl-badge">${esc(hs.zh)}</div><div class="cl-nm">${esc(d.hostNombre || 'Anfitrión')}</div><div class="cl-st">${esc(hs.nombre)}</div></div>
+          <div class="cl-vs"><span class="cl-spark">⚔</span></div>
+          <div class="cl-med b t-${invStance}" id="cl-b"><div class="cl-face"><canvas data-clpj="inv"></canvas></div><div class="cl-badge">${esc(is.zh)}</div><div class="cl-nm">${esc(d.invitadoNombre || 'Invitado')}</div><div class="cl-st">${esc(is.nombre)}</div></div>
+        </div>
+        <div class="cl-verdict">${verdict}</div>`;
       box.appendChild(cl);
-      // Los mecenas adoptan la POSTURA elegida durante el choque (brazo/cara).
-      const portA = debjEl.querySelector('.hacp-debj-fighter.a .hacp-debj-portrait');
-      const portB = debjEl.querySelector('.hacp-debj-fighter.b .hacp-debj-portrait');
-      const GEST = { ofensiva: 'ofensiva', cautelosa: 'cautelosa', ingeniosa: 'ingeniosa' };
-      if (portA) pintarRetrato(portA, d.hostId, 'SE', GEST[hostStance] || 'habla', 0);
-      if (portB) pintarRetrato(portB, d.invitadoId, 'SW', GEST[invStance] || 'habla', 0);
-      setTimeout(() => {   // tras el choque: marca ganador/perdedor y desliza la balanza
-        const a = cl.querySelector('#cl-a'), b = cl.querySelector('#cl-b');
-        if (round.lado === 'host') { a.classList.add('win'); b.classList.add('lose'); if (portB) pintarRetrato(portB, d.invitadoId, 'SW', 'frustrado', 0); }
-        else if (round.lado === 'inv') { b.classList.add('win'); a.classList.add('lose'); if (portA) pintarRetrato(portA, d.hostId, 'SE', 'frustrado', 0); }
+      // Caras en primer plano (zoom) adoptando su postura elegida.
+      const fa = cl.querySelector('[data-clpj="host"]'), fb = cl.querySelector('[data-clpj="inv"]');
+      if (fa) pintarRetrato(fa, d.hostId, 'SE', hostStance, 0, 5);
+      if (fb) pintarRetrato(fb, d.invitadoId, 'SW', invStance, 0, 5);
+      const A = cl.querySelector('#cl-a'), B = cl.querySelector('#cl-b'), stage = cl.querySelector('#cl-stage');
+      const T_IMPACT = 950, T_REVEAL = 1550, T_END = 3900;
+      setTimeout(() => { stage.classList.add('clash'); }, T_IMPACT);   // impacto: sacudida + destello + chispa
+      setTimeout(() => {                                                // veredicto: gana uno, el otro se frustra
+        if (round.lado === 'host') { A.classList.add('win'); B.classList.add('lose'); if (fb) pintarRetrato(fb, d.invitadoId, 'SW', 'frustrado', 0, 5); }
+        else if (round.lado === 'inv') { B.classList.add('win'); A.classList.add('lose'); if (fa) pintarRetrato(fa, d.hostId, 'SE', 'frustrado', 0, 5); }
+        cl.classList.add('resolved');
         const me = debjEl.querySelector('.hacp-deb-beam .me'), foe = debjEl.querySelector('.hacp-deb-beam .foe');
         const np = Math.round(newP * 100);
         if (me) me.style.width = np + '%'; if (foe) foe.style.width = (100 - np) + '%';
         const lbl = debjEl.querySelectorAll('.hacp-deb-beamlbl span');
         if (lbl[0]) lbl[0].textContent = (d.hostNombre || 'Anfitrión') + ' ' + np + '%';
         if (lbl[2]) lbl[2].textContent = (d.invitadoNombre || 'Invitado') + ' ' + (100 - np) + '%';
-      }, 460);
-      setTimeout(() => { if (cl.parentNode) cl.remove(); debjAnimating = false; renderDebateJuego(); }, 2000);
+      }, T_REVEAL);
+      setTimeout(() => { if (cl.parentNode) cl.remove(); debjAnimating = false; renderDebateJuego(); }, T_END);
     }
 
     function debStyleOnce() {
@@ -1693,30 +1712,50 @@
         .hacp-debj-arg .zh{font:700 22px 'Noto Serif SC',serif;line-height:1}
         .hacp-debj-arg.t-ofensiva .zh{color:#e0715a}.hacp-debj-arg.t-cautelosa .zh{color:#6fb0e0}.hacp-debj-arg.t-ingeniosa .zh{color:#9cc47a}
         .hacp-debj-arg .nb{font:700 12px system-ui;color:#efe2c2}
+        .hacp-debj-arg .beat{font-size:10px;color:#9a8360}.hacp-debj-arg .beat b{font:700 12px 'Noto Serif SC',serif;color:#d8c8a4}
         .hacp-debj-arg .ph{font-size:11px;line-height:1.25;color:#b39a72}
         .hacp-debj-beamlbl{display:flex;justify-content:space-between;font-size:12px;color:#d8c8a4;margin-top:4px}
         .hacp-debj-beamlbl .mut{color:#9a8360}
-        .hacp-deb-beam i{transition:width .7s cubic-bezier(.25,1,.4,1)}
-        .hacp-debj-clash{position:absolute;left:8px;right:8px;top:48px;height:150px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;border-radius:12px;z-index:3;background:radial-gradient(circle at 50% 42%,rgba(34,22,12,.86),rgba(18,11,6,.96))}
-        .hacp-debj-clash .row{display:flex;align-items:center;gap:20px}
-        .cl-side{display:flex;flex-direction:column;align-items:center;gap:2px}
-        .cl-side.a{animation:cl-in-l .34s ease-out both}
-        .cl-side.b{animation:cl-in-r .34s ease-out both}
-        @keyframes cl-in-l{from{opacity:0;transform:translateX(-72px)}to{opacity:1;transform:translateX(0)}}
-        @keyframes cl-in-r{from{opacity:0;transform:translateX(72px)}to{opacity:1;transform:translateX(0)}}
-        .cl-side .zh{font:700 42px 'Noto Serif SC',serif;line-height:1}
-        .cl-side.a .zh{color:#e8c064}.cl-side.b .zh{color:#d98a6e}
-        .cl-side.t-ofensiva .zh{color:#e0715a}.cl-side.t-cautelosa .zh{color:#6fb0e0}.cl-side.t-ingeniosa .zh{color:#9cc47a}
-        .cl-side .nm{font-weight:700;font-size:13px;color:#efe2c2}
-        .cl-side .who{font-size:11px;color:#b39a72}
-        .cl-side.win{animation:none;transform:scale(1.14);transition:transform .3s;filter:drop-shadow(0 0 14px rgba(232,192,96,.7))}
-        .cl-side.lose{animation:cl-shake .34s;transform:scale(.86);opacity:.4;transition:opacity .3s,transform .3s}
-        @keyframes cl-shake{0%,100%{transform:translateX(0) scale(.9)}25%{transform:translateX(-5px) scale(.9)}75%{transform:translateX(5px) scale(.9)}}
-        .cl-spark{font-size:32px;opacity:0;animation:cl-spark .55s .28s ease-out}
-        @keyframes cl-spark{0%{opacity:0;transform:scale(.3) rotate(-20deg)}40%{opacity:1;transform:scale(1.5) rotate(0)}100%{opacity:0;transform:scale(1)}}
-        .cl-verdict{opacity:0;font:700 15px 'Noto Serif SC',serif;color:#f3e6c4;text-align:center;padding:0 10px;animation:cl-fade .4s .62s forwards}
-        .cl-verdict b{color:#e8c877}
-        @keyframes cl-fade{to{opacity:1}}
+        .hacp-deb-beam i{transition:width .9s cubic-bezier(.25,1,.4,1)}
+        /* Leyenda del piedra-papel-tijera (siempre visible durante el debate). */
+        .hacp-rps{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:5px;margin:2px 0 8px;font-size:11px;color:#b39a72}
+        .hacp-rps .rps-t{color:#8a6a3a;margin-right:3px}
+        .hacp-rps .rps-chip{display:inline-flex;align-items:center;gap:4px;background:rgba(0,0,0,.28);border:1px solid rgba(216,180,90,.18);border-radius:999px;padding:2px 9px;color:#d8c8a4}
+        .hacp-rps .rps-chip b{font:700 14px 'Noto Serif SC',serif}
+        .hacp-rps .rps-chip.t-ofensiva b{color:#e0715a}.hacp-rps .rps-chip.t-cautelosa b{color:#6fb0e0}.hacp-rps .rps-chip.t-ingeniosa b{color:#9cc47a}
+        .hacp-rps .rps-arrow{color:#8a6a3a;font-size:9px}
+        .hacp-rps .rps-loop{font:700 14px 'Noto Serif SC',serif;color:#e0715a;opacity:.55}
+        /* ── CHOQUE DE IDEAS: caras en primer plano, impacto y veredicto (cinemático) ── */
+        .hacp-debj-clash{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;border-radius:14px;z-index:5;overflow:hidden;background:radial-gradient(circle at 50% 42%,rgba(30,20,11,.94),rgba(12,8,4,.985))}
+        .cl-round{font:700 12px system-ui;letter-spacing:.12em;text-transform:uppercase;color:#a8863c}
+        .cl-stage{display:flex;align-items:center;justify-content:center;gap:14px;position:relative}
+        .cl-stage.clash{animation:cl-shk .45s}
+        @keyframes cl-shk{0%,100%{transform:translateX(0)}18%{transform:translateX(-7px)}38%{transform:translateX(7px)}58%{transform:translateX(-4px)}78%{transform:translateX(3px)}}
+        .cl-stage.clash::after{content:'';position:absolute;inset:-40px;background:radial-gradient(circle,rgba(255,240,200,.55),transparent 62%);animation:cl-flash .5s ease-out;pointer-events:none}
+        @keyframes cl-flash{0%{opacity:0}28%{opacity:1}100%{opacity:0}}
+        .cl-med{display:flex;flex-direction:column;align-items:center;gap:3px;transition:transform .45s cubic-bezier(.2,1.3,.4,1),opacity .4s,filter .4s}
+        .cl-med.a{animation:cl-in-l .55s cubic-bezier(.2,1.35,.4,1) both}
+        .cl-med.b{animation:cl-in-r .55s cubic-bezier(.2,1.35,.4,1) both}
+        @keyframes cl-in-l{from{opacity:0;transform:translateX(-80px) scale(.55)}to{opacity:1;transform:translateX(0) scale(1)}}
+        @keyframes cl-in-r{from{opacity:0;transform:translateX(80px) scale(.55)}to{opacity:1;transform:translateX(0) scale(1)}}
+        .cl-face{width:100px;height:100px;border-radius:50%;overflow:hidden;position:relative;margin:0 auto;border:3px solid #6a4a24;background:radial-gradient(circle at 50% 32%,#3a2a18,#150d07);box-shadow:inset 0 0 14px rgba(0,0,0,.65)}
+        .cl-face canvas{position:absolute;left:50%;top:-10px;transform:translateX(-50%);height:168px;width:auto;image-rendering:pixelated}
+        .cl-badge{font:700 22px 'Noto Serif SC',serif;line-height:1;margin-top:2px}
+        .cl-med.t-ofensiva .cl-badge{color:#e0715a}.cl-med.t-cautelosa .cl-badge{color:#6fb0e0}.cl-med.t-ingeniosa .cl-badge{color:#9cc47a}
+        .cl-nm{font-weight:700;font-size:13px;color:#efe2c2}
+        .cl-st{font-size:11px;color:#b39a72}
+        .cl-med.win{transform:scale(1.18);filter:drop-shadow(0 0 18px rgba(232,192,96,.85));z-index:2}
+        .cl-med.win .cl-face{border-color:#e8c064}
+        .cl-med.lose{transform:scale(.8);opacity:.42;animation:cl-shake .45s}
+        @keyframes cl-shake{0%,100%{transform:scale(.8) translateX(0)}25%{transform:scale(.8) translateX(-6px)}75%{transform:scale(.8) translateX(6px)}}
+        .cl-vs{position:relative;width:34px;text-align:center;flex:0 0 auto}
+        .cl-spark{font-size:32px;display:inline-block;color:#8a6a3a}
+        .cl-stage.clash .cl-spark{animation:cl-spark .55s ease-out forwards}
+        @keyframes cl-spark{0%{transform:scale(.4) rotate(-30deg);color:#8a6a3a}45%{transform:scale(1.8) rotate(0);color:#ffca6b;filter:drop-shadow(0 0 12px #ffca6b)}100%{transform:scale(1);color:#e8c877}}
+        .cl-verdict{opacity:0;font:700 15px/1.4 'Noto Serif SC',serif;color:#f3e6c4;text-align:center;padding:0 14px;transition:opacity .45s;min-height:40px}
+        .hacp-debj-clash.resolved .cl-verdict{opacity:1}
+        .cl-verdict .w{color:#e8c877}.cl-verdict .l{color:#b08a6a;text-decoration:line-through;opacity:.75}
+        .cl-verdict .beats{color:#b39a72;font-weight:400;font-size:13px}.cl-verdict .adv{font-size:13px;color:#d8c8a4}.cl-verdict .tie{color:#c8b488}
         @media(max-width:640px){
           /* ── Debate: adaptación MÓVIL (caben en pantalla, se puede desplazar, textos legibles) ── */
           .hacp-deb-box,.hacp-deb-revbox,.hacp-debj-box{max-width:none;width:100%;max-height:calc(100dvh - var(--nav-h,58px) - 16px);overflow-y:auto;padding:14px 14px calc(14px + env(safe-area-inset-bottom,0px))}
@@ -1743,7 +1782,8 @@
           .hacp-debj-arena[data-focus="both"] .hacp-debj-portrait{height:72px}
           .hacp-debj-center{min-height:70px}.hacp-debj-bubble{font-size:12.5px;padding:6px 9px}
           .hacp-debj-choices{gap:6px}.hacp-debj-arg{padding:9px 4px}.hacp-debj-arg .zh{font-size:20px}.hacp-debj-arg .nb{font-size:12px}.hacp-debj-arg .ph{font-size:12px}
-          .hacp-debj-clash{top:46px;height:140px}.hacp-debj-clash .row{gap:12px}.cl-side .zh{font-size:34px}.cl-verdict{font-size:13.5px}
+          .hacp-debj-clash{gap:8px}.cl-stage{gap:10px}.cl-face{width:88px;height:88px}.cl-face canvas{height:150px}.cl-verdict{font-size:14px}.cl-vs{width:28px}.cl-spark{font-size:28px}
+          .hacp-rps{font-size:10.5px;gap:4px}.hacp-rps .rps-chip{padding:2px 7px}
           .hacp-deb-hint{top:8px;font-size:13px;padding:9px 12px;gap:8px}
         }`;
       document.head.appendChild(s);
