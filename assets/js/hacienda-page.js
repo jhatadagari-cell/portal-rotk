@@ -1768,6 +1768,21 @@
         .hacp-debj-clash.resolved .cl-verdict{opacity:1}
         .cl-verdict .w{color:#e8c877}.cl-verdict .l{color:#b08a6a;text-decoration:line-through;opacity:.75}
         .cl-verdict .beats{color:#b39a72;font-weight:400;font-size:13px}.cl-verdict .adv{font-size:13px;color:#d8c8a4}.cl-verdict .tie{color:#c8b488}
+        /* ── Confirmación al usar unas Conclusiones (varios usos → evitar gastarlas por error) ── */
+        .hacp-conc-box{max-width:400px;background:linear-gradient(165deg,#2c1f13,#18100a);border:1px solid #6a4a24;box-shadow:0 18px 50px rgba(0,0,0,.55),inset 0 0 0 1px rgba(216,180,90,.16);border-radius:14px;padding:18px 20px;color:#ece0c4;font-family:system-ui,sans-serif;position:relative}
+        .hacp-conc-h{display:flex;align-items:center;gap:12px;margin-bottom:8px}
+        .hacp-conc-ic{flex:0 0 auto;width:42px;height:42px;border-radius:10px;display:grid;place-items:center;font-size:24px;background:radial-gradient(circle at 35% 30%,#3a2a18,#1a1109);box-shadow:inset 0 0 0 1px rgba(216,180,90,.22)}
+        .hacp-conc-nm{font:800 17px 'Noto Serif SC',serif;color:#f3e6c4}
+        .hacp-conc-zh{font-size:12px;color:#9a8360;margin-top:2px}
+        .hacp-conc-desc{font-size:13px;line-height:1.5;color:#cbb488;margin:6px 0 12px}
+        .hacp-conc-uses{background:rgba(0,0,0,.24);border:1px solid rgba(216,180,90,.16);border-radius:11px;padding:10px 12px;display:flex;flex-direction:column;gap:9px}
+        .hacp-conc-use{display:flex;gap:10px;align-items:flex-start;font-size:13px;color:#e6dcc0;line-height:1.35}
+        .hacp-conc-use .i{flex:0 0 auto;font-size:17px}
+        .hacp-conc-use b{color:#f0e2bf}
+        .hacp-conc-use .mut{color:#9a8360;font-size:12px}
+        .hacp-conc-warn{text-align:center;font-size:12.5px;color:#e2a06a;margin:11px 0 8px}
+        .hacp-conc-btns{display:flex;gap:8px}
+        .hacp-conc-btns .hacp-cp-btn{flex:1;padding:10px;font-size:13px}
         @media(max-width:640px){
           /* ── Debate: adaptación MÓVIL (caben en pantalla, se puede desplazar, textos legibles) ── */
           .hacp-deb-box,.hacp-deb-revbox,.hacp-debj-box{max-width:none;width:100%;max-height:calc(100dvh - var(--nav-h,58px) - 16px);overflow-y:auto;padding:14px 14px calc(14px + env(safe-area-inset-bottom,0px))}
@@ -3191,7 +3206,13 @@
         const def = flat[i];
         if (!def) return '<div class="hacp-slot"></div>';
         const man = def.efecto && def.efecto.manual;
-        if (man && d.mine) return `<button type="button" class="hacp-slot full manual" data-usar="${esc(def.id)}" title="${esc(def.nombre)} · toca para usar (${HacTienda.efectoTexto(def)})">${def.icon || '∎'}<span class="hacp-slot-xp" style="color:${DOM_COLOR[man.dom] || 'var(--gold)'}">${DOM_GLYPH[man.dom] || ''} +${man.xp} XP</span></button>`;
+        if (man && d.mine) {
+          // XP de un dominio (manuales clásicos) o de VARIOS (libros de conclusiones → xp es un mapa).
+          const map = man.xp && typeof man.xp === 'object', dks = map ? Object.keys(man.xp) : [];
+          const glyphs = map ? dks.map(dm => DOM_GLYPH[dm] || '').join('') : (DOM_GLYPH[man.dom] || '');
+          const val = map ? man.xp[dks[0]] : man.xp, col = map ? 'var(--gold)' : (DOM_COLOR[man.dom] || 'var(--gold)');
+          return `<button type="button" class="hacp-slot full manual" data-usar="${esc(def.id)}" title="${esc(def.nombre)} · toca para usar (${esc(HacTienda.efectoTexto(def))})">${def.icon || '∎'}<span class="hacp-slot-xp" style="color:${col}">${glyphs} +${val} XP</span></button>`;
+        }
         return `<div class="hacp-slot full" title="${esc(def.nombre)} ${esc(def.zh || '')}">${def.icon || '∎'}</div>`;
       }).join('');
       const canStore = hasHome && d.mine && d.money > 0;
@@ -3226,6 +3247,13 @@
     function usarManualUI(id) {
       if (!myId || !window.HacStats || !HacStats.usarManual) return;
       const def = window.HacTienda ? HacTienda.get(id) : null;
+      // Los libros de CONCLUSIONES tienen varios usos (estudiar / presentar al fundador /
+      // vender): pide confirmación para no consumirlos sin querer al tocarlos.
+      if (def && def.calidad && def.tema) { confirmarConclusiones(def); return; }
+      estudiarManual(id);
+    }
+    function estudiarManual(id) {
+      const def = window.HacTienda ? HacTienda.get(id) : null;
       const r = HacStats.usarManual(myId, id);
       if (r && r.ok) {
         // XP puede ser de un dominio (manuales clásicos) o de varios (libros de debate).
@@ -3234,8 +3262,36 @@
           : `+${r.xp} XP ${DOM_NOMBRE[r.dom] || ''}`.trim();
         toast('📖 ' + txt);
         if (window.HacBitacora) HacBitacora.log(myId, 'progreso', `📖 Estudiaste ${def ? def.nombre : 'un tomo'} · ${txt}`);
-        buildCharPanel(charId);
+        if (charId) buildCharPanel(charId);
       } else toast((r && r.motivo) || 'No se pudo usar');
+    }
+    // Confirmación al usar unas CONCLUSIONES: explica sus usos y evita gastarlas por error.
+    let concEl = null;
+    function confirmarConclusiones(def) {
+      if (concEl) concEl.remove();
+      concEl = document.createElement('div');
+      concEl.className = 'hacp-shop hacp-conc-ov';
+      const ef = window.HacTienda ? HacTienda.efectoTexto(def) : '';
+      const donable = def.donable;
+      concEl.innerHTML = `<div class="hacp-shop-box hacp-conc-box">
+        <button type="button" class="hacp-shop-x" data-x aria-label="Cerrar">✕</button>
+        <div class="hacp-conc-h"><span class="hacp-conc-ic">${def.icon || '📖'}</span><div><div class="hacp-conc-nm">${esc(def.nombre)}</div><div class="hacp-conc-zh">論議錄 · saber de un debate</div></div></div>
+        <p class="hacp-conc-desc">${esc(def.desc || '')}</p>
+        <div class="hacp-conc-uses">
+          <div class="hacp-conc-use"><span class="i">📖</span><div><b>Estudiarlas</b> ahora<br><span class="mut">${esc(ef).replace('Consumible · ', '')}</span></div></div>
+          <div class="hacp-conc-use"><span class="i">🏯</span><div><b>Presentarlas al fundador</b>${donable ? '' : ' <span class="mut">(solo muy buenas o reveladoras)</span>'}<br><span class="mut">${donable ? 'bono de XP para toda la hacienda (próximamente)' : 'estas no dan bono a la casa'}</span></div></div>
+          <div class="hacp-conc-use"><span class="i">💰</span><div><b>Venderlas</b> en el mercado<br><span class="mut">por ${def.precio || 0} monedas</span></div></div>
+        </div>
+        <div class="hacp-conc-warn">Estudiarlas las <b>consume</b>. ¿Seguro?</div>
+        <div class="hacp-conc-btns"><button type="button" class="hacp-cp-btn" data-keep>Conservar</button><button type="button" class="hacp-cp-btn hacp-cp-go" data-study>📖 Estudiar (consumir)</button></div>
+      </div>`;
+      overlayHost().appendChild(concEl);
+      ['pointerdown', 'pointerup', 'touchstart', 'touchend', 'click'].forEach(ev => concEl.addEventListener(ev, (e) => e.stopPropagation(), { passive: false }));
+      const close = () => { if (concEl) { concEl.remove(); concEl = null; } };
+      concEl.addEventListener('click', (e) => { if (e.target === concEl) close(); });
+      concEl.querySelector('[data-x]').addEventListener('click', close);
+      concEl.querySelector('[data-keep]').addEventListener('click', close);
+      concEl.querySelector('[data-study]').addEventListener('click', () => { const id = def.id; close(); estudiarManual(id); });
     }
     // Texto transparente de energía: % + ritmo de regeneración + cuánto falta para
     // llenar (para TU mecenas; para los demás, solo el %).
