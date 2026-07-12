@@ -1092,7 +1092,7 @@
       const sig = JSON.stringify(map);
       if (sig !== lastDebSig) { lastDebSig = sig; HacFolk.setDebate(map); }
     }
-    function afterDebChange() { syncDebateFolk(); refreshCharPanel(); }
+    function afterDebChange() { syncDebateFolk(); refreshCharPanel(); renderDebAlert(); }
     // Auto-acepta las invitaciones a NPC (sin dueño) que YO envié, tras ~5 s.
     const _npcTried = {};
     function debNpcAutoAccept() {
@@ -1147,8 +1147,48 @@
       const i = DEB.turnoActual(d);
       if (DEB.turnActorId(d, i) === myId) { const key = d.id + '#' + i; if (_turnNotified !== key) { _turnNotified = key; toast('🗣 Tu turno en el debate · argumenta'); } }
     }
-    // Pulso de debates (poll): sim, auto-accept NPC, resolución, notificaciones.
-    function debPulse() { if (!DEB) return; syncDebateFolk(); debNpcAutoAccept(); maybeResolveDebate(); debNotify(); debTurnNotify(); }
+    // Pulso de debates (poll): sim, auto-accept NPC, resolución, notificaciones, avisos.
+    function debPulse() { if (!DEB) return; syncDebateFolk(); debNpcAutoAccept(); maybeResolveDebate(); debNotify(); debTurnNotify(); renderDebAlert(); }
+    // Firma del estado de MI debate (invitación recibida / enviada / en curso / mi turno):
+    // alimenta `sigOf` para que el panel se RECONSTRUYA solo cuando algo cambia (sin refrescar
+    // el navegador) y `renderDebAlert` para el aviso flotante.
+    function debStateSig() {
+      if (!DEB || !myId) return '-';
+      const inv = DEB.miInvitacionPendiente(h.id, myId, clock());
+      const dd = DEB.miDebate(h.id, myId);
+      const sent = DEB.miInvitacionEnviada(h.id, myId);
+      const myTurn = dd && !DEB.juegoCompleto(dd) && DEB.turnActorId(dd, DEB.turnoActual(dd)) === myId;
+      return [inv && inv.id, dd && dd.id, dd && dd.estado, dd ? DEB.jugCount(dd) : '', sent && sent.id, myTurn ? 1 : 0].join(',');
+    }
+    // Aviso FLOTANTE que parpadea: te retan a debatir (aceptar/rechazar) o es tu turno
+    // (argumentar). Siempre visible sobre el mapa aunque el panel del personaje esté cerrado.
+    let debAlertEl = null;
+    function ensureDebAlertEl() {
+      if (debAlertEl) return debAlertEl;
+      debAlertEl = document.createElement('div');
+      debAlertEl.className = 'hacp-deb-alert'; debAlertEl.hidden = true;
+      vp.appendChild(debAlertEl);
+      return debAlertEl;
+    }
+    function renderDebAlert() {
+      if (!DEB || !myId) { if (debAlertEl) debAlertEl.hidden = true; return; }
+      const el = ensureDebAlertEl();
+      const inv = DEB.miInvitacionPendiente(h.id, myId, clock());
+      const dd = DEB.miDebate(h.id, myId);
+      const myTurn = dd && !DEB.juegoCompleto(dd) && DEB.turnActorId(dd, DEB.turnoActual(dd)) === myId;
+      const juegoAbierto = debjEl && !debjEl.hidden;
+      if (inv) {
+        const t = debTema(inv.tema);
+        el.innerHTML = `<span class="ic">🗣</span><span class="tx"><b>${esc(inv.hostNombre || 'Alguien')}</b> te reta a debatir<br><span class="sb">${esc(t ? t.nombre : inv.tema)}</span></span><div class="bt"><button type="button" data-da="yes" data-id="${esc(inv.id)}">Aceptar</button><button type="button" class="sec" data-da="no" data-id="${esc(inv.id)}">Rechazar</button></div>`;
+      } else if (dd && myTurn && !juegoAbierto) {
+        const t = debTema(dd.tema);
+        el.innerHTML = `<span class="ic">🗣</span><span class="tx"><b>Tu turno</b> en el debate<br><span class="sb">${esc(t ? t.nombre : dd.tema)}</span></span><div class="bt"><button type="button" data-da="play">Argumentar →</button></div>`;
+      } else { el.hidden = true; return; }
+      el.hidden = false;
+      const y = el.querySelector('[data-da="yes"]'); if (y) y.onclick = () => { el.hidden = true; aceptarDebate(y.dataset.id); };
+      const n = el.querySelector('[data-da="no"]'); if (n) n.onclick = () => { el.hidden = true; rechazarDebate(n.dataset.id); };
+      const p = el.querySelector('[data-da="play"]'); if (p) p.onclick = () => { el.hidden = true; abrirDebateJuego(); };
+    }
 
     // ── UI: overlay para INVITAR (elige invitado + tema con % + jardín) ──
     let debEl = null;
@@ -1409,12 +1449,17 @@
       const info = completo ? null : DEB.turnInfo(i);
       const miTurno = !completo && DEB.turnActorId(d, i) === myId;
       const round = completo ? DEB.ROUNDS : (info.round + 1);
-      // Última ronda con ambas jugadas (para mostrar el intercambio).
-      const j = d.jugadas || [], curRound = completo ? DEB.ROUNDS - 1 : info.round;
-      const ask = j[curRound * 2], resp = j[curRound * 2 + 1];
-      const askTxt = ask ? DEB.frase(d.tema, 'ask', ask.s, curRound * 2) : '…';
-      const respTxt = resp ? DEB.frase(d.tema, 'resp', resp.s, curRound * 2 + 1) : (ask ? '…' : '');
-      const aH = (curRound % 2 === 0);   // ¿pregunta el host esta ronda?
+      // Bocadillos: SOLO la última ronda YA CERRADA (ambas jugadas), que se revela en el
+      // choque. La ronda en curso queda OCULTA: ambos eligen A CIEGAS (leer la frase del
+      // rival = conocer su postura, y el piedra-papel-tijera perdería todo el sentido).
+      const j = d.jugadas || [], shownR = Math.floor(j.length / 2) - 1;
+      let hostTxt = '', invTxt = '';
+      if (shownR >= 0) {
+        const aH0 = (shownR % 2 === 0);                       // ¿abrió la ronda el host?
+        const hI = aH0 ? shownR * 2 : shownR * 2 + 1, iI = aH0 ? shownR * 2 + 1 : shownR * 2;
+        hostTxt = DEB.frase(d.tema, aH0 ? 'ask' : 'resp', j[hI].s, hI, d.id);
+        invTxt = DEB.frase(d.tema, aH0 ? 'resp' : 'ask', j[iI].s, iI, d.id);
+      }
       // prompt del turno
       let prompt, choices = '';
       if (completo) { prompt = 'Argumentos agotados · el veredicto llegará al terminar el debate'; }
@@ -1422,11 +1467,11 @@
         const actorId = DEB.turnActorId(d, i);
         const rem = Math.max(0, Math.ceil((DEB.turnoDeadline(d) - clock()) / 1000));
         if (miTurno) {
-          prompt = (info.rol === 'ask' ? 'Tu turno · plantea tu argumento' : 'Tu turno · replica') + ` <span class="hacp-deb-countdown">${rem}s</span>`;
-          choices = '<div class="hacp-debj-choices">' + DEB.STANCES.map(s => `<button type="button" class="hacp-debj-arg t-${s.id}" data-st="${s.id}"><span class="zh">${s.zh}</span><span class="nb">${esc(s.nombre)}</span><span class="ph">${esc(DEB.frase(d.tema, info.rol, s.id, i))}</span></button>`).join('') + '</div>';
+          prompt = `Tu turno · elige tu argumento <span style="opacity:.55">· a ciegas</span> <span class="hacp-deb-countdown">${rem}s</span>`;
+          choices = '<div class="hacp-debj-choices">' + DEB.STANCES.map(s => `<button type="button" class="hacp-debj-arg t-${s.id}" data-st="${s.id}"><span class="zh">${s.zh}</span><span class="nb">${esc(s.nombre)}</span><span class="ph">${esc(DEB.frase(d.tema, info.rol, s.id, i, d.id))}</span></button>`).join('') + '</div>';
         } else {
           const nm = actorId === d.hostId ? d.hostNombre : d.invitadoNombre;
-          prompt = `Espera a <b>${esc(nm || 'tu rival')}</b>… <span class="hacp-deb-countdown">${rem}s</span>`;
+          prompt = `Argumento planteado en secreto · espera a <b>${esc(nm || 'tu rival')}</b> <span class="hacp-deb-countdown">${rem}s</span>`;
         }
       }
       // resultado de la ronda recién cerrada (flash)
@@ -1438,8 +1483,9 @@
         <div class="hacp-debj-arena" data-focus="${completo ? 'both' : (DEB.turnActorId(d, i) === d.hostId ? 'host' : 'inv')}">
           <div class="hacp-debj-fighter a${!completo && DEB.turnActorId(d, i) === d.hostId ? ' on' : ''}"><canvas class="hacp-debj-portrait" data-pj="host"></canvas><div class="nm">${esc(d.hostNombre || 'Anfitrión')}</div></div>
           <div class="hacp-debj-center">
-            <div class="hacp-debj-bubble${aH ? ' a' : ' b'}${ask ? '' : ' ghost'}">${esc(askTxt)}</div>
-            <div class="hacp-debj-bubble${aH ? ' b' : ' a'}${resp ? '' : ' ghost'}">${esc(respTxt || '…')}</div>
+            ${shownR >= 0
+              ? `<div class="hacp-debj-bubble a">${esc(hostTxt)}</div><div class="hacp-debj-bubble b">${esc(invTxt)}</div>`
+              : `<div class="hacp-debj-bubble a ghost">El debate comienza… cada uno arguye a ciegas.</div>`}
           </div>
           <div class="hacp-debj-fighter b${!completo && DEB.turnActorId(d, i) === d.invitadoId ? ' on' : ''}"><canvas class="hacp-debj-portrait" data-pj="inv"></canvas><div class="nm">${esc(d.invitadoNombre || 'Invitado')}</div></div>
         </div>
@@ -1557,9 +1603,26 @@
         .hacp-deb-reward{margin-top:7px;font-size:13px;color:#cbb488;min-height:16px}
         .hacp-deb-reward b{color:#e8c877}
         .hacp-deb-invite{background:linear-gradient(#2c1f13,#20160c);border:1px solid #7a4a1c;border-radius:10px;padding:10px 12px;margin-top:6px;box-shadow:inset 0 0 0 1px rgba(216,180,90,.12)}
+        /* La sección de debate SIEMPRE se apila (nunca fila): el botón no se sale del panel. */
+        .hacp-cp-mis.hacp-deb-invite{display:block}
+        .hacp-cp-mis-on.hacp-deb-invite .hacp-cp-btn{margin-left:0}
+        .hacp-deb-invite .hacp-cp-flag{display:block;margin:2px 0}
         .hacp-deb-invite .r{display:flex;gap:6px;margin-top:8px}
+        .hacp-deb-invite .r .hacp-cp-btn{flex:1;white-space:nowrap}
         .hacp-deb-hint{position:absolute;left:50%;top:12px;transform:translateX(-50%);z-index:6;background:linear-gradient(#2c1f13,#1a1109);color:#f3e6c4;border:1px solid #d8b45a;border-radius:11px;padding:10px 14px;font:600 14px/1.3 system-ui,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.5),inset 0 0 0 1px rgba(216,180,90,.2);display:flex;align-items:center;gap:12px;max-width:92%}
         .hacp-deb-hint b{color:#e8c877}
+        .hacp-deb-alert{position:absolute;left:50%;top:10px;transform:translateX(-50%);z-index:20;display:flex;align-items:center;gap:10px;max-width:94%;background:linear-gradient(#2c1f13,#1a1109);color:#f3e6c4;border:1px solid #d8b45a;border-radius:12px;padding:9px 12px;box-shadow:0 10px 30px rgba(0,0,0,.55),inset 0 0 0 1px rgba(216,180,90,.2);font:600 13px/1.25 system-ui,sans-serif;animation:hacp-alert-pulse 1.25s ease-in-out infinite}
+        .hacp-deb-alert .ic{font-size:20px;flex:0 0 auto}
+        .hacp-deb-alert .tx{flex:1 1 auto}
+        .hacp-deb-alert .tx b{color:#e8c877}
+        .hacp-deb-alert .sb{opacity:.7;font-size:12px}
+        .hacp-deb-alert .bt{display:flex;gap:6px;flex:0 0 auto}
+        .hacp-deb-alert .bt button{background:linear-gradient(#f0cd72,#d8a83f);color:#2a1a08;border:0;border-radius:8px;padding:7px 11px;font:800 13px system-ui,sans-serif;cursor:pointer;white-space:nowrap;box-shadow:0 2px 0 #9c7320}
+        .hacp-deb-alert .bt button:active{transform:translateY(1px);box-shadow:0 1px 0 #9c7320}
+        .hacp-deb-alert .bt button.sec{background:#3a2a18;color:#e8d8b4;box-shadow:none;border:1px solid #6a4a24}
+        @keyframes hacp-alert-pulse{0%,100%{box-shadow:0 10px 30px rgba(0,0,0,.55),inset 0 0 0 1px rgba(216,180,90,.2),0 0 0 0 rgba(232,192,96,0)}50%{box-shadow:0 10px 30px rgba(0,0,0,.55),inset 0 0 0 1px rgba(216,180,90,.5),0 0 22px 3px rgba(232,192,96,.35)}}
+        @media(prefers-reduced-motion:reduce){.hacp-deb-alert{animation:none}}
+        @media(max-width:640px){.hacp-deb-alert{flex-wrap:wrap;justify-content:center;text-align:center;max-width:92%}.hacp-deb-alert .bt{flex:0 0 100%;justify-content:center;margin-top:4px}}
         .hacp-deb-hint button{background:linear-gradient(#8a5420,#6e3f16);color:#fbeecf;border:1px solid #d8b45a;border-radius:8px;padding:6px 11px;font:inherit;cursor:pointer}
         .hacp-deb-countdown{font-variant-numeric:tabular-nums;color:#e8c877;font-weight:700}
         .hacp-debj{display:flex;align-items:center;justify-content:center}
@@ -3361,7 +3424,8 @@
     // cargar/cambiar se re-pinte solo (antes el oro se quedaba a 0 hasta cambiar de pestaña).
     function sigOf(d) {
       return [charId, d.activa ? (d.enTarea ? 't' : 'g') : '-', d.mine ? 'me' : '-',
-        d.money, d.ahorro, d.heridas, (d.secuelas ? d.secuelas.length : 0), d.equipN, d.cargo ? d.cargo.id : '-', d.home ? 1 : 0].join('|');
+        d.money, d.ahorro, d.heridas, (d.secuelas ? d.secuelas.length : 0), d.equipN, d.cargo ? d.cargo.id : '-', d.home ? 1 : 0,
+        d.mine ? debStateSig() : '-'].join('|');   // estado del debate → el panel se re-pinta solo
     }
     // Retrato animado: pinta el sprite ACTUAL del mecenas (dir/andar/sentado) cada
     // frame mientras el panel está abierto. Funciona también a pantalla completa.
@@ -4023,7 +4087,7 @@
     }
     // Tic de 1 s: refresca SOLO el panel del personaje (cuenta atrás de expedición y
     // energía/regeneración se derivan del reloj de servidor → tienen que verse vivos).
-    setInterval(() => { if (charId) refreshCharPanel(); if (escVisible) escTick(); pulseMisNav(); pulseHaciendaNav(); pulseEscNav(); }, 1000);
+    setInterval(() => { if (charId) refreshCharPanel(); if (escVisible) escTick(); pulseMisNav(); pulseHaciendaNav(); pulseEscNav(); renderDebAlert(); }, 1000);
 
     // Popup con la gente que hay dentro de un edificio (al pulsar su banner).
     function showPop(x, y, sign) {
