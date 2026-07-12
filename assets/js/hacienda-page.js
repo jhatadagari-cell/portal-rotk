@@ -1105,19 +1105,27 @@
       _npcTried[inv.id] = true;
       DEB.aceptar(inv.id, inv.invitadoId, clock()).then(() => DEB.reload().then(afterDebChange)).catch(() => {});
     }
-    // Al terminar (finMs) mi debate: computa outcome, premia a MI mecenas, sella y revela.
-    const _debDone = {};
-    function maybeResolveDebate() {
-      if (!DEB || !myId) return;
-      const d = DEB.miDebate(h.id, myId);
-      if (!d || clock() < d.finMs || _debDone[d.id]) return;
+    // Nombres de dominio en castellano para la bitácora (nada de chino en texto informativo).
+    const DOM_NOMBRE_XP = { militar: 'Militar', cultural: 'Cultural', administrativo: 'Administración' };
+    // Reclama MIS recompensas de un debate terminado (XP, libro, prestigio) y lo registra.
+    // Cada participante reclama lo SUYO por separado: antes solo cobraba quien sellaba el
+    // resultado primero y el otro (¡aunque ganara!) se quedaba sin libro, sin XP y sin
+    // entrada en la bitácora. Idempotente y PERSISTENTE: si ya tengo una entrada de bitácora
+    // de este debate, no vuelvo a cobrar (ni siquiera tras recargar).
+    function claimDebate(d) {
+      if (window.HacBitacora && HacBitacora.listar && HacBitacora.listar(myId, 300).some(e => e.clave === 'debate:' + d.id)) { _debDone[d.id] = true; return; }
       _debDone[d.id] = true;
-      const oc = debOutcome(d), t = debTema(d.tema), soyGanador = oc.ganador === myId;
+      const cierroEnVivo = d.estado === 'en_curso';   // lo cierro yo ahora → muestro el reveal
+      const t = debTema(d.tema), doms = t ? t.doms : [];
+      const oc = (d.resultado && d.resultado.ganador)
+        ? { ganador: d.resultado.ganador, pHost: d.resultado.pHost, libros: d.resultado.libros || {}, doms, nH: debNivel(d.hostId, d.tema), nI: debNivel(d.invitadoId, d.tema) }
+        : debOutcome(d);
+      const soyGanador = oc.ganador === myId;
       const xpCada = 22 + (soyGanador ? 12 : 0);
       const xp = {}; oc.doms.forEach(dom => xp[dom] = xpCada);
       if (window.HacStats && HacStats.award) HacStats.award(myId, { xp });
       let extra = '', libroOk = false;
-      const cal = oc.libros[myId];
+      const cal = (oc.libros || {})[myId];
       if (cal && window.HacStats && HacStats.darItem && DEB.bookId) {
         const rr = HacStats.darItem(myId, DEB.bookId(d.tema, cal));
         libroOk = !!(rr && rr.ok !== false);
@@ -1125,10 +1133,24 @@
       }
       if (soyGanador && window.HacPuntos && HacPuntos.award) HacPuntos.award(h.id, myId, HacPuntos.recompensa ? HacPuntos.recompensa(20, 300) : 8);
       const otro = (myId === d.hostId) ? d.invitadoNombre : d.hostNombre;
-      if (window.HacBitacora) HacBitacora.log(myId, 'debate', `🗣 Debate de ${t ? t.nombre : d.tema} con ${otro || 'otro mecenas'}: ${soyGanador ? '✔ ganaste' : '✘ perdiste'}${extra}`, { clave: 'debate:' + d.id });
-      DEB.resolver(d.id, { ganador: oc.ganador, pHost: oc.pHost, libros: oc.libros }).then(() => DEB.reload().then(afterDebChange)).catch(() => {});
-      mostrarRevelacionDebate(d, oc, { won: soyGanador, xp: xpCada, doms: oc.doms, libro: (cal && libroOk) ? cal : null });
+      const xpTxt = oc.doms.length ? ` · +${xpCada} XP (${oc.doms.map(dm => DOM_NOMBRE_XP[dm] || dm).join(', ')})` : '';
+      if (window.HacBitacora) HacBitacora.log(myId, 'debate', `🗣 Debate de ${t ? t.nombre : d.tema} con ${otro || 'otro mecenas'}: ${soyGanador ? '✔ ganaste' : '✘ perdiste'}${xpTxt}${extra}`, { clave: 'debate:' + d.id });
+      if (cierroEnVivo) DEB.resolver(d.id, { ganador: oc.ganador, pHost: oc.pHost, libros: oc.libros }).then(() => DEB.reload().then(afterDebChange)).catch(() => {});
+      else afterDebChange();
+      if (cierroEnVivo) mostrarRevelacionDebate(d, oc, { won: soyGanador, xp: xpCada, doms: oc.doms, libro: (cal && libroOk) ? cal : null });
       refresh();
+    }
+    // Barre TODOS mis debates ya terminados (resueltos o en curso pasado finMs) y reclama
+    // lo pendiente. Sin el ledger de bitácora cargado no cobro, para no arriesgar doble cobro.
+    const _debDone = {};
+    function maybeResolveDebate() {
+      if (!DEB || !myId) return;
+      if (window.HacBitacora && HacBitacora.dbOk && !HacBitacora.dbOk()) return;
+      DEB.all(h.id).forEach(d => {
+        if (d.hostId !== myId && d.invitadoId !== myId) return;
+        const terminado = d.estado === 'resuelto' || (d.estado === 'en_curso' && clock() >= d.finMs);
+        if (terminado && !_debDone[d.id]) claimDebate(d);
+      });
     }
     // Notificación de invitación pendiente (para el invitado).
     let _invNotified = '';
