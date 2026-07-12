@@ -652,16 +652,15 @@ const HacFolk = (function () {
       const em = escMap[w.id], t0 = nowSimMs();
       if (em && t0 < em.inicioMs + ESC_MUSTER_MS) {
         w.moving = false; w.bowing = false; w.speech = null; w._escEnd = em.inicioMs + ESC_MUSTER_MS; w.dir = 'S';
-        // CAMINA (no se teletransporta) a su sitio de formación: los CON caballo, fuera del
-        // vano (offset por idx, sin solaparse) para silbar y montar; los de a pie, en el vano.
-        const e = wk.exitCell;
-        if (caballos[w.id] && wk.outNear) {
-          const off = (em.idx - (em.n - 1) / 2) * 1.2;
-          w._formSpot = [wk.outNear[0] + off, wk.outNear[1]]; w._escHorse = 'pending';
-        } else if (e) {
-          const off = (em.idx - (em.n - 1) / 2) * 0.85;
-          w._formSpot = [e[0] + off, e[1]]; w._escHorse = null;
-        } else { w._formSpot = null; w._escHorse = null; }
+        // CAMINA (no se teletransporta) a formar FUERA de la hacienda (todos), separados por
+        // su idx para no solaparse. Los de a pie en la primera línea; los CON caballo en una
+        // línea algo más al sur (hay sitio para el corcel), para silbar y montar allí.
+        const e = wk.exitCell, off = (em.idx - (em.n - 1) / 2) * 1.3;
+        if (wk.outNear) {
+          if (caballos[w.id]) { w._formSpot = [wk.outNear[0] + off, wk.outNear[1] + 1.4]; w._escHorse = 'pending'; }
+          else { w._formSpot = [wk.outNear[0] + off, wk.outNear[1]]; w._escHorse = null; }
+        } else if (e) { w._formSpot = [e[0] + off, e[1]]; w._escHorse = null; }
+        else { w._formSpot = null; w._escHorse = null; }
         if (w._formSpot) { w.path = [w._formSpot]; w.state = 'esc-form'; }
         else { w.state = 'esc-cheer'; w.path = null; }
       } else {
@@ -679,7 +678,7 @@ const HacFolk = (function () {
       w.state = 'esc-cheer'; w.moving = false; w.path = null; w.dir = 'S';
       if (w._escHorse === 'pending') {
         w._escHorse = 'summon'; w.whistleT = 1.2; w._mountWait = 0; w.speech = '♪ ♫'; w.speechT = 99;
-        summonHorse(w.id, w.fx + 0.85, w.fy + 0.1);
+        summonHorse(w.id, w.fx, w.fy + 0.8);   // el caballo acude desde el campo, al sur
       }
     } else if (w.state === 'exped-in') {
       endMission(w);   // de vuelta dentro de la finca → misión cumplida
@@ -1183,6 +1182,8 @@ const HacFolk = (function () {
           if (w._escHorse !== 'summon' && t0 >= end - ESC_CHEER_MS && !w.bowing) { w.bowing = true; w.speech = escCheerFor(w); w.speechT = ESC_CHEER_MS / 1000; w.dir = 'S'; }
           if (t0 >= end) {
             // Grito hecho: SALEN JUNTOS hacia el campo (los montados ya están fuera).
+            // Si un dueño de caballo no llegó a montar, monta ahora (parte a caballo igual).
+            if (caballos[w.id] && !w.mounted) { const hh = horseOf(w.id); if (hh) { hh.rider = w.id; hh.summonTo = null; w.mounted = true; } }
             w.bowing = false; w.speech = null; w._escHorse = null;
             const out = [];
             if (wk.outNear && !w.mounted) out.push(wk.outNear);
@@ -1631,7 +1632,7 @@ const HacFolk = (function () {
       g.drawImage(cv, dx, dy, Math.round(charW() * disp), Math.round(charH() * disp));
       g.restore();
     }
-    if (o.banner !== false) banner(g, lx, ly - Math.round(FEET * disp / SCALE) + 1, w, o.highlight);
+    if (o.banner !== false) banner(g, lx, ly - Math.round(FEET * disp / SCALE) + 1 - (isMounted(w) ? Math.round((RIDER_UP + 4) / SCALE) : 0), w, o.highlight);
   }
 
   // Rectángulo redondeado (coords lógicas).
@@ -2025,7 +2026,9 @@ const HacFolk = (function () {
     nameCands.forEach(w => {
       overlays.push({ draw: (g) => {
         const p = logic(w.fx, w.fy), s = bannerSprite(w, false);
-        const Wd = s.cv.width / SCALE, Hd = s.cv.height / SCALE, topY = p[1] - bannerDy;
+        // A caballo la cabeza va mucho más arriba: sube el banner para no tapar al jinete.
+        const upM = isMounted(w) ? Math.round((RIDER_UP + 4) / SCALE) : 0;
+        const Wd = s.cv.width / SCALE, Hd = s.cv.height / SCALE, topY = p[1] - bannerDy - upM;
         const cx = Math.max(s.ax, Math.min(logicW - (Wd - s.ax), p[0]));
         const box = { x: cx - s.ax, y: topY - s.ay, w: Wd, h: Hd };
         if (bannerBoxes.some(b => !(box.x + box.w < b.x || box.x > b.x + b.w || box.y + box.h < b.y || box.y > b.y + b.h))) return;
