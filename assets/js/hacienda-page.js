@@ -710,14 +710,19 @@
           const lootId = gotLoot && HacTienda.botinAleatorio ? HacTienda.botinAleatorio(tier) : null;
           const loot = lootId && window.HacTienda ? HacTienda.get(lootId) : null;
           if (loot) {
-            if (loot.efecto && loot.efecto.energia) { if (window.HacEnergia) HacEnergia.add(h.id, myId, loot.efecto.energia); extra += ` · 🎁 ${loot.icon} ${loot.nombre}`; }
-            else { const r2 = HacStats.darItem(myId, lootId); extra += r2.ok ? ` · 🎁 ${loot.icon} ${loot.nombre}` : ' · 🎁 (mochila llena)'; }
+            // COMIDA (té, raciones): se come en el camino → energía al momento, NO va a la
+            // mochila (se avisa con +⚡, no con 🎁, para no dar a entender que la guardas).
+            if (loot.efecto && loot.efecto.energia) { if (window.HacEnergia) HacEnergia.add(h.id, myId, loot.efecto.energia); extra += ` · ${loot.icon} ${loot.nombre} +${loot.efecto.energia}⚡`; }
+            else { const r2 = HacStats.darItem(myId, lootId); extra += r2.ok ? ` · 🎁 ${loot.icon} ${loot.nombre}` : ` · 🎁 ${loot.nombre} (mochila llena)`; }
           }
           // Botín EXTRA de los encuentros superados.
           for (let k = 0; k < (em.loot || 0); k++) {
             const xid = HacTienda.botinAleatorio ? HacTienda.botinAleatorio(tier) : null;
             const xit = xid ? HacTienda.get(xid) : null;
-            if (xit) { if (xit.efecto && xit.efecto.energia) { if (window.HacEnergia) HacEnergia.add(h.id, myId, xit.efecto.energia); } else HacStats.darItem(myId, xid); extra += ` · 🎁 ${xit.icon} ${xit.nombre}`; }
+            if (xit) {
+              if (xit.efecto && xit.efecto.energia) { if (window.HacEnergia) HacEnergia.add(h.id, myId, xit.efecto.energia); extra += ` · ${xit.icon} ${xit.nombre} +${xit.efecto.energia}⚡`; }
+              else { const rx = HacStats.darItem(myId, xid); extra += rx && rx.ok ? ` · 🎁 ${xit.icon} ${xit.nombre}` : ` · 🎁 ${xit.nombre} (mochila llena)`; }
+            }
           }
           // Robo (encuentros fallados) + heridas.
           if (roboDin > 0) { const w = HacStats.dinero(myId), take = Math.min(roboDin, w); if (take > 0) { HacStats.award(myId, { dinero: -take }); extra += ` · −${take}💰 robados`; } }
