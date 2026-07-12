@@ -247,28 +247,50 @@ html.hacp-pseudofs, html.hacp-pseudofs body{ overflow:hidden; }
   font:600 11px 'Noto Sans SC',sans-serif; color:#f4eee2; background:rgba(18,14,9,.96);
   border:1px solid rgba(201,168,76,.45); padding:5px 9px; border-radius:5px; box-shadow:0 3px 12px rgba(0,0,0,.5); }
 .hacp-cp-equipbtn{ display:block; width:100%; margin-top:8px; text-align:center; }
+/* Equipo EN LECTURA de otro mecenas (tira de iconos con tooltip). */
+.hacp-cp-equip{ margin:8px 0 2px; }
+.hacp-cp-equiplbl{ font:700 10px 'Cinzel Decorative',serif; letter-spacing:.06em; text-transform:uppercase; color:var(--hac,var(--gold)); opacity:.85; margin-bottom:5px; }
+.hacp-cp-equiprow{ display:flex; gap:6px; flex-wrap:wrap; }
+.hacp-cp-eqitem{ width:38px; height:38px; display:flex; align-items:center; justify-content:center; cursor:help;
+  background:rgba(201,168,76,.12); border:1px solid rgba(201,168,76,.35); border-radius:8px; }
+.hacp-cp-eqitem .ic{ font-size:20px; line-height:1; }
+.hacp-cp-eqitem.torso{ background:rgba(127,201,160,.14); border-color:rgba(127,201,160,.5); }
+.hacp-cp-eqitem.rare{ border-color:#5aa6e6; box-shadow:0 0 0 1px #5aa6e6, 0 0 8px rgba(90,166,230,.45); background:rgba(90,166,230,.12); }
+.hacp-cp-equip-none{ font-size:11px; color:var(--parch2,#c9bda6); opacity:.75; }
 /* Menú de Equipo (reusa overlay .hacp-shop). */
-.hacp-eq-box{ width:min(440px,94%); }
-.hacp-eq-slots{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:4px 0 14px; }
-/* Ranura DEDICADA de ropa de torso (separada de los 3 objetos). */
-.hacp-eq-slotlbl{ font:700 9.5px 'Cinzel Decorative',serif; letter-spacing:.08em; text-transform:uppercase; color:var(--hac,var(--gold)); opacity:.75; margin:2px 0 4px; }
-.hacp-eq-torso{ margin:0 0 10px; }
-.hacp-eq-torso .hacp-eq-slot{ min-height:64px; }
-.hacp-eq-slot.torso{ border-style:solid; border-color:rgba(127,201,160,.5); }
-.hacp-eq-slot.empty.torso{ border-style:dashed; border-color:rgba(127,201,160,.35); }
-.hacp-eq-slot.full.torso{ background:rgba(127,201,160,.14); border-color:#7fc9a0; }
-.hacp-eq-slot.full.torso:hover{ background:rgba(127,201,160,.24); border-color:#a6ddc2; }
+.hacp-eq-box{ width:min(460px,94%); }
+.hacp-eq-slotlbl{ font:700 9.5px 'Cinzel Decorative',serif; letter-spacing:.08em; text-transform:uppercase; color:var(--hac,var(--gold)); opacity:.75; margin:2px 0 5px; display:flex; align-items:center; gap:6px; }
+.hacp-eq-cap{ font-family:'Noto Sans SC',sans-serif; font-weight:700; letter-spacing:0; color:var(--parch2); }
+/* PAPER-DOLL: torso | figura del mecenas | arma (futura). */
+.hacp-eq-doll{ display:flex; align-items:center; justify-content:center; gap:10px; margin:6px 0 12px;
+  background:radial-gradient(120% 90% at 50% 32%, rgba(201,168,76,.10), rgba(0,0,0,0) 70%); }
+.hacp-eq-dollcol{ display:flex; flex-direction:column; align-items:center; gap:4px; width:118px; }
+.hacp-eq-dolllbl{ font:700 9px 'Cinzel Decorative',serif; letter-spacing:.07em; text-transform:uppercase; color:var(--hac,var(--gold)); opacity:.7; }
+.hacp-eq-figure{ flex:0 0 auto; position:relative; }
+.hacp-eq-figure::after{ content:''; position:absolute; left:50%; bottom:8px; transform:translateX(-50%); width:64px; height:11px; border-radius:50%; background:rgba(0,0,0,.45); filter:blur(3px); }
+.hacp-eq-fig-cv{ image-rendering:pixelated; height:150px; width:auto; position:relative; z-index:1; }
+.hacp-eq-accrow{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:0 0 14px; }
+/* Celda-ranura del doll y de los accesorios. */
+.hacp-eq-cell{ position:relative; width:100%; min-height:84px; box-sizing:border-box; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; text-align:center; border-radius:10px; padding:8px 6px; }
+.hacp-eq-cell.empty{ border:1px dashed rgba(201,168,76,.3); color:var(--parch2); opacity:.7; }
+.hacp-eq-cell.full{ cursor:pointer; background:rgba(201,168,76,.14); border:1px solid var(--hac,var(--gold)); color:var(--parch); }
+.hacp-eq-cell.full:hover{ background:rgba(192,82,74,.22); border-color:#e0907a; }
+.hacp-eq-cell.full:hover .hacp-eq-x{ opacity:1; color:#e0907a; }
+.hacp-eq-cell.torso.empty{ border-color:rgba(127,201,160,.35); }
+.hacp-eq-cell.torso.full{ background:rgba(127,201,160,.14); border-color:#7fc9a0; }
+.hacp-eq-cell.torso.full:hover{ background:rgba(127,201,160,.24); border-color:#a6ddc2; }
+.hacp-eq-cell.arma.locked{ border:1px dashed rgba(255,255,255,.16); color:var(--parch2); opacity:.55; cursor:not-allowed; }
+.hacp-eq-cell.rare{ border-color:#5aa6e6 !important; box-shadow:0 0 0 1px #5aa6e6,0 0 9px rgba(90,166,230,.5); background:rgba(90,166,230,.12); }
+.hacp-eq-cell-ic{ font-size:24px; line-height:1; }
+.hacp-eq-cell-ic.ghost{ opacity:.4; filter:grayscale(.4); }
+.hacp-eq-cell-nm{ font:700 10.5px 'Noto Sans SC',sans-serif; }
+.hacp-eq-cell-bo{ font-size:9px; color:#7fc9a0; }
+.hacp-eq-lk{ font-size:8.5px; letter-spacing:.03em; }
 .hacp-eq-own.torso{ border-color:rgba(127,201,160,.35); }
-.hacp-eq-slot{ display:flex; flex-direction:column; align-items:center; gap:2px; min-height:78px; justify-content:center;
-  border-radius:8px; padding:8px 6px; box-sizing:border-box; text-align:center; }
-.hacp-eq-slot.empty{ border:1px dashed rgba(201,168,76,.3); color:var(--parch2); font-size:10.5px; opacity:.7; }
-.hacp-eq-slot.full{ position:relative; cursor:pointer; background:rgba(201,168,76,.14); border:1px solid var(--hac,var(--gold)); color:var(--parch); }
-.hacp-eq-slot.full:hover{ background:rgba(192,82,74,.22); border-color:#e0907a; }
 .hacp-eq-ic{ font-size:22px; line-height:1; }
 .hacp-eq-nm{ font:700 11px 'Noto Sans SC',sans-serif; }
 .hacp-eq-bo{ font-size:10px; color:#7fc9a0; }
 .hacp-eq-x{ position:absolute; top:3px; right:5px; font-size:10px; color:var(--parch2); opacity:0; }
-.hacp-eq-slot.full:hover .hacp-eq-x{ opacity:1; color:#e0907a; }
 .hacp-eq-h{ font:700 10px 'Cinzel Decorative',serif; letter-spacing:.08em; text-transform:uppercase; color:var(--hac,var(--gold)); opacity:.8; margin-bottom:6px; }
 .hacp-eq-list{ display:flex; flex-direction:column; gap:5px; }
 .hacp-eq-own{ display:flex; align-items:center; gap:8px; text-align:left; cursor:pointer;

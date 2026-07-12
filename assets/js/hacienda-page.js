@@ -3408,6 +3408,20 @@
       }).join('');
       return `<div class="hacp-cp-stats" id="hacp-cp-stats"><div class="hacp-cp-statslbl">Poder personal <span>· nivel por dominio</span></div><div class="hacp-cp-statsrow">${chips}</div></div>`;
     }
+    // Equipo EN LECTURA de OTRO mecenas (el tuyo ya tiene el botón Equipo editable):
+    // muestra los objetos que lleva (ropa de torso + hasta 3) con su efecto en el tip.
+    function equipoHTML(d) {
+      if (d.mine || !window.HacStats || !HacStats.equipados || !window.HacTienda) return '';
+      const ids = HacStats.equipados(d.it.id);
+      const esTorso = (id) => HacStats.slotDe && HacStats.slotDe(id) === 'torso';
+      const orden = ids.slice().sort((a, b) => (esTorso(b) ? 1 : 0) - (esTorso(a) ? 1 : 0));   // la ropa de torso primero
+      const chips = orden.map(id => {
+        const def = HacTienda.get(id); if (!def) return '';
+        const ef = HacTienda.efectoTexto(def).replace('Equipable · ', '');
+        return `<span class="hacp-cp-eqitem${def.raro ? ' rare' : ''}${esTorso(id) ? ' torso' : ''}" data-tip="${esc(def.nombre + (def.zh ? ' ' + def.zh : '') + (ef ? ' · ' + ef : ''))}"><span class="ic">${def.icon || '∎'}</span></span>`;
+      }).join('');
+      return `<div class="hacp-cp-equip"><div class="hacp-cp-equiplbl">Equipo</div>${chips ? `<div class="hacp-cp-equiprow">${chips}</div>` : '<div class="hacp-cp-equip-none">Sin objetos equipados</div>'}</div>`;
+    }
     // Heridas (0..3): tres ranuras. PESAN — merman recompensa (−15 %/herida) y suben
     // el riesgo; a 3/3 el mecenas está malherido y no puede salir. Se curan pagando.
     function woundsHTML(d) {
@@ -3587,6 +3601,7 @@
         <div class="hacp-cp-energy" data-tip="Energía: ${d.e}%. Se gasta al enviar tareas y expediciones, y se regenera con el tiempo. Sin energía no puedes salir." title="Energía ${d.e}%"><i id="hacp-cp-ebar" style="width:${d.e}%"></i></div>
         <div class="hacp-cp-elabel" id="hacp-cp-elabel">${energyLabel(d)}</div>
         ${statsHTML(d)}
+        ${equipoHTML(d)}
         ${woundsHTML(d)}
         ${d.mine ? toolbarHTML(d) : ''}
         ${mision}
@@ -4225,14 +4240,18 @@
       const torsoId = eq.find(id => HacStats.slotDe(id) === 'torso') || null;
       const genIds = eq.filter(id => HacStats.slotDe(id) === 'gen');
       const torsoFull = !!torsoId, genFull = genIds.length >= max;
-      const slotHTML = (id, kind) => {
+      // Celda-ranura del PAPER-DOLL. kind: 'torso' | 'arma' (bloqueada, futura) | 'acc'.
+      const cellHTML = (id, kind) => {
+        if (kind === 'arma') return `<div class="hacp-eq-cell arma locked" title="Armas: próximamente"><span class="hacp-eq-cell-ic ghost">🗡️</span><span class="hacp-eq-cell-nm">Arma</span><span class="hacp-eq-lk">🔒 pronto</span></div>`;
         const def = id && HacTienda.get(id);
-        const extra = kind === 'torso' ? ' torso' : '';
-        return def
-          ? `<button type="button" class="hacp-eq-slot full${extra}${def.raro ? ' rare' : ''}" data-uneq="${esc(id)}" title="${esc(def.nombre)} · clic para quitar"><span class="hacp-eq-ic">${def.icon}</span><span class="hacp-eq-nm">${esc(def.nombre)}</span><span class="hacp-eq-bo">${esc(HacTienda.efectoTexto(def).replace('Equipable · ', ''))}</span><span class="hacp-eq-x">✕</span></button>`
-          : `<div class="hacp-eq-slot empty${extra}">${kind === 'torso' ? 'Sin ropa de torso' : 'Ranura libre'}</div>`;
+        if (def) {
+          const ef = HacTienda.efectoTexto(def).replace('Equipable · ', '');
+          return `<button type="button" class="hacp-eq-cell full ${kind}${def.raro ? ' rare' : ''}" data-uneq="${esc(id)}" title="${esc(def.nombre + ' · ' + ef)} · clic para quitar"><span class="hacp-eq-cell-ic">${def.icon}</span><span class="hacp-eq-cell-nm">${esc(def.nombre)}</span><span class="hacp-eq-cell-bo">${esc(ef)}</span><span class="hacp-eq-x">✕</span></button>`;
+        }
+        const ghost = kind === 'torso' ? '👘' : '✦';
+        return `<div class="hacp-eq-cell empty ${kind}"><span class="hacp-eq-cell-ic ghost">${ghost}</span><span class="hacp-eq-cell-nm">${kind === 'torso' ? 'Torso' : 'Vacío'}</span></div>`;
       };
-      const genSlots = []; for (let i = 0; i < max; i++) genSlots.push(slotHTML(genIds[i], 'gen'));
+      const accSlots = []; for (let i = 0; i < max; i++) accSlots.push(cellHTML(genIds[i], 'acc'));
       // Objetos equipables en la mochila (no equipados). Se deshabilitan si su ranura está llena.
       const ownable = HacStats.inventario(myId).filter(it => HacTienda.equipBonus(it.id));
       const list = ownable.length
@@ -4242,14 +4261,26 @@
         <div class="hacp-shop-box hacp-eq-box">
           <button type="button" class="hacp-shop-x" data-act="equip-close" aria-label="Cerrar">✕</button>
           <div class="hacp-shop-h"><span class="hacp-shop-zh">⚔</span> Equipo de ${esc(nm)}</div>
-          <div class="hacp-shop-sub">Una prenda de torso + hasta ${max} objetos. Suman a tus dominios mientras los llevas. Bonos: ${totHTML}</div>
-          <div class="hacp-eq-slotlbl">Torso 袍</div>
-          <div class="hacp-eq-torso">${slotHTML(torsoId, 'torso')}</div>
-          <div class="hacp-eq-slotlbl">Objetos 具</div>
-          <div class="hacp-eq-slots">${genSlots.join('')}</div>
+          <div class="hacp-shop-sub">Viste a tu mecenas: una prenda de torso, un arma (pronto) y hasta ${max} accesorios. Bonos: ${totHTML}</div>
+          <div class="hacp-eq-doll">
+            <div class="hacp-eq-dollcol">
+              <div class="hacp-eq-dolllbl">Torso 袍</div>
+              ${cellHTML(torsoId, 'torso')}
+            </div>
+            <div class="hacp-eq-figure"><canvas class="hacp-eq-fig-cv" width="120" height="168"></canvas></div>
+            <div class="hacp-eq-dollcol">
+              <div class="hacp-eq-dolllbl">Arma 兵</div>
+              ${cellHTML(null, 'arma')}
+            </div>
+          </div>
+          <div class="hacp-eq-slotlbl">Accesorios 具 <span class="hacp-eq-cap">${genIds.length}/${max}</span></div>
+          <div class="hacp-eq-accrow">${accSlots.join('')}</div>
           <div class="hacp-eq-h">En la mochila</div>
           <div class="hacp-eq-list">${list}</div>
         </div>`;
+      // Dibuja al mecenas en el centro (vestido con lo que lleva: la túnica se ve en vivo).
+      const cv = el.querySelector('.hacp-eq-fig-cv');
+      if (cv && window.HacChar && HacChar.draw) { const a = regYoAspecto(); try { HacChar.draw(cv, { aptitud: a.aptitud, aspecto: a.aspecto, dir: 'S', pose: 'stand', frame: 0, scale: 3 }); } catch (e) {} }
       el.querySelector('[data-act="equip-close"]').addEventListener('click', closeEquip);
       const refrescar = () => { buildEquip(); if (charId) buildCharPanel(charId); };
       el.querySelectorAll('[data-eq]').forEach(b => b.addEventListener('click', () => { const r = HacStats.equipar(myId, b.dataset.eq); if (!r.ok) toast(r.motivo); refrescar(); }));
