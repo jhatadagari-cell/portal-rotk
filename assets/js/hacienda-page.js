@@ -2320,11 +2320,16 @@
       // Los ENCUENTROS resueltos ajustan este número al liquidar (no antes de partir).
       const base = Math.max(0.20, 0.56 - (dif - 3) * 0.08);
       const nM = (b.miembros || []).length;
+      // El TOPE del bono de aptitudes escala con la dificultad: contra objetivos FÁCILES
+      // superarlos de sobra te acerca al techo (≈90%); contra los DIFÍCILES sigue topado
+      // bajo, así que aunque los superes en aptitud la escaramuza sigue siendo una apuesta.
+      const difC = Math.max(1, Math.min(6, dif));
+      const statCapPos = 0.18 + (6 - difC) * 0.06;                                 // dif1 → +48 pts · dif4 → +30 · dif6 → +18
       const statRaw = (bandFuerza(b) - 1) * 0.26;                                  // aptitudes de la banda vs objetivo
-      const stat = Math.max(-0.22, Math.min(0.24, statRaw));                       // …topado a ±22/24 pts
+      const stat = Math.max(-0.22, Math.min(statCapPos, statRaw));                 // suelo −22 fijo; tope según dificultad
       const compania = Math.min(0.06, Math.max(0, nM - 2) * 0.03);                 // más mecenas = más manos (desde el 3.º)
       const raw = base + stat + compania + rb.pMod + capBonus;
-      return { pct: Math.max(0.05, Math.min(0.90, raw)), base: base, stat: stat, statTope: statRaw > 0.24, statPiso: statRaw < -0.22, compania: compania, companiaTope: compania >= 0.06, suc: 0, rel: rb.pMod, cap: capBonus, nM: nM };
+      return { pct: Math.max(0.05, Math.min(0.90, raw)), base: base, stat: stat, statTope: statRaw > statCapPos, statPiso: statRaw < -0.22, compania: compania, companiaTope: compania >= 0.06, suc: 0, rel: rb.pMod, cap: capBonus, nM: nM };
     }
     function escProb(band) { return escProbParts(band).pct; }
     // Desglose legible del % (qué lo sube/baja). Deja claro que reclutar mecenas lo mejora.
