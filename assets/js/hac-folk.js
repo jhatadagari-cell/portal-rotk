@@ -1247,6 +1247,12 @@ const HacFolk = (function () {
     stepHorses(dt);
   }
 
+  // Estados en los que un mecenas CRUZA el vano de la muralla o aguarda justo
+  // fuera antes de partir (salir a llamar al caballo, silbarlo y montar; formar
+  // para una escaramuza): el portón perimetral debe estar ABIERTO en todos ellos.
+  // Antes solo contaban exped-out/in, así que con caballo la puerta se abría tarde
+  // (al montar) pese a que el mecenas ya había cruzado para llamar al corcel.
+  const GATE_CROSS_STATES = ['exped-out', 'exped-in', 'monta-out', 'silbando', 'esc-form', 'esc-cheer'];
   // Apertura/cierre de los portones: se abre si hay un mecenas cerca de la celda
   // del portón; se cierra solo cuando no queda nadie. Easing suave.
   function stepGates(dt) {
@@ -1258,9 +1264,9 @@ const HacFolk = (function () {
       const r2 = gate.r2 || R2;
       for (let i = 0; i < walkers.length; i++) {
         const w2 = walkers[i];
-        // El portón PERIMETRAL solo se abre para quien CRUZA (sale/entra de expedición),
-        // no para los que pasean cerca del frente del patio.
-        if (gate.perimeter && w2.state !== 'exped-out' && w2.state !== 'exped-in') continue;
+        // El portón PERIMETRAL solo se abre para quien CRUZA el vano (sale/entra de
+        // expedición o va a formar), no para los que pasean cerca del frente del patio.
+        if (gate.perimeter && GATE_CROSS_STATES.indexOf(w2.state) < 0) continue;
         const dx = w2.fx - gate.gx, dy = w2.fy - gate.gy;
         if (dx * dx + dy * dy <= r2) { near = true; break; }
       }
