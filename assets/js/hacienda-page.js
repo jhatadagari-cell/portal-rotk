@@ -4066,19 +4066,23 @@
     //   el debate: cada ronda tu oferta SUBE o BAJA. Puede acabar en un gran trato… o
     //   en que el mercader se harte y se marche (y entonces ese objeto no se puede
     //   vender en 24 h). La labia 文·政 da ventaja, no certeza.
-    const valorItem = (item) => Math.max(1, item.precio | 0);
-    const ventaMult = (v) => Math.max(1.4, Math.min(2.0, 2.5 - 0.25 * Math.log10(Math.max(1, v))));   // techo del trato
-    const ventaTope = (item) => Math.round(valorItem(item) * ventaMult(valorItem(item)));             // TRATO REDONDO (máx)
-    const ventaSuelo = (item) => Math.max(1, Math.round(valorItem(item) * 0.4));                       // SUELO (si baja aquí, se marcha)
-    const ventaRapida = (item) => Math.max(1, Math.round(valorItem(item) * 0.8));                      // venta rápida sin riesgo
+    // ANTI-EXPLOIT: el precio de VENTA es SIEMPRE una fracción (<1) del precio de COMPRA
+    // ACTUAL del objeto (precioMercado, ya con descuentos). Así comprar y revender SIEMPRE
+    // pierde dinero — no hay bucle de dinero infinito — pase lo que pase con los descuentos.
+    // El botín sigue siendo ingreso legítimo (no pagaste por él). Antes el tope llegaba a
+    // 2× el precio, lo que permitía comprar barato y regatear caro.
+    const ventaBase = (item) => Math.max(1, (typeof precioMercado === 'function') ? precioMercado(item) : (item.precio | 0));
+    const ventaTope = (item) => Math.max(1, Math.round(ventaBase(item) * 0.75));    // MEJOR regateo (75% de la compra → siempre pierdes al revender)
+    const ventaSuelo = (item) => Math.max(1, Math.round(ventaBase(item) * 0.30));   // peor resultado (si baja aquí, el mercader se marcha)
+    const ventaRapida = (item) => Math.max(1, Math.round(ventaBase(item) * 0.50));  // venta rápida sin riesgo
     function regateoLabia() {
       if (!window.HacStats || !HacStats.nivelTotal) return 0;
       return HacStats.nivelTotal(myId, 'cultural') + HacStats.nivelTotal(myId, 'administrativo')
         + (HacStats.bonusRegateo ? HacStats.bonusRegateo(myId) : 0);
     }
-    const ventaJusta = (item, labia) => {   // oferta INICIAL: justa, mejor con labia
-      const v = valorItem(item);
-      return Math.max(ventaSuelo(item) + 1, Math.min(ventaTope(item) - 1, Math.round(v * (0.85 + Math.min(0.25, labia * 0.006)))));
+    const ventaJusta = (item, labia) => {   // oferta INICIAL (entre suelo y tope), algo mejor con labia
+      const b = ventaBase(item);
+      return Math.max(ventaSuelo(item) + 1, Math.min(ventaTope(item) - 1, Math.round(b * (0.42 + Math.min(0.16, labia * 0.005)))));
     };
     // Tácticas de regateo (piedra-papel-tijera cíclico). `gesto` = pose de HacChar.
     const REG_TAC = [
