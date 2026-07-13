@@ -52,7 +52,9 @@ const HacProd = (function () {
   function esfuerzo(nivDom, nivOficio, fatigaPrev, esfIdx, rng, rng2) {
     const rinde = 2 + Math.floor((nivDom || 1) / 3) + Math.floor((nivOficio || 1) / 2);
     const centro = 1 + Math.floor(((nivDom || 1) + (nivOficio || 1)) / 4);
-    const calMax = Math.min(NIVEL_MAX, 1 + (nivOficio || 1));
+    // Techo de calidad: nivel 1 ya alcanza cal 3 (para que los encargos cal≥3 NUNCA
+    // sean imposibles de raíz); subir el oficio da acceso a cal 4 y 5 y sube la media.
+    const calMax = Math.min(NIVEL_MAX, 2 + (nivOficio || 1));
     const cal = clamp(Math.round(centro + ((rng2 == null ? 0.5 : rng2) - 0.5) * 2), 1, calMax);
     const fatiga = fatigaPrev + 0.14 + 0.02 * (esfIdx || 0);
     const pChapuza = Math.pow(clamp(fatiga - 0.30, 0, 1), 2) * (1 - Math.min(0.5, (nivDom || 1) * 0.02));
