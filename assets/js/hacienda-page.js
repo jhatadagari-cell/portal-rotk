@@ -4591,7 +4591,7 @@
         const R = HacProd.RECURSOS[rec], tot = HacStats.recursoTotal(myId, rec), m = HacStats.recursos(myId)[rec] || {};
         const cals = [1, 2, 3, 4, 5].filter(q => m[q] > 0).map(q => `<span class="hacp-prod-cal c${q}">${q}·${m[q]}</span>`).join('');
         const bajo = (Number(m[1]) || 0) + (Number(m[2]) || 0);
-        return `<div class="hacp-prod-res"><span class="ic">${R.icon}</span><span class="nm">${esc(R.nombre)}</span><b>${tot}</b><span class="cals">${cals || '—'}</span>${bajo > 0 ? `<button type="button" class="hacp-prod-mini" data-vender="${rec}" title="Vende el excedente de calidad 1 y 2">Vender bajo</button>` : ''}</div>`;
+        return `<div class="hacp-prod-res"><span class="ic">${R.icon}</span><span class="nm">${esc(R.nombre)}</span><b>${tot}</b><span class="cals">${cals || '—'}</span>${bajo > 0 ? `<button type="button" class="hacp-prod-mini" data-vender="${rec}" title="Vende el excedente de calidad 1 y 2 (guarda la calidad alta para encargos)">Vender cal ≤2</button>` : ''}</div>`;
       }).join('');
       const oficios = HacProd.OFICIO_IDS.map(of => {
         const O = HacProd.OFICIOS[of], niv = HacStats.oficioNivel(myId, of), R = HacProd.RECURSOS[O.recurso];
@@ -4615,7 +4615,9 @@
         <button type="button" class="hacp-shop-x" data-act="prod-close" aria-label="Cerrar">✕</button>
         <div class="hacp-shop-h"><span class="hacp-shop-zh">產</span> Hacienda productiva</div>
         <div class="hacp-shop-sub">Trabaja los oficios para producir recursos con calidad, cumple encargos del día y mejora tu feudo. Trabajar cuesta energía y sube tu dominio (XP).</div>
-        <div class="hacp-prod-seclbl">Almacén 倉</div><div class="hacp-prod-alm">${almacen}</div>
+        <div class="hacp-prod-seclbl">Almacén 倉</div>
+        <div class="hacp-prod-tip">Cada unidad tiene <b>calidad 1–5</b> · trabajar y <b>subir el oficio</b> dan más calidad · los encargos piden una calidad mínima.</div>
+        <div class="hacp-prod-alm">${almacen}</div>
         <div class="hacp-prod-seclbl">Oficios 工</div><div class="hacp-prod-ofs">${oficios}</div>
         <div class="hacp-prod-seclbl">Encargos del día 委託</div><div class="hacp-prod-encs">${encargos}</div>
       </div>`;
@@ -4692,8 +4694,11 @@
       else if (st.fin === 'sinenergia') estado = `<div class="hacp-jorn-hint">Sin energía para seguir · recoge lo trabajado.</div>`;
       else estado = `<div class="hacp-jorn-hint">Energía ${ener}⚡ · riesgo de chapuza <b class="${pNext > 0.20 ? 'r' : ''}">${Math.round(pNext * 100)}%</b></div>`;
       const cals = [1, 2, 3, 4, 5].filter(q => st.lote[q]).map(q => `${R.icon}${q}·${st.lote[q]}`).join('  ') || '—';
+      const frases = O.frases || [];
+      const say = st.fin === 'chapuza' ? '¡Se te fue de las manos!' : (st.esf === 0 ? `Te dispones a ${esc(O.verbo.toLowerCase())}…` : (frases.length ? esc(frases[(st.esf - 1) % frases.length]) + '…' : ''));
       el.innerHTML = `<div class="hacp-suc-box hacp-jorn-box">
         <div class="hacp-suc-eyebrow">${O.icon} ${esc(O.verbo)} · ${esc(R.nombre)} <span class="zh">${R.zh}</span></div>
+        ${say ? `<div class="hacp-jorn-say">「${say}」</div>` : ''}
         <div class="hacp-jorn-arena">
           <div class="hacp-jorn-fig"><canvas class="hacp-jorn-cv" width="120" height="168"></canvas></div>
           <div class="hacp-jorn-mid">

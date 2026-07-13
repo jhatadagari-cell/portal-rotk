@@ -854,8 +854,11 @@ button.hacp-slot.manual:hover{ background:rgba(201,168,76,.24); }
 .hacp-prod-enc .hacp-cp-btn{ flex:0 0 auto; padding:6px 12px; }
 .hacp-prod-encok{ color:#7fc76a; font:700 11px 'Noto Sans SC',sans-serif; }
 
+.hacp-prod-tip{ font-size:10.5px; color:var(--parch2); opacity:.85; line-height:1.35; margin:-2px 0 6px; }
+.hacp-prod-tip b{ color:var(--parch); font-weight:700; }
 /* La jornada (empujar la suerte) */
 .hacp-jorn-box{ width:min(460px,94%); }
+.hacp-jorn-say{ font:italic 400 12px 'IM Fell English','Noto Serif SC',serif; color:var(--parch2,#c9bda6); margin:2px 0 2px; min-height:16px; }
 .hacp-jorn-arena{ display:flex; align-items:center; gap:12px; margin:8px 0 6px; }
 .hacp-jorn-fig{ position:relative; flex:0 0 auto; }
 .hacp-jorn-fig::after{ content:''; position:absolute; left:50%; bottom:6px; transform:translateX(-50%); width:56px; height:10px; border-radius:50%; background:rgba(0,0,0,.45); filter:blur(3px); }

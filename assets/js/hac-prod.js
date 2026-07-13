@@ -25,9 +25,12 @@ const HacProd = (function () {
   });
   // ── Oficios (un recurso cada uno) ────────────────────────────────────────
   const OFICIOS = Object.freeze({
-    forja:  { nombre: 'Forja',   zh: '鍛冶', icon: '🔨', recurso: 'hierro', dom: 'militar',        verbo: 'Forjar',   accion: 'martillas' },
-    letras: { nombre: 'Letras',  zh: '翰墨', icon: '🖌️', recurso: 'tinta',  dom: 'cultural',       verbo: 'Escribir', accion: 'trazas' },
-    campo:  { nombre: 'Campos',  zh: '田', icon: '🌱', recurso: 'grano',  dom: 'administrativo', verbo: 'Cosechar', accion: 'siegas' },
+    forja:  { nombre: 'Forja',   zh: '鍛冶', icon: '🔨', recurso: 'hierro', dom: 'militar',        verbo: 'Forjar',   accion: 'martillas',
+      frases: ['Calientas el hierro al rojo', 'Martilleas sobre el yunque', 'Templas el filo en agua', 'Repujas la pieza a golpes', 'Afinas el temple con paciencia'] },
+    letras: { nombre: 'Letras',  zh: '翰墨', icon: '🖌️', recurso: 'tinta',  dom: 'cultural',       verbo: 'Escribir', accion: 'trazas',
+      frases: ['Mojas el pincel en la tinta', 'Trazas los caracteres con pulso', 'Muelas más barra de tinta', 'Secas el papel al aire', 'Corriges un trazo con esmero'] },
+    campo:  { nombre: 'Campos',  zh: '田', icon: '🌱', recurso: 'grano',  dom: 'administrativo', verbo: 'Cosechar', accion: 'siegas',
+      frases: ['Siegas las espigas maduras', 'Atas los haces de grano', 'Aventas para separar la paja', 'Cargas los cestos al granero', 'Escoges el mejor grano'] },
   });
   const OFICIO_IDS = Object.keys(OFICIOS);
   const RECURSO_IDS = Object.keys(RECURSOS);
