@@ -2320,10 +2320,11 @@
       // Los ENCUENTROS resueltos ajustan este número al liquidar (no antes de partir).
       const base = Math.max(0.20, 0.56 - (dif - 3) * 0.08);
       const nM = (b.miembros || []).length;
-      const stat = Math.max(-0.22, Math.min(0.24, (bandFuerza(b) - 1) * 0.26));   // aptitudes de la banda vs objetivo
-      const compania = Math.min(0.06, Math.max(0, nM - 2) * 0.03);                 // más mecenas = más manos
+      const statRaw = (bandFuerza(b) - 1) * 0.26;                                  // aptitudes de la banda vs objetivo
+      const stat = Math.max(-0.22, Math.min(0.24, statRaw));                       // …topado a ±22/24 pts
+      const compania = Math.min(0.06, Math.max(0, nM - 2) * 0.03);                 // más mecenas = más manos (desde el 3.º)
       const raw = base + stat + compania + rb.pMod + capBonus;
-      return { pct: Math.max(0.05, Math.min(0.90, raw)), base: base, stat: stat, compania: compania, suc: 0, rel: rb.pMod, cap: capBonus, nM: nM };
+      return { pct: Math.max(0.05, Math.min(0.90, raw)), base: base, stat: stat, statTope: statRaw > 0.24, statPiso: statRaw < -0.22, compania: compania, companiaTope: compania >= 0.06, suc: 0, rel: rb.pMod, cap: capBonus, nM: nM };
     }
     function escProb(band) { return escProbParts(band).pct; }
     // Desglose legible del % (qué lo sube/baja). Deja claro que reclutar mecenas lo mejora.
@@ -2331,13 +2332,19 @@
       const p = escProbParts(band, doctrina);
       const mod = (v) => `${v > 0 ? '+' : ''}${Math.round(v * 100)} pts`;
       const cls = (v) => v < 0 ? 'neg' : (v > 0 ? 'pos' : 'nil');
+      const tope = (on) => on ? ' <i class="hacp-esc-tope">tope</i>' : '';
       const rows = [`<li><span>Base · dificultad</span><b>${Math.round(p.base * 100)}%</b></li>`,
-        `<li><span>Aptitudes de la banda</span><b class="${cls(p.stat)}">${mod(p.stat)}</b></li>`];
-      if (p.compania) rows.push(`<li><span>Compañía · ${p.nM} mecenas</span><b class="pos">${mod(p.compania)}</b></li>`);
+        `<li><span>Aptitudes de la banda</span><b class="${cls(p.stat)}">${mod(p.stat)}${tope(p.statTope || p.statPiso)}</b></li>`];
+      // Compañía: SIEMPRE visible (aunque sea +0) para que se vea que arranca en el 3.er mecenas.
+      rows.push(`<li class="${p.compania ? '' : 'nil'}"><span>Compañía · ${p.nM} mecenas${p.nM < 3 ? ' <em>(desde el 3.º)</em>' : ''}</span><b class="${cls(p.compania)}">${mod(p.compania)}${tope(p.companiaTope)}</b></li>`);
       if (p.suc) rows.push(`<li><span>Doctrina y sucesos</span><b class="${cls(p.suc)}">${mod(p.suc)}</b></li>`);
       if (p.rel) rows.push(`<li><span>Vínculos entre mecenas</span><b class="${cls(p.rel)}">${mod(p.rel)}</b></li>`);
       if (p.cap) rows.push(`<li><span>Talento del capitán</span><b class="pos">${mod(p.cap)}</b></li>`);
-      return `<details class="hacp-esc-desglose"><summary>¿Cómo se calcula el éxito?</summary><ul>${rows.join('')}<li class="hacp-esc-desglose-tip">Recluta mecenas con la aptitud pedida para subir «aptitudes de la banda».</li></ul></details>`;
+      // El consejo se adapta: si ya estás al tope de aptitudes, reclutar más NO sube esa línea.
+      const tip = p.statTope
+        ? 'Tus aptitudes ya superan de sobra el requisito (al tope). Suma un 3.er mecenas para el bono de compañía.'
+        : 'Recluta mecenas con la aptitud pedida para subir «aptitudes de la banda».';
+      return `<details class="hacp-esc-desglose"><summary>¿Cómo se calcula el éxito?</summary><ul>${rows.join('')}<li class="hacp-esc-desglose-tip">${tip}</li></ul></details>`;
     }
     // Resuelve MI peregrinaje al volver. El cliente tira el dado (mismo patrón que las
     // escaramuzas); la RPC es idempotente → solo el primero surte efecto. ÉXITO: cura
