@@ -859,9 +859,10 @@
       // VIÑETA ANIMADA de la resolución (coreografía dedicada por encuentro, con rama
       // éxito/fracaso); al llegar al clímax se revela el verdicto + efecto. El dado ya
       // está tirado arriba (determinista): la animación solo escenifica el resultado.
+      const total = encPlan(o, mis).length;
       const el = ensureSucEl(); el.hidden = false;
       el.innerHTML = `<div class="hacp-suc-box hacp-enc-box">
-        <div class="hacp-suc-eyebrow">${domIcon(ev.dom)} Encuentro · ${esc(mis.nombre || 'Expedición')}</div>
+        <div class="hacp-suc-eyebrow">${domIcon(ev.dom)} ${total > 1 ? `Encuentro ${ev.i + 1} de ${total}` : 'Encuentro'} · ${esc(mis.nombre || 'Expedición')}</div>
         <div class="hacp-suc-ttl">${esc(enc.txt)}</div>
         <canvas class="hacp-enc-anim" data-enc-cv></canvas>
         <div class="hacp-enc-result" data-enc-result hidden>
@@ -886,9 +887,10 @@
       if (!ev) { closeSuc(); applyOrders(); return; }   // no quedan resolubles → cobra/limpia si procede
       const enc = encById(ev.dom, ev.encId); if (!enc) { closeSuc(); return; }
       const p = Math.round(pEncuentro(ev.dom, mis.dif) * 100);
+      const total = encPlan(o, mis).length;   // «Encuentro X de N»: deja claro cuántos trae la misión
       const el = ensureSucEl(); el.hidden = false;
       el.innerHTML = `<div class="hacp-suc-box">
-        <div class="hacp-suc-eyebrow">${domIcon(ev.dom)} Encuentro · ${esc(mis.nombre || 'Expedición')}</div>
+        <div class="hacp-suc-eyebrow">${domIcon(ev.dom)} ${total > 1 ? `Encuentro ${ev.i + 1} de ${total}` : 'Encuentro'} · ${esc(mis.nombre || 'Expedición')}</div>
         <div class="hacp-suc-ttl">${esc(enc.txt)}</div>
         <div class="hacp-suc-desc">${esc(enc.desc || '')}</div>
         <div class="hacp-enc-apt">Se resuelve con tu <b style="color:${DOM_COLOR[ev.dom]}">${DOM_NOMBRE[ev.dom]}</b> · nivel ${nivelEf(ev.dom)} vs dificultad ${mis.dif}</div>
@@ -994,6 +996,7 @@
       if (window.HacStats && HacStats.malherido && HacStats.malherido(myId)) { toast('Tu mecenas está malherido · cúralo antes de salir'); return; }
       const m = HacMisiones.get(misId); if (!m) return;
       if (window.HacEnergia) HacEnergia.spend(h.id, myId, costeExped(m));
+      if (window.HacMisTomadas) HacMisTomadas.tomar(h.id, misId);   // se consume de TU tablón hasta el relleno diario
       HacOrdenes.set({ haciendaId: h.id, miembroId: myId, tipo: 'expedicion', targetId: 'mis:' + misId, duracionSeg: durExped(m) })
         .then(applyOrders).catch(e => console.warn('[orden] set', e));
     }
@@ -4351,7 +4354,8 @@
     }
     function buildBoard() {
       const el = ensureBoardEl();
-      const list = window.HacMisiones ? HacMisiones.disponibles(tier) : [];
+      const tomadas = window.HacMisTomadas ? HacMisTomadas.tomadasHoy(h.id) : new Set();   // las que YA cogiste hoy → fuera del tablón
+      const list = (window.HacMisiones ? HacMisiones.disponibles(tier) : []).filter(m => !tomadas.has(m.id));
       const ocupado = ocupadoAhora(myId);   // orden activa O banda/peregrinaje (incl. 'abierta')
       const energia = window.HacEnergia ? HacEnergia.current(h.id, myId) : 100;
       const rows = list.slice().sort((a, b) => (a.dom < b.dom ? -1 : a.dom > b.dom ? 1 : a.dif - b.dif)).map(m => {
@@ -4360,20 +4364,34 @@
         const rm = retoMultMision(m);                                             // rutina si va muy por debajo de tu nivel
         const dinB = Math.round(conBono(rec.dinero, bonos.dinero) * rm), xpB = Math.round(conBono(rec.xp, xpFracMision(m.dom)) * rm);   // ya con bonos de pabellón
         const rutina = rm < 1 ? ` <span class="hacp-mis-rutina" title="Rutina: muy por debajo de tu nivel, rinde ${Math.round(rm * 100)}%">rutina</span>` : '';
-        const enc = (m.enc && m.enc.length)
-          ? ` <span class="hacp-mis-enc" title="Encuentros por el camino: resuélvelos con esa aptitud para ganar recompensa extra">${m.enc.map(d => {
-              const ep = Math.round(pEncuentro(d, m.dif) * 100);
-              return `<span class="hacp-mis-eciw" title="Encuentro de ${DOM_NOMBRE[d]} · tu éxito ${ep}%">${domIcon(d, 'hacp-mis-eci')}<i>${ep}%</i></span>`;
-            }).join('')}</span>`
+        const rapido = durExped(m) < HacMisiones.durSeg(m) ? '<sup class="hacp-bono">↓</sup>' : '';
+        // ENCUENTROS: bloque claro con RECUENTO + una ficha por aptitud (nombre + tu %).
+        const encBlock = (m.enc && m.enc.length)
+          ? `<div class="hacp-mis-encs" title="Retos a mitad del viaje: resuélvelos con la aptitud indicada. Sale bien según tu %, y suma recompensa (o resta si fallas).">
+               <span class="hacp-mis-encs-h">⚑ ${m.enc.length} ${m.enc.length > 1 ? 'encuentros' : 'encuentro'} en el camino</span>
+               ${m.enc.map(d => {
+                 const ep = Math.round(pEncuentro(d, m.dif) * 100);
+                 return `<span class="hacp-enc-chip" style="--dc:${DOM_COLOR[d] || 'var(--gold)'}">${domIcon(d, 'hacp-enc-chip-i')} ${DOM_NOMBRE[d]} <b>${ep}%</b></span>`;
+               }).join('')}
+             </div>`
           : '';
         return `<div class="hacp-mis t-${m.dom}">
-          <span class="hacp-mis-g">${domIcon(m.dom, 'hacp-mis-gi')}</span>
+          <span class="hacp-mis-g" style="--dc:${DOM_COLOR[m.dom] || 'var(--gold)'}">${domIcon(m.dom, 'hacp-mis-gi')}</span>
           <div class="hacp-mis-main">
-            <div class="hacp-mis-name">${esc(m.nombre)} <span class="hacp-mis-dif">dif. ${m.dif}</span>${enc}${rutina}</div>
-            <div class="hacp-mis-meta">⏱ ${fmtClock(durExped(m))}${durExped(m) < HacMisiones.durSeg(m) ? '<sup class="hacp-bono">↓</sup>' : ''} · <span class="${sinEn ? 'hacp-mis-noen' : ''}">−${en}⚡</span> · +${dinB}💰${bonos.dinero ? '<sup class="hacp-bono">↑</sup>' : ''} · +${xpB} XP${xpFracMision(m.dom) > 0 ? '<sup class="hacp-bono">↑</sup>' : ''} · 🎁 ${loot}%</div>
+            <div class="hacp-mis-name">${esc(m.nombre)} <span class="hacp-mis-dif">dif. ${m.dif}</span>${rutina}</div>
+            <div class="hacp-mis-rewards">
+              <span class="hacp-rw rw-din" title="Dinero que traes al volver">💰 <b>+${dinB}</b>${bonos.dinero ? '<sup class="hacp-bono">↑</sup>' : ''}</span>
+              <span class="hacp-rw rw-xp" title="Experiencia de ${DOM_NOMBRE[m.dom]}">⭐ <b>+${xpB}</b> XP${xpFracMision(m.dom) > 0 ? '<sup class="hacp-bono">↑</sup>' : ''}</span>
+              <span class="hacp-rw rw-loot" title="Probabilidad de traer un objeto de botín">🎁 <b>${loot}%</b></span>
+              <span class="hacp-rw rw-time" title="Duración del viaje">⏱ ${fmtClock(durExped(m))}${rapido}</span>
+              <span class="hacp-rw rw-en${sinEn ? ' noen' : ''}" title="Energía que cuesta salir">⚡ <b>−${en}</b></span>
+            </div>
+            ${encBlock}
           </div>
-          <span class="hacp-mis-risk r-${rc}" title="Riesgo de fracaso (baja con tu nivel de ${DOM_NOMBRE[m.dom]} y el equipo)">⚠ ${Math.round(risk * 100)}%</span>
-          <button type="button" class="hacp-mis-go" data-mis="${esc(m.id)}"${ocupado || sinEn ? ' disabled' : ''} title="${sinEn ? 'Energía insuficiente' : ''}">Enviar</button>
+          <div class="hacp-mis-side">
+            <span class="hacp-mis-risk r-${rc}" title="Riesgo de fracaso (baja con tu nivel de ${DOM_NOMBRE[m.dom]} y el equipo)"><i>Riesgo</i><b>⚠ ${Math.round(risk * 100)}%</b></span>
+            <button type="button" class="hacp-mis-go" data-mis="${esc(m.id)}"${ocupado || sinEn ? ' disabled' : ''} title="${sinEn ? 'Energía insuficiente' : ''}">Enviar</button>
+          </div>
         </div>`;
       }).join('');
       // Banner de ENCUENTROS pendientes: mientras queden, la misión no cobra y no puedes
@@ -4381,22 +4399,27 @@
       const e = miExped();
       const hayEnc = !!(e && encPend(e.o, e.mis));
       const encHot = hayEnc && !!encResolvible(e.o, e.mis);
+      const nEnc = (e && e.mis && e.mis.enc) ? e.mis.enc.length : 0;
       const encBanner = hayEnc
         ? `<div class="hacp-board-encb${encHot ? ' hot' : ''}">
             <span>${encHot
               ? `⚑ Tu expedición <b>«${esc(e.mis.nombre)}»</b> tiene un <b>encuentro</b> que atender antes de cobrar.`
-              : `Tu expedición <b>«${esc(e.mis.nombre)}»</b> tendrá encuentros por el camino.`}</span>
+              : `Tu expedición <b>«${esc(e.mis.nombre)}»</b> traerá <b>${nEnc}</b> ${nEnc > 1 ? 'encuentros' : 'encuentro'} por el camino.`}</span>
             ${encHot ? '<button type="button" class="hacp-cp-btn" data-act="enc-go">Atender</button>' : ''}
           </div>`
         : '';
+      const vacio = tomadas.size
+        ? '✔ Has agotado las misiones de hoy · el tablón se renueva mañana.'
+        : 'No hay misiones disponibles.';
       el.innerHTML = `
         <div class="hacp-shop-box">
           <button type="button" class="hacp-shop-x" data-act="board-close" aria-label="Cerrar">✕</button>
           <div class="hacp-shop-h"><span class="hacp-shop-zh">📜</span> Tablón de misiones <span class="hacp-shop-money">⚡ <b>${Math.round(energia)}</b></span></div>
-          <div class="hacp-shop-sub">A tu nivel una misión es una apuesta real; superarla baja el riesgo con rendimientos decrecientes (nunca es gratis). Las muy por debajo de tu nivel son <b>rutina</b> y pagan menos: conviene variar de dominio y buscar retos. Las difíciles cuestan más energía y dan más 🎁 botín.${ocupado ? ' <b>Tu mecenas ya está ocupado en otra actividad.</b>' : ''}</div>
+          <div class="hacp-shop-sub">Cada misión que <b>coges</b> desaparece de tu tablón hasta mañana. A tu nivel es una apuesta real; superarla baja el riesgo (nunca es gratis). Las muy por debajo de tu nivel son <b>rutina</b> y pagan menos. Las difíciles cuestan más ⚡ y dan más 🎁 botín.${ocupado ? ' <b>Tu mecenas ya está ocupado en otra actividad.</b>' : ''}</div>
+          <div class="hacp-board-legend">⚑ El icono de bandera marca <b>encuentros</b>: mini-retos que aparecen a mitad del viaje y resuelves con la aptitud indicada (con una animación). Si sale bien suman recompensa; si fallas, restan. El % es tu probabilidad de superarlos.</div>
           ${hayBonos() ? `<div class="hacp-shop-note">Bonos de los pabellones de la finca: ${bonosTexto()}</div>` : ''}
           ${encBanner}
-          <div class="hacp-board-list">${rows || '<div class="hacp-inv-note">No hay misiones disponibles.</div>'}</div>
+          <div class="hacp-board-list">${rows || `<div class="hacp-inv-note">${vacio}</div>`}</div>
         </div>`;
       el.querySelector('[data-act="board-close"]').addEventListener('click', closeBoard);
       const encGo = el.querySelector('[data-act="enc-go"]');
@@ -4466,6 +4489,7 @@
     if (window.HacEscaramuzas) HacEscaramuzas.ready().then(escPulse);
     if (DEB) DEB.ready().then(debPulse);
     if (window.HacBuff) HacBuff.ready().then(() => { if (charId) refreshCharPanel(); });   // bono de hacienda (F2)
+    if (window.HacMisTomadas) HacMisTomadas.ready();   // misiones ya cogidas hoy (para esconderlas del tablón)
     if (window.HacOrdenes) {
       HacOrdenes.ready().then(applyOrders);
       setInterval(() => {
