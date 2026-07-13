@@ -631,6 +631,12 @@
     // cuando el sim termina la misión de mi mecenas (onMission true→false) o, si no
     // estaba mirando, por un tope de seguridad. Premia + limpia la orden (dedup).
     let _wasOnMission = false;
+    // Órdenes ya cobradas (por sucKey). El clear de la orden es OPTIMISTA; el poll puede
+    // recargarla de la BD antes de que persista el borrado. Sin este guard, al haber vuelto
+    // ya a la finca y limpiar el estado de encuentros (sucClear), esa orden recargada se veía
+    // como "encuentros sin resolver" y RE-DISPARABA el encuentro. Aquí la ignoramos hasta que
+    // el borrado se propague de verdad.
+    const _cobradas = new Set();
     function maybeRewardMyMission() {
       if (!myId || !window.HacOrdenes || !window.HacPuntos) return;
       const o = HacOrdenes.mine(h.id, myId);
@@ -650,6 +656,9 @@
         if (String(o.targetId || '').indexOf('escaramuza:') === 0) {
           HacOrdenes.clear(h.id, myId); _wasOnMission = false; applyOrders(); return;
         }
+        // Ya cobrada y recargada por el poll antes de persistir el clear: reintenta el
+        // borrado y NO la reproceses (nada de re-mostrar el encuentro ni re-cobrar).
+        if (_cobradas.has(sucKey(o))) { HacOrdenes.clear(h.id, myId); _wasOnMission = false; return; }
         let dom = null;
         const mis = (o.tipo === 'expedicion') ? (window.HacMisiones && HacMisiones.get(String(o.targetId || '').replace('mis:', ''))) : null;
         // EXPEDICIÓN con encuentros SIN resolver: el mecenas ha VUELTO pero NO cobra ni
@@ -668,7 +677,7 @@
           let lost = 0;
           if (window.HacStats) { const wallet = HacStats.dinero(myId); lost = Math.min(wallet, Math.round(wallet * 0.5) + roboDin); if (lost > 0) HacStats.award(myId, { dinero: -lost }); }
           if (em.heridas > 0 && HacStats.herir) HacStats.herir(myId, em.heridas); sucClear(o);
-          HacOrdenes.clear(h.id, myId);
+          _cobradas.add(sucKey(o)); HacOrdenes.clear(h.id, myId);
           toast(lost > 0 ? `❌ Misión fallida · perdiste ${lost} 💰` : '❌ Misión fallida · sin botín');
           if (window.HacBitacora) HacBitacora.log(myId, 'expedicion', '🧭 ' + (mis.nombre || 'Expedición') + ': ✘ fracaso' + (lost > 0 ? ` · −${lost}💰` : ''));
           _wasOnMission = false; applyOrders();
@@ -731,6 +740,7 @@
           sucClear(o);
           retoAdd('misiones', 1);   // reto semanal: expedición del tablón completada
         }
+        _cobradas.add(sucKey(o));
         HacOrdenes.clear(h.id, myId);   // optimista: la quita del caché ya
         toast('+' + r + ' puntos · misión cumplida' + extra);
         if (window.HacBitacora) {
