@@ -844,6 +844,8 @@ button.hacp-slot.manual:hover{ background:rgba(201,168,76,.24); }
 .hacp-prod-of-h .ic{ font-size:18px; } .hacp-prod-of-h .nm{ font:700 13px 'Noto Sans SC',sans-serif; flex:1; } .hacp-prod-of-h .nm i{ color:var(--parch2); font-style:normal; font-size:11px; }
 .hacp-prod-of-h .niv{ font:800 12px 'Noto Serif SC',serif; }
 .hacp-prod-of-sub{ font-size:10.5px; color:var(--parch2); margin:2px 0 6px; }
+.hacp-prod-edif{ color:var(--hac,var(--gold)); opacity:.85; }
+.hacp-cp-btn.hacp-prod-locked{ border-style:dashed; }
 .hacp-prod-of-acts{ display:flex; gap:6px; } .hacp-prod-of-acts .hacp-cp-btn{ flex:1; font-size:11px; padding:6px 4px; }
 .hacp-prod-encs{ display:flex; flex-direction:column; gap:6px; }
 .hacp-prod-enc{ display:flex; align-items:center; gap:9px; background:rgba(255,255,255,.03); border:1px solid rgba(201,168,76,.2); border-radius:8px; padding:7px 10px; }

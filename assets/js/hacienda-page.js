@@ -4563,6 +4563,16 @@
     const prodDia = () => (window.HacProd ? HacProd.diaStr() : '');
     const prodOk = () => !!(myId && window.HacProd && window.HacStats && HacStats.recursos);
     const refrescarProd = () => { if (prodEl && !prodEl.hidden) buildProd(); if (charId) buildCharPanel(charId); };
+    // ATADO A EDIFICIOS: nº de edificios de un dominio en ESTA finca (los de CLASE
+    // —校場/太學/官署— cuentan doble, como en la sinergia). Fija el TECHO del oficio.
+    function edificiosDominio(dom) {
+      const cons = (h.mapa && Array.isArray(h.mapa.construcciones)) ? h.mapa.construcciones : [];
+      let n = 0; cons.forEach(c => { const t = window.HacBuild && HacBuild.tipo && HacBuild.tipo(c.tipo); if (t && t.dominio === dom) n += t.restringido ? 2 : 1; });
+      return n;
+    }
+    // Techo de nivel del oficio según los edificios de su dominio: sin edificios → 1
+    // (trabajas básico, no mejoras); cada edificio del dominio sube el techo (máx 5).
+    function oficioTecho(of) { const O = HacProd.OFICIOS[of]; return Math.max(1, Math.min(HacProd.NIVEL_MAX, 1 + edificiosDominio(O.dom))); }
     // Nº de encargos ENTREGABLES ahora (para el badge rojo del botón Producción).
     function encargosEntregables() {
       if (!prodOk()) return 0;
@@ -4596,12 +4606,15 @@
       const oficios = HacProd.OFICIO_IDS.map(of => {
         const O = HacProd.OFICIOS[of], niv = HacStats.oficioNivel(myId, of), R = HacProd.RECURSOS[O.recurso];
         const rph = HacProd.rentaPorHora(niv), cap = HacProd.rentaCap(niv), c = HacProd.costeMejora(niv);
-        const tope = niv >= HacProd.NIVEL_MAX, puede = !tope && HacStats.recursoDesdeCal(myId, O.recurso, c.calMin) >= c.uds && HacStats.dinero(myId) >= c.dinero;
-        const mLbl = tope ? 'Nivel máx' : `Mejorar · ${c.uds}${R.icon}≥${c.calMin} +${c.dinero}💰`;
+        const techo = oficioTecho(of), edif = edificiosDominio(O.dom);
+        const enTope = niv >= HacProd.NIVEL_MAX, enTecho = niv >= techo;   // enTecho = limitado por los edificios de la finca
+        const puede = !enTope && !enTecho && HacStats.recursoDesdeCal(myId, O.recurso, c.calMin) >= c.uds && HacStats.dinero(myId) >= c.dinero;
+        const mLbl = enTope ? 'Nivel máx' : enTecho ? `Faltan edificios ${DOM_GLYPH[O.dom]}` : `Mejorar · ${c.uds}${R.icon}≥${c.calMin} +${c.dinero}💰`;
+        const edifTxt = edif > 0 ? `${edif} edif. ${DOM_GLYPH[O.dom]} → techo niv ${techo}` : `sin edificios ${DOM_GLYPH[O.dom]} → techo niv 1 (constrúyelos para mejorar)`;
         return `<div class="hacp-prod-of">
           <div class="hacp-prod-of-h"><span class="ic">${O.icon}</span><span class="nm">${esc(O.nombre)} <i>${O.zh}</i></span><span class="niv" style="color:${DOM_COLOR[O.dom]}">${DOM_GLYPH[O.dom]} niv ${niv}</span></div>
-          <div class="hacp-prod-of-sub">Produce ${R.icon} ${esc(R.nombre)} · renta ${rph}/h (tope ${cap})</div>
-          <div class="hacp-prod-of-acts"><button type="button" class="hacp-cp-btn hacp-suc-ok" data-trabajar="${of}">${esc(O.verbo)} 勞作</button><button type="button" class="hacp-cp-btn" data-mejorar="${of}"${tope || !puede ? ' disabled' : ''}>${mLbl}</button></div>
+          <div class="hacp-prod-of-sub">Produce ${R.icon} ${esc(R.nombre)} · renta ${rph}/h (tope ${cap}) · <span class="hacp-prod-edif">${edifTxt}</span></div>
+          <div class="hacp-prod-of-acts"><button type="button" class="hacp-cp-btn hacp-suc-ok" data-trabajar="${of}">${esc(O.verbo)} 勞作</button><button type="button" class="hacp-cp-btn${enTecho && !enTope ? ' hacp-prod-locked' : ''}" data-mejorar="${of}"${enTope || !puede ? ' disabled' : ''}>${mLbl}</button></div>
         </div>`;
       }).join('');
       const hechos = HacStats.encargosHechos(myId, dia);
@@ -4629,6 +4642,7 @@
     }
     function mejorarOficio(of) {
       const O = HacProd.OFICIOS[of]; if (!O) return; const niv = HacStats.oficioNivel(myId, of); if (niv >= HacProd.NIVEL_MAX) return;
+      if (niv >= oficioTecho(of)) { toast(`Necesitas más edificios ${DOM_GLYPH[O.dom]} en la finca para subir este oficio`); return; }
       const c = HacProd.costeMejora(niv), R = HacProd.RECURSOS[O.recurso];
       if (HacStats.recursoDesdeCal(myId, O.recurso, c.calMin) < c.uds) { toast(`Necesitas ${c.uds} ${R.icon} de calidad ≥${c.calMin}`); return; }
       if (HacStats.dinero(myId) < c.dinero) { toast('No tienes suficiente dinero'); return; }
