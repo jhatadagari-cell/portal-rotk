@@ -1588,6 +1588,13 @@ const HacFolk = (function () {
     horses.forEach(h => {
       const c = caballos[h.id]; if (c && c.nombre) h.nombre = c.nombre;
       if (h.rider) { h.moving = false; return; }           // MONTADO: lo lleva el jinete (drawMount)
+      // Reanudación: el dueño ya está FUERA en expedición (montó en OTRO cliente, o antes
+      // de recargar, sin que ESTE cliente viviera la coreografía de silbar/montar). Sin
+      // esto, el corcel se quedaría pastando en la finca mientras su jinete está de misión
+      // (visible p.ej. desde otra cuenta). Un dueño con caballo SIEMPRE sale montado
+      // (expedición individual y escaramuza), así que basta con que su walker esté 'fuera'.
+      const away = walkers.find(x => x.id === h.id && x.state === 'fuera');
+      if (away) { h.rider = h.id; h.summonTo = null; h.arrived = false; away.mounted = true; h.moving = false; return; }
       if (h.summonTo) {                                     // ACUDE al silbido del dueño
         const dx = h.summonTo[0] - h.fx, dy = h.summonTo[1] - h.fy, d = Math.sqrt(dx * dx + dy * dy), adv = SUMMON_SPD * dt;
         const fd = faceFromGrid(dx, dy); if (fd) h.dir = fd; h.moving = true; h.phase += dt * 4;
