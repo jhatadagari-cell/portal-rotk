@@ -938,6 +938,16 @@
       const nav = document.querySelector('#hacp-mnav [data-sec="misiones"]');
       if (nav) nav.classList.toggle('pulse', on && !nav.classList.contains('on'));
     }
+    // Badge rojo con el nº de misiones disponibles en la barra móvil (el de escritorio
+    // lo pinta toolbarHTML). Si no hay badge, es que no queda ninguna hoy.
+    function refreshMoMisBadge() {
+      if (!mobar) return;
+      const btn = mobar.querySelector('.hacp-mo-mis'); if (!btn) return;
+      const n = (typeof misDisponiblesCount === 'function') ? misDisponiblesCount() : 0;
+      let b = btn.querySelector('.hacp-mo-badge');
+      if (n > 0) { if (!b) { b = document.createElement('span'); b.className = 'hacp-mo-badge'; btn.appendChild(b); } b.textContent = n; }
+      else if (b) b.remove();
+    }
 
     // Repinta la caja de prestigio in situ (el prestigio se carga async tras el
     // primer render y crece al completar misiones: hay que refrescarla, no dejarla
@@ -3652,8 +3662,15 @@
       if (charId) buildCharPanel(charId);
     }
     // Barra de acciones (rejilla de iconos) — sustituye la pila de botones ancha.
+    // Nº de misiones DISPONIBLES en tu tablón AHORA (pool del tier menos las que ya cogiste hoy).
+    function misDisponiblesCount() {
+      if (!hasTablon || !window.HacMisiones) return 0;
+      const tomadas = window.HacMisTomadas ? HacMisTomadas.tomadasHoy(h.id) : new Set();
+      return HacMisiones.disponibles(tier).filter(m => !tomadas.has(m.id)).length;
+    }
     function toolbarHTML(d) {
       const pts = (window.HacStats && HacStats.puntosLibres) ? HacStats.puntosLibres(myId) : 0;
+      const misDisp = misDisponiblesCount();
       const tool = (act, ic, lb, extra) => `<button type="button" class="hacp-cp-tool${extra || ''}" data-act="${act}"><span class="ic">${ic}</span><span class="lb">${lb}</span></button>`;
       const items = [
         tool('equip', '⚔', 'Equipo' + (d.equipN ? ` ${d.equipN}/3` : '')),
@@ -3665,10 +3682,13 @@
         tool('esc', '兵', 'Escaramuzas', ' hacp-cp-esc'),
         hasTablon ? tool('board', '檄', 'Misiones', ' hacp-cp-board') : '',
       ];
-      // Distintivo de puntos de talento sin gastar sobre el icono de Sendas.
+      // Distintivos rojos: puntos de talento sin gastar (Sendas) y misiones disponibles
+      // en el tablón (Misiones). Si el de Misiones no aparece, es que no queda ninguna hoy.
       const sendasBadge = pts > 0 ? `<span class="hacp-cp-badge">${pts}</span>` : '';
+      const boardBadge = misDisp > 0 ? `<span class="hacp-cp-badge">${misDisp}</span>` : '';
       let html = items.join('');
       if (sendasBadge) html = html.replace('data-act="sendas"><span class="ic">道</span>', `data-act="sendas">${sendasBadge}<span class="ic">道</span>`);
+      if (boardBadge) html = html.replace('data-act="board"><span class="ic">檄</span>', `data-act="board">${boardBadge}<span class="ic">檄</span>`);
       return `<div class="hacp-cp-tools">${html}</div>`;
     }
     // Overlay reutilizable para "Tu Caballo" y "Bufos".
@@ -4614,12 +4634,7 @@
     function goConsultBoard() {
       if (!myId || !hasTablon || !tablonBid) return;
       if (abrirEncuentrosPend()) return;   // hay un encuentro que atender: se resuelve antes que el tablón
-      const r = HacFolk.consultar ? HacFolk.consultar(myId, tablonBid) : false;
-      if (r === 'now') { openMissionBoard(); return; }
-      if (!r) { toast('Tu mecenas está ocupado ahora mismo'); return; }
-      HacFolk.select(myId);
-      if (cam && cam.focusFollow) cam.focusFollow(() => HacFolk.position(myId), 3.0);
-      toast('🚶 Tu mecenas va al tablón de misiones…');
+      openMissionBoard();                  // abre el listado DIRECTAMENTE (sin caminar al tablón)
     }
 
     function itemHTML(m, sel) {
@@ -4716,7 +4731,7 @@
     }
     // Tic de 1 s: refresca SOLO el panel del personaje (cuenta atrás de expedición y
     // energía/regeneración se derivan del reloj de servidor → tienen que verse vivos).
-    setInterval(() => { if (charId) refreshCharPanel(); if (escVisible) escTick(); pulseMisNav(); pulseHaciendaNav(); pulseEscNav(); renderDebAlert(); if (mShell && mShell.refreshDeb) mShell.refreshDeb(); }, 1000);
+    setInterval(() => { if (charId) refreshCharPanel(); if (escVisible) escTick(); pulseMisNav(); refreshMoMisBadge(); pulseHaciendaNav(); pulseEscNav(); renderDebAlert(); if (mShell && mShell.refreshDeb) mShell.refreshDeb(); }, 1000);
 
     // Popup con la gente que hay dentro de un edificio (al pulsar su banner).
     function showPop(x, y, sign) {

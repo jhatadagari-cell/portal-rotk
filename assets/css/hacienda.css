@@ -820,7 +820,11 @@ button.hacp-slot.manual:hover{ background:rgba(201,168,76,.24); }
 .hacp-board-encb b{ color:var(--parch,#eadfce); }
 .hacp-board-encb .hacp-cp-btn{ flex:0 0 auto; white-space:nowrap; }
 /* Parpadeo del botón «Misiones» en la barra de acciones móvil (encuentro pendiente). */
+.hacp-mobar-btn{ position:relative; }
 .hacp-mobar-btn.pulse{ color:var(--gold); animation:hacpToolPulse 1s ease-in-out infinite; }
+/* Badge rojo con el nº de misiones disponibles (barra móvil). */
+.hacp-mo-badge{ position:absolute; top:3px; right:calc(50% - 20px); min-width:15px; height:15px; padding:0 3px; box-sizing:border-box; border-radius:8px;
+  background:#b23b2e; color:#fff; font:700 9.5px 'Noto Sans SC',sans-serif; display:flex; align-items:center; justify-content:center; z-index:2; }
 .hacp-suc-done{ display:block; width:100%; }
 /* ── Bautizo del caballo ── */
 .hacp-horse-in{ width:100%; box-sizing:border-box; margin-top:4px; padding:11px 12px; font:800 18px 'Noto Serif SC',serif; text-align:center;
