@@ -61,7 +61,7 @@ const HacChar = (function () {
       // `aspecto.kind`/`aspecto.torsoLujo` permiten que una ROPA DE TORSO equipada
       // (HacTienda item.viste) redefina el atuendo del tronco sin tocar la cabeza:
       // p. ej. un guerrero (armadura) que se pone una túnica pasa a kind 'robe'.
-      kind: aspecto.kind || o.kind, prop: o.prop, arma: aspecto.arma || null, cape: !!o.cape, ornate: !!o.ornate, torsoLujo: !!aspecto.torsoLujo, beard: o.beard || 0,
+      kind: aspecto.kind || o.kind, prop: o.prop, arma: aspecto.arma || null, cape: !!o.cape, ornate: !!o.ornate, torsoLujo: !!aspecto.torsoLujo, torsoGala: !!aspecto.torsoGala, beard: o.beard || 0,
       robe, robeHi: light(robe, 0.16), robeDk: dark(robe, 0.30), robeSh: dark(robe, 0.50),
       beardC: dark(hair, 0.05),
       sash: dark(mix(robe, accent, 0.25), 0.05),
@@ -286,25 +286,31 @@ const HacChar = (function () {
     } else {
       // Hombros + cuello.
       px(c - shHalf, top, shHalf * 2, 2, P.robeHi);
+      // GALA = ropa de torso RARA: dorados extra (charreteras con tachón, brocado del
+      // placket, bajo dorado doble y medallón), por encima del acabado `torsoLujo`.
+      const gala = P.torsoGala;
       // ROPA DE TORSO fina (torsoLujo): charreteras de acento en ambos hombros.
       if (P.torsoLujo) { px(c - shHalf, top, 3, 2, P.trim); px(c + shHalf - 3, top, 3, 2, P.trim); px(c - shHalf, top, 3, 1, P.trimHi); px(c + shHalf - 3, top, 3, 1, P.trimHi); }
+      if (gala) { px(c - shHalf + 1, top, 1, 1, P.goldHi); px(c + shHalf - 2, top, 1, 1, P.goldHi); }   // tachón dorado en cada charretera
       // Solapa cruzada (jiaoling) con ribete.
       if (!v.back) {
-        for (let i = 0; i < 12; i++) px(c - 6 + i + Math.round(v.dx * 0.5), top + 2 + i, 2, 1, i < 2 ? P.skinDk : P.trim);
+        for (let i = 0; i < 12; i++) px(c - 6 + i + Math.round(v.dx * 0.5), top + 2 + i, 2, 1, i < 2 ? P.skinDk : (gala ? P.gold : P.trim));
         px(c - 5 + Math.round(v.dx * 0.5), top + 2, 2, 2, P.robeHi);   // cuello interior
       }
-      // Placket/brocado frontal (banda central).
+      // Placket/brocado frontal (banda central). Dorado con tachones en ornate o gala.
       if (!v.back) {
-        const bandTop = top + 3, bandBot = beltY;
-        px(c - 1 + Math.round(v.dx * 0.4), bandTop, 2, bandBot - bandTop, P.ornate ? P.gold : P.trimDk);
-        if (P.ornate) for (let yy = bandTop + 1; yy < bandBot; yy += 2) px(c + Math.round(v.dx * 0.4), yy, 1, 1, P.robeDk);
+        const bandTop = top + 3, bandBot = beltY, rico = P.ornate || gala;
+        px(c - 1 + Math.round(v.dx * 0.4), bandTop, 2, bandBot - bandTop, rico ? P.gold : P.trimDk);
+        if (rico) for (let yy = bandTop + 1; yy < bandBot; yy += 2) px(c + Math.round(v.dx * 0.4), yy, 1, 1, gala ? P.goldHi : P.robeDk);
       }
       // Faja.
       px(c - hemHalf + 1, beltY, hemHalf * 2 - 2, 3, P.sash);
       px(c - hemHalf + 1, beltY, hemHalf * 2 - 2, 1, light(P.sash, 0.12));
       px(c - hemHalf + 1, beltY + 2, hemHalf * 2 - 2, 1, dark(P.sash, 0.2));
       if (v.front) { px(c - 2, beltY + 2, 4, 4, P.trim); px(c - 1, beltY + 6, 2, 3, P.trimDk); }  // nudo + caída
-      if (P.ornate) { px(c - hemHalf, hemY - 2, hemHalf * 2, 1, P.gold); px(c - hemHalf, hemY - 1, hemHalf * 2, 1, P.goldHi); if (v.front) px(c - 1, beltY + 2, 2, 3, P.jade); }
+      // MEDALLÓN de gala: gema de jade con marco dorado sobre la faja (solo de frente).
+      if (gala && v.front) { px(c - 2, beltY + 1, 4, 4, P.gold); px(c - 1, beltY + 2, 2, 2, P.jade); }
+      if (P.ornate || gala) { px(c - hemHalf, hemY - 3, hemHalf * 2, 1, P.goldHi); px(c - hemHalf, hemY - 2, hemHalf * 2, 1, P.gold); px(c - hemHalf, hemY - 1, hemHalf * 2, 1, P.trimDk); if (v.front && P.ornate) px(c - 1, beltY + 2, 2, 3, P.jade); }
       // ROPA DE TORSO fina: banda de ribete en el bajo (si no es ya la ornamentada dorada).
       else if (P.torsoLujo) { px(c - hemHalf, hemY - 2, hemHalf * 2, 1, P.trimDk); px(c - hemHalf, hemY - 1, hemHalf * 2, 1, P.trim); }
       // Pliegues verticales de la falda.

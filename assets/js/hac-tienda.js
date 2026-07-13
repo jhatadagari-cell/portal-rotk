@@ -122,6 +122,24 @@ const HacTienda = (function () {
     { id: 'ropa-am',  nombre: 'Sobreveste de Intendencia',  zh: '屯袍', icon: '👘', tier: 3, tipo: 'equipo', slot: 'torso', oculto: true, precio: 80,
       efecto: { equip: { pct: { administrativo: 0.05, militar: 0.05 } } },    viste: { kind: 'robe', torsoLujo: true, robe: '#6a5a2c', accent: '#a83a2e' }, desc: 'Sobreveste de campaña y avituallamiento. Equípala para +5% Administrativo 政 y +5% Militar 武.' },
 
+    // ── ROPAS DE TORSO RARAS (contorno azul de "raro") ───────────────────────────
+    //   Versión superior de cada común: MISMO % + 5% de prestigio + 20% antirrobo
+    //   (pierdes menos dinero en encuentros/misiones fallidos). raro:true → contorno
+    //   azul; viste con `torsoGala` → dorados y medallón (se ven más ricas). Caen como
+    //   botín RARO (ROPA_RARA_LOOT_CHANCE ~5%); no se compran.
+    { id: 'ropa-mil-r', nombre: 'Casaca del General',        zh: '名將袍', icon: '👘', tier: 4, tipo: 'equipo', slot: 'torso', raro: true, oculto: true, precio: 180,
+      efecto: { equip: { pct: { militar: 0.10 }, prestigioPct: 0.05, antirroboPct: 0.20 } }, viste: { kind: 'robe', torsoLujo: true, torsoGala: true, robe: '#7a2620', accent: '#d8b65a' }, desc: 'Casaca de gala de un gran general, ribeteada en oro. +10% Militar 武, +5% prestigio y 20% antirrobo. (Rara)' },
+    { id: 'ropa-cul-r', nombre: 'Túnica del Gran Erudito',   zh: '鴻儒袍', icon: '👘', tier: 4, tipo: 'equipo', slot: 'torso', raro: true, oculto: true, precio: 180,
+      efecto: { equip: { pct: { cultural: 0.10 }, prestigioPct: 0.05, antirroboPct: 0.20 } }, viste: { kind: 'robe', torsoLujo: true, torsoGala: true, robe: '#24506a', accent: '#d8b65a' }, desc: 'Túnica ceremonial de un sabio insigne. +10% Cultural 文, +5% prestigio y 20% antirrobo. (Rara)' },
+    { id: 'ropa-adm-r', nombre: 'Toga del Ministro',         zh: '相國袍', icon: '👘', tier: 4, tipo: 'equipo', slot: 'torso', raro: true, oculto: true, precio: 180,
+      efecto: { equip: { pct: { administrativo: 0.10 }, prestigioPct: 0.05, antirroboPct: 0.20 } }, viste: { kind: 'robe', torsoLujo: true, torsoGala: true, robe: '#1f4433', accent: '#d8b65a' }, desc: 'Toga de un ministro de la corte, brocada en oro. +10% Administrativo 政, +5% prestigio y 20% antirrobo. (Rara)' },
+    { id: 'ropa-mc-r',  nombre: 'Manto del Gran Estratega',  zh: '臥龍袍', icon: '👘', tier: 5, tipo: 'equipo', slot: 'torso', raro: true, oculto: true, precio: 220,
+      efecto: { equip: { pct: { militar: 0.05, cultural: 0.05 }, prestigioPct: 0.05, antirroboPct: 0.20 } }, viste: { kind: 'robe', torsoLujo: true, torsoGala: true, robe: '#3f4468', accent: '#e7e0cc' }, desc: 'Manto del genio que domina armas y letras. +5% Militar 武, +5% Cultural 文, +5% prestigio y 20% antirrobo. (Rara)' },
+    { id: 'ropa-ca-r',  nombre: 'Vestidura del Preceptor',   zh: '太傅袍', icon: '👘', tier: 5, tipo: 'equipo', slot: 'torso', raro: true, oculto: true, precio: 220,
+      efecto: { equip: { pct: { cultural: 0.05, administrativo: 0.05 }, prestigioPct: 0.05, antirroboPct: 0.20 } }, viste: { kind: 'robe', torsoLujo: true, torsoGala: true, robe: '#4a2170', accent: '#e6c66a' }, desc: 'Vestidura del preceptor imperial. +5% Cultural 文, +5% Administrativo 政, +5% prestigio y 20% antirrobo. (Rara)' },
+    { id: 'ropa-am-r',  nombre: 'Sobreveste del Gran Intendente', zh: '大司農袍', icon: '👘', tier: 5, tipo: 'equipo', slot: 'torso', raro: true, oculto: true, precio: 220,
+      efecto: { equip: { pct: { administrativo: 0.05, militar: 0.05 }, prestigioPct: 0.05, antirroboPct: 0.20 } }, viste: { kind: 'robe', torsoLujo: true, torsoGala: true, robe: '#5a4a22', accent: '#a83a2e' }, desc: 'Sobreveste del intendente mayor del ejército. +5% Administrativo 政, +5% Militar 武, +5% prestigio y 20% antirrobo. (Rara)' },
+
     // ── ARMAS (兵 · slot dedicado 'arma') ────────────────────────────────────────
     //   3 por dominio. Por AHORA su efecto es +10% de su dominio (como las túnicas,
     //   vía equip.pct); en el futuro tendrán además efectos en el combate por turnos.
@@ -161,6 +179,8 @@ const HacTienda = (function () {
         const v = e.equip[d];
         if (d === 'dineroPct') { parts.push(`+${Math.round(v * 100)}% dinero`); return; }
         if (d === 'expedPct') { parts.push(`−${Math.round(v * 100)}% tiempo de expedición`); return; }
+        if (d === 'prestigioPct') { parts.push(`+${Math.round(v * 100)}% prestigio`); return; }
+        if (d === 'antirroboPct') { parts.push(`${Math.round(v * 100)}% antirrobo`); return; }
         parts.push(`+${v} ${NOM[d] || d}`);
       });
       return 'Equipable · ' + parts.join(' · ');
@@ -195,8 +215,10 @@ const HacTienda = (function () {
   }
   // Reliquias RARAS (contorno azul). No se compran; se encuentran/regalan.
   const RARE_LOOT_CHANCE = 0.05;   // 5 % del botín de misión es una reliquia rara
-  const ROPA_LOOT_CHANCE = 0.14;   // ~14 % del botín es una ROPA DE TORSO (medianamente raro)
-  const ropasTorso = () => CATALOGO.filter(i => i.slot === 'torso');
+  const ROPA_LOOT_CHANCE = 0.14;       // ~14 % del botín es una ROPA DE TORSO COMÚN (medianamente raro)
+  const ROPA_RARA_LOOT_CHANCE = 0.05;  // ~5 % es una ROPA DE TORSO RARA (efectos superiores, contorno azul)
+  const ropasTorso = () => CATALOGO.filter(i => i.slot === 'torso' && !i.raro);        // comunes
+  const ropasTorsoRaras = () => CATALOGO.filter(i => i.slot === 'torso' && i.raro);    // raras
   const esRaro = (id) => !!(byId[id] && byId[id].raro);
   const raros = () => CATALOGO.filter(i => i.raro);
   function raroAleatorio(rng) {                       // una reliquia rara al azar (regalo del fundador, etc.)
@@ -206,9 +228,13 @@ const HacTienda = (function () {
   // Botín aleatorio PONDERADO por tier (los de mayor tier salen menos), de ≤ tier.
   // Con baja probabilidad, en su lugar cae una RELIQUIA RARA (de tier cercano).
   function botinAleatorio(tier) {
-    const raroPool = raros().filter(i => (i.tier || 1) <= (tier || 1) + 1);
+    // RELIQUIAS raras (NO las ropas raras, que tienen su propio canal).
+    const raroPool = raros().filter(i => i.slot !== 'torso' && (i.tier || 1) <= (tier || 1) + 1);
     if (raroPool.length && Math.random() < RARE_LOOT_CHANCE) return raroPool[Math.floor(Math.random() * raroPool.length)].id;
-    // ROPA DE TORSO: canal propio, medianamente raro. Ocultas → no salen por el pool común.
+    // ROPA DE TORSO RARA: ~5 % (efectos superiores, contorno azul).
+    const ropaRaraPool = ropasTorsoRaras();
+    if (ropaRaraPool.length && Math.random() < ROPA_RARA_LOOT_CHANCE) return ropaRaraPool[Math.floor(Math.random() * ropaRaraPool.length)].id;
+    // ROPA DE TORSO COMÚN: canal propio, medianamente raro. Ocultas → no salen por el pool común.
     const ropaPool = ropasTorso();
     if (ropaPool.length && Math.random() < ROPA_LOOT_CHANCE) return ropaPool[Math.floor(Math.random() * ropaPool.length)].id;
     const pool = disponibles(tier).filter(i => i.tipo !== 'caballo'); if (!pool.length) return null;   // el caballo no cae como botín (es compra única)

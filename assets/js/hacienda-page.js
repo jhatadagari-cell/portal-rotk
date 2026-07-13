@@ -675,7 +675,7 @@
         // robado; las heridas de los encuentros se aplican igual (ya ocurrieron).
         if (mis && Math.random() < Math.min(0.97, riesgoMision(mis) + em.riesgo)) {
           let lost = 0;
-          if (window.HacStats) { const wallet = HacStats.dinero(myId); lost = Math.min(wallet, Math.round(wallet * 0.5) + roboDin); if (lost > 0) HacStats.award(myId, { dinero: -lost }); }
+          if (window.HacStats) { const wallet = HacStats.dinero(myId); const anti = HacStats.bonusAntirrobo ? HacStats.bonusAntirrobo(myId) : 0; lost = Math.round(Math.min(wallet, Math.round(wallet * 0.5) + roboDin) * (1 - anti)); if (lost > 0) HacStats.award(myId, { dinero: -lost }); }
           if (em.heridas > 0 && HacStats.herir) HacStats.herir(myId, em.heridas); sucClear(o);
           _cobradas.add(sucKey(o)); HacOrdenes.clear(h.id, myId);
           toast(lost > 0 ? `❌ Misión fallida · perdiste ${lost} 💰` : '❌ Misión fallida · sin botín');
@@ -693,6 +693,7 @@
           r = Math.round(r * (n <= 1 ? 1 : 1 + Math.min(n, 20) * 0.1));
           if (tieneT('canciller')) r = Math.round(r * 1.3);   // 丞相: +30% prestigio en tareas internas
         }
+        if (HacStats && HacStats.bonusPrestigio) r = Math.round(r * (1 + HacStats.bonusPrestigio(myId)));   // ropa de torso rara: +% prestigio
         HacPuntos.award(h.id, myId, r);
         retoAdd('prestigio', r);   // reto semanal: prestigio ganado
         // La misión del tablón da, además del prestigio, dinero + XP PERSONAL (al dominio).
@@ -734,8 +735,8 @@
               else { const rx = HacStats.darItem(myId, xid); extra += rx && rx.ok ? ` · 🎁 ${xit.icon} ${xit.nombre}` : ` · 🎁 ${xit.nombre} (mochila llena)`; }
             }
           }
-          // Robo (encuentros fallados) + heridas.
-          if (roboDin > 0) { const w = HacStats.dinero(myId), take = Math.min(roboDin, w); if (take > 0) { HacStats.award(myId, { dinero: -take }); extra += ` · −${take}💰 robados`; } }
+          // Robo (encuentros fallados) + heridas. La ropa rara reduce el robo (antirrobo).
+          if (roboDin > 0) { const w = HacStats.dinero(myId), anti = HacStats.bonusAntirrobo ? HacStats.bonusAntirrobo(myId) : 0, take = Math.round(Math.min(roboDin, w) * (1 - anti)); if (take > 0) { HacStats.award(myId, { dinero: -take }); extra += ` · −${take}💰 robados`; } }
           if (em.heridas > 0 && HacStats.herir) { HacStats.herir(myId, em.heridas); extra += ' · ✚ herido'; }
           sucClear(o);
           retoAdd('misiones', 1);   // reto semanal: expedición del tablón completada
@@ -1184,7 +1185,7 @@
         libroOk = !!(rr && rr.ok !== false);
         extra = libroOk ? ` · 📔 Conclusiones ${(DEB.CALIDADES[cal] || {}).nombre || cal}` : ' · 📔 (mochila llena)';
       }
-      if (soyGanador && window.HacPuntos && HacPuntos.award) HacPuntos.award(h.id, myId, HacPuntos.recompensa ? HacPuntos.recompensa(20, 300) : 8);
+      if (soyGanador && window.HacPuntos && HacPuntos.award) { let pr = HacPuntos.recompensa ? HacPuntos.recompensa(20, 300) : 8; if (HacStats && HacStats.bonusPrestigio) pr = Math.round(pr * (1 + HacStats.bonusPrestigio(myId))); HacPuntos.award(h.id, myId, pr); }
       const otro = (myId === d.hostId) ? d.invitadoNombre : d.hostNombre;
       const xpTxt = oc.doms.length ? ` · +${xpCada} XP (${oc.doms.map(dm => DOM_NOMBRE_XP[dm] || dm).join(', ')})` : '';
       if (window.HacBitacora) HacBitacora.log(myId, 'debate', `🗣 Debate de ${t ? t.nombre : d.tema} con ${otro || 'otro mecenas'}: ${soyGanador ? '✔ ganaste' : '✘ perdiste'}${xpTxt}${extra}`, { clave: 'debate:' + d.id });
