@@ -827,14 +827,14 @@
       return t;
     }
     // ── Carta de ENCUENTRO (modal): narrativa + una TIRADA ÚNICA «Afrontar» ─────────
-    let sucEl = null;
+    let sucEl = null, encReportAnim = null;
     function ensureSucEl() {
       if (sucEl) return sucEl;
       sucEl = document.createElement('div'); sucEl.className = 'hacp-suc-ov'; sucEl.hidden = true; document.body.appendChild(sucEl);
       ['pointerdown', 'pointerup', 'wheel', 'click'].forEach(ev => sucEl.addEventListener(ev, e => e.stopPropagation(), { passive: false }));
       return sucEl;
     }
-    function closeSuc() { if (sucEl) sucEl.hidden = true; }
+    function closeSuc() { if (encReportAnim) { encReportAnim.stop(); encReportAnim = null; } if (sucEl) sucEl.hidden = true; }
     // Resumen legible del efecto de un encuentro (se aplica al VOLVER, al cobrar).
     function encEffTxt(enc, ok, dif) {
       const s = (ok ? enc.ok : enc.fail) || {}, p = [];
@@ -856,15 +856,29 @@
       st.resolved[ev.i] = { ok: ok }; sucSave(o, st);
       if (window.HacBitacora) HacBitacora.log(myId, 'expedicion', `${DOM_GLYPH[ev.dom] || '⚔'} ${enc.txt} → ${ok ? '✔ superado' : '✘ fallado'}`, { clave: 'enc:' + sucKey(o) + ':' + ev.i });
       if (charId) buildCharPanel(charId);
-      // Pantalla de RESULTADO hasta que confirmes con «Continuar».
+      // VIÑETA ANIMADA de la resolución (coreografía dedicada por encuentro, con rama
+      // éxito/fracaso); al llegar al clímax se revela el verdicto + efecto. El dado ya
+      // está tirado arriba (determinista): la animación solo escenifica el resultado.
       const el = ensureSucEl(); el.hidden = false;
-      el.innerHTML = `<div class="hacp-suc-box">
+      el.innerHTML = `<div class="hacp-suc-box hacp-enc-box">
         <div class="hacp-suc-eyebrow">${domIcon(ev.dom)} Encuentro · ${esc(mis.nombre || 'Expedición')}</div>
         <div class="hacp-suc-ttl">${esc(enc.txt)}</div>
-        <div class="hacp-suc-verdict ${ok ? 'ok' : 'bad'}">${ok ? '✔ Superado' : '✘ Ha salido mal'}</div>
-        <div class="hacp-suc-eff">Al volver: ${esc(encEffTxt(enc, ok, mis.dif))}</div>
+        <canvas class="hacp-enc-anim" data-enc-cv></canvas>
+        <div class="hacp-enc-result" data-enc-result hidden>
+          <div class="hacp-suc-verdict ${ok ? 'ok' : 'bad'}">${ok ? '✔ Superado' : '✘ Ha salido mal'}</div>
+          <div class="hacp-suc-eff">Al volver: ${esc(encEffTxt(enc, ok, mis.dif))}</div>
+        </div>
         <button type="button" class="hacp-cp-btn hacp-suc-done" data-enc-done>Continuar</button></div>`;
-      el.querySelector('[data-enc-done]').addEventListener('click', () => encAbrir(o, mis));
+      const cv = el.querySelector('[data-enc-cv]');
+      const resEl = el.querySelector('[data-enc-result]');
+      const reveal = () => { if (resEl && resEl.hidden) { resEl.hidden = false; resEl.classList.add('show'); } };
+      if (encReportAnim) { encReportAnim.stop(); encReportAnim = null; }
+      if (window.HacEncAnim && cv) {
+        const hero = escAnimActor(myId, true);   // el mecenas vestido con su equipo
+        requestAnimationFrame(() => { encReportAnim = HacEncAnim.play(cv, { scene: enc.id, ok: ok, hero: hero, onEnd: reveal }); });
+        cv.addEventListener('click', () => { if (encReportAnim) encReportAnim.stop(); reveal(); });   // tap para saltar
+      } else { reveal(); }
+      el.querySelector('[data-enc-done]').addEventListener('click', () => { if (encReportAnim) { encReportAnim.stop(); encReportAnim = null; } encAbrir(o, mis); });
     }
     // Abre el encuentro pendiente (si lo hay). Si ya no quedan, cierra e intenta cobrar.
     function encAbrir(o, mis) {
@@ -4012,6 +4026,15 @@
     // Nombres sugeridos EN CASTELLANO (glosas de corceles célebres del período); el
     // jugador puede escribir el suyo. Nada de chino aquí: debe entenderse.
     const CABALLO_NOMBRES = ['Liebre Roja', 'Sombra Fugaz', 'Rayo Bayo', 'Azabache', 'Vela Veloz', 'Tormenta'];
+    // Pelajes elegibles al bautizar (el `tono` es el color base; la paleta la deriva el
+    // simulador). El primero es el que queda seleccionado por defecto.
+    const CABALLO_PELAJES = [
+      { nombre: 'Bayo',    tono: '#a86b34' },
+      { nombre: 'Castaño', tono: '#6b4423' },
+      { nombre: 'Blanco',  tono: '#e7e3d9' },
+      { nombre: 'Negro',   tono: '#33302b' },
+      { nombre: 'Gris',    tono: '#8d8b86' },
+    ];
     let caballoEl = null;
     function ensureCaballoEl() {
       if (caballoEl) return caballoEl;
@@ -4029,6 +4052,7 @@
         <div class="hacp-suc-eyebrow">🐎 ${esc(item.zh || '')} · Caballo de raza</div>
         <div class="hacp-suc-ttl">Bautiza a tu corcel</div>
         <div class="hacp-suc-desc">Vivirá suelto por los campos de la finca. Solo tendrás uno · cuesta 💰 ${precio}.</div>
+        <div class="hacp-horse-coats">${CABALLO_PELAJES.map((p, i) => `<button type="button" class="hacp-horse-coat${i === 0 ? ' sel' : ''}" data-coat="${p.tono}" title="${esc(p.nombre)}" aria-label="Pelaje ${esc(p.nombre)}"><span class="hacp-horse-coat-sw" style="background:${p.tono}"></span><span class="hacp-horse-coat-nm">${esc(p.nombre)}</span></button>`).join('')}</div>
         <input type="text" class="hacp-horse-in" maxlength="24" value="${esc(sug)}" placeholder="Nombre del caballo" />
         <div class="hacp-horse-sug">${CABALLO_NOMBRES.map(n => `<button type="button" class="hacp-horse-chip" data-nom="${esc(n)}">${esc(n)}</button>`).join('')}</div>
         <div class="hacp-suc-confirm">
@@ -4036,13 +4060,18 @@
           <button type="button" class="hacp-cp-btn hacp-suc-ok" data-h-ok>Bautizar 💰 ${precio}</button>
         </div></div>`;
       el.hidden = false;
+      let coatSel = CABALLO_PELAJES[0].tono;   // pelaje elegido (arranca en el primero, ya marcado)
       const input = el.querySelector('.hacp-horse-in');
       if (input) { try { input.focus(); input.select(); } catch (e) {} }
       el.querySelectorAll('[data-nom]').forEach(b => b.addEventListener('click', () => { if (input) { input.value = b.dataset.nom; input.focus(); } }));
+      el.querySelectorAll('[data-coat]').forEach(b => b.addEventListener('click', () => {
+        coatSel = b.dataset.coat;
+        el.querySelectorAll('[data-coat]').forEach(x => x.classList.toggle('sel', x === b));
+      }));
       el.querySelector('[data-h-cancel]').addEventListener('click', cerrarBautizo);
       el.querySelector('[data-h-ok]').addEventListener('click', () => {
         const nombre = (input && input.value || '').trim() || CABALLO_NOMBRES[0];
-        const res = HacStats.comprarCaballo(myId, item.id, nombre, precio);
+        const res = HacStats.comprarCaballo(myId, item.id, nombre, precio, coatSel);
         if (!res.ok) { toast(res.motivo || 'No se pudo comprar'); return; }
         cerrarBautizo();
         toast(`🐎 ${esc(res.caballo.nombre)} · ¡tu corcel ronda ya por los campos!`);
@@ -4058,7 +4087,7 @@
       const map = {};
       // OJO: HacStats y los walkers se indexan por personajeId (= myId), NO por el id
       // de la fila de miembro. Usar m.id aquí hacía que el caballo comprado no apareciera.
-      (h.miembros || []).forEach(m => { const pid = m.personajeId || m.id; const c = HacStats.caballo(pid); if (c) map[pid] = { nombre: c.nombre, variante: c.id || 'caballo' }; });
+      (h.miembros || []).forEach(m => { const pid = m.personajeId || m.id; const c = HacStats.caballo(pid); if (c) map[pid] = { nombre: c.nombre, variante: c.id || 'caballo', tono: c.tono || null }; });
       HacFolk.setCaballos(map);
     }
 

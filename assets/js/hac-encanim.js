@@ -125,6 +125,158 @@ const HacEncAnim = (function () {
     ctx.fillStyle = '#fff'; ctx.globalAlpha = a * 0.9; ctx.beginPath(); ctx.arc(x, y, r * 0.35, 0, 6.283); ctx.fill();
     ctx.restore();
   }
+  // Gota de sudor / signo de esfuerzo (vacilación).
+  function sweat(ctx, cx, cy, a) {
+    ctx.save(); ctx.globalAlpha = a == null ? 0.9 : a; ctx.fillStyle = '#bfe0ea';
+    ctx.beginPath(); ctx.ellipse(cx, cy, 1.8, 2.6, 0, 0, 6.283); ctx.fill(); ctx.restore();
+  }
+  // Polvareda / choque sordo (aldeanos a las manos).
+  function dust(ctx, cx, gy, a) {
+    ctx.save(); ctx.globalAlpha = (a == null ? 0.5 : a);
+    for (let i = 0; i < 5; i++) { ctx.fillStyle = i % 2 ? 'rgba(180,160,130,.5)' : 'rgba(140,120,96,.5)'; const an = i * 1.25; ctx.beginPath(); ctx.arc(cx + Math.cos(an) * 9, gy - 6 + Math.sin(an) * 5, 3 - i * 0.3, 0, 6.283); ctx.fill(); }
+    ctx.restore();
+  }
+  // Líneas de garra (zarpazo de la fiera).
+  function clawMarks(ctx, cx, cy, a) {
+    ctx.save(); ctx.globalAlpha = a; ctx.strokeStyle = '#e2554a'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+    for (let i = -1; i <= 1; i++) { ctx.beginPath(); ctx.moveTo(cx - 10 + i * 5, cy - 12); ctx.lineTo(cx + 6 + i * 5, cy + 12); ctx.stroke(); }
+    ctx.restore();
+  }
+
+  // ══ FIGURANTES SINTÉTICOS ═══════════════════════════════════════════════
+  // Arquetipos (aptitud + aspecto) para hornear con HacChar como el héroe. Los
+  // props de la aptitud (lanza del guerrero, etc.) refuerzan el papel.
+  const ARQ = {
+    bandido:     { aptitud: 'guerrero',      aspecto: { robe: '#4a3b2c', accent: '#7a6b4a', piel: 3, pelo: 4 } },
+    oficial:     { aptitud: 'guerrero',      aspecto: { robe: '#3b322c', accent: '#b8b0a0', piel: 3, pelo: 3 } },
+    soldado:     { aptitud: 'guerrero',      aspecto: { robe: '#4d5b6a', accent: '#cfd6de', piel: 2, pelo: 2 } },
+    poeta:       { aptitud: 'erudito',       aspecto: { robe: '#6a5b3a', accent: '#eae4d2', piel: 1, pelo: 1 } },
+    monje:       { aptitud: 'erudito',       aspecto: { robe: '#8a8378', accent: '#c9b98a', piel: 2, pelo: 5 } },
+    funcionario: { aptitud: 'canciller',     aspecto: { robe: '#5a3f7a', accent: '#d8b65a', piel: 1, pelo: 2 } },
+    mercader:    { aptitud: 'administrador', aspecto: { robe: '#7a5a34', accent: '#d8b65a', piel: 2, pelo: 3 } },
+    aldeanoA:    { aptitud: 'administrador', aspecto: { robe: '#6b5a44', accent: '#9a8a6a', piel: 3, pelo: 3 } },
+    aldeanoB:    { aptitud: 'erudito',       aspecto: { robe: '#5a6b4a', accent: '#9aa07a', piel: 2, pelo: 4 } },
+  };
+  // Qué figurante(s) intervienen en cada escena nueva (0, 1 o 2). Las escenas
+  // legacy (bridge/duel/parley/supply) conservan su `foe` propio (ver play()).
+  const SCENE_FOES = {
+    emboscada: ['bandido', 'bandido'], duelo: ['oficial'], fiera: [], patrulla: ['soldado', 'soldado'],
+    inscripciones: [], poeta: ['poeta'], rumor: ['aldeanoA'], copista: ['monje'],
+    mercader: ['mercader'], peaje: ['funcionario'], disputa: ['aldeanoA', 'aldeanoB'], contrato: ['mercader'],
+  };
+  // Clona un arquetipo (aspecto propio) para que `bake` le asigne su clave de caché.
+  const cloneArq = (id) => id && ARQ[id] ? { aptitud: ARQ[id].aptitud, aspecto: Object.assign({}, ARQ[id].aspecto) } : null;
+  // Figurante(s) de una escena. Escenas legacy (bridge/duel/parley/supply): foe único.
+  function foesFor(scene) {
+    const ids = SCENE_FOES[scene];
+    if (ids) return { foe: cloneArq(ids[0]), foe2: cloneArq(ids[1]) };
+    const legacy = scene === 'parley'
+      ? { aptitud: 'erudito', aspecto: { robe: '#6a5b3a', piel: 1, pelo: 1 } }
+      : { aptitud: 'guerrero', aspecto: { robe: '#3b322c', piel: 3, pelo: 3 } };
+    return { foe: legacy, foe2: null };
+  }
+
+  // ══ PROPS PROCEDURALES ══════════════════════════════════════════════════
+  // Paredes rocosas que enmarcan un desfiladero (emboscada).
+  function drawRocks(ctx, W, gy) {
+    ctx.save();
+    const rock = (x0, w, h) => {
+      const g = ctx.createLinearGradient(0, gy - h, 0, gy);
+      g.addColorStop(0, '#4a4038'); g.addColorStop(1, '#26201a');
+      ctx.fillStyle = g; ctx.beginPath();
+      ctx.moveTo(x0, gy + 2); ctx.lineTo(x0 + w * 0.12, gy - h * 0.88); ctx.lineTo(x0 + w * 0.42, gy - h);
+      ctx.lineTo(x0 + w * 0.74, gy - h * 0.66); ctx.lineTo(x0 + w, gy - h * 0.82); ctx.lineTo(x0 + w, gy + 2);
+      ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = 'rgba(0,0,0,.32)'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(x0 + w * 0.42, gy - h); ctx.lineTo(x0 + w * 0.5, gy - h * 0.35); ctx.stroke();
+    };
+    rock(-12, W * 0.30, 74); rock(W * 0.80, W * 0.32, 66);
+    ctx.restore();
+  }
+  // Un gran felino procedural (vista lateral). opt: {dir:±1, jump, scale, run, phase}.
+  function drawTiger(ctx, x, gy, opt) {
+    opt = opt || {}; const s = opt.scale || 1, dir = opt.dir || 1, jump = opt.jump || 0, ph = opt.phase || 0;
+    ctx.save(); ctx.globalAlpha = 0.22; ctx.fillStyle = '#000';
+    ctx.beginPath(); ctx.ellipse(x, gy + 1, 26 * s, 5, 0, 0, 6.283); ctx.fill(); ctx.restore();
+    ctx.save(); ctx.translate(x, gy - jump); ctx.scale(dir * s, s);
+    const O = '#c8792f', Od = '#9c5a1e', L = '#e6c79a', K = '#241812';
+    ctx.strokeStyle = O; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(-22, -12); ctx.quadraticCurveTo(-36, -18, -30, -3); ctx.stroke();  // cola
+    ctx.fillStyle = Od; [-15, -8, 7, 15].forEach((lx, i) => { const ll = opt.run ? Math.max(0, Math.sin(ph + i * 1.6)) * 3 : 0; ctx.fillRect(lx, -7 - ll, 3, 8); });  // patas
+    ctx.fillStyle = O; ctx.beginPath(); ctx.ellipse(-2, -11, 22, 9, 0, 0, 6.283); ctx.fill();          // cuerpo
+    ctx.beginPath(); ctx.ellipse(-16, -12, 8, 8, 0, 0, 6.283); ctx.fill();                              // grupa
+    ctx.fillStyle = L; ctx.beginPath(); ctx.ellipse(-4, -7, 15, 4, 0, 0, 6.283); ctx.fill();            // vientre
+    ctx.fillStyle = O; ctx.beginPath(); ctx.arc(20, -15, 7, 0, 6.283); ctx.fill();                      // cabeza
+    ctx.beginPath(); ctx.moveTo(15, -21); ctx.lineTo(17, -25); ctx.lineTo(20, -20); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(23, -20); ctx.lineTo(25, -25); ctx.lineTo(27, -21); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = L; ctx.beginPath(); ctx.arc(25, -12, 3, 0, 6.283); ctx.fill();                      // hocico
+    ctx.fillStyle = K; ctx.fillRect(22, -17, 2, 2); ctx.fillRect(26, -12, 1, 1);                        // ojo + nariz
+    ctx.strokeStyle = K; ctx.lineWidth = 1.5; [-14, -9, -4, 1, 6, 11].forEach(sx => { ctx.beginPath(); ctx.moveTo(sx, -18); ctx.lineTo(sx - 2, -4); ctx.stroke(); });
+    ctx.restore();
+  }
+  // Columnas caídas (santuario en ruinas).
+  function drawRuins(ctx, W, gy) {
+    ctx.save();
+    for (let i = 0; i < 4; i++) { ctx.fillStyle = i % 2 ? '#5c5346' : '#6b6153'; ctx.fillRect(W * 0.07 + i * 15, gy - 7, 14, 9); ctx.fillStyle = 'rgba(0,0,0,.2)'; ctx.fillRect(W * 0.07 + i * 15, gy - 2, 14, 2); }
+    ctx.fillStyle = '#6b6153'; ctx.fillRect(W * 0.07, gy - 22, 12, 16); ctx.fillStyle = '#5c5346'; ctx.fillRect(W * 0.07 + 9, gy - 22, 3, 16);   // tocón de columna en pie
+    ctx.restore();
+  }
+  // Estela de piedra con glifos; `glow` (0..1) los enciende (éxito cultural).
+  function drawStele(ctx, x, gy, glow) {
+    ctx.save();
+    ctx.fillStyle = '#7a7062'; ctx.fillRect(x - 9, gy - 46, 18, 46);
+    ctx.fillStyle = '#8a8072'; ctx.fillRect(x - 9, gy - 46, 18, 2);
+    ctx.fillStyle = '#5c5346'; ctx.fillRect(x + 7, gy - 46, 2, 46);
+    if (glow) { ctx.save(); ctx.globalAlpha = glow * 0.4; ctx.fillStyle = '#e9c66a'; ctx.fillRect(x - 11, gy - 48, 22, 50); ctx.restore(); }
+    for (let r = 0; r < 5; r++) for (let cc = 0; cc < 2; cc++) { ctx.fillStyle = glow ? 'rgba(233,198,106,' + (0.5 + glow * 0.5) + ')' : 'rgba(30,24,18,.55)'; ctx.fillRect(x - 5 + cc * 7, gy - 40 + r * 8, 4, 4); }
+    ctx.restore();
+  }
+  // Rincón de posada: mesa, jarra y farol colgante que derrama luz cálida.
+  function drawTavern(ctx, W, gy) {
+    ctx.save();
+    ctx.fillStyle = '#5a4326'; ctx.fillRect(W * 0.52, gy - 14, W * 0.32, 6);
+    ctx.fillStyle = '#3a2c17'; ctx.fillRect(W * 0.56, gy - 8, 4, 8); ctx.fillRect(W * 0.80, gy - 8, 4, 8);
+    ctx.fillStyle = '#8a7a5a'; ctx.fillRect(W * 0.62, gy - 20, 5, 6);
+    const lx = W * 0.70, ly = gy - 54;
+    ctx.strokeStyle = '#3a2c17'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(lx, 6); ctx.lineTo(lx, ly); ctx.stroke();
+    const glow = ctx.createRadialGradient(lx, ly + 6, 2, lx, ly + 6, 30);
+    glow.addColorStop(0, 'rgba(255,200,90,.45)'); glow.addColorStop(1, 'rgba(255,200,90,0)');
+    ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(lx, ly + 6, 30, 0, 6.283); ctx.fill();
+    ctx.fillStyle = '#e7c66a'; ctx.fillRect(lx - 4, ly, 8, 11); ctx.fillStyle = '#7a5c1e'; ctx.fillRect(lx - 4, ly, 8, 2);
+    ctx.restore();
+  }
+  // Franja de agua de un vado (mercader varado).
+  function drawFord(ctx, W, gy) {
+    ctx.save();
+    const g = ctx.createLinearGradient(0, gy, 0, gy + 44);
+    g.addColorStop(0, '#3a5a66'); g.addColorStop(1, '#20343c');
+    ctx.fillStyle = g; ctx.fillRect(0, gy + 2, W, 44);
+    ctx.fillStyle = 'rgba(200,220,230,.13)'; for (let i = 0; i < 6; i++) ctx.fillRect(i * W / 6 + 8, gy + 8 + (i % 3) * 5, 22, 1);
+    ctx.restore();
+  }
+  // Carro (de dos ruedas). `tilt` lo inclina; usado también volcado.
+  function drawCartProp(ctx, x, gy, tilt) {
+    ctx.save(); ctx.translate(x, gy); ctx.rotate(tilt || 0);
+    ctx.fillStyle = '#6b4f2c'; ctx.fillRect(-20, -22, 40, 16);
+    ctx.fillStyle = '#8a6636'; ctx.fillRect(-20, -22, 40, 3);
+    [-12, 12].forEach(wx => { ctx.fillStyle = '#3a2c17'; ctx.beginPath(); ctx.arc(wx, -4, 6, 0, 6.283); ctx.fill(); ctx.fillStyle = '#5a4326'; ctx.beginPath(); ctx.arc(wx, -4, 2.4, 0, 6.283); ctx.fill(); });
+    ctx.restore();
+  }
+  // Mesa baja con pergamino (copista / contrato). `fill` 0..1 llena de renglones;
+  // `seal` dibuja el sello de laca ya estampado.
+  function drawDesk(ctx, x, gy, fill, seal) {
+    ctx.save();
+    ctx.fillStyle = '#5a4326'; ctx.fillRect(x - 22, gy - 12, 44, 5); ctx.fillStyle = '#3a2c17'; ctx.fillRect(x - 20, gy - 7, 3, 7); ctx.fillRect(x + 17, gy - 7, 3, 7);
+    ctx.fillStyle = '#efe4c4'; ctx.fillRect(x - 16, gy - 17, 32, 6); ctx.fillStyle = '#d8cba6'; ctx.fillRect(x - 16, gy - 12, 32, 1);
+    if (fill > 0) { ctx.fillStyle = 'rgba(40,30,20,.7)'; const n = Math.min(5, Math.floor(fill * 5)); for (let i = 0; i < n; i++) ctx.fillRect(x - 13 + i * 6, gy - 15, 4, 1); }
+    if (seal) { ctx.fillStyle = '#b0342a'; ctx.beginPath(); ctx.arc(x + 10, gy - 14, 2.6, 0, 6.283); ctx.fill(); }
+    ctx.restore();
+  }
+  // Mancha de tinta derramada (fracaso copista).
+  function inkBlot(ctx, x, y, r) {
+    ctx.save(); ctx.fillStyle = 'rgba(20,16,28,.85)';
+    ctx.beginPath(); ctx.ellipse(x, y, r, r * 0.6, 0, 0, 6.283); ctx.fill();
+    ctx.beginPath(); ctx.arc(x + r * 0.7, y - r * 0.3, r * 0.35, 0, 6.283); ctx.fill(); ctx.restore();
+  }
 
   // ══ ESCENAS ════════════════════════════════════════════════════════════
   // Cada escena: draw(ctx, W, H, t, S) donde S = estado compartido. Devuelven
@@ -342,7 +494,284 @@ const HacEncAnim = (function () {
     coins.forEach(([x, y, r]) => coin(ctx, x, y, r));
   }
 
-  const SCENES = { bridge: sceneBridge, duel: sceneDuel, parley: sceneParley, supply: sceneSupply };
+  // ══════════════ ENCUENTROS DE MISIÓN (protagonista en solitario) ═════════
+  // 12 escenas temáticas, cada una con rama éxito (S.ok) y fracaso. El héroe
+  // resuelve solo; los figurantes salen de S.foe / S.foe2 (ver SCENE_FOES).
+  const walkFrame = (x) => Math.floor(x / 130) % 4;
+
+  // ── 1. EMBOSCADA (militar): forajidos surgen de tras las rocas ───────────
+  function sceneAmbush(ctx, W, H, t, S) {
+    const gy = S.gy, ok = S.ok, hero = S.hero, b1 = S.foe, b2 = S.foe2;
+    backdrop(ctx, W, H, gy, { top: '#2e2a22' });
+    drawRocks(ctx, W, gy);
+    const cx = W * 0.44, T_IN = 500, T_ACT = 720;
+    let hx = cx, hframe = 0, htilt = 0, hj = 0;
+    if (t < T_IN) { hx = lerp(-24, cx, easeOut(seg(t, 0, T_IN))); hframe = walkFrame(t); }
+    const ap = seg(t, T_IN, 260);                                   // los bandidos surgen
+    if (ok) {
+      if (t < T_IN + T_ACT) {                                       // amaga el golpe
+        const p = seg(t, T_IN, T_ACT); hj = arch(clamp(p * 1.2, 0, 1)) * 6;
+        if (b1) actorAt(ctx, S.bake, b1, 'SE', 0, lerp(W * 0.22, W * 0.30, ap), gy, 0, undefined, { alpha: ap });
+        if (b2) actorAt(ctx, S.bake, b2, 'SW', 0, lerp(W * 0.84, W * 0.70, ap), gy, 0, undefined, { alpha: ap });
+        actorAt(ctx, S.bake, hero, 'SE', 0, hx + p * 8, gy, hj);
+        if (p > 0.42 && p < 0.72) spark(ctx, cx + 24, gy - dH * 0.52, 11 + Math.sin(t / 28) * 3, 0.9);
+      } else {                                                      // huyen despavoridos
+        const p = seg(t, T_IN + T_ACT, 560);
+        if (b1) actorAt(ctx, S.bake, b1, 'SW', walkFrame(t), lerp(W * 0.30, -34, easeIn(p)), gy, 0);
+        if (b2) actorAt(ctx, S.bake, b2, 'SE', walkFrame(t), lerp(W * 0.70, W + 34, easeIn(p)), gy, 0);
+        actorAt(ctx, S.bake, hero, 'SE', 0, cx, gy, Math.abs(Math.sin(t / 240)) * 4);
+      }
+    } else {
+      if (b1) actorAt(ctx, S.bake, b1, 'SE', 0, lerp(W * 0.22, cx - 26, seg(t, T_IN, 420)), gy, 0, undefined, { alpha: ap });
+      if (b2) actorAt(ctx, S.bake, b2, 'SW', 0, lerp(W * 0.84, cx + 26, seg(t, T_IN, 420)), gy, 0, undefined, { alpha: ap });
+      if (t > T_IN + T_ACT) {                                       // le roban: caen monedas y una escapa
+        const p = seg(t, T_IN + T_ACT, 620);
+        for (let i = 0; i < 3; i++) coin(ctx, cx + Math.cos(i * 2) * 8 + Math.sin(i) * p * 22, gy - 14 - arch(p) * 16 + p * 8, 3);
+        htilt = Math.sin(t / 60) * 0.05;
+      } else if (t > T_IN) htilt = Math.sin(t / 46) * 0.08;         // forcejeo
+      actorAt(ctx, S.bake, hero, 'SE', 0, cx, gy, 0, undefined, { tilt: htilt });
+    }
+  }
+
+  // ── 2. DUELO (militar): singular combate con un oficial enemigo ──────────
+  function sceneDuelo(ctx, W, H, t, S) {
+    const gy = S.gy, ok = S.ok, hero = S.hero, foe = S.foe;
+    backdrop(ctx, W, H, gy, { top: '#332a22' });
+    const cx = W * 0.5, T_IN = 560, T_CLASH = 520;
+    let hx, fx, hframe = 0, fframe = 0, htilt = 0, ftilt = 0, ha = 1, fa = 1, hj = 0, fj = 0;
+    if (t < T_IN) { const p = easeOut(seg(t, 0, T_IN)); hx = lerp(-24, cx - 42, p); fx = lerp(W + 24, cx + 42, p); hframe = walkFrame(t); fframe = hframe; }
+    else if (t < T_IN + T_CLASH) {
+      const p = seg(t, T_IN, T_CLASH), lunge = arch(clamp(p * 1.4, 0, 1));
+      hx = cx - 42 + lunge * 30; fx = cx + 42 - lunge * 30;
+      if (p > 0.42 && p < 0.7) spark(ctx, cx, gy - dH * 0.55, 13 + Math.sin(t / 28) * 4, 0.92);
+    } else {
+      const p = seg(t, T_IN + T_CLASH, 520);
+      if (ok) { hx = cx - 28; fx = lerp(cx + 12, cx + 62, easeOut(p)); ftilt = lerp(0, 1.15, easeOut(p)); fj = arch(p) * 11; fa = lerp(1, 0.5, p); hj = t > T_IN + T_CLASH + 300 ? Math.abs(Math.sin(t / 240)) * 5 : 0; }
+      else { fx = cx + 28; hx = lerp(cx - 12, cx - 62, easeOut(p)); htilt = lerp(0, -1.05, easeOut(p)); hj = arch(p) * 9; ha = lerp(1, 0.68, p); }
+    }
+    actorAt(ctx, S.bake, foe, 'SW', fframe, fx, gy, fj, undefined, { tilt: ftilt, alpha: fa, shadow: fa > 0.6 });
+    actorAt(ctx, S.bake, hero, 'SE', hframe, hx, gy, hj, undefined, { tilt: htilt, alpha: ha });
+  }
+
+  // ── 3. FIERA (militar): un tigre cierra el sendero ───────────────────────
+  function sceneBeast(ctx, W, H, t, S) {
+    const gy = S.gy, ok = S.ok, hero = S.hero;
+    backdrop(ctx, W, H, gy, { top: '#2a2e22' });
+    const hxHome = W * 0.30, T_IN = 520, T_STALK = 560, T_POUNCE = 420;
+    let hx = hxHome, hframe = 0, htilt = 0, hj = 0;
+    if (t < T_IN) { hx = lerp(-24, hxHome, easeOut(seg(t, 0, T_IN))); hframe = walkFrame(t); }
+    // tigre: acecha desde la derecha, luego salta hacia el héroe
+    let tx = W * 0.72, tj = 0, trun = false, tph = t / 60, tdir = -1;
+    const acecha = seg(t, T_IN, T_STALK);
+    tx = lerp(W * 0.78, W * 0.56, acecha); trun = acecha > 0 && acecha < 1;
+    const pounceS = T_IN + T_STALK;
+    if (ok) {
+      if (t < pounceS + T_POUNCE) {                                 // salta y el héroe se planta
+        const p = seg(t, pounceS, T_POUNCE); tx = lerp(W * 0.56, W * 0.40, p); tj = arch(p) * 40; trun = true;
+        if (p > 0.4) spark(ctx, W * 0.36, gy - dH * 0.5, 10 + Math.sin(t / 26) * 3, 0.85);
+        actorAt(ctx, S.bake, hero, 'SE', 0, hx, gy, 0);
+        drawTiger(ctx, tx, gy, { dir: tdir, jump: tj, scale: 0.92, run: trun, phase: tph });
+      } else {                                                      // el tigre desiste y huye de un brinco
+        const p = seg(t, pounceS + T_POUNCE, 560); const fxT = lerp(W * 0.40, W + 40, easeIn(p));
+        drawTiger(ctx, fxT, gy, { dir: 1, jump: arch(seg(t, pounceS + T_POUNCE, 300)) * 24, scale: 0.92, run: true, phase: tph });
+        if (t < pounceS + T_POUNCE + 340) coin(ctx, W * 0.42, gy - 12 - arch(seg(t, pounceS + T_POUNCE, 340)) * 20, 3);   // botín (colmillo)
+        actorAt(ctx, S.bake, hero, 'SE', 0, hx, gy, Math.abs(Math.sin(t / 240)) * 4);
+      }
+    } else {
+      if (t < pounceS + T_POUNCE) {                                 // embiste y derriba al héroe
+        const p = seg(t, pounceS, T_POUNCE); tx = lerp(W * 0.56, W * 0.36, p); tj = arch(p) * 34; trun = true;
+        drawTiger(ctx, tx, gy, { dir: tdir, jump: tj, scale: 0.92, run: trun, phase: tph });
+        actorAt(ctx, S.bake, hero, 'SE', 0, hx, gy, 0);
+      } else {
+        const p = seg(t, pounceS + T_POUNCE, 560);
+        htilt = lerp(0, -0.9, easeOut(p)); hj = arch(p) * 8;
+        drawTiger(ctx, lerp(W * 0.36, W * 0.48, p), gy, { dir: -1, jump: 0, scale: 0.92, run: false, phase: tph });
+        actorAt(ctx, S.bake, hero, 'SW', 0, lerp(hx, hx - 14, p), gy, hj, undefined, { tilt: htilt });
+        if (p > 0.1 && p < 0.5) clawMarks(ctx, hx - 4, gy - dH * 0.5, 1 - seg(t, pounceS + T_POUNCE + 60, 240));
+      }
+    }
+  }
+
+  // ── 4. PATRULLA (militar): dos soldados con lanza cierran el paso ────────
+  function scenePatrol(ctx, W, H, t, S) {
+    const gy = S.gy, ok = S.ok, hero = S.hero, s1 = S.foe, s2 = S.foe2;
+    backdrop(ctx, W, H, gy, { top: '#2b2c26' });
+    const T_IN = 540, T_TALK = 900;
+    const s1x = W * 0.60, s2x = W * 0.72;
+    let hx = W * 0.40, hframe = 0, hj = 0, htilt = 0, hpose;
+    if (t < T_IN) { hx = lerp(-24, W * 0.40, easeOut(seg(t, 0, T_IN))); hframe = walkFrame(t); }
+    // soldados apostados
+    let s1p = s1x, s2p = s2x;
+    if (ok) {
+      if (t > T_IN + T_TALK) { const p = seg(t, T_IN + T_TALK, 520); s1p = lerp(s1x, s1x - 16, easeOut(p)); s2p = lerp(s2x, s2x + 16, easeOut(p)); hx = lerp(W * 0.40, W * 0.52, easeOut(p)); hframe = walkFrame(t); }
+      else if (t > T_IN) { hj = Math.max(0, Math.sin((t - T_IN) / 220)) * 2; if ((Math.floor((t - T_IN) / 300) % 2) === 0) bubble(ctx, hx, gy - dH + 4, ((t / 150) | 0) % 3 + 1); }   // parlamenta
+    } else {
+      if (t > T_IN && t < T_IN + T_TALK) { s1p = lerp(s1x, W * 0.48, seg(t, T_IN, 400)); }                 // se le echan encima (cacheo)
+      else if (t > T_IN + T_TALK) {                                                                        // le sacan monedas
+        s1p = W * 0.48; const p = seg(t, T_IN + T_TALK, 560);
+        for (let i = 0; i < 3; i++) coin(ctx, lerp(W * 0.44, W * 0.56, p) + i * 5, gy - 14 - arch(p) * 14, 3);
+        htilt = Math.sin(t / 70) * 0.04;
+        if (p > 0.5) bubble(ctx, s2x, gy - dH + 4, 1, 'rgba(226,120,106,.9)');                             // uno queda vigilante
+      }
+    }
+    if (s1) actorAt(ctx, S.bake, s1, 'SW', 0, s1p, gy, 0);
+    if (s2) actorAt(ctx, S.bake, s2, 'SW', 0, s2p, gy, 0);
+    actorAt(ctx, S.bake, hero, 'SE', hframe, hx, gy, hj, hpose, { tilt: htilt });
+  }
+
+  // ── 5. INSCRIPCIONES (cultural): estela en un santuario en ruinas ────────
+  function sceneStele(ctx, W, H, t, S) {
+    const gy = S.gy, ok = S.ok, hero = S.hero;
+    backdrop(ctx, W, H, gy, { top: '#2a2e2a' });
+    drawRuins(ctx, W, gy);
+    const stx = W * 0.66, hxHome = W * 0.48, T_IN = 560, T_READ = 900;
+    let hx = hxHome, hframe = 0, hj = 0, glow = 0;
+    if (t < T_IN) { hx = lerp(-24, hxHome, easeOut(seg(t, 0, T_IN))); hframe = walkFrame(t); }
+    else if (t < T_IN + T_READ) hj = Math.max(0, Math.sin((t - T_IN) / 240)) * 2;   // examina (bob)
+    if (ok) {
+      if (t > T_IN + T_READ) { const p = seg(t, T_IN + T_READ, 560); glow = easeOut(p); hj = Math.abs(Math.sin(t / 240)) * 4; }
+      else if (t > T_IN) glow = 0.12 + 0.12 * Math.max(0, Math.sin((t - T_IN) / 240));
+    } else if (t > T_IN + T_READ && seg(t, T_IN + T_READ, 500) < 0.85) bubble(ctx, hx, gy - dH + 2, 1, 'rgba(200,200,210,.8)');   // se encoge (interrogante)
+    drawStele(ctx, stx, gy, glow);
+    if (ok && t > T_IN + T_READ) {   // pergamino (botín) que asciende de la estela
+      const p = seg(t, T_IN + T_READ, 560), ly = gy - 26 - p * 22;
+      ctx.save(); ctx.globalAlpha = clamp(1 - p * 0.3, 0, 1); ctx.fillStyle = '#efe4c4'; ctx.fillRect(stx - 4, ly, 8, 10); ctx.fillStyle = '#c9a84c'; ctx.fillRect(stx - 4, ly, 8, 2); ctx.restore();
+    }
+    actorAt(ctx, S.bake, hero, 'SE', hframe, hx, gy, hj);
+  }
+
+  // ── 6. POETA (cultural): duelo de versos con un poeta errante ────────────
+  function scenePoet(ctx, W, H, t, S) {
+    const gy = S.gy, ok = S.ok, hero = S.hero, foe = S.foe;
+    backdrop(ctx, W, H, gy, { top: '#28302c' });
+    const T_IN = 560, T_VERSE = 1200;
+    let hx = W * 0.37, fx = W * 0.63, hframe = 0, fframe = 0, hj = 0, fj = 0, hpose, fpose;
+    if (t < T_IN) { const p = easeOut(seg(t, 0, T_IN)); hx = lerp(-24, W * 0.37, p); fx = lerp(W + 24, W * 0.63, p); hframe = walkFrame(t); fframe = hframe; }
+    else if (t < T_IN + T_VERSE) {
+      const p = t - T_IN; hj = Math.max(0, Math.sin(p / 240)) * 2; fj = Math.max(0, Math.sin((p + 600) / 240)) * 2;
+      if ((Math.floor(p / 560) % 2) === 0) bubble(ctx, hx, gy - dH + 4, ((p / 150) | 0) % 3 + 1, 'rgba(233,220,180,.9)');
+      else bubble(ctx, fx, gy - dH + 4, ((p / 150) | 0) % 3 + 1, 'rgba(233,220,180,.9)');
+    } else {
+      if (ok) { hj = Math.max(0, Math.sin(t / 200)) * 3; fpose = 'bow'; }                                  // declama; el poeta se inclina
+      else { const p = seg(t, T_IN + T_VERSE, 560); sweat(ctx, hx + 8, gy - dH + 8, clamp(1 - p, 0, 1)); if (p > 0.3) coin(ctx, hx, gy - 12 - arch((p - 0.3) / 0.7) * 8 + (p - 0.3) * 6, 3); fj = Math.max(0, Math.sin(t / 200)) * 2; }   // titubea; cae una moneda
+    }
+    actorAt(ctx, S.bake, foe, 'SW', fframe, fx, gy, fj, fpose);
+    actorAt(ctx, S.bake, hero, 'SE', hframe, hx, gy, hj, hpose);
+  }
+
+  // ── 7. RUMOR (cultural): escuchar en el rincón de una posada ─────────────
+  function sceneTavern(ctx, W, H, t, S) {
+    const gy = S.gy, ok = S.ok, hero = S.hero, patron = S.foe;
+    backdrop(ctx, W, H, gy, { top: '#302820' });
+    drawTavern(ctx, W, gy);
+    const hxHome = W * 0.42, px = W * 0.80, T_IN = 540, T_LISTEN = 1000;
+    let hx = hxHome, hframe = 0, htilt = 0, hj = 0, hdir = 'SE';
+    if (t < T_IN) { hx = lerp(-24, hxHome, easeOut(seg(t, 0, T_IN))); hframe = walkFrame(t); }
+    if (ok) {
+      if (t > T_IN && t < T_IN + T_LISTEN) { htilt = 0.13; if ((Math.floor((t - T_IN) / 300) % 2) === 0) bubble(ctx, px - 12, gy - dH + 2, ((t / 150) | 0) % 3 + 1, 'rgba(255,210,140,.85)'); }
+      else if (t > T_IN + T_LISTEN) { const p = seg(t, T_IN + T_LISTEN, 520); hj = Math.abs(Math.sin(t / 240)) * 3; if (p > 0.2) coin(ctx, hx + 10, gy - 12 - arch((p - 0.2) / 0.8) * 14, 3); }
+    } else {
+      if (t > T_IN && t < T_IN + T_LISTEN) htilt = 0.10;
+      else if (t > T_IN + T_LISTEN) { const p = seg(t, T_IN + T_LISTEN, 560); bubble(ctx, px - 12, gy - dH + 2, 1, 'rgba(226,120,106,.9)'); hx = lerp(hxHome, hxHome - 22, easeOut(p)); hframe = walkFrame(t); hdir = 'SW'; }
+    }
+    if (patron) actorAt(ctx, S.bake, patron, 'SW', 0, px, gy, 0);
+    actorAt(ctx, S.bake, hero, hdir, hframe, hx, gy, hj, undefined, { tilt: htilt });
+  }
+
+  // ── 8. COPISTA (cultural): copiar textos en un templo ────────────────────
+  function sceneScribe(ctx, W, H, t, S) {
+    const gy = S.gy, ok = S.ok, hero = S.hero, monje = S.foe;
+    backdrop(ctx, W, H, gy, { top: '#2c2a26' });
+    const deskX = W * 0.52, mx = W * 0.72, T_IN = 560, T_WRITE = 1100;
+    let hx = W * 0.40, hframe = 0, hj = 0, fill = 0, blot = 0, htilt = 0;
+    if (t < T_IN) { hx = lerp(-24, W * 0.40, easeOut(seg(t, 0, T_IN))); hframe = walkFrame(t); }
+    else if (t < T_IN + T_WRITE) { hj = Math.max(0, Math.sin((t - T_IN) / 160)) * 2; fill = ok ? seg(t, T_IN, T_WRITE) : Math.min(0.5, seg(t, T_IN, T_WRITE * 0.6)); }
+    if (ok) { if (t > T_IN + T_WRITE) { fill = 1; hj = Math.abs(Math.sin(t / 240)) * 3; } }
+    else if (t > T_IN + T_WRITE * 0.6) { blot = 1; htilt = Math.sin(t / 70) * 0.05; }
+    const monjeBow = ok && t > T_IN + T_WRITE;
+    if (monje) actorAt(ctx, S.bake, monje, 'SW', 0, mx, gy, monjeBow ? Math.max(0, Math.sin(t / 240)) * 2 : 0, monjeBow ? 'bow' : undefined);
+    drawDesk(ctx, deskX, gy, fill, false);
+    if (blot) inkBlot(ctx, deskX + 6, gy - 14, 4);
+    else if (fill > 0 && fill < 1) { ctx.save(); ctx.strokeStyle = 'rgba(30,24,40,.8)'; ctx.lineWidth = 1.3; ctx.beginPath(); ctx.moveTo(deskX - 13 + fill * 26, gy - 16); ctx.lineTo(deskX - 11 + fill * 26, gy - 13); ctx.stroke(); ctx.restore(); }
+    actorAt(ctx, S.bake, hero, 'SE', hframe, hx, gy, hj, undefined, { tilt: htilt });
+  }
+
+  // ── 9. MERCADER (administrativo): enderezar un carro varado en el vado ───
+  function sceneFord(ctx, W, H, t, S) {
+    const gy = S.gy, ok = S.ok, hero = S.hero, merc = S.foe;
+    backdrop(ctx, W, H, gy, { top: '#2a2e34' });
+    drawFord(ctx, W, gy);
+    const cartX = W * 0.60, mx = W * 0.78, T_IN = 560, T_WORK = 1100;
+    let hx = W * 0.38, hframe = 0, hj = 0, cartTilt = 0.5, htilt = 0;
+    if (t < T_IN) { hx = lerp(-24, W * 0.38, easeOut(seg(t, 0, T_IN))); hframe = walkFrame(t); }
+    else if (t < T_IN + T_WORK) hj = Math.max(0, Math.sin((t - T_IN) / 170)) * 3;
+    if (ok) {
+      if (t > T_IN && t < T_IN + T_WORK) cartTilt = lerp(0.5, 0.06, seg(t, T_IN, T_WORK));               // se endereza
+      else if (t >= T_IN + T_WORK) { cartTilt = 0; hj = Math.abs(Math.sin(t / 240)) * 4; const p = seg(t, T_IN + T_WORK, 560); for (let i = 0; i < 4; i++) coin(ctx, cartX + Math.cos(i * 1.7) * 12 + Math.sin(i) * p * 8, gy - 18 - arch(p) * 38, 3); }
+    } else {
+      if (t > T_IN) cartTilt = lerp(0.5, 0.95, easeIn(seg(t, T_IN, T_WORK + 400)));                       // resbala más
+      if (t > T_IN + T_WORK) { htilt = Math.sin(t / 70) * 0.05; const p = seg(t, T_IN + T_WORK, 400); for (let i = 0; i < 4; i++) { ctx.save(); ctx.globalAlpha = (1 - p) * 0.6; ctx.fillStyle = 'rgba(180,210,220,.7)'; ctx.beginPath(); ctx.arc(cartX + (i - 1.5) * 6, gy + 4 - arch(p) * 14, 2, 0, 6.283); ctx.fill(); ctx.restore(); } }
+    }
+    const mercBow = ok && t > T_IN + T_WORK;
+    if (merc) actorAt(ctx, S.bake, merc, 'SW', 0, mx, gy, mercBow ? Math.max(0, Math.sin(t / 240)) * 2 : 0, mercBow ? 'bow' : undefined);
+    drawCartProp(ctx, cartX, gy, cartTilt);
+    actorAt(ctx, S.bake, hero, 'SE', hframe, hx, gy, hj, undefined, { tilt: htilt });
+  }
+
+  // ── 10. PEAJE (administrativo): un funcionario corrupto exige peaje ──────
+  function sceneToll(ctx, W, H, t, S) {
+    const gy = S.gy, ok = S.ok, hero = S.hero, fun = S.foe;
+    backdrop(ctx, W, H, gy, { top: '#2c2830' });
+    const barX = W * 0.56, fx = W * 0.68, T_IN = 540, T_ARG = 1000;
+    let hx = W * 0.36, hframe = 0, hj = 0, htilt = 0, barLift = 0;
+    if (t < T_IN) { hx = lerp(-24, W * 0.36, easeOut(seg(t, 0, T_IN))); hframe = walkFrame(t); }
+    if (ok) {
+      if (t > T_IN && t < T_IN + T_ARG) { if ((Math.floor((t - T_IN) / 300) % 2) === 0) bubble(ctx, hx, gy - dH + 4, ((t / 150) | 0) % 3 + 1, 'rgba(216,182,90,.9)'); }
+      else if (t > T_IN + T_ARG) { const p = seg(t, T_IN + T_ARG, 520); barLift = easeOut(p); hx = lerp(W * 0.36, W * 0.50, easeOut(p)); hframe = walkFrame(t); }
+    } else if (t > T_IN + T_ARG) { const p = seg(t, T_IN + T_ARG, 560); for (let i = 0; i < 3; i++) coin(ctx, lerp(hx + 8, fx - 8, easeIn(p)) + i * 3, gy - 14 - arch(p) * 16, 3); htilt = Math.sin(t / 70) * 0.04; }
+    ctx.save(); ctx.translate(barX, gy - 10); ctx.rotate(-barLift * 1.0);
+    ctx.fillStyle = '#7a5a2a'; ctx.fillRect(0, -2, W * 0.13, 4); ctx.fillStyle = '#d8b65a'; ctx.fillRect(0, -2, W * 0.13, 1); ctx.restore();
+    ctx.fillStyle = '#3a2c17'; ctx.fillRect(barX - 2, gy - 14, 4, 14);   // poste
+    if (fun) actorAt(ctx, S.bake, fun, 'SW', 0, fx, gy, 0);
+    actorAt(ctx, S.bake, hero, 'SE', hframe, hx, gy, hj, undefined, { tilt: htilt });
+  }
+
+  // ── 11. DISPUTA (administrativo): mediar entre dos aldeanos ──────────────
+  function sceneMediate(ctx, W, H, t, S) {
+    const gy = S.gy, ok = S.ok, hero = S.hero, a = S.foe, b = S.foe2;
+    backdrop(ctx, W, H, gy, { top: '#2a2c26' });
+    const ax0 = W * 0.40, bx0 = W * 0.62, T_IN = 540, T_ARG = 800;
+    let hx = W * 0.15, hframe = 0, hj = 0, hdir = 'S';
+    let ax = ax0, bx = bx0, aj = 0, bj = 0, apose, bpose;
+    if (t < T_IN + T_ARG) { aj = Math.max(0, Math.sin(t / 160)) * 2; bj = Math.max(0, Math.sin((t + 400) / 160)) * 2; if ((Math.floor(t / 300) % 2) === 0) bubble(ctx, ax, gy - dH + 4, 2, 'rgba(226,140,110,.85)'); else bubble(ctx, bx, gy - dH + 4, 2, 'rgba(226,140,110,.85)'); }
+    if (t < T_IN) { hx = lerp(-24, W * 0.30, easeOut(seg(t, 0, T_IN))); hframe = walkFrame(t); } else hx = W * 0.51;   // se interpone
+    if (ok) { if (t > T_IN + T_ARG) { const p = seg(t, T_IN + T_ARG, 560); apose = 'bow'; bpose = 'bow'; ax = lerp(ax0, ax0 - 6, p); bx = lerp(bx0, bx0 + 6, p); hj = Math.abs(Math.sin(t / 240)) * 3; } }
+    else if (t > T_IN + T_ARG) { const p = seg(t, T_IN + T_ARG, 560); ax = lerp(ax0, W * 0.47, easeOut(Math.min(1, p * 1.5))); bx = lerp(bx0, W * 0.55, easeOut(Math.min(1, p * 1.5))); if (p > 0.3 && p < 0.7) dust(ctx, W * 0.51, gy, 0.6); hx = lerp(W * 0.51, W * 0.34, easeOut(p)); hframe = walkFrame(t); hdir = 'SW'; }
+    if (a) actorAt(ctx, S.bake, a, 'SE', 0, ax, gy, aj, apose);
+    if (b) actorAt(ctx, S.bake, b, 'SW', 0, bx, gy, bj, bpose);
+    actorAt(ctx, S.bake, hero, hdir, hframe, hx, gy, hj);
+  }
+
+  // ── 12. CONTRATO (administrativo): estampar el sello de un buen trato ────
+  function sceneSeal(ctx, W, H, t, S) {
+    const gy = S.gy, ok = S.ok, hero = S.hero, merc = S.foe;
+    backdrop(ctx, W, H, gy, { top: '#2e2a22' });
+    const deskX = W * 0.5, T_IN = 560, T_DEAL = 1000;
+    let hx = W * 0.34, mx = W * 0.66, hframe = 0, mframe = 0, hj = 0, mj = 0, htilt = 0, seal = 0, stampJ = 0;
+    if (t < T_IN) { const p = easeOut(seg(t, 0, T_IN)); hx = lerp(-24, W * 0.34, p); mx = lerp(W + 24, W * 0.66, p); hframe = walkFrame(t); mframe = hframe; }
+    else if (t < T_IN + T_DEAL) { hj = Math.max(0, Math.sin((t - T_IN) / 260)) * 2; mj = Math.max(0, Math.sin((t - T_IN + 500) / 260)) * 2; if ((Math.floor((t - T_IN) / 500) % 2) === 0) bubble(ctx, hx, gy - dH + 4, ((t / 150) | 0) % 3 + 1); else bubble(ctx, mx, gy - dH + 4, ((t / 150) | 0) % 3 + 1); }
+    if (ok) { if (t >= T_IN + T_DEAL) { const p = seg(t, T_IN + T_DEAL, 560); stampJ = p < 0.3 ? arch(p / 0.3) * 10 : 0; seal = p > 0.3 ? 1 : 0; if (p > 0.3) for (let i = 0; i < 3; i++) coin(ctx, deskX + Math.cos(i * 2) * 10 + Math.sin(i) * (p - 0.3) * 14, gy - 16 - arch((p - 0.3) / 0.7) * 30, 3); hj = Math.abs(Math.sin(t / 240)) * 3; } }
+    else if (t >= T_IN + T_DEAL) { const p = seg(t, T_IN + T_DEAL, 560); mx = lerp(W * 0.66, W + 30, easeIn(p)); mframe = walkFrame(t); htilt = Math.sin(t / 70) * 0.03; }
+    drawDesk(ctx, deskX, gy, 0.8, seal);
+    if (stampJ > 0) { ctx.save(); ctx.globalAlpha = 0.7; ctx.fillStyle = '#b0342a'; ctx.beginPath(); ctx.arc(deskX + 10, gy - 14 - stampJ, 3, 0, 6.283); ctx.fill(); ctx.restore(); }
+    if (merc) actorAt(ctx, S.bake, merc, 'SW', mframe, mx, gy, mj);
+    actorAt(ctx, S.bake, hero, 'SE', hframe, hx, gy, hj, undefined, { tilt: htilt });
+  }
+
+  const SCENES = { bridge: sceneBridge, duel: sceneDuel, parley: sceneParley, supply: sceneSupply,
+    emboscada: sceneAmbush, duelo: sceneDuelo, fiera: sceneBeast, patrulla: scenePatrol,
+    inscripciones: sceneStele, poeta: scenePoet, rumor: sceneTavern, copista: sceneScribe,
+    mercader: sceneFord, peaje: sceneToll, disputa: sceneMediate, contrato: sceneSeal };
 
   // Tiempo del CLÍMAX (cuándo revelar el resultado) por escena/desenlace.
   function climaxOf(scene, ok, k) {
@@ -350,6 +779,19 @@ const HacEncAnim = (function () {
     if (scene === 'duel') return 560 + 520 + (ok ? 420 : 380);
     if (scene === 'parley') return 560 + 1500 + 420;
     if (scene === 'supply') return 620 + 1200 + 420;
+    // Encuentros de misión (protagonista solo):
+    if (scene === 'emboscada') return ok ? (500 + 720 + 420) : (500 + 720 + 460);
+    if (scene === 'duelo') return 560 + 520 + (ok ? 420 : 380);
+    if (scene === 'fiera') return 520 + 560 + 420 + (ok ? 380 : 360);
+    if (scene === 'patrulla') return 540 + 900 + (ok ? 420 : 460);
+    if (scene === 'inscripciones') return 560 + 900 + (ok ? 560 : 500);
+    if (scene === 'poeta') return 560 + 1200 + 560;
+    if (scene === 'rumor') return 540 + 1000 + (ok ? 520 : 560);
+    if (scene === 'copista') return 560 + 1100 + 420;
+    if (scene === 'mercader') return 560 + 1100 + 560;
+    if (scene === 'peaje') return 540 + 1000 + (ok ? 520 : 560);
+    if (scene === 'disputa') return 540 + 800 + 560;
+    if (scene === 'contrato') return 560 + 1000 + 560;
     return 1600;
   }
 
@@ -365,10 +807,7 @@ const HacEncAnim = (function () {
     const bake = makeBaker();
     const hero = Object.assign({ mio: true }, opts.hero || {});
     const allies = (opts.members || []).map(m => Object.assign({}, m));
-    // Enviado / oficial enemigo sintético (duelo, parlamento).
-    const foe = opts.scene === 'parley'
-      ? { aptitud: 'erudito', aspecto: { robe: '#6a5b3a', piel: 1, pelo: 1 } }
-      : { aptitud: 'guerrero', aspecto: { robe: '#3b322c', piel: 3, pelo: 3 } };
+    const { foe, foe2 } = foesFor(opts.scene);
 
     const dpr = Math.min(2, window.devicePixelRatio || 1);
     const CHpx = 184;
@@ -376,7 +815,7 @@ const HacEncAnim = (function () {
     fit();
 
     const climax = climaxOf(scene, !!opts.ok, allies.length);
-    const S = { gy: CHpx * 0.72, ok: !!opts.ok, hero, allies, foe, bake, obstacle: opts.obstacle || 'chasm' };
+    const S = { gy: CHpx * 0.72, ok: !!opts.ok, hero, allies, foe, foe2, bake, obstacle: opts.obstacle || 'chasm' };
 
     // Movimiento reducido: dibuja el fotograma final y revela ya.
     if (reduce()) {
@@ -412,8 +851,8 @@ const HacEncAnim = (function () {
     canvas.width = Math.round(w * dpr); canvas.height = Math.round(CHpx * dpr);
     const hero = Object.assign({ mio: true }, opts.hero || {});
     const allies = (opts.members || []).map(m => Object.assign({}, m));
-    const foe = opts.scene === 'parley' ? { aptitud: 'erudito', aspecto: { robe: '#6a5b3a', piel: 1, pelo: 1 } } : { aptitud: 'guerrero', aspecto: { robe: '#3b322c', piel: 3, pelo: 3 } };
-    const S = { gy: CHpx * 0.72, ok: !!opts.ok, hero, allies, foe, bake, obstacle: opts.obstacle || 'chasm' };
+    const { foe, foe2 } = foesFor(opts.scene);
+    const S = { gy: CHpx * 0.72, ok: !!opts.ok, hero, allies, foe, foe2, bake, obstacle: opts.obstacle || 'chasm' };
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, w, CHpx);
     SCENES[scene](ctx, w, CHpx, t, S);
   }

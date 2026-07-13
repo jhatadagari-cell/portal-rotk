@@ -416,14 +416,15 @@ const HacStats = (function () {
   function tieneCaballo(mid) { return !!caballo(mid); }
   // Compra ÚNICA (uno por mecenas, sea la variante que sea): descuenta el precio,
   // guarda QUÉ caballo (variante) y su nombre. Devuelve {ok, motivo}.
-  function comprarCaballo(mid, variante, nombre, precio) {
+  function comprarCaballo(mid, variante, nombre, precio, tono) {
     if (!mid) return { ok: false, motivo: 'Sin mecenas' };
     const r = ensure(mid);
     if (r.caballo) return { ok: false, motivo: 'Ya tienes un caballo' };
     const p = Math.max(0, precio | 0);
     if (r.dinero < p) return { ok: false, motivo: 'No tienes suficiente dinero' };
     const nom = String(nombre || '').trim().slice(0, 24) || 'Corcel';
-    r.dinero -= p; r.caballo = { id: variante || 'caballo', nombre: nom, ms: Date.now() };
+    const col = (typeof tono === 'string' && /^#[0-9a-fA-F]{6}$/.test(tono)) ? tono : null;   // pelaje elegido (hex) o null→marrón por defecto
+    r.dinero -= p; r.caballo = { id: variante || 'caballo', nombre: nom, tono: col, ms: Date.now() };
     persist(r); return { ok: true, caballo: r.caballo };
   }
   // VENDER un objeto de la mochila por `precio` (lo negocia la página con el regateo).
