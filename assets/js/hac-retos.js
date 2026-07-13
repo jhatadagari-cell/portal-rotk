@@ -22,7 +22,10 @@ const HacRetos = (function () {
   const TABLE = 'retos_semanales';
   const CAMPOS = ['prestigio', 'misiones', 'escaramuzas', 'encuentros'];
   // Metas por defecto (ajustables). Se cumplen los retos al llegar a TODAS.
-  const METAS = Object.freeze({ prestigio: 250, misiones: 6, escaramuzas: 2, encuentros: 4 });
+  // Reequilibradas: 250 de prestigio equivalía a ~23 misiones (una del tablón da ~11),
+  // desalineado con las demás metas; y las misiones/encuentros escasean. Bajadas a algo
+  // alcanzable en una semana de juego moderado (≈ 4 misiones + su puñado de encuentros).
+  const METAS = Object.freeze({ prestigio: 120, misiones: 4, escaramuzas: 1, encuentros: 3 });
   let cache = [], readyPromise = null, ok = false;
 
   // Semana ISO 'AAAA-Wnn' en hora de servidor (coherente entre sesiones del jugador).
