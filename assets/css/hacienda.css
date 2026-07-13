@@ -825,6 +825,54 @@ button.hacp-slot.manual:hover{ background:rgba(201,168,76,.24); }
 /* Badge rojo con el nº de misiones disponibles (barra móvil). */
 .hacp-mo-badge{ position:absolute; top:3px; right:calc(50% - 20px); min-width:15px; height:15px; padding:0 3px; box-sizing:border-box; border-radius:8px;
   background:#b23b2e; color:#fff; font:700 9.5px 'Noto Sans SC',sans-serif; display:flex; align-items:center; justify-content:center; z-index:2; }
+
+/* ── Hacienda productiva 產 ──────────────────────────────────────────────── */
+.hacp-prod-box{ width:min(480px,95%); }
+.hacp-prod-seclbl{ font:700 9.5px 'Cinzel Decorative',serif; letter-spacing:.08em; text-transform:uppercase; color:var(--hac,var(--gold)); opacity:.8; margin:12px 0 5px; }
+.hacp-prod-alm{ display:flex; flex-direction:column; gap:4px; }
+.hacp-prod-res{ display:flex; align-items:center; gap:8px; background:rgba(255,255,255,.03); border:1px solid rgba(201,168,76,.2); border-radius:7px; padding:5px 9px; }
+.hacp-prod-res .ic{ font-size:18px; } .hacp-prod-res .nm{ font:700 12px 'Noto Sans SC',sans-serif; flex:0 0 auto; }
+.hacp-prod-res>b{ font:800 15px 'Noto Sans SC',sans-serif; color:var(--gold); font-variant-numeric:tabular-nums; margin-left:2px; }
+.hacp-prod-res .cals{ flex:1; display:flex; gap:4px; flex-wrap:wrap; font-size:10px; }
+.hacp-prod-cal{ padding:1px 5px; border-radius:6px; background:rgba(0,0,0,.25); color:#eee; }
+.hacp-prod-cal.c1{ color:#c3ccd4; } .hacp-prod-cal.c2{ color:#7fc76a; } .hacp-prod-cal.c3{ color:#5aa6e6; } .hacp-prod-cal.c4{ color:#c79ae6; } .hacp-prod-cal.c5{ color:#f0d98a; }
+.hacp-prod-mini{ flex:0 0 auto; font:700 10px 'Noto Sans SC',sans-serif; padding:3px 8px; border-radius:6px; cursor:pointer; background:rgba(255,255,255,.05); border:1px solid rgba(201,168,76,.3); color:var(--parch); }
+.hacp-prod-mini:hover{ background:rgba(201,168,76,.2); }
+.hacp-prod-ofs{ display:flex; flex-direction:column; gap:7px; }
+.hacp-prod-of{ background:rgba(255,255,255,.03); border:1px solid rgba(201,168,76,.25); border-radius:9px; padding:8px 10px; }
+.hacp-prod-of-h{ display:flex; align-items:center; gap:7px; }
+.hacp-prod-of-h .ic{ font-size:18px; } .hacp-prod-of-h .nm{ font:700 13px 'Noto Sans SC',sans-serif; flex:1; } .hacp-prod-of-h .nm i{ color:var(--parch2); font-style:normal; font-size:11px; }
+.hacp-prod-of-h .niv{ font:800 12px 'Noto Serif SC',serif; }
+.hacp-prod-of-sub{ font-size:10.5px; color:var(--parch2); margin:2px 0 6px; }
+.hacp-prod-of-acts{ display:flex; gap:6px; } .hacp-prod-of-acts .hacp-cp-btn{ flex:1; font-size:11px; padding:6px 4px; }
+.hacp-prod-encs{ display:flex; flex-direction:column; gap:6px; }
+.hacp-prod-enc{ display:flex; align-items:center; gap:9px; background:rgba(255,255,255,.03); border:1px solid rgba(201,168,76,.2); border-radius:8px; padding:7px 10px; }
+.hacp-prod-enc.listo{ border-color:#7fc76a; background:rgba(127,199,106,.1); }
+.hacp-prod-enc.done{ opacity:.5; }
+.hacp-prod-enc .ic{ font-size:20px; } .hacp-prod-enc .txt{ flex:1; font-size:11.5px; line-height:1.35; }
+.hacp-prod-enc .rew{ color:var(--gold); font-weight:700; } .hacp-prod-enc .prog{ color:var(--parch2); font-size:10.5px; }
+.hacp-prod-enc .hacp-cp-btn{ flex:0 0 auto; padding:6px 12px; }
+.hacp-prod-encok{ color:#7fc76a; font:700 11px 'Noto Sans SC',sans-serif; }
+
+/* La jornada (empujar la suerte) */
+.hacp-jorn-box{ width:min(460px,94%); }
+.hacp-jorn-arena{ display:flex; align-items:center; gap:12px; margin:8px 0 6px; }
+.hacp-jorn-fig{ position:relative; flex:0 0 auto; }
+.hacp-jorn-fig::after{ content:''; position:absolute; left:50%; bottom:6px; transform:translateX(-50%); width:56px; height:10px; border-radius:50%; background:rgba(0,0,0,.45); filter:blur(3px); }
+.hacp-jorn-cv{ image-rendering:pixelated; height:150px; width:auto; position:relative; z-index:1; }
+.hacp-jorn-mid{ flex:1; position:relative; text-align:center; }
+.hacp-jorn-lote{ line-height:1; } .hacp-jorn-lote span{ display:block; font-size:10px; text-transform:uppercase; letter-spacing:.08em; color:var(--parch2); }
+.hacp-jorn-lote b{ font:900 34px 'Noto Serif SC',serif; color:var(--gold); font-variant-numeric:tabular-nums; } .hacp-jorn-lote i{ font-style:normal; font-size:20px; }
+.hacp-jorn-media{ font-size:11px; color:var(--parch2); margin-top:2px; }
+.hacp-jorn-fat{ height:8px; border-radius:5px; background:rgba(255,255,255,.12); overflow:hidden; margin:8px 0 4px; }
+.hacp-jorn-fat i{ display:block; height:100%; background:linear-gradient(90deg,#7fc76a,#e0b85a 55%,#c0463a); transition:width .25s; }
+.hacp-jorn-cals{ font-size:11px; color:var(--parch); letter-spacing:.02em; }
+.hacp-jorn-flash{ position:absolute; top:-2px; left:50%; transform:translateX(-50%); font:900 17px 'Noto Serif SC',serif; color:#7fc76a; pointer-events:none; animation:jorn-flash 1s ease-out both; }
+.hacp-jorn-flash.bad{ color:#e0715a; }
+.hacp-jorn-hint{ text-align:center; font-size:12px; color:var(--parch); margin:4px 0 8px; min-height:15px; }
+.hacp-jorn-hint.bad{ color:#e0715a; } .hacp-jorn-hint b.r{ color:#e0715a; }
+.hacp-jorn-acts{ display:flex; gap:8px; } .hacp-jorn-acts .hacp-cp-btn{ flex:1; }
+@keyframes jorn-flash{ 0%{ transform:translateX(-50%) translateY(4px); opacity:0; } 25%{ opacity:1; } 100%{ transform:translateX(-50%) translateY(-20px); opacity:0; } }
 .hacp-suc-done{ display:block; width:100%; }
 /* ── Bautizo del caballo ── */
 .hacp-horse-in{ width:100%; box-sizing:border-box; margin-top:4px; padding:11px 12px; font:800 18px 'Noto Serif SC',serif; text-align:center;

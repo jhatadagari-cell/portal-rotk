@@ -45,7 +45,7 @@ const HacStats = (function () {
       casaPos: r.casa_pos || null, casaInv: parseInv(r.casa_inv), equipado: parseInv(r.equipado),
       heridas: Math.max(0, Math.min(3, Number(r.heridas) || 0)),
       secuelas: parseInv(r.secuelas),
-      escaramuzaCd: Number(r.escaramuza_cd) || 0, ventaCd: parseObj(r.venta_cd), sendas: parseObj(r.sendas),
+      escaramuzaCd: Number(r.escaramuza_cd) || 0, ventaCd: parseObj(r.venta_cd), produccion: parseObj(r.produccion), sendas: parseObj(r.sendas),
       caballo: (r.caballo && typeof r.caballo === 'object') ? r.caballo : (r.caballo ? (function () { try { return JSON.parse(r.caballo); } catch (e) { return null; } })() : null),
     };
   }
@@ -65,7 +65,7 @@ const HacStats = (function () {
   function reload() { readyPromise = load(); return readyPromise; }
 
   function row(mid) { return cache.find(r => r.miembroId === mid) || null; }
-  function ensure(mid) { let r = row(mid); if (!r) { r = { miembroId: mid, dinero: 0, militar: 0, cultural: 0, administrativo: 0, cap: 8, inv: [], ahorro: 0, casaPos: null, casaInv: [], equipado: [], heridas: 0, secuelas: [], sendas: {}, caballo: null, ventaCd: {} }; cache.push(r); } if (!r.sendas) r.sendas = {}; if (!r.ventaCd) r.ventaCd = {}; return r; }
+  function ensure(mid) { let r = row(mid); if (!r) { r = { miembroId: mid, dinero: 0, militar: 0, cultural: 0, administrativo: 0, cap: 8, inv: [], ahorro: 0, casaPos: null, casaInv: [], equipado: [], heridas: 0, secuelas: [], sendas: {}, caballo: null, ventaCd: {}, produccion: {} }; cache.push(r); } if (!r.sendas) r.sendas = {}; if (!r.ventaCd) r.ventaCd = {}; if (!r.produccion) r.produccion = {}; return r; }
   // HERIDAS (0..3). Se infligen al fracasar/arriesgar en expediciones y escaramuzas.
   // PESAN: penalizan la recompensa (dinero+XP) y suben el riesgo; a 3 el mecenas
   // está MALHERIDO y no puede salir de la finca hasta curarse.
@@ -223,6 +223,7 @@ const HacStats = (function () {
 
   let caballoCol = true;   // false si la columna `caballo` aún no existe (falta caballo.sql)
   let ventaCdCol = true;   // false si la columna `venta_cd` aún no existe (falta el ALTER de mecenas_stats.sql)
+  let prodCol = true;      // false si la columna `produccion` aún no existe (falta el ALTER de mecenas_stats.sql)
   async function persist(r) {
     // ── SEGURIDAD ANTI-PISOTÓN ────────────────────────────────────────────
     // persist() hace un UPSERT de la FILA COMPLETA (xp, dinero, inventario…).
@@ -249,6 +250,7 @@ const HacStats = (function () {
       };
       if (caballoCol) rowData.caballo = r.caballo || null;
       if (ventaCdCol) rowData.venta_cd = r.ventaCd || {};
+      if (prodCol) rowData.produccion = r.produccion || {};
       let { error } = await client.from(TABLE).upsert(rowData);
       // Si la columna `caballo` no existe todavía, reintenta SIN ella para no perder
       // el resto de stats (el caballo no persistirá hasta ejecutar caballo.sql).
@@ -259,6 +261,11 @@ const HacStats = (function () {
       // Ídem para `venta_cd` (falta ejecutar el ALTER de mecenas_stats.sql).
       if (error && ventaCdCol && /venta_cd/i.test(String(error.message || ''))) {
         ventaCdCol = false; delete rowData.venta_cd;
+        ({ error } = await client.from(TABLE).upsert(rowData));
+      }
+      // Ídem para `produccion` (falta el ALTER de mecenas_stats.sql).
+      if (error && prodCol && /produccion/i.test(String(error.message || ''))) {
+        prodCol = false; delete rowData.produccion;
         ({ error } = await client.from(TABLE).upsert(rowData));
       }
       if (error) throw error;
@@ -461,6 +468,31 @@ const HacStats = (function () {
   // Bono de LABIA por objetos equipados (gancho `equip.regateo`); 0 si ninguno lo da.
   function bonusRegateo(mid) { const r = row(mid); if (!r || !window.HacTienda) return 0; let s = 0; r.equipado.forEach(id => { const b = HacTienda.equipBonus(id); if (b && b.regateo) s += b.regateo; }); return s; }
 
-  return { ready, reload, dinero, ahorro, casaPos, casasReclamadas, duenoDeCasa, comprarCasa, liberarCasa, abandonar, heridas, penHerida, malherido, herir, curar, secuelas, tieneSecuela, escaramuzaCd, bonusDinero, bonusExped, bonusPrestigio, bonusAntirrobo, usarManual, abrirRecompensaSemanal, xp, nivel, progresoNivel, bonus, nivelTotal, nivelPersonaje, setNiveles, puntosTalento, talentos, puntosGastados, puntosLibres, tieneTalento, aprenderTalento, equipados, equipar, desequipar, slotDe, MAX_EQUIP, bonusPct, bonusPctNiveles, torsoViste, vestir, otorgarArmaInicial, award, comprar, guardar, sacar, darItem, quitarItem, meterEnCasa, sacarDeCasa, inventario, casaInventario, capInventario, ocupadas, recompensaExped, caballo, tieneCaballo, comprarCaballo, venderItem, ventaCd, ventaEnfriada, ventaCdRestanteMs, enfriarVenta, bonusRegateo, DOMS, dbOk: () => ok, TABLE };
+  // ── HACIENDA PRODUCTIVA (Fase 1, personal): estado en produccion jsonb ──────
+  function prodObj(mid) { const r = ensure(mid); const p = r.produccion || (r.produccion = {}); if (!p.recursos) p.recursos = {}; if (!p.oficios) p.oficios = {}; if (!p.encargos) p.encargos = { dia: '', hechos: [] }; return p; }
+  function recursos(mid) { const r = row(mid); return (r && r.produccion && r.produccion.recursos) || {}; }
+  function recursoTotal(mid, rec) { const m = recursos(mid)[rec] || {}; let s = 0; for (const q in m) s += Number(m[q]) || 0; return s; }
+  function recursoDesdeCal(mid, rec, calMin) { const m = recursos(mid)[rec] || {}; let s = 0; for (let q = calMin; q <= 5; q++) s += Number(m[q]) || 0; return s; }
+  // Añade un LOTE {cal:n} a un recurso (una sola escritura).
+  function addLote(mid, rec, lote) { const p = prodObj(mid); const m = p.recursos[rec] || (p.recursos[rec] = {}); let tot = 0; for (const q in lote) { const n = Number(lote[q]) || 0; if (n <= 0) continue; m[q] = (Number(m[q]) || 0) + n; tot += n; } if (tot > 0) persist(ensure(mid)); return tot; }
+  // Consume n uds de cal ≥ calMin (de la más baja que cumpla hacia arriba). Devuelve ok.
+  function quitaRecurso(mid, rec, calMin, n) { if (recursoDesdeCal(mid, rec, calMin) < n) return false; const p = prodObj(mid); const m = p.recursos[rec]; let falta = n; for (let q = calMin; q <= 5 && falta > 0; q++) { const dispo = Number(m[q]) || 0, usa = Math.min(dispo, falta); if (usa > 0) { m[q] = dispo - usa; falta -= usa; } } persist(ensure(mid)); return true; }
+  // Consume EXACTAMENTE n uds de una calidad concreta (para vender por calidad). Devuelve lo consumido.
+  function quitaCal(mid, rec, cal, n) { const p = prodObj(mid); const m = p.recursos[rec]; if (!m) return 0; const d = Number(m[cal]) || 0, usa = Math.min(d, n); if (usa > 0) { m[cal] = d - usa; persist(ensure(mid)); } return usa; }
+  function oficioNivel(mid, of) { const p = row(mid) && row(mid).produccion; return (p && p.oficios && p.oficios[of] && p.oficios[of].nivel) || 1; }
+  function subirOficio(mid, of) { const p = prodObj(mid); const o = p.oficios[of] || (p.oficios[of] = { nivel: 1, ts: nowMs() }); o.nivel = Math.min(5, (o.nivel || 1) + 1); persist(ensure(mid)); return o.nivel; }
+  // Renta pasiva: acumula por el tiempo desde ts (uds/h y tope según nivel); calidad 1.
+  function recolectarRenta(mid, of, udsPorHora, cap, recurso) {
+    const p = prodObj(mid); const o = p.oficios[of] || (p.oficios[of] = { nivel: 1, ts: nowMs() });
+    const t = Number(o.ts) || nowMs(), now = nowMs(), actual = recursoTotal(mid, recurso);
+    const ganado = Math.max(0, Math.min(Math.floor((now - t) / 3600000 * udsPorHora), cap - actual));
+    o.ts = now; if (ganado > 0) addLote(mid, recurso, { 1: ganado }); else persist(ensure(mid));
+    return ganado;
+  }
+  function rentaPendiente(mid, of, udsPorHora, cap, recurso) { const p = row(mid) && row(mid).produccion; const o = p && p.oficios && p.oficios[of]; const t = (o && Number(o.ts)) || nowMs(); return Math.max(0, Math.min(Math.floor((nowMs() - t) / 3600000 * udsPorHora), cap - recursoTotal(mid, recurso))); }
+  function encargosHechos(mid, dia) { const p = prodObj(mid); if (p.encargos.dia !== dia) { p.encargos.dia = dia; p.encargos.hechos = []; } return p.encargos.hechos.slice(); }
+  function marcarEncargo(mid, dia, id) { const p = prodObj(mid); if (p.encargos.dia !== dia) { p.encargos.dia = dia; p.encargos.hechos = []; } if (p.encargos.hechos.indexOf(id) < 0) { p.encargos.hechos.push(id); persist(ensure(mid)); } }
+
+  return { ready, reload, dinero, ahorro, casaPos, casasReclamadas, duenoDeCasa, comprarCasa, liberarCasa, abandonar, heridas, penHerida, malherido, herir, curar, secuelas, tieneSecuela, escaramuzaCd, bonusDinero, bonusExped, bonusPrestigio, bonusAntirrobo, usarManual, abrirRecompensaSemanal, xp, nivel, progresoNivel, bonus, nivelTotal, nivelPersonaje, setNiveles, puntosTalento, talentos, puntosGastados, puntosLibres, tieneTalento, aprenderTalento, equipados, equipar, desequipar, slotDe, MAX_EQUIP, bonusPct, bonusPctNiveles, torsoViste, vestir, otorgarArmaInicial, award, comprar, guardar, sacar, darItem, quitarItem, meterEnCasa, sacarDeCasa, inventario, casaInventario, capInventario, ocupadas, recompensaExped, caballo, tieneCaballo, comprarCaballo, venderItem, ventaCd, ventaEnfriada, ventaCdRestanteMs, enfriarVenta, bonusRegateo, recursos, recursoTotal, recursoDesdeCal, addLote, quitaRecurso, quitaCal, oficioNivel, subirOficio, recolectarRenta, rentaPendiente, encargosHechos, marcarEncargo, DOMS, dbOk: () => ok, TABLE };
 })();
 if (typeof window !== 'undefined') window.HacStats = HacStats;

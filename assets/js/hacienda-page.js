@@ -424,6 +424,7 @@
     };
     if (myId) mobar.appendChild(moBtn('士', 'Tu mecenas', () => gotoMember(myId)));
     if (myId && hasTablon) { const bMis = moBtn('檄', 'Misiones', goConsultBoard); bMis.classList.add('hacp-mo-mis'); mobar.appendChild(bMis); }
+    if (myId && window.HacProd) { const bP = moBtn('產', 'Producción', () => openProd()); bP.classList.add('hacp-mo-prod'); mobar.appendChild(bP); }
     if (myId && hasMarket) mobar.appendChild(moBtn('市', 'Mercado', openShop));
     mobar.appendChild(moBtn('众', 'Mecenas', () => folkCollapse(false)));
     ['pointerdown', 'pointerup', 'wheel', 'click'].forEach(ev => mobar.addEventListener(ev, (e) => e.stopPropagation(), { passive: false }));
@@ -945,6 +946,15 @@
       if (!mobar) return;
       const btn = mobar.querySelector('.hacp-mo-mis'); if (!btn) return;
       const n = (typeof misDisponiblesCount === 'function') ? misDisponiblesCount() : 0;
+      let b = btn.querySelector('.hacp-mo-badge');
+      if (n > 0) { if (!b) { b = document.createElement('span'); b.className = 'hacp-mo-badge'; btn.appendChild(b); } b.textContent = n; }
+      else if (b) b.remove();
+    }
+    // Badge de Producción en la barra móvil (encargos entregables).
+    function refreshMoProdBadge() {
+      if (!mobar) return;
+      const btn = mobar.querySelector('.hacp-mo-prod'); if (!btn) return;
+      const n = (typeof encargosEntregables === 'function') ? encargosEntregables() : 0;
       let b = btn.querySelector('.hacp-mo-badge');
       if (n > 0) { if (!b) { b = document.createElement('span'); b.className = 'hacp-mo-badge'; btn.appendChild(b); } b.textContent = n; }
       else if (b) b.remove();
@@ -3672,6 +3682,7 @@
     function toolbarHTML(d) {
       const pts = (window.HacStats && HacStats.puntosLibres) ? HacStats.puntosLibres(myId) : 0;
       const misDisp = misDisponiblesCount();
+      const prodEnc = (typeof encargosEntregables === 'function') ? encargosEntregables() : 0;
       const tool = (act, ic, lb, extra) => `<button type="button" class="hacp-cp-tool${extra || ''}" data-act="${act}"><span class="ic">${ic}</span><span class="lb">${lb}</span></button>`;
       const items = [
         tool('equip', '⚔', 'Equipo' + (d.equipN ? ` ${d.equipN}/3` : '')),
@@ -3679,16 +3690,19 @@
         tool('sendas', '道', 'Sendas') + (pts > 0 ? '' : ''),
         tool('caballo', '🐎', 'Tu Caballo'),
         tool('log', '錄', 'Bitácora'),
+        prodOk() ? tool('prod', '產', 'Producción', ' hacp-cp-prod') : '',
         hasMarket ? tool('shop', '市', 'Mercado') : '',
         tool('esc', '兵', 'Escaramuzas', ' hacp-cp-esc'),
         hasTablon ? tool('board', '檄', 'Misiones', ' hacp-cp-board') : '',
       ];
-      // Distintivos rojos: puntos de talento sin gastar (Sendas) y misiones disponibles
-      // en el tablón (Misiones). Si el de Misiones no aparece, es que no queda ninguna hoy.
+      // Distintivos rojos: puntos de talento sin gastar (Sendas), encargos entregables
+      // (Producción) y misiones disponibles (Misiones). Sin badge = nada pendiente.
       const sendasBadge = pts > 0 ? `<span class="hacp-cp-badge">${pts}</span>` : '';
+      const prodBadge = prodEnc > 0 ? `<span class="hacp-cp-badge">${prodEnc}</span>` : '';
       const boardBadge = misDisp > 0 ? `<span class="hacp-cp-badge">${misDisp}</span>` : '';
       let html = items.join('');
       if (sendasBadge) html = html.replace('data-act="sendas"><span class="ic">道</span>', `data-act="sendas">${sendasBadge}<span class="ic">道</span>`);
+      if (prodBadge) html = html.replace('data-act="prod"><span class="ic">產</span>', `data-act="prod">${prodBadge}<span class="ic">產</span>`);
       if (boardBadge) html = html.replace('data-act="board"><span class="ic">檄</span>', `data-act="board">${boardBadge}<span class="ic">檄</span>`);
       return `<div class="hacp-cp-tools">${html}</div>`;
     }
@@ -3855,6 +3869,8 @@
       if (ib) ib.addEventListener('click', () => { invOpen = !invOpen; buildCharPanel(charId); });
       const shb = charEl.querySelector('[data-act="shop"]');
       if (shb) shb.addEventListener('click', openShop);
+      const pdb = charEl.querySelector('[data-act="prod"]');
+      if (pdb) pdb.addEventListener('click', openProd);
       charEl.querySelectorAll('[data-usar]').forEach(b => b.addEventListener('click', () => usarManualUI(b.dataset.usar)));
       charEl.querySelectorAll('[data-abrir]').forEach(b => b.addEventListener('click', () => abrirRecompensaUI(b.dataset.abrir)));
       const gh = charEl.querySelector('[data-act="gohome"]');
@@ -4542,6 +4558,163 @@
     function openEquip() { if (!myId || !window.HacStats) return; buildEquip(); ensureEquipEl().hidden = false; }
     function closeEquip() { if (equipEl) equipEl.hidden = true; }
 
+    // ══ HACIENDA PRODUCTIVA (Fase 1, personal) ═══════════════════════════════
+    let prodEl = null, jornEl = null;
+    const prodDia = () => (window.HacProd ? HacProd.diaStr() : '');
+    const prodOk = () => !!(myId && window.HacProd && window.HacStats && HacStats.recursos);
+    const refrescarProd = () => { if (prodEl && !prodEl.hidden) buildProd(); if (charId) buildCharPanel(charId); };
+    // Nº de encargos ENTREGABLES ahora (para el badge rojo del botón Producción).
+    function encargosEntregables() {
+      if (!prodOk()) return 0;
+      const dia = prodDia(), hechos = HacStats.encargosHechos(myId, dia);
+      return HacProd.encargosDelDia(h.id, tier).filter(e => hechos.indexOf(e.id) < 0 && HacStats.recursoDesdeCal(myId, e.recurso, e.calMin) >= e.cantidad).length;
+    }
+    function ensureProdEl() {
+      if (prodEl) return prodEl;
+      prodEl = document.createElement('div'); prodEl.className = 'hacp-shop hacp-prod-ov'; prodEl.hidden = true; overlayHost().appendChild(prodEl);
+      ['pointerdown', 'pointerup', 'wheel', 'click'].forEach(ev => prodEl.addEventListener(ev, (e) => e.stopPropagation(), { passive: false }));
+      prodEl.addEventListener('click', (e) => { if (e.target === prodEl) closeProd(); });
+      return prodEl;
+    }
+    function closeProd() { if (prodEl) prodEl.hidden = true; }
+    function openProd() {
+      if (!prodOk()) return;
+      // Recoge la RENTA pasiva al abrir (momento de feedback).
+      const recs = {}; let rec = 0;
+      HacProd.OFICIO_IDS.forEach(of => { const o = HacProd.OFICIOS[of], niv = HacStats.oficioNivel(myId, of); const g = HacStats.recolectarRenta(myId, of, HacProd.rentaPorHora(niv), HacProd.rentaCap(niv), o.recurso); if (g > 0) { rec += g; recs[o.recurso] = (recs[o.recurso] || 0) + g; } });
+      if (rec > 0) toast('🧺 Renta del feudo: ' + Object.keys(recs).map(r => `+${recs[r]} ${HacProd.RECURSOS[r].icon}`).join(' · '));
+      buildProd(); ensureProdEl().hidden = false;
+    }
+    function buildProd() {
+      const el = ensureProdEl(), dia = prodDia();
+      const almacen = HacProd.RECURSO_IDS.map(rec => {
+        const R = HacProd.RECURSOS[rec], tot = HacStats.recursoTotal(myId, rec), m = HacStats.recursos(myId)[rec] || {};
+        const cals = [1, 2, 3, 4, 5].filter(q => m[q] > 0).map(q => `<span class="hacp-prod-cal c${q}">${q}·${m[q]}</span>`).join('');
+        const bajo = (Number(m[1]) || 0) + (Number(m[2]) || 0);
+        return `<div class="hacp-prod-res"><span class="ic">${R.icon}</span><span class="nm">${esc(R.nombre)}</span><b>${tot}</b><span class="cals">${cals || '—'}</span>${bajo > 0 ? `<button type="button" class="hacp-prod-mini" data-vender="${rec}" title="Vende el excedente de calidad 1 y 2">Vender bajo</button>` : ''}</div>`;
+      }).join('');
+      const oficios = HacProd.OFICIO_IDS.map(of => {
+        const O = HacProd.OFICIOS[of], niv = HacStats.oficioNivel(myId, of), R = HacProd.RECURSOS[O.recurso];
+        const rph = HacProd.rentaPorHora(niv), cap = HacProd.rentaCap(niv), c = HacProd.costeMejora(niv);
+        const tope = niv >= HacProd.NIVEL_MAX, puede = !tope && HacStats.recursoDesdeCal(myId, O.recurso, c.calMin) >= c.uds && HacStats.dinero(myId) >= c.dinero;
+        const mLbl = tope ? 'Nivel máx' : `Mejorar · ${c.uds}${R.icon}≥${c.calMin} +${c.dinero}💰`;
+        return `<div class="hacp-prod-of">
+          <div class="hacp-prod-of-h"><span class="ic">${O.icon}</span><span class="nm">${esc(O.nombre)} <i>${O.zh}</i></span><span class="niv" style="color:${DOM_COLOR[O.dom]}">${DOM_GLYPH[O.dom]} niv ${niv}</span></div>
+          <div class="hacp-prod-of-sub">Produce ${R.icon} ${esc(R.nombre)} · renta ${rph}/h (tope ${cap})</div>
+          <div class="hacp-prod-of-acts"><button type="button" class="hacp-cp-btn hacp-suc-ok" data-trabajar="${of}">${esc(O.verbo)} 勞作</button><button type="button" class="hacp-cp-btn" data-mejorar="${of}"${tope || !puede ? ' disabled' : ''}>${mLbl}</button></div>
+        </div>`;
+      }).join('');
+      const hechos = HacStats.encargosHechos(myId, dia);
+      const encargos = HacProd.encargosDelDia(h.id, tier).map(e => {
+        const R = HacProd.RECURSOS[e.recurso], hecho = hechos.indexOf(e.id) >= 0, tengo = HacStats.recursoDesdeCal(myId, e.recurso, e.calMin), listo = !hecho && tengo >= e.cantidad;
+        return `<div class="hacp-prod-enc${hecho ? ' done' : listo ? ' listo' : ''}"><span class="ic">${R.icon}</span>
+          <span class="txt"><b>${e.cantidad}</b> ${esc(R.nombre)} cal≥${e.calMin} · <span class="rew">${e.dinero}💰 +${e.prestigio}★</span><br><span class="prog">tienes ${Math.min(tengo, e.cantidad)}/${e.cantidad}</span></span>
+          ${hecho ? '<span class="hacp-prod-encok">✔ hecho</span>' : `<button type="button" class="hacp-cp-btn hacp-suc-ok" data-entregar="${esc(e.id)}"${listo ? '' : ' disabled'}>Entregar</button>`}</div>`;
+      }).join('');
+      el.innerHTML = `<div class="hacp-shop-box hacp-prod-box">
+        <button type="button" class="hacp-shop-x" data-act="prod-close" aria-label="Cerrar">✕</button>
+        <div class="hacp-shop-h"><span class="hacp-shop-zh">產</span> Hacienda productiva</div>
+        <div class="hacp-shop-sub">Trabaja los oficios para producir recursos con calidad, cumple encargos del día y mejora tu feudo. Trabajar cuesta energía y sube tu dominio (XP).</div>
+        <div class="hacp-prod-seclbl">Almacén 倉</div><div class="hacp-prod-alm">${almacen}</div>
+        <div class="hacp-prod-seclbl">Oficios 工</div><div class="hacp-prod-ofs">${oficios}</div>
+        <div class="hacp-prod-seclbl">Encargos del día 委託</div><div class="hacp-prod-encs">${encargos}</div>
+      </div>`;
+      el.querySelector('[data-act="prod-close"]').addEventListener('click', closeProd);
+      el.querySelectorAll('[data-trabajar]').forEach(b => b.addEventListener('click', () => abrirJornada(b.dataset.trabajar)));
+      el.querySelectorAll('[data-mejorar]').forEach(b => b.addEventListener('click', () => mejorarOficio(b.dataset.mejorar)));
+      el.querySelectorAll('[data-entregar]').forEach(b => b.addEventListener('click', () => entregarEncargo(b.dataset.entregar)));
+      el.querySelectorAll('[data-vender]').forEach(b => b.addEventListener('click', () => venderRecurso(b.dataset.vender)));
+    }
+    function mejorarOficio(of) {
+      const O = HacProd.OFICIOS[of]; if (!O) return; const niv = HacStats.oficioNivel(myId, of); if (niv >= HacProd.NIVEL_MAX) return;
+      const c = HacProd.costeMejora(niv), R = HacProd.RECURSOS[O.recurso];
+      if (HacStats.recursoDesdeCal(myId, O.recurso, c.calMin) < c.uds) { toast(`Necesitas ${c.uds} ${R.icon} de calidad ≥${c.calMin}`); return; }
+      if (HacStats.dinero(myId) < c.dinero) { toast('No tienes suficiente dinero'); return; }
+      HacStats.quitaRecurso(myId, O.recurso, c.calMin, c.uds); HacStats.award(myId, { dinero: -c.dinero });
+      const nn = HacStats.subirOficio(myId, of);
+      toast(`${O.icon} ${O.nombre} sube a nivel ${nn}`);
+      if (window.HacBitacora) HacBitacora.log(myId, 'progreso', `工 ${O.nombre} mejora a nivel ${nn}`);
+      refrescarProd();
+    }
+    function entregarEncargo(id) {
+      const dia = prodDia(), e = HacProd.encargosDelDia(h.id, tier).find(x => x.id === id); if (!e) return;
+      if (HacStats.encargosHechos(myId, dia).indexOf(id) >= 0) return;
+      if (!HacStats.quitaRecurso(myId, e.recurso, e.calMin, e.cantidad)) { toast('Te falta material para el encargo'); return; }
+      HacStats.award(myId, { dinero: e.dinero });
+      if (window.HacPuntos && HacPuntos.award) HacPuntos.award(h.id, myId, e.prestigio);
+      retoAdd('prestigio', e.prestigio);
+      HacStats.marcarEncargo(myId, dia, id);
+      toast(`✔ Encargo cumplido · +${e.dinero}💰 · +${e.prestigio}★`);
+      if (window.HacBitacora) HacBitacora.log(myId, 'progreso', `委 Cumpliste un encargo de ${HacProd.RECURSOS[e.recurso].nombre} · +${e.dinero}💰`);
+      refrescarProd();
+    }
+    function venderRecurso(rec) {
+      const m = HacStats.recursos(myId)[rec] || {}, n1 = Number(m[1]) || 0, n2 = Number(m[2]) || 0;
+      if (n1 + n2 <= 0) { toast('No hay excedente (calidad ≤2) que vender'); return; }
+      const total = n1 * HacProd.precioVenta(rec, 1) + n2 * HacProd.precioVenta(rec, 2);
+      HacStats.quitaCal(myId, rec, 1, n1); HacStats.quitaCal(myId, rec, 2, n2);
+      HacStats.award(myId, { dinero: total });
+      toast(`💰 Vendiste ${n1 + n2} ${HacProd.RECURSOS[rec].icon} (excedente) · +${total}💰`);
+      if (window.HacBitacora) HacBitacora.log(myId, 'venta', `商 Vendiste excedente de ${HacProd.RECURSOS[rec].nombre} · +${total}💰`);
+      refrescarProd();
+    }
+    // ── La JORNADA (empujar la suerte) ──────────────────────────────────────
+    function ensureJornEl() {
+      if (jornEl) return jornEl;
+      jornEl = document.createElement('div'); jornEl.className = 'hacp-suc-ov hacp-jorn-ov'; jornEl.hidden = true; overlayHost().appendChild(jornEl);
+      ['pointerdown', 'pointerup', 'wheel', 'click'].forEach(ev => jornEl.addEventListener(ev, (e) => e.stopPropagation(), { passive: false }));
+      return jornEl;
+    }
+    function cerrarJornEl() { if (jornEl) jornEl.hidden = true; }
+    function abrirJornada(of) {
+      const O = HacProd.OFICIOS[of]; if (!O || !myId) return;
+      const st = { of, O, recurso: O.recurso, dom: O.dom, nivel: HacStats.oficioNivel(myId, of), lote: {}, total: 0, sumCal: 0, fatiga: 0, esf: 0, fin: null, last: null };
+      renderJornada(ensureJornEl(), st); ensureJornEl().hidden = false;
+    }
+    function jornQuitaLote(st, n) { let f = n; for (let q = 1; q <= 5 && f > 0; q++) { const d = st.lote[q] || 0, u = Math.min(d, f); if (u > 0) { st.lote[q] = d - u; f -= u; st.total -= u; st.sumCal -= q * u; } } }
+    function jornEsforzar(st) {
+      const nivDom = HacStats.nivelTotal(myId, st.dom);
+      if (!window.HacEnergia || HacEnergia.current(h.id, myId) < HacProd.E_ESF) { st.fin = 'sinenergia'; st.last = { sinen: true }; return; }
+      HacEnergia.spend(h.id, myId, HacProd.E_ESF);
+      const e = HacProd.esfuerzo(nivDom, st.nivel, st.fatiga, st.esf, Math.random(), Math.random());
+      st.esf++; st.fatiga = e.fatiga;
+      if (e.chapuza) { const perd = Math.round(st.total * HacProd.CHAPUZA_PERDIDA); jornQuitaLote(st, perd); st.last = { chapuza: true, perd }; st.fin = 'chapuza'; return; }
+      st.lote[e.cal] = (st.lote[e.cal] || 0) + e.rinde; st.total += e.rinde; st.sumCal += e.cal * e.rinde; st.last = { rinde: e.rinde, cal: e.cal };
+    }
+    function jornBanco(st) { if (st.total > 0) { HacStats.addLote(myId, st.recurso, st.lote); HacStats.award(myId, { xp: { [st.dom]: st.total * HacProd.XP_UD } }); } }
+    function renderJornada(el, st) {
+      const O = st.O, R = HacProd.RECURSOS[st.recurso], nivDom = HacStats.nivelTotal(myId, st.dom);
+      const media = st.total ? (st.sumCal / st.total) : 0, ener = window.HacEnergia ? Math.round(HacEnergia.current(h.id, myId)) : 0;
+      const fat = Math.min(1, st.fatiga), pNext = HacProd.esfuerzo(nivDom, st.nivel, st.fatiga, st.esf, 1, 0.5).pChapuza, acabado = !!st.fin;
+      const flash = st.last && st.last.chapuza ? `<div class="hacp-jorn-flash bad">¡Chapuza! −${st.last.perd}</div>` : (st.last && st.last.rinde ? `<div class="hacp-jorn-flash">+${st.last.rinde} · cal ${st.last.cal}</div>` : '');
+      let estado;
+      if (st.fin === 'chapuza') estado = `<div class="hacp-jorn-hint bad">Se te estropeó parte del lote. Fin de la jornada.</div>`;
+      else if (st.fin === 'sinenergia') estado = `<div class="hacp-jorn-hint">Sin energía para seguir · recoge lo trabajado.</div>`;
+      else estado = `<div class="hacp-jorn-hint">Energía ${ener}⚡ · riesgo de chapuza <b class="${pNext > 0.20 ? 'r' : ''}">${Math.round(pNext * 100)}%</b></div>`;
+      const cals = [1, 2, 3, 4, 5].filter(q => st.lote[q]).map(q => `${R.icon}${q}·${st.lote[q]}`).join('  ') || '—';
+      el.innerHTML = `<div class="hacp-suc-box hacp-jorn-box">
+        <div class="hacp-suc-eyebrow">${O.icon} ${esc(O.verbo)} · ${esc(R.nombre)} <span class="zh">${R.zh}</span></div>
+        <div class="hacp-jorn-arena">
+          <div class="hacp-jorn-fig"><canvas class="hacp-jorn-cv" width="120" height="168"></canvas></div>
+          <div class="hacp-jorn-mid">
+            <div class="hacp-jorn-lote"><span>lote</span><b>${st.total}</b> <i>${R.icon}</i></div>
+            <div class="hacp-jorn-media">calidad media ${media ? media.toFixed(1) : '—'}</div>
+            <div class="hacp-jorn-fat"><i style="width:${Math.round(fat * 100)}%"></i></div>
+            <div class="hacp-jorn-cals">${cals}</div>
+            ${flash}
+          </div>
+        </div>
+        ${estado}
+        <div class="hacp-jorn-acts">${acabado
+          ? `<button type="button" class="hacp-cp-btn hacp-suc-ok" data-jorn-cerrar>Recoger${st.total ? ` ${st.total} ${R.icon}` : ''}</button>`
+          : `<button type="button" class="hacp-cp-btn hacp-suc-cancel" data-jorn-cerrar>Cerrar el lote${st.total ? ` (${st.total}${R.icon})` : ''}</button><button type="button" class="hacp-cp-btn hacp-suc-ok" data-jorn-seguir${ener < HacProd.E_ESF ? ' disabled' : ''}>Seguir (−${HacProd.E_ESF}⚡)</button>`}</div>
+      </div>`;
+      const cv = el.querySelector('.hacp-jorn-cv');
+      if (cv && window.HacChar && HacChar.draw) { const a = regYoAspecto(); try { HacChar.draw(cv, { aptitud: a.aptitud, aspecto: a.aspecto, dir: 'SE', pose: 'stand', gesture: (st.fin === 'chapuza' ? 'frustrado' : null), frame: 0, scale: 3 }); } catch (e) {} }
+      const seg = el.querySelector('[data-jorn-seguir]'); if (seg) seg.addEventListener('click', () => { jornEsforzar(st); renderJornada(el, st); });
+      const cer = el.querySelector('[data-jorn-cerrar]'); if (cer) cer.addEventListener('click', () => { jornBanco(st); cerrarJornEl(); if (st.total > 0) toast(`${O.icon} Lote: ${st.total} ${R.icon} · cal media ${(st.sumCal / st.total).toFixed(1)} · +${st.total * HacProd.XP_UD} XP ${HacProd.GLIFOS[st.dom]}`); refrescarProd(); });
+    }
+
     // ── Tablón de misiones (overlay): pool con riesgo según tus stats ──────────
     let boardEl = null;
     function ensureBoardEl() {
@@ -4736,7 +4909,7 @@
     }
     // Tic de 1 s: refresca SOLO el panel del personaje (cuenta atrás de expedición y
     // energía/regeneración se derivan del reloj de servidor → tienen que verse vivos).
-    setInterval(() => { if (charId) refreshCharPanel(); if (escVisible) escTick(); pulseMisNav(); refreshMoMisBadge(); pulseHaciendaNav(); pulseEscNav(); renderDebAlert(); if (mShell && mShell.refreshDeb) mShell.refreshDeb(); }, 1000);
+    setInterval(() => { if (charId) refreshCharPanel(); if (escVisible) escTick(); pulseMisNav(); refreshMoMisBadge(); refreshMoProdBadge(); pulseHaciendaNav(); pulseEscNav(); renderDebAlert(); if (mShell && mShell.refreshDeb) mShell.refreshDeb(); }, 1000);
 
     // Popup con la gente que hay dentro de un edificio (al pulsar su banner).
     function showPop(x, y, sign) {
