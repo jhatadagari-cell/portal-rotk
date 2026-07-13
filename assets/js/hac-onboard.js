@@ -324,7 +324,13 @@ const HacOnboard = (function () {
     });
   }
 
-  const prevState = (pj) => () => ({ aptitud: pj.aptitud, aspecto: pj.aspecto || {} });
+  // Aspecto del retrato = base del personaje + lo EQUIPADO (arma/torso), como en la
+  // finca. Se recalcula cada frame (startPreview llama getState), así que en cuanto
+  // HacStats carga o cambia el equipo, el retrato se actualiza solo.
+  const prevState = (pj) => () => ({
+    aptitud: pj.aptitud,
+    aspecto: (window.HacStats && HacStats.vestir) ? HacStats.vestir(pj.id, pj.aspecto || {}) : (pj.aspecto || {})
+  });
   const aptDe = (pj) => ((window.HacPersonajeDefs && HacPersonajeDefs.APTITUDES) || []).find(x => x.id === pj.aptitud);
 
   // Estado del jugador CON personaje: según su solicitud (ninguna / pendiente /
@@ -334,6 +340,7 @@ const HacOnboard = (function () {
     host.innerHTML = `<div class="onb-card"><div class="onb-loading">Cargando tu hacienda…</div></div>`;
     try {
       if (window.HacStore && HacStore.ready) await withTimeout(HacStore.ready(), 5000, null);
+      if (window.HacStats && HacStats.ready) await withTimeout(HacStats.ready(), 5000, null);   // carga lo equipado → el retrato lo refleja
       const casas = window.HacStore ? HacStore.all() : [];
       // FUENTE DE VERDAD de la pertenencia = estar en h.miembros de alguna casa (igual
       // que la página de la finca). Cubre TANTO el ingreso por solicitud aprobada COMO
