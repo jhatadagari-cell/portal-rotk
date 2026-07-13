@@ -999,10 +999,32 @@ button.hacp-slot.manual:hover{ background:rgba(201,168,76,.24); }
 .hacp-bit-row.t-escaramuza{ border-left-color:#b23b2e; }
 .hacp-bit-row.t-tarea{ border-left-color:#3a8a5a; }
 .hacp-bit-row.t-progreso{ border-left-color:#caa42c; }
+/* Convocatoria del señor: fila resaltada con acción «ir a hablar / ver audiencia» */
+.hacp-bit-row.t-convocatoria{ border-left-color:var(--gold,#c9a84c); border-color:rgba(201,168,76,.5); background:rgba(201,168,76,.12); flex-wrap:wrap; }
 .hacp-bit-day{ font:700 10px 'Cinzel Decorative',serif; letter-spacing:.09em; text-transform:uppercase; color:var(--hac,var(--gold)); opacity:.85; margin:10px 2px 2px; }
 .hacp-bit-day:first-child{ margin-top:2px; }
 .hacp-bit-when{ flex:0 0 auto; font:600 10px 'Noto Sans SC',sans-serif; color:var(--parch2); opacity:.7; white-space:nowrap; min-width:40px; font-variant-numeric:tabular-nums; }
 .hacp-bit-txt{ flex:1; min-width:0; font:500 12.5px/1.4 'Noto Sans SC',sans-serif; color:var(--parch); }
+.hacp-bit-row.t-convocatoria .hacp-bit-txt{ font-weight:700; }
+.hacp-bit-act{ display:block; margin-top:7px; width:100%; }
+/* ── Panel de RETOS SEMANALES ── */
+.hacp-retos-list{ display:flex; flex-direction:column; gap:10px; margin:4px 0 12px; }
+.hacp-reto{ padding:8px 10px; background:rgba(255,255,255,.035); border:1px solid rgba(201,168,76,.18); border-radius:9px; }
+.hacp-reto.done{ background:rgba(127,201,154,.10); border-color:rgba(127,201,154,.4); }
+.hacp-reto-h{ display:flex; align-items:center; gap:7px; margin-bottom:6px; }
+.hacp-reto-ic{ font-size:15px; line-height:1; }
+.hacp-reto-nom{ flex:1; min-width:0; font:700 12.5px 'Noto Sans SC',sans-serif; color:var(--parch); }
+.hacp-reto-num{ font:800 13px 'Noto Sans SC',sans-serif; color:var(--parch); font-variant-numeric:tabular-nums; white-space:nowrap; }
+.hacp-reto-num span{ font-weight:500; color:var(--parch2); }
+.hacp-reto.done .hacp-reto-num{ color:#7fc99a; }
+.hacp-reto-bar{ height:8px; border-radius:5px; background:rgba(0,0,0,.28); overflow:hidden; }
+.hacp-reto-bar i{ display:block; height:100%; border-radius:5px; transition:width .4s ease; }
+.hacp-reto-state{ font-size:12px; line-height:1.45; color:var(--parch2); background:rgba(255,255,255,.03); border:1px solid rgba(201,168,76,.16); border-radius:8px; padding:9px 11px; }
+.hacp-reto-state b{ color:var(--parch); }
+.hacp-reto-state.hot{ color:#f0d9a0; background:rgba(201,168,76,.14); border-color:rgba(201,168,76,.5); }
+.hacp-reto-state.done{ color:#a7d8b5; background:rgba(127,201,154,.1); border-color:rgba(127,201,154,.35); }
+/* Slot de recompensa en la mochila */
+.hacp-slot.recompensa{ border-color:rgba(201,168,76,.55); box-shadow:inset 0 0 0 1px rgba(201,168,76,.25); }
 /* Popup de info de edificio (al pulsar su cuerpo en el plano) */
 .hacp-bld-pop{ position:fixed; z-index:9999; width:min(248px,80vw); padding:10px 12px; box-sizing:border-box;
   background:rgba(13,11,7,.97); border:1px solid rgba(201,168,76,.45); border-radius:8px;

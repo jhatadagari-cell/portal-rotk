@@ -156,6 +156,7 @@ const HacEncAnim = (function () {
     mercader:    { aptitud: 'administrador', aspecto: { robe: '#7a5a34', accent: '#d8b65a', piel: 2, pelo: 3 } },
     aldeanoA:    { aptitud: 'administrador', aspecto: { robe: '#6b5a44', accent: '#9a8a6a', piel: 3, pelo: 3 } },
     aldeanoB:    { aptitud: 'erudito',       aspecto: { robe: '#5a6b4a', accent: '#9aa07a', piel: 2, pelo: 4 } },
+    senor:       { aptitud: 'caudillo',      aspecto: { robe: '#5a1f1f', accent: '#d8b65a', piel: 2, pelo: 2 } },   // el señor de la casa (audiencia)
   };
   // Qué figurante(s) intervienen en cada escena nueva (0, 1 o 2). Las escenas
   // legacy (bridge/duel/parley/supply) conservan su `foe` propio (ver play()).
@@ -163,6 +164,7 @@ const HacEncAnim = (function () {
     emboscada: ['bandido', 'bandido'], duelo: ['oficial'], fiera: [], patrulla: ['soldado', 'soldado'],
     inscripciones: [], poeta: ['poeta'], rumor: ['aldeanoA'], copista: ['monje'],
     mercader: ['mercader'], peaje: ['funcionario'], disputa: ['aldeanoA', 'aldeanoB'], contrato: ['mercader'],
+    audiencia: ['senor'],
   };
   // Clona un arquetipo (aspecto propio) para que `bake` le asigne su clave de caché.
   const cloneArq = (id) => id && ARQ[id] ? { aptitud: ARQ[id].aptitud, aspecto: Object.assign({}, ARQ[id].aspecto) } : null;
@@ -276,6 +278,35 @@ const HacEncAnim = (function () {
     ctx.save(); ctx.fillStyle = 'rgba(20,16,28,.85)';
     ctx.beginPath(); ctx.ellipse(x, y, r, r * 0.6, 0, 0, 6.283); ctx.fill();
     ctx.beginPath(); ctx.arc(x + r * 0.7, y - r * 0.3, r * 0.35, 0, 6.283); ctx.fill(); ctx.restore();
+  }
+  // Salón de gobierno del señor: estrado con asiento, columnas laqueadas y estandartes.
+  function drawHall(ctx, W, gy) {
+    ctx.save();
+    const dx = W * 0.60, dw = W * 0.42;
+    ctx.fillStyle = '#4a3826'; ctx.fillRect(dx, gy - 7, dw, 9);                         // tarima
+    ctx.fillStyle = '#5a4632'; ctx.fillRect(dx, gy - 12, dw, 5);                        // escalón
+    ctx.fillStyle = '#3a2c1c'; ctx.fillRect(dx, gy - 2, dw, 2);
+    // Asiento/sitial tras el señor
+    ctx.fillStyle = '#5a2420'; ctx.fillRect(W * 0.745, gy - 42, 22, 30);
+    ctx.fillStyle = '#6a2c26'; ctx.fillRect(W * 0.745, gy - 46, 22, 6);
+    ctx.fillStyle = '#c9a84c'; ctx.fillRect(W * 0.745, gy - 46, 22, 1);
+    ctx.fillStyle = '#7a2f22'; ctx.fillRect(W * 0.745, gy - 30, 3, 18); ctx.fillRect(W * 0.745 + 19, gy - 30, 3, 18);
+    // Columnas laqueadas
+    [W * 0.56, W * 0.96].forEach(cx => { ctx.fillStyle = '#7a2f22'; ctx.fillRect(cx - 3, 4, 6, gy - 4); ctx.fillStyle = '#8a3a2a'; ctx.fillRect(cx - 5, 2, 10, 5); ctx.fillStyle = '#3a2c1c'; ctx.fillRect(cx - 3, gy - 10, 6, 8); });
+    // Estandartes colgantes
+    [W * 0.66, W * 0.88].forEach(bx => { ctx.fillStyle = '#2a2118'; ctx.fillRect(bx - 1, 6, 2, 8); ctx.fillStyle = '#8b2f25'; ctx.fillRect(bx - 5, 12, 10, 22); ctx.fillStyle = '#c9a84c'; ctx.fillRect(bx - 1, 16, 2, 12); });
+    ctx.restore();
+  }
+  // Obsequio dorado que el señor entrega (cajita con lazo + halo que crece).
+  function giftGlow(ctx, x, y, p) {
+    ctx.save();
+    const g = ctx.createRadialGradient(x, y, 1, x, y, 20);
+    g.addColorStop(0, 'rgba(255,224,130,' + (0.55 * Math.min(1, p * 2)) + ')'); g.addColorStop(1, 'rgba(255,224,130,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, 20, 0, 6.283); ctx.fill();
+    ctx.fillStyle = '#b0342a'; ctx.fillRect(x - 5, y - 4, 10, 9);
+    ctx.fillStyle = '#e7c66a'; ctx.fillRect(x - 5, y - 1, 10, 2); ctx.fillRect(x - 1, y - 4, 2, 9);
+    ctx.beginPath(); ctx.arc(x - 2, y - 5, 1.8, 0, 6.283); ctx.arc(x + 2, y - 5, 1.8, 0, 6.283); ctx.fill();
+    ctx.restore();
   }
 
   // ══ ESCENAS ════════════════════════════════════════════════════════════
@@ -768,10 +799,32 @@ const HacEncAnim = (function () {
     actorAt(ctx, S.bake, hero, 'SE', hframe, hx, gy, hj, undefined, { tilt: htilt });
   }
 
+  // ── AUDIENCIA: el mecenas es recibido por el señor de la casa (retos semanales) ──
+  // Entra, saluda con respeto (拱手), el señor baja del estrado, lo felicita y estira
+  // los brazos para ENTREGARLE un obsequio (halo dorado). No hay rama de fracaso.
+  function sceneAudiencia(ctx, W, H, t, S) {
+    const gy = S.gy, hero = S.hero, lord = S.foe;
+    backdrop(ctx, W, H, gy, { top: '#3a2a20' });
+    drawHall(ctx, W, gy);
+    const T_IN = 760, T_BOW = 900, T_APP = 700, heroHome = W * 0.40, lordSeat = W * 0.76;
+    let hx = heroHome, hframe = 0, hpose, hj = 0;
+    let lx = lordSeat, lframe = 0, lj = 0;
+    if (t < T_IN) { hx = lerp(-26, heroHome, easeOut(seg(t, 0, T_IN))); hframe = walkFrame(t); }         // entra
+    else if (t < T_IN + T_BOW) { hpose = 'bow'; if ((Math.floor((t - T_IN) / 320) % 2) === 0) bubble(ctx, heroHome, gy - dH + 2, ((t / 150) | 0) % 3 + 1, 'rgba(233,220,180,.9)'); lj = Math.max(0, Math.sin((t - T_IN + 400) / 240)) * 2; }   // reverencia; el señor asiente
+    else if (t < T_IN + T_BOW + T_APP) { const p = seg(t, T_IN + T_BOW, T_APP); lx = lerp(lordSeat, W * 0.56, easeOut(p)); lframe = walkFrame(t); }   // el señor se acerca
+    else {                                                                                              // ENTREGA
+      lx = W * 0.56; const p = seg(t, T_IN + T_BOW + T_APP, 700); lj = Math.max(0, Math.sin(t / 220)) * 2; hj = Math.abs(Math.sin(t / 240)) * 3;
+      giftGlow(ctx, (heroHome + W * 0.56) / 2, gy - 24 - arch(Math.min(1, p * 1.3)) * 8, p);
+    }
+    actorAt(ctx, S.bake, lord, 'SW', lframe, lx, gy, lj);
+    actorAt(ctx, S.bake, hero, 'SE', hframe, hx, gy, hj, hpose);
+  }
+
   const SCENES = { bridge: sceneBridge, duel: sceneDuel, parley: sceneParley, supply: sceneSupply,
     emboscada: sceneAmbush, duelo: sceneDuelo, fiera: sceneBeast, patrulla: scenePatrol,
     inscripciones: sceneStele, poeta: scenePoet, rumor: sceneTavern, copista: sceneScribe,
-    mercader: sceneFord, peaje: sceneToll, disputa: sceneMediate, contrato: sceneSeal };
+    mercader: sceneFord, peaje: sceneToll, disputa: sceneMediate, contrato: sceneSeal,
+    audiencia: sceneAudiencia };
 
   // Tiempo del CLÍMAX (cuándo revelar el resultado) por escena/desenlace.
   function climaxOf(scene, ok, k) {
@@ -792,6 +845,7 @@ const HacEncAnim = (function () {
     if (scene === 'peaje') return 540 + 1000 + (ok ? 520 : 560);
     if (scene === 'disputa') return 540 + 800 + 560;
     if (scene === 'contrato') return 560 + 1000 + 560;
+    if (scene === 'audiencia') return 760 + 900 + 700 + 420;
     return 1600;
   }
 
@@ -807,7 +861,8 @@ const HacEncAnim = (function () {
     const bake = makeBaker();
     const hero = Object.assign({ mio: true }, opts.hero || {});
     const allies = (opts.members || []).map(m => Object.assign({}, m));
-    const { foe, foe2 } = foesFor(opts.scene);
+    let { foe, foe2 } = foesFor(opts.scene);
+    if (opts.scene === 'audiencia' && opts.lord) foe = Object.assign({}, opts.lord, { mio: false });   // el señor real de la casa
 
     const dpr = Math.min(2, window.devicePixelRatio || 1);
     const CHpx = 184;
@@ -851,7 +906,8 @@ const HacEncAnim = (function () {
     canvas.width = Math.round(w * dpr); canvas.height = Math.round(CHpx * dpr);
     const hero = Object.assign({ mio: true }, opts.hero || {});
     const allies = (opts.members || []).map(m => Object.assign({}, m));
-    const { foe, foe2 } = foesFor(opts.scene);
+    let { foe, foe2 } = foesFor(opts.scene);
+    if (opts.scene === 'audiencia' && opts.lord) foe = Object.assign({}, opts.lord, { mio: false });
     const S = { gy: CHpx * 0.72, ok: !!opts.ok, hero, allies, foe, foe2, bake, obstacle: opts.obstacle || 'chasm' };
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, w, CHpx);
     SCENES[scene](ctx, w, CHpx, t, S);

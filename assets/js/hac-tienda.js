@@ -51,6 +51,9 @@ const HacTienda = (function () {
 
   // tipo: 'comida' | 'tomo' | 'inventario' | 'mascota'
   const CATALOGO = Object.freeze([
+    // ── Recompensa del señor (NO se compra ni cae como botín): la entrega el fundador
+    //    al cumplir los retos semanales. Al abrirla, +10% de XP en las tres aptitudes.
+    { id: 'recompensa-semanal', nombre: 'Recompensa semanal', zh: '恩賞', icon: '🎁', tier: 99, oculto: true, tipo: 'recompensa', donable: false, efecto: { guardable: true, recompensaSemanal: true }, desc: 'Un presente de tu señor por cumplir los retos de la semana. Ábrelo para +10% de XP en tus tres aptitudes, o guárdalo.' },
     // ── Tier 1 ── vituallas básicas
     { id: 'raciones', nombre: 'Raciones', zh: '干糧', icon: '🍚', tier: 1, precio: 8,  tipo: 'comida', efecto: { energia: 25 }, desc: 'Provisiones de marcha para reponer fuerzas.' },
     { id: 'te',       nombre: 'Té verde', zh: '清茶', icon: '🍵', tier: 1, precio: 14, tipo: 'comida', efecto: { energia: 45 }, desc: 'Una infusión que despeja y reconforta.' },

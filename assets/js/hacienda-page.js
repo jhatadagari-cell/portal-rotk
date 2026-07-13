@@ -424,6 +424,7 @@
     };
     if (myId) mobar.appendChild(moBtn('士', 'Tu mecenas', () => gotoMember(myId)));
     if (myId && hasTablon) { const bMis = moBtn('檄', 'Misiones', goConsultBoard); bMis.classList.add('hacp-mo-mis'); mobar.appendChild(bMis); }
+    if (myId) { const bRet = moBtn('週', 'Retos', openRetos); bRet.classList.add('hacp-mo-retos'); mobar.appendChild(bRet); }
     if (myId && hasMarket) mobar.appendChild(moBtn('市', 'Mercado', openShop));
     mobar.appendChild(moBtn('众', 'Mecenas', () => folkCollapse(false)));
     ['pointerdown', 'pointerup', 'wheel', 'click'].forEach(ev => mobar.addEventListener(ev, (e) => e.stopPropagation(), { passive: false }));
@@ -685,6 +686,7 @@
           if (tieneT('canciller')) r = Math.round(r * 1.3);   // 丞相: +30% prestigio en tareas internas
         }
         HacPuntos.award(h.id, myId, r);
+        retoAdd('prestigio', r);   // reto semanal: prestigio ganado
         // La misión del tablón da, además del prestigio, dinero + XP PERSONAL (al dominio).
         let extra = '';
         if (mis && window.HacStats) {
@@ -728,6 +730,7 @@
           if (roboDin > 0) { const w = HacStats.dinero(myId), take = Math.min(roboDin, w); if (take > 0) { HacStats.award(myId, { dinero: -take }); extra += ` · −${take}💰 robados`; } }
           if (em.heridas > 0 && HacStats.herir) { HacStats.herir(myId, em.heridas); extra += ' · ✚ herido'; }
           sucClear(o);
+          retoAdd('misiones', 1);   // reto semanal: expedición del tablón completada
         }
         HacOrdenes.clear(h.id, myId);   // optimista: la quita del caché ya
         toast('+' + r + ' puntos · misión cumplida' + extra);
@@ -854,6 +857,8 @@
       const R = HacRand.make('encr#' + sucKey(o) + '#' + ev.i);
       const ok = R.next() < pEncuentro(ev.dom, mis.dif);
       st.resolved[ev.i] = { ok: ok }; sucSave(o, st);
+      if (ok) retoAdd('encuentros', 1);   // reto semanal: encuentro superado
+
       if (window.HacBitacora) HacBitacora.log(myId, 'expedicion', `${DOM_GLYPH[ev.dom] || '⚔'} ${enc.txt} → ${ok ? '✔ superado' : '✘ fallado'}`, { clave: 'enc:' + sucKey(o) + ':' + ev.i });
       if (charId) buildCharPanel(charId);
       // VIÑETA ANIMADA de la resolución (coreografía dedicada por encuentro, con rama
@@ -2857,6 +2862,10 @@
           HacBitacora.log(myId, 'escaramuza', '↩ Peregrinaje abandonado · el grupo regresa', { clave: 'per-abort:' + band.id });
         return;
       }
+      // Reto semanal: cuenta la escaramuza al RESOLVERSE (éxito o fracaso, no al abortar),
+      // una sola vez por banda (la clave de bitácora hace de señal «ya registrada»).
+      const yaRegEsc = HacBitacora.listar && HacBitacora.listar(myId, 300).some(e => e.clave === 'esc-res:' + band.id);
+      if (!yaRegEsc && ((band.exito === true && (band.estado === 'botin' || band.estado === 'resuelta')) || (band.exito === false && band.estado === 'resuelta'))) retoAdd('escaramuzas', 1);
       // Éxito: se registra tanto en 'botin' (botín pendiente) como en 'resuelta' (ya
       // repartido) — antes solo en 'botin', y se perdía si volvías tras cerrarse el reparto.
       const suf = '';
@@ -3099,7 +3108,19 @@
       const hoy = diaKey(clock()), ayer = diaKey(clock() - 86400000);
       const g = { hoy: [], ayer: [], prev: [] };
       all.forEach(e => { const k = diaKey(e.ts); if (k === hoy) g.hoy.push(e); else if (k === ayer) g.ayer.push(e); else g.prev.push(e); });
-      const rowsOf = (arr) => arr.map(e => `<div class="hacp-bit-row t-${esc(e.tipo)}"><span class="hacp-bit-when">${fmtHora(e.ts)}</span><span class="hacp-bit-txt">${esc(e.texto)}</span></div>`).join('');
+      // La CONVOCATORIA de esta semana (sin reclamar) lleva un botón de acción: caminar
+      // al salón («Ir a hablar») o, ya en el salón, «Ver audiencia».
+      const semConv = window.HacRetos ? ('reto-conv:' + HacRetos.semanaStr()) : '';
+      const convActiva = window.HacRetos && HacRetos.progreso(h.id).estado === 'convocado';
+      const rowsOf = (arr) => arr.map(e => {
+        let act = '';
+        if (e.tipo === 'convocatoria' && e.clave === semConv && convActiva) {
+          act = _audienciaLista
+            ? `<button type="button" class="hacp-cp-btn hacp-bit-act" data-aud-go>Ver audiencia</button>`
+            : `<button type="button" class="hacp-cp-btn hacp-bit-act" data-hablar>Ir a hablar con ${esc(fundadorNombre())}</button>`;
+        }
+        return `<div class="hacp-bit-row t-${esc(e.tipo)}"><span class="hacp-bit-when">${fmtHora(e.ts)}</span><span class="hacp-bit-txt">${esc(e.texto)}${act}</span></div>`;
+      }).join('');
       let body = '';
       if (g.hoy.length) body += `<div class="hacp-bit-day">Hoy</div>` + rowsOf(g.hoy);
       if (g.ayer.length) body += `<div class="hacp-bit-day">Ayer</div>` + rowsOf(g.ayer);
@@ -3115,11 +3136,164 @@
         <div class="hacp-shop-sub">Lo que ha hecho tu mecenas · hoy y ayer.</div>
         <div class="hacp-bit-list">${body}</div></div>`;
       el.querySelector('[data-bit-x]').addEventListener('click', () => { el.hidden = true; });
+      const hb = el.querySelector('[data-hablar]'); if (hb) hb.addEventListener('click', irAHablar);
+      const ab = el.querySelector('[data-aud-go]'); if (ab) ab.addEventListener('click', playAudiencia);
     }
     function openBitacora() {
       if (!myId) return;
       const el = ensureBitEl(); el.hidden = false; renderBitacora();
       if (window.HacBitacora) HacBitacora.reload().then(() => { if (!el.hidden) renderBitacora(); });
+    }
+
+    // ══════════════ RETOS SEMANALES + audiencia con el señor ═══════════════════
+    // Al cumplir las 4 metas de la semana, el señor de la casa te convoca (bitácora
+    // parpadea + evento resaltado); vas a hablar con él → tu mecenas camina al Salón
+    // Principal → cinemática de audiencia → «Recompensa semanal» a tu mochila.
+    let _audienciaLista = false;   // el mecenas ya llegó al salón → toca la audiencia
+    // Localiza el Salón Principal (正殿 o su mejora) para caminar hasta él.
+    function salonBid() {
+      const cons = (h.mapa && h.mapa.construcciones) || [];
+      let best = null, bestR = -1;
+      cons.forEach(c => {
+        const t = (window.HacBuild && HacBuild.tipo) ? HacBuild.tipo(c.tipo) : null;
+        if (!t || !t.principal || !c.pos) return;
+        const rango = (c.tipo === 'salon') ? 100 : (t.rango || 1);   // prefiere el 正殿 (edificio principal por defecto)
+        if (rango > bestR) { bestR = rango; best = c; }
+      });
+      return best ? (best.pos[0] + ',' + best.pos[1]) : null;
+    }
+    function pulseBitacora(on) {
+      const log = charEl ? charEl.querySelector('[data-act="log"]') : null; if (log) log.classList.toggle('pulse', !!on);
+      const mlog = mobar ? mobar.querySelector('.hacp-mo-log') : null; if (mlog) mlog.classList.toggle('pulse', !!on);
+    }
+    function pulseRetos(on) {
+      const t = charEl ? charEl.querySelector('.hacp-cp-retos') : null; if (t) t.classList.toggle('pulse', !!on);
+      const m = mobar ? mobar.querySelector('.hacp-mo-retos') : null; if (m) m.classList.toggle('pulse', !!on);
+    }
+    // Reaplica el parpadeo (bitácora + retos) tras re-renderizar el panel; no registra nada.
+    function refreshRetoPulses() {
+      if (!window.HacRetos || !myId) return;
+      const p = HacRetos.progreso(h.id), avisa = HacRetos.completos(h.id) && p.estado !== 'reclamado';
+      pulseRetos(avisa); pulseBitacora(avisa);
+    }
+    // Suma a un reto semanal y comprueba si el señor debe convocarte (idempotente).
+    function retoAdd(campo, n) {
+      if (!window.HacRetos || !myId) return;
+      HacRetos.add(h.id, campo, n).then(() => { checkConvocatoria(); if (retosVisible) buildRetos(); });
+    }
+    // ¿Cumplidos los 4? → convoca: evento resaltado en bitácora + parpadeo. Dedup por semana.
+    function checkConvocatoria() {
+      if (!window.HacRetos || !myId) { return; }
+      const comp = HacRetos.completos(h.id);
+      pulseRetos(comp && HacRetos.progreso(h.id).estado !== 'reclamado');
+      if (!comp) { pulseBitacora(false); return; }
+      const p = HacRetos.progreso(h.id);
+      if (p.estado === 'reclamado') { pulseBitacora(false); return; }
+      if (p.estado === 'curso') HacRetos.marcar(h.id, 'convocado');
+      if (window.HacBitacora) HacBitacora.log(myId, 'convocatoria', `🏯 ${fundadorNombre()} quiere hablar contigo · has cumplido tus retos de la semana`, { clave: 'reto-conv:' + HacRetos.semanaStr() });
+      pulseBitacora(true);
+      if (bitEl && !bitEl.hidden) renderBitacora();
+    }
+    // «Ir a hablar»: el mecenas CAMINA al salón; al llegar, la bitácora parpadea y se
+    // ofrece «Ver audiencia». Sin salón construido: audiencia directa (fallback).
+    function irAHablar() {
+      const bid = salonBid(), fund = fundadorNombre();
+      if (!bid || !window.HacFolk || !HacFolk.goHome) { playAudiencia(); return; }
+      const arrive = () => { _audienciaLista = true; pulseBitacora(true); if (bitEl && !bitEl.hidden) renderBitacora(); toast(`🏯 Estás ante ${fund} · abre la bitácora para la audiencia`); };
+      const r = HacFolk.goHome(myId, bid, arrive);
+      if (r === false) { toast('Tu mecenas está ocupado ahora mismo'); return; }
+      if (r === 'now') { playAudiencia(); return; }     // ya estaba en el salón (arrive ya corrió)
+      if (bitEl) bitEl.hidden = true;
+      if (HacFolk.select) HacFolk.select(myId);
+      if (cam && cam.focusFollow) cam.focusFollow(() => HacFolk.position(myId), 3.0);
+      toast(`🚶 Vas a ver a ${fund}…`);
+    }
+    // Cinemática de audiencia (reutiliza el overlay de encuentro y el motor HacEncAnim).
+    function playAudiencia() {
+      const fund = fundadorNombre(), fundId = h.mapa && h.mapa.fundador;
+      const lord = (fundId && typeof escAnimActor === 'function') ? escAnimActor(fundId, false) : null;
+      const el = ensureSucEl(); el.hidden = false;
+      el.innerHTML = `<div class="hacp-suc-box hacp-enc-box">
+        <div class="hacp-suc-eyebrow">🏯 Audiencia · ${esc(fund)}</div>
+        <div class="hacp-suc-ttl">Ante tu señor</div>
+        <canvas class="hacp-enc-anim" data-aud-cv></canvas>
+        <div class="hacp-enc-result" data-aud-result hidden>
+          <div class="hacp-suc-verdict ok">🎁 Recompensa semanal</div>
+          <div class="hacp-suc-eff">${esc(fund)} te entrega un presente. Está en tu mochila: <b>ábrelo</b> para +10% de XP en tus tres aptitudes, o guárdalo.</div>
+        </div>
+        <button type="button" class="hacp-cp-btn hacp-suc-done" data-aud-done>Continuar</button></div>`;
+      const cv = el.querySelector('[data-aud-cv]'), resEl = el.querySelector('[data-aud-result]');
+      let entregado = false;
+      const entregar = () => {
+        if (entregado) return;
+        const rr = window.HacStats ? HacStats.darItem(myId, 'recompensa-semanal') : { ok: true };
+        if (rr && rr.ok === false) { toast('🎒 Mochila llena · haz hueco y vuelve a hablar con tu señor'); return; }   // no marca: permite reintento
+        entregado = true;
+        if (resEl && resEl.hidden) { resEl.hidden = false; resEl.classList.add('show'); }
+        HacRetos.marcar(h.id, 'reclamado');
+        if (window.HacBitacora) HacBitacora.log(myId, 'convocatoria', `🎁 ${fund} te entregó la recompensa semanal`, { clave: 'reto-rew:' + HacRetos.semanaStr() });
+        pulseBitacora(false); pulseRetos(false); _audienciaLista = false;
+        if (charId) buildCharPanel(charId);
+      };
+      if (encReportAnim) { encReportAnim.stop(); encReportAnim = null; }
+      if (window.HacEncAnim && cv) {
+        const hero = escAnimActor(myId, true);
+        requestAnimationFrame(() => { encReportAnim = HacEncAnim.play(cv, { scene: 'audiencia', ok: true, hero: hero, lord: lord, onEnd: entregar }); });
+        cv.addEventListener('click', () => { if (encReportAnim) encReportAnim.stop(); entregar(); });
+      } else { entregar(); }
+      el.querySelector('[data-aud-done]').addEventListener('click', () => { if (encReportAnim) { encReportAnim.stop(); encReportAnim = null; } entregar(); el.hidden = true; if (bitEl && !bitEl.hidden) renderBitacora(); });
+    }
+    // ── Panel de RETOS SEMANALES (consulta cómoda) ─────────────────────────────
+    let retosEl = null, retosVisible = false;
+    function ensureRetosEl() {
+      if (retosEl) return retosEl;
+      retosEl = document.createElement('div'); retosEl.className = 'hacp-shop hacp-retos-ov'; retosEl.hidden = true; overlayHost().appendChild(retosEl);
+      ['pointerdown', 'pointerup', 'wheel', 'click'].forEach(ev => retosEl.addEventListener(ev, (e) => e.stopPropagation(), { passive: false }));
+      retosEl.addEventListener('click', (e) => { if (e.target === retosEl) closeRetos(); });
+      return retosEl;
+    }
+    const RETO_DEFS = [
+      { k: 'prestigio', ic: '★', nom: 'Ganar prestigio', c: '#e7c66a' },
+      { k: 'misiones', ic: '🧭', nom: 'Completar misiones del tablón', c: '#e0b85a' },
+      { k: 'escaramuzas', ic: '⚔', nom: 'Completar escaramuzas', c: '#e0907a' },
+      { k: 'encuentros', ic: '⚑', nom: 'Superar encuentros', c: '#7fc99a' },
+    ];
+    function buildRetos() {
+      if (!window.HacRetos) return;
+      const el = ensureRetosEl(), p = HacRetos.progreso(h.id), M = HacRetos.METAS, fund = fundadorNombre();
+      const filas = RETO_DEFS.map(m => {
+        const cur = Math.min(M[m.k], p[m.k] || 0), pct = Math.round(cur / M[m.k] * 100), done = cur >= M[m.k];
+        return `<div class="hacp-reto${done ? ' done' : ''}">
+          <div class="hacp-reto-h"><span class="hacp-reto-ic">${m.ic}</span><span class="hacp-reto-nom">${m.nom}</span><span class="hacp-reto-num">${cur}<span>/${M[m.k]}</span>${done ? ' ✔' : ''}</span></div>
+          <div class="hacp-reto-bar"><i style="width:${pct}%;background:${m.c}"></i></div>
+        </div>`;
+      }).join('');
+      const comp = HacRetos.completos(h.id);
+      const estado = comp
+        ? (p.estado === 'reclamado'
+          ? `<div class="hacp-reto-state done">✔ Recompensa recibida esta semana. Vuelve el lunes.</div>`
+          : `<div class="hacp-reto-state hot">🏯 ¡Retos cumplidos! <b>${esc(fund)}</b> quiere hablar contigo — abre la <b>bitácora</b>.</div>`)
+        : `<div class="hacp-reto-state">Cumple las cuatro para que tu señor te recompense.</div>`;
+      el.innerHTML = `<div class="hacp-shop-box">
+        <button type="button" class="hacp-shop-x" data-retos-x aria-label="Cerrar">✕</button>
+        <div class="hacp-shop-h"><span class="hacp-shop-zh">週</span> Retos semanales</div>
+        <div class="hacp-shop-sub">Cuatro metas cada semana. Al cumplirlas <b>todas</b>, tu señor te entrega una <b>Recompensa semanal</b>: +10% de XP en tus tres aptitudes. Se renueva cada lunes.</div>
+        <div class="hacp-retos-list">${filas}</div>
+        ${estado}
+      </div>`;
+      el.querySelector('[data-retos-x]').addEventListener('click', closeRetos);
+    }
+    function openRetos() { if (!myId) return; buildRetos(); ensureRetosEl().hidden = false; retosVisible = true; if (window.HacRetos) HacRetos.reload().then(() => { if (retosVisible) { buildRetos(); checkConvocatoria(); } }); }
+    function closeRetos() { if (retosEl) retosEl.hidden = true; retosVisible = false; }
+    // Abre la «Recompensa semanal» de la mochila → +10% XP en las tres aptitudes.
+    function abrirRecompensaUI(id) {
+      if (!myId || !window.HacStats || !HacStats.abrirRecompensaSemanal) return;
+      const res = HacStats.abrirRecompensaSemanal(myId);
+      if (!res.ok) { toast(res.motivo || 'No se pudo abrir'); return; }
+      const g = res.ganado || {}, parts = Object.keys(g).filter(d => g[d] > 0).map(d => `+${g[d]} ${DOM_GLYPH[d] || ''}`.trim());
+      toast(`🎁 Recompensa abierta · ${parts.join(' · ')} XP`);
+      if (window.HacBitacora) HacBitacora.log(myId, 'progreso', `🎁 Abriste la recompensa semanal de tu señor · ${parts.join(' · ')} XP`);
+      if (charId) buildCharPanel(charId);
     }
 
     // ── SENDAS (talentos): overlay con el árbol de la aptitud militar (C1) ─────
@@ -3259,6 +3433,9 @@
       const slots = Array.from({ length: cap }, (_, i) => {
         const def = flat[i];
         if (!def) return '<div class="hacp-slot"></div>';
+        if (def.tipo === 'recompensa' && d.mine) {   // Recompensa del señor: botón «abrir» (+10% XP ×3)
+          return `<button type="button" class="hacp-slot full recompensa" data-abrir="${esc(def.id)}" title="${esc(def.nombre)} · toca para ABRIR (+10% XP en tus tres aptitudes)">${def.icon || '🎁'}<span class="hacp-slot-xp" style="color:#e7c66a">abrir</span></button>`;
+        }
         const man = def.efecto && def.efecto.manual;
         if (man && d.mine) {
           // XP de un dominio (manuales clásicos) o de VARIOS (libros de conclusiones → xp es un mapa).
@@ -3379,7 +3556,7 @@
         .then(() => {
           toast(`🏯 Presentaste el libro a ${fund} · +${pctv}% XP a la hacienda (7 días)`);
           if (window.HacBitacora) HacBitacora.log(myId, 'progreso', `🏯 Presentaste «${def.nombre}» a ${fund} · +${pctv}% XP a toda la hacienda durante 7 días`);
-          if (window.HacPuntos && HacPuntos.award) HacPuntos.award(h.id, myId, HacPuntos.recompensa ? HacPuntos.recompensa(30, 300) : 12);   // prestigio de casa al donante
+          if (window.HacPuntos && HacPuntos.award) { const pr = HacPuntos.recompensa ? HacPuntos.recompensa(30, 300) : 12; HacPuntos.award(h.id, myId, pr); retoAdd('prestigio', pr); }   // prestigio de casa al donante (+ reto semanal)
           // Ideas REVELADORAS → el fundador puede recompensarte con una RELIQUIA RARA (baja prob.).
           if (cal === 'reveladoras' && window.HacTienda && HacTienda.raroAleatorio && Math.random() < 0.25) {
             const rid = HacTienda.raroAleatorio(), rdef = rid && HacTienda.get(rid);
@@ -3486,6 +3663,7 @@
         tool('inv', '🎒', 'Inventario', invOpen ? ' on' : ''),
         tool('sendas', '道', 'Sendas') + (pts > 0 ? '' : ''),
         tool('caballo', '🐎', 'Tu Caballo'),
+        tool('retos', '週', 'Retos', ' hacp-cp-retos'),
         tool('log', '錄', 'Bitácora'),
         hasMarket ? tool('shop', '市', 'Mercado') : '',
         tool('esc', '兵', 'Escaramuzas', ' hacp-cp-esc'),
@@ -3661,12 +3839,16 @@
       const shb = charEl.querySelector('[data-act="shop"]');
       if (shb) shb.addEventListener('click', openShop);
       charEl.querySelectorAll('[data-usar]').forEach(b => b.addEventListener('click', () => usarManualUI(b.dataset.usar)));
+      charEl.querySelectorAll('[data-abrir]').forEach(b => b.addEventListener('click', () => abrirRecompensaUI(b.dataset.abrir)));
       const gh = charEl.querySelector('[data-act="gohome"]');
       if (gh) gh.addEventListener('click', openHome);
       const escb = charEl.querySelector('[data-act="esc"]');
       if (escb) escb.addEventListener('click', openEscOverlay);
       const logb = charEl.querySelector('[data-act="log"]');
       if (logb) logb.addEventListener('click', openBitacora);
+      const rtb = charEl.querySelector('[data-act="retos"]');
+      if (rtb) rtb.addEventListener('click', openRetos);
+      refreshRetoPulses();   // reaplica el aviso de «tu señor te espera» tras re-render
       const sdb = charEl.querySelector('[data-act="sendas"]');
       if (sdb) sdb.addEventListener('click', openSendas);
       const csb = charEl.querySelector('[data-act="caballo"]');
@@ -4490,6 +4672,7 @@
     if (DEB) DEB.ready().then(debPulse);
     if (window.HacBuff) HacBuff.ready().then(() => { if (charId) refreshCharPanel(); });   // bono de hacienda (F2)
     if (window.HacMisTomadas) HacMisTomadas.ready();   // misiones ya cogidas hoy (para esconderlas del tablón)
+    if (window.HacRetos) HacRetos.ready().then(checkConvocatoria);   // retos semanales: avisa si ya están cumplidos
     if (window.HacOrdenes) {
       HacOrdenes.ready().then(applyOrders);
       setInterval(() => {
