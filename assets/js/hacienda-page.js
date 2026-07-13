@@ -424,7 +424,6 @@
     };
     if (myId) mobar.appendChild(moBtn('士', 'Tu mecenas', () => gotoMember(myId)));
     if (myId && hasTablon) { const bMis = moBtn('檄', 'Misiones', goConsultBoard); bMis.classList.add('hacp-mo-mis'); mobar.appendChild(bMis); }
-    if (myId) { const bRet = moBtn('週', 'Retos', openRetos); bRet.classList.add('hacp-mo-retos'); mobar.appendChild(bRet); }
     if (myId && hasMarket) mobar.appendChild(moBtn('市', 'Mercado', openShop));
     mobar.appendChild(moBtn('众', 'Mecenas', () => folkCollapse(false)));
     ['pointerdown', 'pointerup', 'wheel', 'click'].forEach(ev => mobar.addEventListener(ev, (e) => e.stopPropagation(), { passive: false }));
@@ -3179,7 +3178,7 @@
     // Suma a un reto semanal y comprueba si el señor debe convocarte (idempotente).
     function retoAdd(campo, n) {
       if (!window.HacRetos || !myId) return;
-      HacRetos.add(h.id, campo, n).then(() => { checkConvocatoria(); if (retosVisible) buildRetos(); });
+      HacRetos.add(h.id, campo, n).then(() => { checkConvocatoria(); if (boardEl && !boardEl.hidden) buildBoard(); });
     }
     // ¿Cumplidos los 4? → convoca: evento resaltado en bitácora + parpadeo. Dedup por semana.
     function checkConvocatoria() {
@@ -3243,48 +3242,36 @@
       } else { entregar(); }
       el.querySelector('[data-aud-done]').addEventListener('click', () => { if (encReportAnim) { encReportAnim.stop(); encReportAnim = null; } entregar(); el.hidden = true; if (bitEl && !bitEl.hidden) renderBitacora(); });
     }
-    // ── Panel de RETOS SEMANALES (consulta cómoda) ─────────────────────────────
-    let retosEl = null, retosVisible = false;
-    function ensureRetosEl() {
-      if (retosEl) return retosEl;
-      retosEl = document.createElement('div'); retosEl.className = 'hacp-shop hacp-retos-ov'; retosEl.hidden = true; overlayHost().appendChild(retosEl);
-      ['pointerdown', 'pointerup', 'wheel', 'click'].forEach(ev => retosEl.addEventListener(ev, (e) => e.stopPropagation(), { passive: false }));
-      retosEl.addEventListener('click', (e) => { if (e.target === retosEl) closeRetos(); });
-      return retosEl;
-    }
+    // ── Franja de RETOS SEMANALES (a la vista, dentro del Tablón de misiones) ───
+    // Se pinta en la cabecera del tablón. Preparada para alojar también, más
+    // adelante, las «misiones diarias» (otra franja análoga encima o debajo).
     const RETO_DEFS = [
       { k: 'prestigio', ic: '★', nom: 'Ganar prestigio', c: '#e7c66a' },
       { k: 'misiones', ic: '🧭', nom: 'Completar misiones del tablón', c: '#e0b85a' },
       { k: 'escaramuzas', ic: '⚔', nom: 'Completar escaramuzas', c: '#e0907a' },
       { k: 'encuentros', ic: '⚑', nom: 'Superar encuentros', c: '#7fc99a' },
     ];
-    function buildRetos() {
-      if (!window.HacRetos) return;
-      const el = ensureRetosEl(), p = HacRetos.progreso(h.id), M = HacRetos.METAS, fund = fundadorNombre();
-      const filas = RETO_DEFS.map(m => {
+    function retosStripHTML() {
+      if (!window.HacRetos) return '';
+      const p = HacRetos.progreso(h.id), M = HacRetos.METAS, comp = HacRetos.completos(h.id), fund = fundadorNombre();
+      const chips = RETO_DEFS.map(m => {
         const cur = Math.min(M[m.k], p[m.k] || 0), pct = Math.round(cur / M[m.k] * 100), done = cur >= M[m.k];
-        return `<div class="hacp-reto${done ? ' done' : ''}">
-          <div class="hacp-reto-h"><span class="hacp-reto-ic">${m.ic}</span><span class="hacp-reto-nom">${m.nom}</span><span class="hacp-reto-num">${cur}<span>/${M[m.k]}</span>${done ? ' ✔' : ''}</span></div>
-          <div class="hacp-reto-bar"><i style="width:${pct}%;background:${m.c}"></i></div>
+        return `<div class="hacp-retochip${done ? ' done' : ''}" title="${esc(m.nom)}: ${cur}/${M[m.k]}">
+          <span class="hacp-retochip-h"><span class="hacp-retochip-ic">${m.ic}</span><b>${cur}<span>/${M[m.k]}</span></b>${done ? '<em>✔</em>' : ''}</span>
+          <i class="hacp-retochip-bar"><b style="width:${pct}%;background:${m.c}"></b></i>
         </div>`;
       }).join('');
-      const comp = HacRetos.completos(h.id);
       const estado = comp
         ? (p.estado === 'reclamado'
-          ? `<div class="hacp-reto-state done">✔ Recompensa recibida esta semana. Vuelve el lunes.</div>`
-          : `<div class="hacp-reto-state hot">🏯 ¡Retos cumplidos! <b>${esc(fund)}</b> quiere hablar contigo — abre la <b>bitácora</b>.</div>`)
-        : `<div class="hacp-reto-state">Cumple las cuatro para que tu señor te recompense.</div>`;
-      el.innerHTML = `<div class="hacp-shop-box">
-        <button type="button" class="hacp-shop-x" data-retos-x aria-label="Cerrar">✕</button>
-        <div class="hacp-shop-h"><span class="hacp-shop-zh">週</span> Retos semanales</div>
-        <div class="hacp-shop-sub">Cuatro metas cada semana. Al cumplirlas <b>todas</b>, tu señor te entrega una <b>Recompensa semanal</b>: +10% de XP en tus tres aptitudes. Se renueva cada lunes.</div>
-        <div class="hacp-retos-list">${filas}</div>
+          ? `<div class="hacp-board-retos-st ok">✔ Recompensa recibida · vuelve el lunes.</div>`
+          : `<div class="hacp-board-retos-st hot">🏯 ¡Cumplidos! <b>${esc(fund)}</b> te espera — abre la <b>bitácora</b>.</div>`)
+        : '';
+      return `<div class="hacp-board-retos${comp && p.estado !== 'reclamado' ? ' hot' : ''}">
+        <div class="hacp-board-retos-h">週 Retos de la semana <span>· los cuatro → +10% XP en tus tres aptitudes</span></div>
+        <div class="hacp-board-retos-row">${chips}</div>
         ${estado}
       </div>`;
-      el.querySelector('[data-retos-x]').addEventListener('click', closeRetos);
     }
-    function openRetos() { if (!myId) return; buildRetos(); ensureRetosEl().hidden = false; retosVisible = true; if (window.HacRetos) HacRetos.reload().then(() => { if (retosVisible) { buildRetos(); checkConvocatoria(); } }); }
-    function closeRetos() { if (retosEl) retosEl.hidden = true; retosVisible = false; }
     // Abre la «Recompensa semanal» de la mochila → +10% XP en las tres aptitudes.
     function abrirRecompensaUI(id) {
       if (!myId || !window.HacStats || !HacStats.abrirRecompensaSemanal) return;
@@ -3663,7 +3650,6 @@
         tool('inv', '🎒', 'Inventario', invOpen ? ' on' : ''),
         tool('sendas', '道', 'Sendas') + (pts > 0 ? '' : ''),
         tool('caballo', '🐎', 'Tu Caballo'),
-        tool('retos', '週', 'Retos', ' hacp-cp-retos'),
         tool('log', '錄', 'Bitácora'),
         hasMarket ? tool('shop', '市', 'Mercado') : '',
         tool('esc', '兵', 'Escaramuzas', ' hacp-cp-esc'),
@@ -3846,8 +3832,6 @@
       if (escb) escb.addEventListener('click', openEscOverlay);
       const logb = charEl.querySelector('[data-act="log"]');
       if (logb) logb.addEventListener('click', openBitacora);
-      const rtb = charEl.querySelector('[data-act="retos"]');
-      if (rtb) rtb.addEventListener('click', openRetos);
       refreshRetoPulses();   // reaplica el aviso de «tu señor te espera» tras re-render
       const sdb = charEl.querySelector('[data-act="sendas"]');
       if (sdb) sdb.addEventListener('click', openSendas);
@@ -4597,6 +4581,8 @@
         <div class="hacp-shop-box">
           <button type="button" class="hacp-shop-x" data-act="board-close" aria-label="Cerrar">✕</button>
           <div class="hacp-shop-h"><span class="hacp-shop-zh">📜</span> Tablón de misiones <span class="hacp-shop-money">⚡ <b>${Math.round(energia)}</b></span></div>
+          ${retosStripHTML()}
+          <div class="hacp-board-seclbl">檄 Misiones disponibles</div>
           <div class="hacp-shop-sub">Cada misión que <b>coges</b> desaparece de tu tablón hasta mañana. A tu nivel es una apuesta real; superarla baja el riesgo (nunca es gratis). Las muy por debajo de tu nivel son <b>rutina</b> y pagan menos. Las difíciles cuestan más ⚡ y dan más 🎁 botín.${ocupado ? ' <b>Tu mecenas ya está ocupado en otra actividad.</b>' : ''}</div>
           <div class="hacp-board-legend">⚑ El icono de bandera marca <b>encuentros</b>: mini-retos que aparecen a mitad del viaje y resuelves con la aptitud indicada (con una animación). Si sale bien suman recompensa; si fallas, restan. El % es tu probabilidad de superarlos.</div>
           ${hayBonos() ? `<div class="hacp-shop-note">Bonos de los pabellones de la finca: ${bonosTexto()}</div>` : ''}
