@@ -1150,7 +1150,7 @@
         }
         // Delimitar pabellón = ARRASTRAR un rectángulo (≥100 tiles).
         canvas.addEventListener('mousedown', (e) => { if (!pabMode || pabPending) return; const c = toCell(e); if (c) { pabDrag = c; e.preventDefault(); } });
-        window.addEventListener('mouseup', (e) => {
+        canvas.addEventListener('mouseup', (e) => {
           if (!pabMode || !pabDrag) return;
           const c = toCell(e) || pabDrag, rc = pabRect(pabDrag, c); pabDrag = null;
           const region = HacBuild.regionRect(rc.x, rc.y, rc.w, rc.h, tierNow);
