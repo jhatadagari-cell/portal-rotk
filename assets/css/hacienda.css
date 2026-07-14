@@ -419,6 +419,25 @@ html.hacp-pseudofs, html.hacp-pseudofs body{ overflow:hidden; }
 .hacp-home-money b.g{ color:#7fc9a0; }
 .hacp-home-row2{ display:flex; gap:8px; margin-bottom:14px; }
 .hacp-home-row2 .hacp-cp-btn{ flex:1; text-align:center; }
+/* Bóveda: importe flexible (fila −/input/+ · fila Guardar/Sacar) */
+.hacp-home-vault{ display:flex; gap:6px; align-items:stretch; margin:2px 0 6px; }
+.hacp-vault-step{ width:38px; flex:0 0 auto; font:800 18px/1 'Noto Sans SC',sans-serif; background:rgba(201,168,76,.16); color:var(--gold); border:1px solid var(--hac,var(--gold)); border-radius:5px; cursor:pointer; }
+.hacp-vault-in{ flex:1; min-width:0; text-align:center; font:700 15px 'Noto Sans SC',sans-serif; color:var(--parch); background:rgba(0,0,0,.28); border:1px solid rgba(201,168,76,.4); border-radius:5px; padding:5px 6px; -moz-appearance:textfield; }
+.hacp-vault-in::-webkit-outer-spin-button, .hacp-vault-in::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0; }
+.hacp-home-vault-act{ display:flex; gap:8px; margin-bottom:6px; }
+.hacp-home-vault-act .hacp-cp-btn{ flex:1; text-align:center; }
+.hacp-home-vault-all{ display:flex; gap:8px; align-items:center; font-size:11px; color:var(--parch2); opacity:.85; margin-bottom:12px; }
+.hacp-linklike{ background:none; border:none; color:var(--gold); font-size:11px; text-decoration:underline; cursor:pointer; padding:0; }
+.hacp-linklike:disabled{ color:var(--parch2); opacity:.5; text-decoration:none; cursor:default; }
+/* Recordatorio del diezmo dentro de la casa */
+.hacp-home-diezmo{ border:1px solid rgba(201,168,76,.28); border-radius:8px; padding:8px 10px; margin:2px 0 14px; display:flex; flex-direction:column; gap:6px; }
+.hacp-home-diezmo.ok{ border-color:rgba(122,196,140,.45); background:rgba(122,196,140,.07); }
+.hacp-home-diezmo.due{ border-color:rgba(224,168,74,.5); background:rgba(224,168,74,.07); }
+.hacp-hd-t{ font:700 12px 'Noto Sans SC',sans-serif; color:var(--parch); }
+.hacp-hd-t b{ color:var(--gold); }
+.hacp-hd-s{ font-size:11px; color:var(--parch2); line-height:1.35; }
+.hacp-hd-s .ok{ color:#8fd6a0; font-weight:700; } .hacp-hd-s .due{ color:#e6b968; font-weight:700; } .hacp-hd-s b{ color:var(--parch); }
+.hacp-home-diezmo [data-act="home-diezmo"]{ align-self:flex-start; }
 .hacp-home-objs{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
 .hacp-home-colh{ font:700 10.5px 'Cinzel Decorative',serif; letter-spacing:.06em; text-transform:uppercase; color:var(--hac,var(--gold)); opacity:.85; margin-bottom:6px; display:flex; justify-content:space-between; }
 .hacp-home-colh span{ color:var(--parch2); }

@@ -4524,6 +4524,9 @@
     function buildHome() {
       const el = ensureHomeEl();
       const money = HacStats.dinero(myId), ahorro = HacStats.ahorro(myId);
+      const defAmt = money > 0 ? money : (ahorro > 0 ? ahorro : DIEZMO_MONEDAS);
+      const casaOn = !!window.HacProdCasa, dia = prodDia();
+      const pagado = casaOn && HacProdCasa.pagadoHoy(h.id, myId, dia);
       const mochila = HacStats.inventario(myId), casa = HacStats.casaInventario(myId);
       const cap = HacStats.capInventario(myId), nMo = mochila.reduce((s, i) => s + (i.n || 1), 0);
       const me = HacFolk.list().find(w => w.id === myId), nm = me ? me.name : 'tu mecenas';
@@ -4537,10 +4540,25 @@
           <div class="hacp-home-money">
             <span>💰 Monedero: <b>${money}</b></span><span>🏠 En casa: <b class="g">${ahorro}</b></span>
           </div>
-          <div class="hacp-home-row2">
-            <button type="button" class="hacp-cp-btn" data-act="home-store"${money > 0 ? '' : ' disabled'}>🏠 Guardar todo</button>
-            <button type="button" class="hacp-cp-btn" data-act="home-take"${ahorro > 0 ? '' : ' disabled'}>👛 Sacar todo</button>
+          <div class="hacp-home-vault">
+            <button type="button" class="hacp-vault-step" data-act="v-dec" aria-label="menos">−</button>
+            <input type="number" class="hacp-vault-in" data-vault-amt value="${defAmt}" min="1" inputmode="numeric" aria-label="cantidad">
+            <button type="button" class="hacp-vault-step" data-act="v-inc" aria-label="más">+</button>
           </div>
+          <div class="hacp-home-vault-act">
+            <button type="button" class="hacp-cp-btn" data-act="home-store"${money > 0 ? '' : ' disabled'}>🏠 Guardar</button>
+            <button type="button" class="hacp-cp-btn" data-act="home-take"${ahorro > 0 ? '' : ' disabled'}>👛 Sacar</button>
+          </div>
+          <div class="hacp-home-vault-all">
+            <button type="button" class="hacp-linklike" data-act="home-store-all"${money > 0 ? '' : ' disabled'}>guardar todo</button><span>·</span><button type="button" class="hacp-linklike" data-act="home-take-all"${ahorro > 0 ? '' : ' disabled'}>sacar todo</button>
+          </div>
+          ${casaOn ? `<div class="hacp-home-diezmo ${pagado ? 'ok' : 'due'}">
+            <div class="hacp-hd-t">📜 Diezmo diario de casa: <b>${DIEZMO_MONEDAS}💰</b> + material</div>
+            ${pagado
+              ? `<div class="hacp-hd-s"><span class="ok">Al día con pagos ✓</span> · próximo: <b>${esc(fmtDia(diaMasUno(dia)))}</b></div>`
+              : `<div class="hacp-hd-s"><span class="due">Pendiente hoy (${esc(fmtDia(dia))})</span> · recuerda tener <b>${DIEZMO_MONEDAS}💰</b> en casa</div>
+                 <button type="button" class="hacp-cp-btn hacp-suc-ok" data-act="home-diezmo"${money + ahorro >= DIEZMO_MONEDAS ? '' : ' disabled'}>Pagar diezmo ahora</button>`}
+          </div>` : ''}
           <div class="hacp-home-objs">
             <div class="hacp-home-col"><div class="hacp-home-colh">🎒 Mochila <span>${nMo}/${cap}</span></div><div class="hacp-home-list">${moch}</div></div>
             <div class="hacp-home-col"><div class="hacp-home-colh">🏠 Almacén de casa</div><div class="hacp-home-list">${enc}</div></div>
@@ -4548,8 +4566,17 @@
         </div>`;
       el.querySelector('[data-act="home-close"]').addEventListener('click', closeHome);
       const refrescar = () => { buildHome(); if (charId) buildCharPanel(charId); };
-      const ms = el.querySelector('[data-act="home-store"]'); if (ms && !ms.disabled) ms.addEventListener('click', () => { const n = HacStats.guardar(myId); if (n > 0) toast(`🏠 Guardaste ${n} 💰`); refrescar(); });
-      const mt = el.querySelector('[data-act="home-take"]'); if (mt && !mt.disabled) mt.addEventListener('click', () => { const n = HacStats.sacar(myId); if (n > 0) toast(`👛 Sacaste ${n} 💰`); refrescar(); });
+      const amtEl = el.querySelector('[data-vault-amt]');
+      const getAmt = () => Math.max(1, Math.floor(Number(amtEl && amtEl.value) || 0));
+      const setAmt = (v) => { if (amtEl) amtEl.value = Math.max(1, v); };
+      const dec = el.querySelector('[data-act="v-dec"]'); if (dec) dec.addEventListener('click', () => setAmt(getAmt() - 10));
+      const inc = el.querySelector('[data-act="v-inc"]'); if (inc) inc.addEventListener('click', () => setAmt(getAmt() + 10));
+      const bind = (sel, fn) => { const b = el.querySelector(sel); if (b && !b.disabled) b.addEventListener('click', fn); };
+      bind('[data-act="home-store"]', () => { const n = HacStats.guardar(myId, getAmt()); if (n > 0) toast(`🏠 Guardaste ${n} 💰`); refrescar(); });
+      bind('[data-act="home-take"]', () => { const n = HacStats.sacar(myId, getAmt()); if (n > 0) toast(`👛 Sacaste ${n} 💰`); refrescar(); });
+      bind('[data-act="home-store-all"]', () => { const n = HacStats.guardar(myId); if (n > 0) toast(`🏠 Guardaste ${n} 💰`); refrescar(); });
+      bind('[data-act="home-take-all"]', () => { const n = HacStats.sacar(myId); if (n > 0) toast(`👛 Sacaste ${n} 💰`); refrescar(); });
+      bind('[data-act="home-diezmo"]', (ev) => pagarDiezmo(ev.currentTarget));
       el.querySelectorAll('[data-mov]').forEach(b => b.addEventListener('click', () => { const r = HacStats.meterEnCasa(myId, b.dataset.mov); if (!r.ok) toast(r.motivo); refrescar(); }));
       el.querySelectorAll('[data-take]').forEach(b => b.addEventListener('click', () => { const r = HacStats.sacarDeCasa(myId, b.dataset.take); if (!r.ok) toast(r.motivo); refrescar(); }));
     }
@@ -4560,7 +4587,7 @@
       const casa = miCasa(myId); if (!casa) return;
       const bid = casa.pos[0] + ',' + casa.pos[1];
       let opened = false;
-      const doOpen = () => { if (opened) return; opened = true; if (homeTimer) { clearTimeout(homeTimer); homeTimer = null; } buildHome(); ensureHomeEl().hidden = false; };
+      const doOpen = () => { if (opened) return; opened = true; if (homeTimer) { clearTimeout(homeTimer); homeTimer = null; } buildHome(); ensureHomeEl().hidden = false; if (window.HacProdCasa) HacProdCasa.ready().then(() => { if (homeEl && !homeEl.hidden) buildHome(); }).catch(() => {}); };
       const r = HacFolk.goHome ? HacFolk.goHome(myId, bid, doOpen) : false;
       if (opened) return;                 // ya estaba en casa / sin ruta → abrió al instante
       if (!r) { doOpen(); return; }       // ocupado (misión) o sin API → abre directamente
@@ -4657,6 +4684,10 @@
     const DIEZMO_MONEDAS = 8;                 // diezmo diario de dinero a la casa (tuneable)
     const DIEZMO_MAT = 5;                     // tope de material de cada recurso que aporta el diezmo
     const prodDia = () => (window.HacProd ? HacProd.diaStr() : '');
+    // Formatea/avanza el día del diezmo ('Y-M-D', M 1-based → como HacProd.diaStr).
+    const _MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+    const fmtDia = (s) => { const p = String(s || '').split('-'); return p.length < 3 ? (s || '') : `${p[2]} ${_MESES[(Number(p[1]) || 1) - 1] || ''}.`; };
+    const diaMasUno = (s) => { const p = String(s || '').split('-').map(Number); if (p.length < 3) return s; const d = new Date(p[0], (p[1] || 1) - 1, p[2] || 1); d.setDate(d.getDate() + 1); return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`; };
     const prodOk = () => !!(myId && window.HacProd && window.HacStats && HacStats.recursos);
     const refrescarProd = () => { if (prodEl && !prodEl.hidden) buildProd(); if (charId) buildCharPanel(charId); };
     // ATADO A EDIFICIOS: nº de edificios de un dominio en ESTA finca (los de CLASE
@@ -4778,6 +4809,7 @@
       toast(`納貢 Diezmo pagado · ${DIEZMO_MONEDAS}💰${matTxt ? ' + ' + matTxt : ''} · al día ✓`);
       if (window.HacBitacora) HacBitacora.log(myId, 'progreso', `納 Pagaste el diezmo de casa · ${DIEZMO_MONEDAS}💰`);
       refrescarProd();
+      if (homeEl && !homeEl.hidden) buildHome();
     }
     function mejorarOficio(of) {
       const O = HacProd.OFICIOS[of]; if (!O) return; const niv = HacStats.oficioNivel(myId, of); if (niv >= HacProd.NIVEL_MAX) return;
