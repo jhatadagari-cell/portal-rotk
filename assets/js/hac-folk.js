@@ -401,7 +401,7 @@ const HacFolk = (function () {
         // id del walker = id del PERSONAJE (clave estable para órdenes/energía/
         // competencias y verificable en RLS). Fallback al id de miembro si no hay
         // personaje vinculado (mecenas sin cuenta, no controlable por un jugador).
-        id: m.personajeId || m.id, name: m.nombre || '', color, aptitud, aspecto,
+        id: m.personajeId || m.id, name: m.nombre || '', color, aptitud, aspecto, npc: !!m.npc,
         basePuntos: Number(m.puntos) || 0,   // puntos base (admin); el ganado se suma al vuelo en refreshCargos
         cargoIcon: cargo ? (cargo.icon || '') : '', cargoNombre: cargo ? cargo.nombre : '', cargoTier: cargo ? (cargo.tier || 1) : 0, rankIdx,
         aptIcon: aptDef ? (aptDef.icon || '') : '', dominios: aptDef ? (aptDef.dominios || []) : [],
@@ -1829,14 +1829,14 @@ const HacFolk = (function () {
     if (document.fonts.addEventListener) document.fonts.addEventListener('loadingdone', rebakeBanners);
   }
   function bannerKey(w, hot) {
-    const pre = (w.cargoIcon ? w.cargoIcon + ' ' : '') + (w.aptIcon ? w.aptIcon + ' ' : '');
-    return pre + String(w.name || '').slice(0, 16) + '|' + (Number(w.cargoTier) || 0) + '|' + (hot ? 1 : 0);
+    const pre = (w.npc ? '客 ' : '') + (w.cargoIcon ? w.cargoIcon + ' ' : '') + (w.aptIcon ? w.aptIcon + ' ' : '');
+    return pre + String(w.name || '').slice(0, 16) + '|' + (Number(w.cargoTier) || 0) + '|' + (hot ? 1 : 0) + '|' + (w.npc ? 'n' : '');
   }
   function bannerSprite(w, hot) {
     const key = bannerKey(w, hot);
     let s = bannerCache.get(key);
     if (s) return s;
-    const pre = (w.cargoIcon ? w.cargoIcon + ' ' : '') + (w.aptIcon ? w.aptIcon + ' ' : '');
+    const pre = (w.npc ? '客 ' : '') + (w.cargoIcon ? w.cargoIcon + ' ' : '') + (w.aptIcon ? w.aptIcon + ' ' : '');
     const label = pre + String(w.name || '').slice(0, 16);
     const lvl = Math.max(0, Math.min(6, Number(w.cargoTier) || 0));
     if (!bannerMeasure) bannerMeasure = document.createElement('canvas').getContext('2d');

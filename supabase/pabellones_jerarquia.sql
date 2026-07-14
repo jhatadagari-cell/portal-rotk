@@ -127,8 +127,25 @@ begin
   return jsonb_build_object('mapa', h.mapa);
 end; $$;
 
+-- ── TALENTOS (F3 文): un miembro vuelve de expedición con un NPC ──────────────
+-- Añade un NPC (p_npc: {id, nombre, npc:true, aptitud, puntos, desde}) a miembros.
+-- p_npc NO lleva personajeId → no es controlable por ningún jugador.
+create or replace function public.casa_reclutar(p_hac text, p_pj text, p_npc jsonb)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare h public.haciendas;
+begin
+  select * into h from public.haciendas where id = p_hac for update;
+  if not found then raise exception 'La hacienda no existe'; end if;
+  if not exists (select 1 from jsonb_array_elements(coalesce(h.miembros, '[]'::jsonb)) m where m ->> 'personajeId' = p_pj) then
+    raise exception 'No perteneces a esta hacienda'; end if;
+  if jsonb_array_length(coalesce(h.miembros, '[]'::jsonb)) >= 40 then raise exception 'La casa está llena'; end if;
+  update public.haciendas set miembros = coalesce(miembros, '[]'::jsonb) || jsonb_build_array(p_npc) where id = p_hac returning * into h;
+  return jsonb_build_object('miembros', h.miembros);
+end; $$;
+
 grant execute on function public.pab_unirse(text,text,text)           to authenticated, anon;
 grant execute on function public.pab_responsable(text,text,text,text) to authenticated, anon;
 grant execute on function public.pab_escalafon(text,text,text,int)    to authenticated, anon;
 grant execute on function public.pab_investig_elegir(text,text,text,text,bigint)      to authenticated, anon;
 grant execute on function public.pab_investig_prog(text,text,text,int,bigint,int,text) to authenticated, anon;
+grant execute on function public.casa_reclutar(text,text,jsonb)                       to authenticated, anon;

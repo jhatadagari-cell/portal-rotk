@@ -741,6 +741,7 @@
         HacPuntos.award(h.id, myId, r);
         retoAdd('prestigio', r);   // reto semanal: prestigio ganado
         if (mis && mis.dom) aportarInvestig(mis.dom, 12);   // contribución ACTIVA a la investigación de tu pabellón
+        if (mis) reclutarTalentoSiToca();                    // 招賢: prob. baja de volver con un talento (NPC)
         // La misión del tablón da, además del prestigio, dinero + XP PERSONAL (al dominio).
         let extra = '';
         if (mis && window.HacStats) {
@@ -5170,6 +5171,21 @@
       if (window.HacBitacora) HacBitacora.log(myId, 'progreso', `貢 Recibiste la caravana de tributo (+${cg.dinero}🏛) para la casa`);
       if (window.HacFolk && HacFolk.setCaravan) HacFolk.setCaravan(false);   // la caravana se marcha
       if (window.HacProdCasa && HacProdCasa.reload) HacProdCasa.reload();
+    }
+    // ── ATRAER TALENTOS (F3 文): al volver de expedición con éxito, prob. baja de
+    //    reclutar un NPC (por ahora solo se une y ronda; sin función aún). ──
+    const TALENTO_CHANCE = 0.12;
+    const TALENTO_NOMBRES = ['Un ermitaño errante', 'Un letrado sin señor', 'Un jinete fronterizo', 'Un artesano viajero', 'Un veterano retirado', 'Una dama estratega', 'Un joven prometedor', 'Un médico ambulante'];
+    async function reclutarTalentoSiToca() {
+      if (!myId || !pabDesbloqueado('talentos')) return;
+      if (Math.random() >= TALENTO_CHANCE) return;
+      const nombre = TALENTO_NOMBRES[Math.floor(Math.random() * TALENTO_NOMBRES.length)];
+      const apt = ['militar', 'cultural', 'administrativo'][Math.floor(Math.random() * 3)];
+      const npc = { id: 'npc-' + Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36), nombre: nombre, npc: true, aptitud: apt, puntos: 0, desde: prodDia() };
+      try { const d = await pabRPC('casa_reclutar', { p_hac: h.id, p_pj: myId, p_npc: npc }); if (d && d.miembros) h.miembros = d.miembros; }
+      catch (e) { return; }
+      toast(`招賢 ¡Vuelves con un talento! ${nombre} se une a la casa.`);
+      if (window.HacBitacora) HacBitacora.log(myId, 'progreso', `招賢 Atrajiste un talento a la casa: ${nombre}`);
     }
     let pabEl = null, pabAbierto = null;
     function ensurePabEl() {
