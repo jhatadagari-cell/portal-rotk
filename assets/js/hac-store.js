@@ -66,16 +66,17 @@ const HacStore = (function () {
   }
 
   // ── Pabellones (tabla aparte, FK hacienda_id) ───────────────────────────
-  // DINÁMICO: se guarda la celda-SEMILLA [gx,gy]; la región (celdas) se recalcula
-  // en vivo a partir de las murallas (HacBuild.regionPabellon). Así el patio se
-  // adapta solo cuando se mueven los muros.
+  // El pabellón se delimita a mano como RECTÁNGULO: seed = [x, y, w, h] (mín. 100
+  // tiles). Se conserva el array completo tal cual (los formatos viejos [x,y] de la
+  // época de murallas quedan con length 2 → región vacía hasta re-delimitar).
+  const cleanSeed = (s) => Array.isArray(s) ? s.map(n => Number(n) || 0) : [];
   function rowToPab(r) {
     return { id: r.id, haciendaId: r.hacienda_id, nombre: r.nombre || '', rol: r.rol || '',
-      seed: Array.isArray(r.seed) ? [Number(r.seed[0]) || 0, Number(r.seed[1]) || 0] : [0, 0] };
+      seed: cleanSeed(r.seed) };
   }
   function pabToRow(p) {
     return { id: p.id, hacienda_id: p.haciendaId, nombre: p.nombre || '', rol: p.rol || '',
-      seed: Array.isArray(p.seed) ? [Number(p.seed[0]) || 0, Number(p.seed[1]) || 0] : [0, 0] };
+      seed: cleanSeed(p.seed) };
   }
 
   // Cliente Supabase compartido con Auth (espera a la sesión inicial).

@@ -432,6 +432,8 @@ html.hacp-pseudofs, html.hacp-pseudofs body{ overflow:hidden; }
 .hacp-pab-pot{ font-size:12px; color:var(--parch2); margin:2px 0 6px; }
 .hacp-pab-pot b{ font-variant-numeric:tabular-nums; }
 .hacp-pab-resp{ font:600 13px 'Noto Sans SC',sans-serif; color:var(--parch); margin:2px 0 6px; }
+.hacp-pab-hint{ font-size:11px; line-height:1.45; color:var(--parch2); opacity:.85; margin:-2px 0 8px; }
+.hacp-pab-hint b{ color:var(--parch); }
 .hacp-pab-setresp{ display:flex; align-items:center; gap:8px; margin-bottom:8px; }
 .hacp-pab-setresp label{ font-size:11px; color:var(--parch2); text-transform:uppercase; letter-spacing:.05em; }
 .hacp-pab-setresp select{ flex:1; min-width:0; background:rgba(0,0,0,.3); color:var(--parch); border:1px solid rgba(201,168,76,.4); border-radius:5px; padding:5px 7px; font:600 12px 'Noto Sans SC',sans-serif; }

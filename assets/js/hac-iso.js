@@ -520,24 +520,25 @@ const HacIso = (function () {
       const region = B.regionDePabellon(p, tier);
       if (!region.length) return;
       const r = B.rolPabellon(p.rol), col = r ? r.color : casa, cc = hexToRgb(col);
-      const fill = 'rgba(' + cc[0] + ',' + cc[1] + ',' + cc[2] + ',0.30)';
+      // Relleno MUY suave (una veladura de color, no una mancha) sobre el suelo.
+      const fill = 'rgba(' + cc[0] + ',' + cc[1] + ',' + cc[2] + ',0.11)';
       region.forEach(([gx, gy]) => {
         const cx = X(gx, gy), cy = Y(gx, gy);
         poly([[cx, cy - TILE_H / 2], [cx + TILE_W / 2, cy], [cx, cy + TILE_H / 2], [cx - TILE_W / 2, cy]], fill);
       });
-      // BORDE del pabellón (perímetro): así la zona se ve claramente delimitada.
-      const set = new Set(region.map(c => c[0] + ',' + c[1]));
-      g.strokeStyle = 'rgba(' + cc[0] + ',' + cc[1] + ',' + cc[2] + ',0.9)'; g.lineWidth = 2; g.beginPath();
-      region.forEach(([gx, gy]) => {
-        const cx = X(gx, gy), cy = Y(gx, gy);
-        const T = [cx, cy - TILE_H / 2], Rr = [cx + TILE_W / 2, cy], Bt = [cx, cy + TILE_H / 2], Lf = [cx - TILE_W / 2, cy];
-        const has = (dx, dy) => set.has((gx + dx) + ',' + (gy + dy));
-        if (!has(0, -1)) { g.moveTo(T[0], T[1]); g.lineTo(Rr[0], Rr[1]); }
-        if (!has(1, 0)) { g.moveTo(Rr[0], Rr[1]); g.lineTo(Bt[0], Bt[1]); }
-        if (!has(0, 1)) { g.moveTo(Bt[0], Bt[1]); g.lineTo(Lf[0], Lf[1]); }
-        if (!has(-1, 0)) { g.moveTo(Lf[0], Lf[1]); g.lineTo(T[0], T[1]); }
-      });
-      g.stroke();
+      // BORDE limpio: como la región es un rectángulo, trazamos su contorno
+      // uniendo los 4 vértices extremos (líneas iso rectas, sin escalera).
+      let minx = Infinity, miny = Infinity, maxx = -Infinity, maxy = -Infinity;
+      region.forEach(([gx, gy]) => { if (gx < minx) minx = gx; if (gy < miny) miny = gy; if (gx > maxx) maxx = gx; if (gy > maxy) maxy = gy; });
+      const vTop = [X(minx, miny), Y(minx, miny) - TILE_H / 2];
+      const vRight = [X(maxx, miny) + TILE_W / 2, Y(maxx, miny)];
+      const vBot = [X(maxx, maxy), Y(maxx, maxy) + TILE_H / 2];
+      const vLeft = [X(minx, maxy) - TILE_W / 2, Y(minx, maxy)];
+      const trace = () => { g.beginPath(); g.moveTo(vTop[0], vTop[1]); g.lineTo(vRight[0], vRight[1]); g.lineTo(vBot[0], vBot[1]); g.lineTo(vLeft[0], vLeft[1]); g.closePath(); };
+      g.lineJoin = 'round';
+      // Halo oscuro por debajo (para que el borde se lea sobre cualquier suelo).
+      trace(); g.strokeStyle = 'rgba(0,0,0,0.28)'; g.lineWidth = 4; g.stroke();
+      trace(); g.strokeStyle = 'rgba(' + cc[0] + ',' + cc[1] + ',' + cc[2] + ',0.85)'; g.lineWidth = 1.5; g.stroke();
     });
     // Guarda la proyección para el hit-test celda↔cursor (hover de pabellones).
     canvas._hacProj = { originX, originY, GW, GH };

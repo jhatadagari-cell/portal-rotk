@@ -5261,8 +5261,8 @@
         const esRes = String(m.personajeId) === String(resId), yo = String(m.personajeId) === String(myId);
         return `<div class="hacp-pab-m${yo ? ' yo' : ''}">
           <span class="nm">${esc(m.nombre || '—')}${esRes ? ' <i class="hacp-pab-resb">責 responsable</i>' : ''}${yo ? ' <em>(tú)</em>' : ''}</span>
-          <span class="esc" title="Escalafón ${e5}/5" style="color:${R.color}">${pips}</span>
-          ${puedeAscender ? `<span class="hacp-pab-escb"><button type="button" class="hacp-pab-mini" data-esc="-1" data-pj="${esc(m.personajeId)}"${e5 <= 0 ? ' disabled' : ''}>−</button><button type="button" class="hacp-pab-mini" data-esc="1" data-pj="${esc(m.personajeId)}"${e5 >= 5 ? ' disabled' : ''}>+</button></span>` : ''}
+          <span class="esc" title="Escalafón (rango) ${e5}/5" style="color:${R.color}">${pips}</span>
+          ${puedeAscender ? `<span class="hacp-pab-escb"><button type="button" class="hacp-pab-mini" data-esc="-1" data-pj="${esc(m.personajeId)}" title="Bajar de escalafón"${e5 <= 0 ? ' disabled' : ''}>−</button><button type="button" class="hacp-pab-mini" data-esc="1" data-pj="${esc(m.personajeId)}" title="Ascender de escalafón"${e5 >= 5 ? ' disabled' : ''}>+</button></span>` : ''}
         </div>`;
       };
       const listaM = mios.length ? mios.map(filaM).join('') : '<div class="hacp-inv-note">Aún nadie se ha unido a este pabellón.</div>';
@@ -5298,6 +5298,7 @@
         <div class="hacp-pab-resp">責 Responsable: <b>${resM ? esc(resM.nombre) : '— sin nombrar —'}</b></div>
         ${nombrarHtml}
         <div class="hacp-prod-seclbl">Miembros 部眾</div>
+        <div class="hacp-pab-hint">Los puntos ●●●○○ son el <b>escalafón</b> (rango dentro del pabellón, 0–5): a más escalafón, más aporta esa persona a la investigación.${puedeAscender ? ' Con <b>−/+</b> el responsable lo ajusta.' : ''}</div>
         <div class="hacp-pab-ms">${listaM}</div>
         <div class="hacp-prod-seclbl">Investigación 研究</div>
         ${invHtml}
