@@ -365,6 +365,32 @@ html.hacp-pseudofs, html.hacp-pseudofs body{ overflow:hidden; }
 .hacp-cp-diezmo-t{ font:700 13px 'Noto Sans SC',sans-serif; color:#f0c874; margin-bottom:3px; }
 .hacp-cp-diezmo-s{ font-size:11px; color:var(--parch2); line-height:1.35; margin-bottom:7px; }
 .hacp-cp-diezmo-s b{ color:#e6a85a; }
+/* Obras 營造: panel de construcción del fundador (rejilla 2D cenital) */
+.hacp-obras-box{ width:min(440px,94%); }
+.hacp-ob-pool{ font:700 12px 'Noto Sans SC',sans-serif; color:var(--parch); margin:6px 0 8px; }
+.hacp-ob-pool b{ color:var(--gold); }
+.hacp-ob-pick{ display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+.hacp-ob-pick label{ font-size:11px; color:var(--parch2); text-transform:uppercase; letter-spacing:.05em; }
+.hacp-ob-sel{ flex:1; min-width:0; background:rgba(0,0,0,.3); color:var(--parch); border:1px solid rgba(201,168,76,.4); border-radius:5px; padding:5px 7px; font:600 12px 'Noto Sans SC',sans-serif; }
+.hacp-ob-coste{ font-size:12px; color:var(--parch2); display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:8px; }
+.hacp-ob-coste span.short{ color:#e0715a; font-weight:700; }
+.hacp-ob-fp{ margin-left:auto; opacity:.7; font-size:10.5px; }
+.hacp-ob-gridwrap{ overflow:auto; max-height:44vh; padding:2px; }
+.hacp-ob-grid{ display:grid; gap:2px; width:max-content; margin:0 auto; }
+.hacp-ob-cell{ width:26px; height:26px; border:1px solid rgba(201,168,76,.2); border-radius:3px; background:rgba(255,255,255,.03); cursor:pointer; padding:0; }
+.hacp-ob-cell.free:hover{ background:rgba(201,168,76,.18); }
+.hacp-ob-cell.occ{ background:rgba(201,168,76,.5); border-color:rgba(201,168,76,.6); cursor:default; }
+.hacp-ob-cell.ghost.ok{ background:rgba(122,196,140,.6); border-color:#7fc9a0; }
+.hacp-ob-cell.ghost.bad{ background:rgba(224,113,90,.55); border-color:#e0715a; }
+.hacp-ob-legend{ display:flex; align-items:center; gap:6px; font-size:10.5px; color:var(--parch2); margin:8px 0 4px; flex-wrap:wrap; }
+.hacp-ob-legend span{ width:13px; height:13px; border-radius:3px; display:inline-block; vertical-align:middle; }
+.hacp-ob-legend span.occ{ background:rgba(201,168,76,.5); }
+.hacp-ob-legend span.ghost.ok{ background:rgba(122,196,140,.6); }
+.hacp-ob-legend span.ghost.bad{ background:rgba(224,113,90,.55); }
+.hacp-ob-aviso{ font-size:11.5px; margin:4px 0 8px; min-height:1.2em; }
+.hacp-ob-aviso .ok{ color:#8fd6a0; } .hacp-ob-aviso .bad{ color:#e0715a; }
+.hacp-ob-acts{ display:flex; gap:8px; }
+.hacp-ob-acts .hacp-cp-btn{ flex:1; }
 .hacp-cp-mis{ margin-top:9px; border-top:1px solid rgba(201,168,76,.18); padding-top:8px; }
 .hacp-cp-mis-on{ display:flex; align-items:center; gap:8px; }
 .hacp-cp-mis-on .hacp-cp-btn{ margin-left:auto; }

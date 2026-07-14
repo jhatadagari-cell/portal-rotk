@@ -528,6 +528,8 @@
     }
     // ¿El diezmo aplica? (tabla de casa cargada y disponible).
     const diezmoDisponible = () => !!(window.HacProdCasa && HacProdCasa.dbOk && HacProdCasa.dbOk());
+    // ¿Soy el FUNDADOR de esta casa? (mapa.fundador, designado por el admin).
+    const esFundador = () => !!(h && h.mapa && myId && String(h.mapa.fundador) === String(myId));
     // Modificador de prestigio por el diezmo: +buff al día, −debufo si pendiente.
     const diezmoFrac = () => !diezmoDisponible() ? 0 : (HacProdCasa.pagadoHoy(h.id, myId, prodDia()) ? TITHE_BUFF : -TITHE_DEBUFF);
     // Prestigio a otorgar con TODOS los modificadores (objetos + diezmo). Fuente única
@@ -3815,6 +3817,7 @@
         tool('caballo', '🐎', 'Tu Caballo'),
         tool('log', '錄', 'Bitácora'),
         prodOk() ? tool('prod', '產', 'Producción', ' hacp-cp-prod') : '',
+        esFundador() ? tool('obras', '營', 'Obras', ' hacp-cp-obras') : '',
         hasMarket ? tool('shop', '市', 'Mercado') : '',
         tool('esc', '兵', 'Escaramuzas', ' hacp-cp-esc'),
         hasTablon ? tool('board', '檄', 'Misiones', ' hacp-cp-board') : '',
@@ -3996,6 +3999,8 @@
       if (shb) shb.addEventListener('click', openShop);
       const pdb = charEl.querySelector('[data-act="prod"]');
       if (pdb) pdb.addEventListener('click', openProd);
+      const obb = charEl.querySelector('[data-act="obras"]');
+      if (obb) obb.addEventListener('click', openObras);
       charEl.querySelectorAll('[data-item]').forEach(b => b.addEventListener('click', () => abrirObjeto(b.dataset.item)));
       const dcb = charEl.querySelector('[data-act="diezmo-cta"]');
       if (dcb) dcb.addEventListener('click', () => pagarDiezmo(dcb));
@@ -4844,6 +4849,118 @@
       if (window.HacBitacora) HacBitacora.log(myId, 'progreso', `納 Pagaste el diezmo de casa · ${DIEZMO_MONEDAS}💰`);
       refrescarProd();
       if (homeEl && !homeEl.hidden) buildHome();
+    }
+
+    // ══ OBRAS 營造 (solo el FUNDADOR): construir edificios gastando la tesorería +
+    //    el almacén de la casa. Colocación en rejilla 2D cenital (reutiliza HacBuild).
+    // Redibuja SOLO el lienzo iso desde h.mapa (sin re-render completo → no cierra paneles).
+    function redrawIso() {
+      const iso = document.getElementById('hacp-iso');
+      if (iso && window.HacIso && HacIso.draw) {
+        const pab = (window.HacStore && HacStore.pabellones) ? HacStore.pabellones(h.id) : [];
+        HacIso.draw(iso, { mapa: h.mapa, tier, color: h.color || '#c9a84c', pabellones: pab, estacion: (h.mapa && h.mapa.estacion) || 'verano', tema: (h.mapa && h.mapa.tema) || '' });
+      }
+      if (window.HacFolk && HacFolk.repaintOverlay) HacFolk.repaintOverlay();
+    }
+    let obrasEl = null;
+    const obrasSt = { tipo: null, rot: 0, pos: null };   // edificio elegido · rotación · celda ancla
+    function ensureObrasEl() {
+      if (obrasEl) return obrasEl;
+      obrasEl = document.createElement('div'); obrasEl.className = 'hacp-shop hacp-obras-ov'; obrasEl.hidden = true; overlayHost().appendChild(obrasEl);
+      ['pointerdown', 'pointerup', 'wheel', 'click'].forEach(ev => obrasEl.addEventListener(ev, (e) => e.stopPropagation(), { passive: false }));
+      obrasEl.addEventListener('click', (e) => { if (e.target === obrasEl) closeObras(); });
+      return obrasEl;
+    }
+    function closeObras() { if (obrasEl) obrasEl.hidden = true; }
+    function openObras() {
+      if (!esFundador()) { toast('Solo el fundador de la casa puede construir'); return; }
+      obrasSt.pos = null;
+      if (!obrasSt.tipo) { const first = HacBuild.CONSTRUCCIONES.find(t => (t.tierMin || 1) <= tier); obrasSt.tipo = first ? first.id : null; }
+      buildObras(); ensureObrasEl().hidden = false;
+      if (window.HacProdCasa) HacProdCasa.ready().then(() => { if (obrasEl && !obrasEl.hidden) buildObras(); }).catch(() => {});
+    }
+    const obrasCoste = () => obrasSt.tipo ? HacBuild.coste(obrasSt.tipo) : { hierro: 0, tinta: 0, grano: 0, dinero: 0 };
+    function obrasAsequible(co) {
+      const alm = window.HacProdCasa ? HacProdCasa.almacen(h.id) : { hierro: 0, tinta: 0, grano: 0 };
+      const teso = window.HacProdCasa ? HacProdCasa.tesoreria(h.id) : 0;
+      return alm.hierro >= co.hierro && alm.tinta >= co.tinta && alm.grano >= co.grano && teso >= co.dinero;
+    }
+    function buildObras() {
+      const el = ensureObrasEl();
+      const alm = window.HacProdCasa ? HacProdCasa.almacen(h.id) : { hierro: 0, tinta: 0, grano: 0 };
+      const teso = window.HacProdCasa ? HacProdCasa.tesoreria(h.id) : 0;
+      const R = HacProd.RECURSOS;
+      const opts = HacBuild.CONSTRUCCIONES.filter(t => (t.tierMin || 1) <= tier).map(t => {
+        const co = HacBuild.coste(t.id);
+        const ct = [co.hierro ? co.hierro + '⛓' : '', co.tinta ? co.tinta + '🖋' : '', co.grano ? co.grano + '🌾' : '', co.dinero ? co.dinero + '🏛' : ''].filter(Boolean).join(' ');
+        return `<option value="${t.id}"${obrasSt.tipo === t.id ? ' selected' : ''}>${esc(t.nombre)} ${t.zh} · ${ct}</option>`;
+      }).join('');
+      const t = obrasSt.tipo ? HacBuild.tipo(obrasSt.tipo) : null, co = obrasCoste();
+      const falta = (need, have) => need > have ? ' short' : '';
+      const costeHtml = t ? `<div class="hacp-ob-coste">Coste:
+        ${co.hierro ? `<span class="${falta(co.hierro, alm.hierro)}">${R.hierro.icon}${co.hierro}</span>` : ''}
+        ${co.tinta ? `<span class="${falta(co.tinta, alm.tinta)}">${R.tinta.icon}${co.tinta}</span>` : ''}
+        ${co.grano ? `<span class="${falta(co.grano, alm.grano)}">${R.grano.icon}${co.grano}</span>` : ''}
+        ${co.dinero ? `<span class="${falta(co.dinero, teso)}">🏛${co.dinero}</span>` : ''}
+        <span class="hacp-ob-fp">huella ${t.footprint[0]}×${t.footprint[1]}</span></div>` : '';
+      // Rejilla cenital: ocupado / fantasma (válido·inválido) / libre.
+      const [GW, GH] = HacBuild.gridDims(tier);
+      const lista = (h.mapa && h.mapa.construcciones) || [];
+      let gCells = [], gOk = false, gMot = '';
+      if (obrasSt.tipo && obrasSt.pos) {
+        const c = { tipo: obrasSt.tipo, pos: [obrasSt.pos[0], obrasSt.pos[1]], rot: obrasSt.rot };
+        gCells = HacBuild.celdasOcupadas(c);
+        const v = HacBuild.puedeColocar(c, tier, lista); gOk = v.ok; gMot = v.motivo || '';
+      }
+      const inG = (x, y) => gCells.some(p => p[0] === x && p[1] === y);
+      let cells = '';
+      for (let y = 0; y < GH; y++) for (let x = 0; x < GW; x++) {
+        const occ = HacBuild.construccionEn(lista, x, y), g = inG(x, y);
+        const cls = occ ? 'occ' : g ? (gOk ? 'ghost ok' : 'ghost bad') : 'free';
+        cells += `<button type="button" class="hacp-ob-cell ${cls}" data-gx="${x}" data-gy="${y}"${occ ? ' disabled' : ''}></button>`;
+      }
+      const puede = t && obrasSt.pos && gOk && obrasAsequible(co);
+      const aviso = !obrasSt.pos ? 'Toca una celda libre para situar el edificio.'
+        : !gOk ? `<span class="bad">${esc(gMot)}</span>`
+        : !obrasAsequible(co) ? '<span class="bad">La casa no tiene tesorería o materiales suficientes.</span>'
+        : '<span class="ok">Listo para construir.</span>';
+      el.innerHTML = `<div class="hacp-shop-box hacp-obras-box">
+        <button type="button" class="hacp-shop-x" data-act="obras-close" aria-label="Cerrar">✕</button>
+        <div class="hacp-shop-h"><span class="hacp-shop-zh">營</span> Obras de la casa</div>
+        <div class="hacp-shop-sub">Como fundador, levantas edificios con la <b>tesorería</b> y el <b>almacén</b> que la casa reúne con los diezmos.</div>
+        <div class="hacp-ob-pool">Casa: <b>🏛 ${teso}</b> · ${R.hierro.icon}${alm.hierro} · ${R.tinta.icon}${alm.tinta} · ${R.grano.icon}${alm.grano}</div>
+        <div class="hacp-ob-pick"><label>Edificio</label><select class="hacp-ob-sel" data-ob-sel>${opts}</select></div>
+        ${costeHtml}
+        <div class="hacp-ob-gridwrap"><div class="hacp-ob-grid" style="grid-template-columns:repeat(${GW},1fr)">${cells}</div></div>
+        <div class="hacp-ob-legend"><span class="occ"></span>ocupado <span class="ghost ok"></span>válido <span class="ghost bad"></span>no cabe</div>
+        <div class="hacp-ob-aviso">${aviso}</div>
+        <div class="hacp-ob-acts">
+          <button type="button" class="hacp-cp-btn" data-ob-rot>↻ Girar</button>
+          <button type="button" class="hacp-cp-btn hacp-suc-ok" data-ob-build${puede ? '' : ' disabled'}>Construir aquí</button>
+        </div>
+      </div>`;
+      el.querySelector('[data-act="obras-close"]').addEventListener('click', closeObras);
+      const sel = el.querySelector('[data-ob-sel]'); if (sel) sel.addEventListener('change', () => { obrasSt.tipo = sel.value; obrasSt.pos = null; buildObras(); });
+      const rot = el.querySelector('[data-ob-rot]'); if (rot) rot.addEventListener('click', () => { obrasSt.rot = (obrasSt.rot + 1) % 4; buildObras(); });
+      el.querySelectorAll('.hacp-ob-cell.free, .hacp-ob-cell.ghost').forEach(b => b.addEventListener('click', () => { obrasSt.pos = [Number(b.dataset.gx), Number(b.dataset.gy)]; buildObras(); }));
+      const bb = el.querySelector('[data-ob-build]'); if (bb && !bb.disabled) bb.addEventListener('click', obrasConstruir);
+    }
+    async function obrasConstruir() {
+      if (!esFundador() || !obrasSt.tipo || !obrasSt.pos || !window.HacProdCasa) return;
+      const t = HacBuild.tipo(obrasSt.tipo), co = HacBuild.coste(obrasSt.tipo);
+      const c = { tipo: obrasSt.tipo, pos: obrasSt.pos, rot: obrasSt.rot };
+      const v = HacBuild.puedeColocar(c, tier, (h.mapa && h.mapa.construcciones) || []);
+      if (!v.ok) { toast(v.motivo); return; }
+      if (!obrasAsequible(co)) { toast('La casa no reúne tesorería/materiales suficientes'); return; }
+      try {
+        const res = await HacProdCasa.construir({ haciendaId: h.id, pj: myId, tipo: obrasSt.tipo, pos: obrasSt.pos, rot: obrasSt.rot, dueno: null, mat: { hierro: co.hierro, tinta: co.tinta, grano: co.grano }, dinero: co.dinero });
+        if (res && res.mapa) h.mapa = res.mapa;
+      } catch (e) { toast('No se pudo construir: ' + (e && e.message || e)); return; }
+      toast(`營 Construido: ${t.nombre}`);
+      if (window.HacBitacora) HacBitacora.log(myId, 'progreso', `營 El fundador levantó ${t.nombre}`);
+      obrasSt.pos = null;
+      redrawIso();
+      buildObras();
     }
     function mejorarOficio(of) {
       const O = HacProd.OFICIOS[of]; if (!O) return; const niv = HacStats.oficioNivel(myId, of); if (niv >= HacProd.NIVEL_MAX) return;
