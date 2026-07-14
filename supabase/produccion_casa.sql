@@ -130,6 +130,30 @@ begin
   return jsonb_build_object('mapa', h.mapa);
 end; $$;
 
+-- ── TRIBUTO (F3 政): un miembro ADMINISTRATIVO recibe la caravana ─────────────
+-- Deposita monedas + materiales en la casa y sella `mapa.tributo.ts` (temporizador
+-- de la próxima caravana). Solo un miembro del pabellón administrativo puede recibir.
+create or replace function public.casa_tributo(p_hac text, p_pj text, p_dinero int, p_lote jsonb, p_ts bigint)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare h public.haciendas; r public.produccion_casa; k text; add int;
+begin
+  select * into h from public.haciendas where id = p_hac for update;
+  if not found then raise exception 'La hacienda no existe'; end if;
+  if not exists (select 1 from jsonb_array_elements(coalesce(h.miembros, '[]'::jsonb)) m
+                 where m ->> 'personajeId' = p_pj and m ->> 'pabellon' = 'administrativo') then
+    raise exception 'Solo un mecenas del pabellón administrativo recibe el tributo'; end if;
+  insert into public.produccion_casa (hacienda_id) values (p_hac) on conflict (hacienda_id) do nothing;
+  select * into r from public.produccion_casa where hacienda_id = p_hac for update;
+  r.tesoreria := r.tesoreria + greatest(0, coalesce(p_dinero, 0));
+  foreach k in array array['hierro','tinta','grano'] loop
+    add := greatest(0, coalesce((p_lote ->> k)::int, 0));
+    if add > 0 then r.almacen := jsonb_set(r.almacen, array[k], to_jsonb(coalesce((r.almacen ->> k)::int, 0) + add)); end if;
+  end loop;
+  update public.produccion_casa set tesoreria = r.tesoreria, almacen = r.almacen where hacienda_id = p_hac;
+  update public.haciendas set mapa = jsonb_set(coalesce(mapa, '{}'::jsonb), '{tributo}', jsonb_build_object('ts', p_ts)) where id = p_hac returning * into h;
+  return jsonb_build_object('mapa', h.mapa, 'tesoreria', r.tesoreria, 'almacen', r.almacen);
+end; $$;
+
 -- ── RLS: lectura pública; escritura solo por las RPC SECURITY DEFINER ──
 alter table public.produccion_casa enable row level security;
 drop policy if exists prodcasa_read on public.produccion_casa;
@@ -137,3 +161,4 @@ create policy prodcasa_read on public.produccion_casa for select using (true);
 grant execute on function public.casa_diezmo(text,text,text,int,jsonb,text)             to authenticated, anon;
 grant execute on function public.casa_construir(text,text,text,jsonb,int,text,jsonb,int) to authenticated, anon;
 grant execute on function public.casa_demoler(text,text,jsonb)                          to authenticated, anon;
+grant execute on function public.casa_tributo(text,text,int,jsonb,bigint)               to authenticated, anon;

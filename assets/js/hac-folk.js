@@ -1110,6 +1110,7 @@ const HacFolk = (function () {
 
   function step(dt) {
     const SPD = 1.1;
+    stepCaravan(dt);
     walkers.forEach(w => {
       if (w.gardenCd > 0) w.gardenCd -= dt;
       if (w.socialCd > 0) w.socialCd -= dt;
@@ -1566,6 +1567,79 @@ const HacFolk = (function () {
     g.drawImage(cv, -HCX * HDRAW, -HFEET * HDRAW, HW * HDRAW, HH * HDRAW);
     g.restore();
   }
+
+  // ── CARAVANA de tributo (F3 政) ───────────────────────────────────────────
+  // Un carro cargado que LLEGA por el camino y ESPERA en la puerta (outNear) a que
+  // un mecenas administrativo lo reciba. Sprite horneado una vez (sin coste/frame).
+  const CW = 54, CH = 44, CFEET = 37, CCX = 27, CDRAW = 2;
+  let caravanCv = null;
+  function caravanBaked() {
+    if (caravanCv) return caravanCv;
+    const cv = document.createElement('canvas'); cv.width = CW; cv.height = CH;
+    const g = cv.getContext('2d'); g.imageSmoothingEnabled = false;
+    const wood = '#6b4a2a', woodHi = '#8a6636', woodDk = '#463016', iron = '#33373d';
+    const crate = '#a9812f', crateHi = '#c99a3a', crateDk = '#7a5a1f', cloth = '#b23b2e', clothHi = '#d35845';
+    const jar = '#3f6b5c', sack = '#cbb892';
+    const R = (x, y, w, h, c) => { g.fillStyle = c; g.fillRect(x, y, w, h); };
+    const gy = CFEET;
+    function wheel(cx) {
+      g.fillStyle = woodDk; g.beginPath(); g.arc(cx, gy, 6.5, 0, 6.2832); g.fill();
+      g.fillStyle = wood; g.beginPath(); g.arc(cx, gy, 5, 0, 6.2832); g.fill();
+      g.strokeStyle = woodDk; g.lineWidth = 1;
+      for (let k = 0; k < 4; k++) { const a = k * Math.PI / 4; g.beginPath(); g.moveTo(cx, gy); g.lineTo(cx + Math.cos(a) * 5, gy + Math.sin(a) * 5); g.stroke(); }
+      g.fillStyle = iron; g.beginPath(); g.arc(cx, gy, 1.6, 0, 6.2832); g.fill();
+    }
+    wheel(CCX - 9); wheel(CCX + 11);
+    R(CCX - 22, gy - 7, 9, 2, woodDk);                                           // timón (tira un buey, fuera de cuadro)
+    R(CCX - 17, gy - 9, 35, 5, wood); R(CCX - 17, gy - 9, 35, 1, woodHi); R(CCX - 17, gy - 5, 35, 1, woodDk);   // plataforma
+    R(CCX - 15, gy - 19, 9, 10, crate); R(CCX - 15, gy - 19, 9, 1, crateHi); R(CCX - 7, gy - 19, 1, 10, crateDk);   // caja alta
+    R(CCX - 5, gy - 16, 8, 7, crate); R(CCX - 5, gy - 16, 8, 1, crateHi);        // caja baja
+    g.fillStyle = jar; g.beginPath(); g.ellipse(CCX + 10, gy - 13, 4, 5, 0, 0, 6.2832); g.fill(); R(CCX + 8, gy - 16, 4, 2, jar);   // tinaja
+    g.fillStyle = sack; g.beginPath(); g.ellipse(CCX - 10, gy - 20, 4, 3, 0, 0, 6.2832); g.fill();               // saco
+    R(CCX - 16, gy - 13, 12, 4, cloth); R(CCX - 16, gy - 13, 12, 1, clothHi);    // tela roja sobre la carga
+    R(CCX + 14, gy - 31, 1, 22, woodDk);                                          // asta
+    R(CCX + 15, gy - 31, 8, 6, cloth); R(CCX + 15, gy - 31, 8, 1, clothHi);       // banderín 貢
+    caravanCv = cv; return cv;
+  }
+  function drawCaravan(g, lx, ly) {
+    const cv = caravanBaked(), fx = lx * SCALE, fy = ly * SCALE;
+    g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.imageSmoothingEnabled = false;
+    g.fillStyle = 'rgba(0,0,0,.20)'; g.beginPath(); g.ellipse(fx, fy, 22 * CDRAW * 0.5, 5, 0, 0, 6.2832); g.fill();
+    g.translate(fx, fy); g.drawImage(cv, -CCX * CDRAW, -CFEET * CDRAW, CW * CDRAW, CH * CDRAW); g.restore();
+  }
+  // Estado de la caravana: llega (from→to), espera (idle), se va (to→from) y desaparece.
+  let caravan = null;
+  const CAR_IN_MS = 1700, CAR_OUT_MS = 1400;
+  function setCaravan(on) {
+    if (on) {
+      if (caravan && caravan.phase !== 'out') return;                             // ya está
+      const to = wk && wk.outNear, from = (wk && wk.outFar) || to; if (!to) { caravan = null; return; }
+      caravan = { phase: 'in', p: 0, from: from, to: to, fx: from[0], fy: from[1] };
+    } else if (caravan && caravan.phase !== 'out') {
+      caravan = { phase: 'out', p: 0, from: [caravan.fx, caravan.fy], to: (wk && wk.outFar) || [caravan.fx, caravan.fy], fx: caravan.fx, fy: caravan.fy };
+    }
+  }
+  function stepCaravan(dt) {
+    if (!caravan) return;
+    const lerp = (a, b, t) => a + (b - a) * t;
+    if (caravan.phase === 'in') {
+      caravan.p = Math.min(1, caravan.p + dt / CAR_IN_MS);
+      const e = 1 - Math.pow(1 - caravan.p, 2);                                    // ease-out
+      caravan.fx = lerp(caravan.from[0], caravan.to[0], e); caravan.fy = lerp(caravan.from[1], caravan.to[1], e);
+      if (caravan.p >= 1) { caravan.phase = 'idle'; caravan.fx = caravan.to[0]; caravan.fy = caravan.to[1]; }
+    } else if (caravan.phase === 'out') {
+      caravan.p = Math.min(1, caravan.p + dt / CAR_OUT_MS);
+      caravan.fx = lerp(caravan.from[0], caravan.to[0], caravan.p); caravan.fy = lerp(caravan.from[1], caravan.to[1], caravan.p);
+      if (caravan.p >= 1) caravan = null;
+    }
+  }
+  // ¿El toque (lx,ly logicos) cae sobre la caravana? (caja del sprite proyectada).
+  function caravanHit(lx, ly) {
+    if (!caravan) return false;
+    const p = logic(caravan.fx, caravan.fy), hw = CW * CDRAW / SCALE / 2, ht = CH * CDRAW / SCALE;
+    return lx >= p[0] - hw && lx <= p[0] + hw && ly >= p[1] - ht && ly <= p[1] + 6;
+  }
+
   // Crea la encarnación de un caballo: hogar ESTABLE (semilla por dueño) en el campo
   // que hay frente al portón sur, para que varios caballos no se amontonen.
   function makeHorse(id, info) {
@@ -2028,6 +2102,11 @@ const HacFolk = (function () {
         overlays.push({ draw: (g) => { const p = logic(h.fx, h.fy); npcBanner(g, p[0], p[1] - HBANNER, h.nombre, '🐎'); } });
       });
     }
+    // Caravana de tributo: actor (profundidad/oclusión como el resto) + banner 貢.
+    if (caravan) {
+      actors.push({ fx: caravan.fx, fy: caravan.fy, draw: (g, lx, ly) => drawCaravan(g, lx, ly) });
+      overlays.push({ draw: (g) => { const p = logic(caravan.fx, caravan.fy); npcBanner(g, p[0], p[1] - Math.round(CH * CDRAW / SCALE) - 2, 'Tributo', '貢'); } });
+    }
     // Mecenas visibles: el sprite va como actor (con oclusión); el NOMBRE va aparte.
     const nameCands = [];
     walkers.forEach(w => {
@@ -2380,6 +2459,6 @@ const HacFolk = (function () {
   }
 
   function mainBuildingId() { return wk ? (wk.mainBid || null) : null; }
-  return { start, stop, list, select, selected, position, buildings, buildingTypes, setOrders, setEscaramuzas, setDebate, setHighlight, setCaballos, drawAvatar, goHome, consultar, consultando, dejarConsulta, mainBuildingId, repaintOverlay, refreshCargos };
+  return { start, stop, list, select, selected, position, buildings, buildingTypes, setOrders, setEscaramuzas, setDebate, setHighlight, setCaballos, drawAvatar, goHome, consultar, consultando, dejarConsulta, mainBuildingId, repaintOverlay, refreshCargos, setCaravan, caravanHit, caravanActiva: () => !!caravan };
 })();
 if (typeof window !== 'undefined') window.HacFolk = HacFolk;

@@ -131,6 +131,7 @@
       enableFullscreen(vp, document.getElementById('hacp-fs-btn'));
       // Mecenas paseando + listado lateral con cámara y banners de edificio.
       if (window.HacFolk) setupFolk(iso, vp, cam, h, tier, color);
+      setTimeout(() => { try { syncCaravan(); } catch (e) {} }, 400);   // caravana de tributo (F3 政) si toca
       // Nombre del pabellón al pasar el ratón (mapa celda→pabellón en vivo).
       const pabPorCelda = {};
       if (window.HacBuild) pabellones.forEach(p => {
@@ -5145,6 +5146,31 @@
       const def = INVESTIG[rol]; if (!def) return;
       try { const d = await pabRPC('pab_investig_prog', { p_hac: h.id, p_pj: myId, p_rol: rol, p_prog: def.target, p_ts: nowMs(), p_target: def.target, p_done_key: def.unlock }); if (d && d.mapa) { h.mapa = d.mapa; toast(`🔬 ¡Investigación completada: ${def.nombre}!`); buildPabPanel(); } } catch (e) {}
     }
+    // ── RUTAS DE TRIBUTO (F3 政): caravana periódica que espera en la puerta ──
+    const PERIOD_TRIBUTO = 3 * 3600 * 1000;   // una caravana cada ~3 h (tuneable)
+    function tributoPresente() {
+      if (!pabDesbloqueado('tributo')) return false;
+      const ts = (h.mapa && h.mapa.tributo && Number(h.mapa.tributo.ts)) || 0;
+      return (nowMs() - ts) >= PERIOD_TRIBUTO;
+    }
+    function tributoCargo() {   // escala modestamente con la fuerza del pabellón 政
+      const s = pabSinergia('administrativo'), a = (h.miembros || []).filter(m => m.pabellon === 'administrativo').length;
+      return { dinero: 40 + 6 * s + 4 * a, grano: 8 + s, hierro: 4, tinta: 4 };
+    }
+    function syncCaravan() { if (window.HacFolk && HacFolk.setCaravan) HacFolk.setCaravan(tributoPresente()); }
+    async function recibirTributo() {
+      const yo = (h.miembros || []).find(m => String(m.personajeId) === String(myId));
+      if (!yo || yo.pabellon !== 'administrativo') { toast('🐂 Un carro de tributo aguarda en la puerta · lo recibe un mecenas del pabellón 政 (administrativo).'); return; }
+      const cg = tributoCargo();
+      try {
+        const d = await pabRPC('casa_tributo', { p_hac: h.id, p_pj: myId, p_dinero: cg.dinero, p_lote: { hierro: cg.hierro, tinta: cg.tinta, grano: cg.grano }, p_ts: nowMs() });
+        if (d && d.mapa) h.mapa = d.mapa;
+      } catch (e) { toast(String(e && e.message || e)); return; }
+      toast(`貢 Tributo recibido para la casa · +${cg.dinero}🏛 +${cg.grano}🌾`);
+      if (window.HacBitacora) HacBitacora.log(myId, 'progreso', `貢 Recibiste la caravana de tributo (+${cg.dinero}🏛) para la casa`);
+      if (window.HacFolk && HacFolk.setCaravan) HacFolk.setCaravan(false);   // la caravana se marcha
+      if (window.HacProdCasa && HacProdCasa.reload) HacProdCasa.reload();
+    }
     let pabEl = null, pabAbierto = null;
     function ensurePabEl() {
       if (pabEl) return pabEl;
@@ -5662,6 +5688,8 @@
       if (!r.width || !r.height) return;
       const lx = (e.clientX - r.left) / r.width * iso.width / S;
       const ly = (e.clientY - r.top) / r.height * iso.height / S;
+      // ¿Toque sobre la CARAVANA de tributo? (espera fuera, en la puerta).
+      if (window.HacFolk && HacFolk.caravanHit && HacFolk.caravanHit(lx, ly)) { hidePop(); recibirTributo(); return; }
       const sign = (iso._hacSigns || []).find(s => lx >= s.lx && lx <= s.lx + s.w && ly >= s.ly && ly <= s.ly + s.h);
       if (sign) { showPop(e.clientX, e.clientY, sign); return; }
       // ¿clic sobre un mecenas? (caja ~ sprite, sobre sus pies en (px,py))
