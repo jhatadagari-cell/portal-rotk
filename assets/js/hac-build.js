@@ -254,6 +254,27 @@ const HacBuild = (function () {
     return (((c && c.rot) || 0) % 2) ? [base[1], base[0]] : [base[0], base[1]];
   }
 
+  // ── COSTE de CONSTRUIR (Hilo 2: producción → finca) ───────────────────────
+  // Levantar un edificio cuesta MATERIALES del dominio del edificio (hierro武 /
+  // tinta文 / grano政) + grano (comida de los obreros, universal) + dinero,
+  // escalado por el TAMAÑO (celdas de huella) y por su tierMin. Los edificios
+  // PRINCIPALES/únicos llevan sobrecoste (obra señalada). Función PURA: de qué
+  // bolsa sale (almacén de casa) y el gasto atómico se resuelven fuera (RPC).
+  const MAT_DOM = { militar: 'hierro', cultural: 'tinta', administrativo: 'grano' };
+  const areaDe = (t) => Array.isArray(t.mask) ? t.mask.length : (t.footprint[0] * t.footprint[1]);
+  function coste(idOrObj) {
+    const t = typeof idOrObj === 'string' ? byId[idOrObj] : idOrObj;
+    if (!t) return null;
+    const area = areaDe(t), tm = t.tierMin || 1;
+    const out = { hierro: 0, tinta: 0, grano: 0, dinero: 0 };
+    const mat = MAT_DOM[t.dominio] || 'grano';
+    out[mat] += Math.round(area * (5 + tm * 3));                  // material del dominio
+    out.grano += Math.round(area * (2 + tm));                     // grano de los obreros (universal)
+    out.dinero = Math.round(area * (40 + tm * 30));
+    if (t.principal || t.unico) { out[mat] = Math.round(out[mat] * 1.5); out.dinero = Math.round(out.dinero * 1.5); }
+    return out;
+  }
+
   // Rota una celda (dx,dy) DENTRO de la caja base [w,h] según rot (0..3, ×90° en
   // sentido horario). Las rotaciones impares devuelven coords en una caja [h,w].
   // La usan tanto celdasOcupadas (lógica) como el generador de sprites (arte): si
@@ -538,7 +559,7 @@ const HacBuild = (function () {
 
   return {
     CONSTRUCCIONES, tipo, esSuelo, esLinea, CATEGORIAS, categoriaDe, TAREAS, tareaDe, lugarDe, gridDims, slotsDesbloqueados, footprintDe, celdasOcupadas, edificioPrincipal,
-    dentroDeRejilla, colisiona, construccionEn, puedeColocar, patios, enMuro,
+    dentroDeRejilla, colisiona, construccionEn, puedeColocar, patios, enMuro, coste,
     construccionesValidas, normalizaMapa, MAX_TIER,
     ringDepth, costeExterior, esCeldaExterior, enExterior, COSTE_EXTERIOR,
     ROLES_PABELLON, rolPabellon, maxPabellones, MIN_PABELLON, regionPabellon, regionValidaPabellon, bonosPabellon, pctSinergia, pctSinergiaMil, DR_COPIA
