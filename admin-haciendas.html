@@ -172,7 +172,7 @@
 <script src="assets/js/hac-util.js?v=1"></script>
 <script src="assets/js/haciendas-data.js?v=11"></script>
 <script src="assets/js/hac-calc.js?v=7"></script>
-<script src="assets/js/hac-build.js?v=41"></script>
+<script src="assets/js/hac-build.js?v=42"></script>
 <script src="assets/js/hac-store.js?v=5"></script>
 <script src="assets/js/hac-tareas.js?v=2"></script>
 <script src="assets/js/personajes-data.js?v=2"></script>
@@ -242,10 +242,11 @@
   let boardMovePos = null; // [gx,gy] ancla del edificio en modo mover, null si inactivo
   let wallStart = null;  // [gx,gy] inicio de una muralla en línea (herramienta de muro)
   let deleteMode = false; // modo borrar: clic en una construcción la elimina al instante
-  let pabMode = false;   // modo delimitar pabellón: hover resalta el área cerrada
+  let pabMode = false;   // modo delimitar pabellón: ARRASTRA un rectángulo (≥100 tiles)
+  let pabDrag = null;    // celda de inicio [gx,gy] mientras se arrastra el rectángulo
   let boardHover = null; // última celda [gx,gy] bajo el cursor (persiste entre renders: al rotar con R el preview no desaparece)
   let detailView = 'tablero';   // vista activa del detalle: 'casa' | 'mecenas' | 'tablero' (se conserva entre renders)
-  let pabPending = null; // { cells:[[gx,gy],…] } área elegida pendiente de bautizar
+  let pabPending = null; pabDrag = null; // { cells:[[gx,gy],…] } área elegida pendiente de bautizar
   let tareaTipoSel = null; // tipo de edificio elegido en la pestaña «Tareas»
   // ── Estado de la pestaña «Personajes» ──
   let pjEditId = null;                                  // id en edición (null = creando)
@@ -449,7 +450,7 @@
       ? `<div class="adm-board-moving adm-board-del">Modo borrar — clic en una construcción para eliminarla <button type="button" class="adm-btn adm-btn-sm" id="btn-cancel-del">Salir</button></div>`
       : '';
     const boardTip = pabMode
-      ? 'Delimitar pabellón: pasa el ratón por un área cerrada por murallas interiores (resaltado verde = válida) y haz clic para ponerle nombre y rol. Esc para salir.'
+      ? 'Delimitar pabellón: arrastra un rectángulo de al menos 100 tiles (10×10, 5×20…). Verde = válido. Suelta para nombrarlo. Esc para salir.'
       : movingC
       ? 'Haz clic en una casilla libre para mover el edificio. Pulsa Esc o el botón Cancelar para salir del modo mover.'
       : deleteMode
@@ -458,13 +459,13 @@
       ? `${lineaNoun === 'camino' ? 'Camino' : 'Muro'} en línea: clic en el INICIO y luego clic en el FINAL (recto, sin diagonal) → se traza la hilera. Esc para cancelar.`
       : 'Pasa el ratón por la rejilla para ver la huella; haz clic en un edificio para moverlo; usa ✕ en la lista para quitarlo.';
 
-    // ── Pabellones (patios temáticos cerrados por murallas) ──
+    // ── Pabellones (patios temáticos (rectángulos ≥100 tiles)) ──
     const pabs = (window.HacStore && HacStore.pabellones) ? HacStore.pabellones(h.id) : [];
     const maxPab = B.maxPabellones(tier);
     const pabAtMax = pabs.length >= maxPab;
     const pabItems = pabs.map(p => {
       const r = B.rolPabellon(p.rol);
-      const cells = p.seed ? B.regionPabellon(h.mapa, tier, p.seed[0], p.seed[1]) : [];
+      const cells = B.regionDePabellon(p, tier);
       const lost = cells.length === 0;
       const meta = lost ? 'área perdida — mueve el muro o bórralo' : (cells.length + ' celdas · ' + (r ? r.nombre : p.rol));
       // Sinergia de ESTE pabellón: edificios de su dominio dentro → bono pasivo.
@@ -492,14 +493,14 @@
            <button type="button" class="adm-btn adm-btn-sm" id="btn-pab-cancel">Cancelar</button>
          </form>`
       : pabMode
-      ? `<div class="adm-board-moving adm-board-pab">⬚ Delimitar pabellón — pasa el ratón por un área cerrada por murallas y haz clic para nombrarla <button type="button" class="adm-btn adm-btn-sm" id="btn-pab-exit">Salir</button></div>`
+      ? `<div class="adm-board-moving adm-board-pab">⬚ Delimitar pabellón — arrastra un rectángulo de ≥100 tiles y suéltalo para nombrarlo <button type="button" class="adm-btn adm-btn-sm" id="btn-pab-exit">Salir</button></div>`
       : '';
     const pabSection = `
       <h3 class="adm-members-ttl adm-pab-head">Pabellones <span class="adm-board-hint">${pabs.length}/${maxPab} · nivel ${tier} · usa el modo «⬚ Pabellón» de la barra</span></h3>
-      <ul class="adm-pab-list">${pabItems || '<li class="adm-empty">Sin pabellones. Cierra un área con murallas interiores y usa el modo «⬚ Pabellón».</li>'}</ul>`;
+      <ul class="adm-pab-list">${pabItems || '<li class="adm-empty">Sin pabellones. Usa «⬚ Pabellón» y arrastra un rectángulo de ≥100 tiles.</li>'}</ul>`;
 
     const buildOn = !deleteMode && !pabMode && !muroMode && !movingC;
-    const bannerHTML = pabMode ? '<b>Delimitar pabellón</b> · clic dentro de un área cerrada por murallas para nombrarla.'
+    const bannerHTML = pabMode ? '<b>Delimitar pabellón</b> · arrastra un rectángulo de al menos 100 tiles (p. ej. 10×10 o 5×20) y nómbralo.'
       : movingC ? '<b>Mover</b> · clic en una casilla libre para soltar el edificio.'
       : deleteMode ? '<b>Borrar</b> · clic en una construcción para quitarla.'
       : muroMode ? `<b>${lineaNoun === 'camino' ? 'Camino' : 'Muralla'}</b> · clic en el inicio y luego en el final para trazar la hilera.`
@@ -809,7 +810,7 @@
         if (e.target.closest('input,textarea,select')) return;
         if (detailView !== 'tablero' || !selectedId) return;
         if (e.key === 'r' || e.key === 'R') { boardRot = (boardRot + 1) % 4; render(); }
-        else if (e.key === 'Escape') { deleteMode = false; pabMode = false; pabPending = null; boardMovePos = null; wallStart = null; render(); }
+        else if (e.key === 'Escape') { deleteMode = false; pabMode = false; pabPending = null; pabDrag = null; boardMovePos = null; wallStart = null; render(); }
       });
     }
 
@@ -966,7 +967,7 @@
 
       // Paleta de edificios (sustituye al <select>): elegir tipo de edificio.
       document.querySelectorAll('#adm-detail .adm-pal').forEach(b => b.addEventListener('click', () => {
-        boardTipo = b.dataset.tipo; wallStart = null; boardSel = null; deleteMode = false; pabMode = false; pabPending = null; boardMovePos = null; render();
+        boardTipo = b.dataset.tipo; wallStart = null; boardSel = null; deleteMode = false; pabMode = false; pabPending = null; pabDrag = null; boardMovePos = null; render();
       }));
       // Filtro de la paleta (oculta items sin re-render, para no perder el foco).
       const palSearch = document.getElementById('pal-search');
@@ -984,7 +985,7 @@
         const m = b.dataset.mode;
         if (m === 'del' || m === 'pab') return;   // los gestionan #btn-delmode / #btn-pabmode
         b.addEventListener('click', () => {
-          deleteMode = false; pabMode = false; pabPending = null; boardMovePos = null; wallStart = null; boardSel = null;
+          deleteMode = false; pabMode = false; pabPending = null; pabDrag = null; boardMovePos = null; wallStart = null; boardSel = null;
           if (m === 'wall') boardTipo = 'muralla';
           else if (m === 'build' && HacBuild.esLinea(boardTipo)) {
             const d = HacBuild.CONSTRUCCIONES.filter(t => t.tierMin <= tierNow && !HacBuild.esLinea(t.id) && HacBuild.categoriaDe(t.id) === 'edificio');
@@ -1055,7 +1056,7 @@
         // Tinte de pabellones ya delimitados.
         if (!pabMode) (window.HacStore && HacStore.pabellones ? HacStore.pabellones(h.id) : []).forEach(p => {
           if (!p.seed) return; const r = HacBuild.rolPabellon(p.rol);
-          HacBuild.regionPabellon(h.mapa, tierNow, p.seed[0], p.seed[1]).forEach(([rx, ry]) => { bx.fillStyle = withA(r ? r.color : '#888', 0.2); bx.fillRect(px(rx), py(ry), CELL, CELL); });
+          HacBuild.regionDePabellon(p, tierNow).forEach(([rx, ry]) => { bx.fillStyle = withA(r ? r.color : '#888', 0.2); bx.fillRect(px(rx), py(ry), CELL, CELL); });
         });
         // Muralla exterior (borde del recinto interior).
         if (ringD > 0) { const lx = px(0), ly = py(0), w = GW * STRIDE - GAP, hh = GH * STRIDE - GAP; bx.strokeStyle = '#9a4e36'; bx.lineWidth = 3; bx.strokeRect(lx - 1.5, ly - 1.5, w + 3, hh + 3); bx.lineWidth = 1; }
@@ -1084,7 +1085,11 @@
           ctx.drawImage(bg, 0, 0);
           if (pabMode) {
             if (pabPending) pabPending.cells.forEach(([rx, ry]) => fillCell(rx, ry, 'rgba(58,138,90,.34)'));
-            else if (hover) { const region = HacBuild.regionPabellon(h.mapa, tierNow, hover[0], hover[1]); const ok = HacBuild.regionValidaPabellon(h.mapa, tierNow, region); region.forEach(([rx, ry]) => fillCell(rx, ry, ok ? 'rgba(58,138,90,.34)' : 'rgba(170,60,50,.28)')); }
+            else if (pabDrag && hover) {
+              const rc = pabRect(pabDrag, hover), region = HacBuild.regionRect(rc.x, rc.y, rc.w, rc.h, tierNow);
+              const ok = HacBuild.regionValidaPabellon(h.mapa, tierNow, region) && !pabSolapa(region);
+              region.forEach(([rx, ry]) => fillCell(rx, ry, ok ? 'rgba(58,138,90,.34)' : 'rgba(170,60,50,.28)'));
+            }
             updateConfirm(); return;
           }
           if (muroMode) {
@@ -1136,6 +1141,24 @@
         repaint(boardHover);
 
         const toCell = (e) => { const r = canvas.getBoundingClientRect(); return cellFromXY((e.clientX - r.left) * (canvas.width / r.width), (e.clientY - r.top) * (canvas.height / r.height)); };
+        // Rectángulo entre dos celdas (esquinas) + solape con pabellones existentes.
+        const pabRect = (a, b) => ({ x: Math.min(a[0], b[0]), y: Math.min(a[1], b[1]), w: Math.abs(a[0] - b[0]) + 1, h: Math.abs(a[1] - b[1]) + 1 });
+        function pabSolapa(region) {
+          const occ = new Set();
+          (HacStore.pabellones(h.id) || []).forEach(p => HacBuild.regionDePabellon(p, tierNow).forEach(c => occ.add(c[0] + ',' + c[1])));
+          return region.some(c => occ.has(c[0] + ',' + c[1]));
+        }
+        // Delimitar pabellón = ARRASTRAR un rectángulo (≥100 tiles).
+        canvas.addEventListener('mousedown', (e) => { if (!pabMode || pabPending) return; const c = toCell(e); if (c) { pabDrag = c; e.preventDefault(); } });
+        window.addEventListener('mouseup', (e) => {
+          if (!pabMode || !pabDrag) return;
+          const c = toCell(e) || pabDrag, rc = pabRect(pabDrag, c); pabDrag = null;
+          const region = HacBuild.regionRect(rc.x, rc.y, rc.w, rc.h, tierNow);
+          if (!HacBuild.regionValidaPabellon(h.mapa, tierNow, region)) { alert('El pabellón debe tener al menos ' + HacBuild.MIN_PABELLON + ' tiles (p. ej. 10×10 o 5×20).'); repaint(boardHover); return; }
+          if (pabSolapa(region)) { alert('Se solapa con otro pabellón ya delimitado.'); repaint(boardHover); return; }
+          if (HacStore.pabellones(h.id).length >= HacBuild.maxPabellones(tierNow)) { alert('Has alcanzado el máximo de pabellones para este nivel.'); return; }
+          pabPending = { cells: region, seed: [rc.x, rc.y, rc.w, rc.h] }; render();
+        });
         canvas.addEventListener('mousemove', (e) => {
           coordTip.style.left = (e.clientX + 14) + 'px'; coordTip.style.top = (e.clientY + 16) + 'px';
           const cell = toCell(e);
@@ -1150,16 +1173,8 @@
         canvas.addEventListener('click', (e) => {
           const cell = toCell(e); if (!cell) return;
           const gx = cell[0], gy = cell[1];
-          // Modo delimitar pabellón.
-          if (pabMode) {
-            if (pabPending) return;
-            const region = HacBuild.regionPabellon(h.mapa, tierNow, gx, gy);
-            if (!HacBuild.regionValidaPabellon(h.mapa, tierNow, region)) { alert('Esa área no es válida: debe estar cerrada por murallas interiores y tener al menos ' + HacBuild.MIN_PABELLON + ' celdas.'); return; }
-            const inSet = new Set(region.map(c => c[0] + ',' + c[1]));
-            if (HacStore.pabellones(h.id).some(p => p.seed && inSet.has(p.seed[0] + ',' + p.seed[1]))) { alert('Aquí ya hay un pabellón delimitado.'); return; }
-            if (HacStore.pabellones(h.id).length >= HacBuild.maxPabellones(tierNow)) { alert('Has alcanzado el máximo de pabellones para este nivel.'); return; }
-            pabPending = { cells: region, seed: [gx, gy] }; render(); return;
-          }
+          // Modo delimitar pabellón: lo gestionan mousedown/mouseup (arrastrar rectángulo).
+          if (pabMode) return;
           const occ = cubre(gx, gy);
           if (occ) {
             if (deleteMode) {
@@ -1206,15 +1221,15 @@
 
       // Modo borrar: alternar / salir.
       const delBtn = document.getElementById('btn-delmode');
-      if (delBtn) delBtn.addEventListener('click', () => { deleteMode = !deleteMode; boardMovePos = null; wallStart = null; boardSel = null; pabMode = false; pabPending = null; render(); });
+      if (delBtn) delBtn.addEventListener('click', () => { deleteMode = !deleteMode; boardMovePos = null; wallStart = null; boardSel = null; pabMode = false; pabPending = null; pabDrag = null; render(); });
 
       // ── Delimitar pabellones ──
       const pabBtn = document.getElementById('btn-pabmode');
-      if (pabBtn) pabBtn.addEventListener('click', () => { pabMode = !pabMode; pabPending = null; deleteMode = false; boardMovePos = null; wallStart = null; boardSel = null; render(); });
+      if (pabBtn) pabBtn.addEventListener('click', () => { pabMode = !pabMode; pabPending = null; pabDrag = null; deleteMode = false; boardMovePos = null; wallStart = null; boardSel = null; render(); });
       const pabExit = document.getElementById('btn-pab-exit');
-      if (pabExit) pabExit.addEventListener('click', () => { pabMode = false; pabPending = null; render(); });
+      if (pabExit) pabExit.addEventListener('click', () => { pabMode = false; pabPending = null; pabDrag = null; render(); });
       const pabCancel = document.getElementById('btn-pab-cancel');
-      if (pabCancel) pabCancel.addEventListener('click', () => { pabPending = null; render(); });   // sigue en modo delimitar
+      if (pabCancel) pabCancel.addEventListener('click', () => { pabPending = null; pabDrag = null; render(); });   // sigue en modo delimitar
       const formPab = document.getElementById('form-pab');
       if (formPab) formPab.addEventListener('submit', (e) => {
         e.preventDefault();
@@ -1225,7 +1240,7 @@
         const id = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : (uid() + '-' + uid());
         HacStore.addPabellon({ id, haciendaId: h.id, nombre, rol, seed: pabPending.seed })
           .catch(onWriteError('crear el pabellón'));
-        pabPending = null; pabMode = false; render();
+        pabPending = null; pabDrag = null; pabMode = false; render();
       });
       document.querySelectorAll('#adm-detail .adm-pab-del').forEach(b =>
         b.addEventListener('click', () => {
@@ -1946,7 +1961,7 @@
   // Esc cancela el modo mover desde cualquier punto.
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
-    if (pabPending) { pabPending = null; render(); }
+    if (pabPending) { pabPending = null; pabDrag = null; render(); }
     else if (pabMode) { pabMode = false; render(); }
     else if (boardMovePos) { boardMovePos = null; render(); }
     else if (wallStart) { wallStart = null; render(); }

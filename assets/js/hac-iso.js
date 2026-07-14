@@ -514,10 +514,10 @@ const HacIso = (function () {
     // La región se recalcula EN VIVO desde la celda-semilla (se adapta a los
     // muros). El NOMBRE se muestra al pasar el ratón (tooltip en la página, vía
     // HacIso.cellAt), no como etiqueta fija, para no recargar la finca.
-    const pabList = (B && typeof B.regionPabellon === 'function' && Array.isArray(opts.pabellones)) ? opts.pabellones : [];
+    const pabList = (B && typeof B.regionDePabellon === 'function' && Array.isArray(opts.pabellones)) ? opts.pabellones : [];
     pabList.forEach(p => {
       if (!p || !Array.isArray(p.seed)) return;
-      const region = B.regionPabellon(opts.mapa, tier, p.seed[0], p.seed[1]);
+      const region = B.regionDePabellon(p, tier);
       if (!region.length) return;
       const r = B.rolPabellon(p.rol), col = r ? r.color : casa, cc = hexToRgb(col);
       const fill = 'rgba(' + cc[0] + ',' + cc[1] + ',' + cc[2] + ',0.17)';

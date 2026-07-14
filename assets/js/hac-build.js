@@ -346,7 +346,7 @@ const HacBuild = (function () {
   // Nº máximo de pabellones por nivel (contenido: pocos y relevantes).
   const PAB_POR_TIER = [1, 1, 2, 2, 3, 3];
   const maxPabellones = (tier) => PAB_POR_TIER[clampTier(tier) - 1] || 1;
-  const MIN_PABELLON = 6;       // celdas mínimas para poder bautizar un patio
+  const MIN_PABELLON = 100;     // tiles mínimos de un pabellón (p.ej. 10×10, 5×20)
 
   // Celdas ocupadas por MUROS interiores (muralla + portón): frontera del patio.
   function murosInternosSet(mapa) {
@@ -358,44 +358,27 @@ const HacBuild = (function () {
   // Región CERRADA que contiene (sx,sy): inunda en 4 direcciones sin cruzar muros
   // interiores ni el borde de la rejilla. Los edificios SÍ son interior del patio.
   // Devuelve [[gx,gy],…] (vacío si la semilla cae sobre un muro o fuera).
-  function regionPabellon(mapa, tier, sx, sy) {
-    const dims = gridDims(tier), GW = dims[0], GH = dims[1];
-    sx = Math.floor(sx); sy = Math.floor(sy);
-    if (sx < 0 || sy < 0 || sx >= GW || sy >= GH) return [];
-    const muros = murosInternosSet(mapa);
-    if (muros.has(sx + ',' + sy)) return [];
-    const seen = new Set([sx + ',' + sy]), out = [[sx, sy]], stack = [[sx, sy]];
-    while (stack.length) {
-      const cur = stack.pop(), x = cur[0], y = cur[1];
-      const vec = [[x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]];
-      for (let i = 0; i < 4; i++) {
-        const nx = vec[i][0], ny = vec[i][1];
-        if (nx < 0 || ny < 0 || nx >= GW || ny >= GH) continue;
-        const k = nx + ',' + ny;
-        if (seen.has(k) || muros.has(k)) continue;
-        seen.add(k); out.push([nx, ny]); stack.push([nx, ny]);
-      }
-    }
+  // Región de un pabellón = RECTÁNGULO delimitado a mano `seed=[x,y,w,h]` (mín. 100
+  // tiles). Ya NO depende de murallas ni flood-fill. Se recorta a la rejilla del tier.
+  function regionRect(x, y, w, h, tier) {
+    const dims = gridDims(tier), GW = dims[0], GH = dims[1], out = [];
+    x = Math.floor(x); y = Math.floor(y); w = Math.max(1, Math.floor(w)); h = Math.max(1, Math.floor(h));
+    for (let cy = Math.max(0, y); cy < Math.min(GH, y + h); cy++)
+      for (let cx = Math.max(0, x); cx < Math.min(GW, x + w); cx++) out.push([cx, cy]);
     return out;
+  }
+  // Región de un pabellón `p` (usa su seed [x,y,w,h]). [] si aún no está delimitado.
+  function regionDePabellon(p, tier) {
+    const s = p && p.seed;
+    return (Array.isArray(s) && s.length >= 4) ? regionRect(s[0], s[1], s[2], s[3], tier) : [];
   }
   // ¿La región vale como pabellón? Tamaño mínimo, no es toda la finca y está
   // realmente delimitada por al menos un muro interior contiguo.
+  // Válido = rectángulo de al menos MIN_PABELLON tiles y que no acapara toda la finca.
   function regionValidaPabellon(mapa, tier, cells) {
     if (!cells || cells.length < MIN_PABELLON) return false;
-    const dims = gridDims(tier), GW = dims[0], GH = dims[1];
-    if (cells.length >= GW * GH) return false;
-    const muros = murosInternosSet(mapa);
-    if (!muros.size) return false;
-    // El "sobrante" exterior toca los 4 bordes de la rejilla → no es un patio.
-    let bL = false, bR = false, bT = false, bB = false, tocaMuro = false;
-    for (let i = 0; i < cells.length; i++) {
-      const x = cells[i][0], y = cells[i][1];
-      if (x === 0) bL = true; if (x === GW - 1) bR = true;
-      if (y === 0) bT = true; if (y === GH - 1) bB = true;
-      if (!tocaMuro && (muros.has((x + 1) + ',' + y) || muros.has((x - 1) + ',' + y) || muros.has(x + ',' + (y + 1)) || muros.has(x + ',' + (y - 1)))) tocaMuro = true;
-    }
-    if (bL && bR && bT && bB) return false;
-    return tocaMuro;
+    const dims = gridDims(tier);
+    return cells.length < dims[0] * dims[1];
   }
 
   // ── SINERGIA DE PABELLÓN ───────────────────────────────────────────────────
@@ -416,8 +399,7 @@ const HacBuild = (function () {
     const aportan = [];
     (pabellones || []).forEach(p => {
       const rol = p && p.rol; if (!rol || !(rol in sin)) return;
-      const seed = (p && p.seed) || [0, 0];
-      const cells = new Set(regionPabellon(mapa, tier, seed[0], seed[1]).map(c => c[0] + ',' + c[1]));
+      const cells = new Set(regionDePabellon(p, tier).map(c => c[0] + ',' + c[1]));
       if (!cells.size) return;
       cons.forEach(c => {
         const t = tipo(c && c.tipo); if (!t || t.dominio !== rol || !Array.isArray(c.pos)) return;
@@ -567,7 +549,7 @@ const HacBuild = (function () {
     dentroDeRejilla, colisiona, construccionEn, puedeColocar, patios, enMuro, coste,
     construccionesValidas, normalizaMapa, MAX_TIER,
     ringDepth, costeExterior, esCeldaExterior, enExterior, COSTE_EXTERIOR,
-    ROLES_PABELLON, rolPabellon, maxPabellones, MIN_PABELLON, regionPabellon, regionValidaPabellon, bonosPabellon, pctSinergia, pctSinergiaMil, DR_COPIA
+    ROLES_PABELLON, rolPabellon, maxPabellones, MIN_PABELLON, regionRect, regionDePabellon, regionValidaPabellon, bonosPabellon, pctSinergia, pctSinergiaMil, DR_COPIA
   };
 })();
 

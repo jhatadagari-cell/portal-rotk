@@ -136,7 +136,7 @@
       const pabPorCelda = {};
       if (window.HacBuild) pabellones.forEach(p => {
         if (!Array.isArray(p.seed)) return;
-        HacBuild.regionPabellon(h.mapa, tier, p.seed[0], p.seed[1]).forEach(([gx, gy]) => { pabPorCelda[gx + ',' + gy] = p; });
+        HacBuild.regionDePabellon(p, tier).forEach(([gx, gy]) => { pabPorCelda[gx + ',' + gy] = p; });
       });
       enablePabHover(vp, iso, pabPorCelda);
     }
@@ -5114,11 +5114,11 @@
     }
     // ¿Qué pabellón contiene la celda (gx,gy)? (región flood-fill desde su semilla).
     function pabEnCelda(gx, gy) {
-      if (!window.HacStore || !window.HacBuild || !HacBuild.regionPabellon) return null;
+      if (!window.HacStore || !window.HacBuild || !HacBuild.regionDePabellon) return null;
       const pabs = HacStore.pabellones(h.id) || [];
       for (const p of pabs) {
         if (!Array.isArray(p.seed)) continue;
-        if (HacBuild.regionPabellon(h.mapa, tier, p.seed[0], p.seed[1]).some(c => c[0] === gx && c[1] === gy)) return p;
+        if (HacBuild.regionDePabellon(p, tier).some(c => c[0] === gx && c[1] === gy)) return p;
       }
       return null;
     }
@@ -5132,7 +5132,7 @@
     function pabSinergia(rol) {
       const pabs = (window.HacStore && HacStore.pabellones) ? HacStore.pabellones(h.id) : [];
       const p = pabs.find(x => x.rol === rol); if (!p || !Array.isArray(p.seed)) return 0;
-      const reg = new Set(HacBuild.regionPabellon(h.mapa, tier, p.seed[0], p.seed[1]).map(c => c[0] + ',' + c[1]));
+      const reg = new Set(HacBuild.regionDePabellon(p, tier).map(c => c[0] + ',' + c[1]));
       let s = 0; ((h.mapa && h.mapa.construcciones) || []).forEach(c => { const t = HacBuild.tipo(c.tipo); if (t && t.dominio === rol && reg.has(c.pos[0] + ',' + c.pos[1])) s += t.restringido ? 2 : 1; });
       return s;
     }
@@ -5228,7 +5228,7 @@
       const yoM = miembros.find(m => String(m.personajeId) === String(myId));
       const yoEnEste = !!(yoM && yoM.pabellon === rol);
       // Sinergia: edificios del dominio dentro de la región (los de CLASE cuentan doble).
-      const reg = Array.isArray(p.seed) ? HacBuild.regionPabellon(h.mapa, tier, p.seed[0], p.seed[1]) : [];
+      const reg = Array.isArray(p.seed) ? HacBuild.regionDePabellon(p, tier) : [];
       const regSet = new Set(reg.map(c => c[0] + ',' + c[1]));
       let sin = 0; ((h.mapa && h.mapa.construcciones) || []).forEach(c => { const t = HacBuild.tipo(c.tipo); if (t && t.dominio === rol && regSet.has(c.pos[0] + ',' + c.pos[1])) sin += t.restringido ? 2 : 1; });
       const pct = Math.min(15, sin * 3);
