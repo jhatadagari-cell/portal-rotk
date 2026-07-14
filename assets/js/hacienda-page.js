@@ -2420,7 +2420,7 @@
       const statCapPos = 0.18 + (6 - difC) * 0.06;                                 // dif1 → +48 pts · dif4 → +30 · dif6 → +18
       const statRaw = (bandFuerza(b) - 1) * 0.26;                                  // aptitudes de la banda vs objetivo
       const stat = Math.max(-0.22, Math.min(statCapPos, statRaw));                 // suelo −22 fijo; tope según dificultad
-      const compania = Math.min(0.06, Math.max(0, nM - 2) * 0.03);                 // más mecenas = más manos (desde el 3.º)
+      const compania = Math.min(0.06, Math.max(0, nM - 1) * 0.02);                 // cada compañero suma (desde el 2.º), +2 pts c/u hasta +6
       const raw = base + stat + compania + rb.pMod + capBonus;
       return { pct: Math.max(0.05, Math.min(0.90, raw)), base: base, stat: stat, statTope: statRaw > statCapPos, statPiso: statRaw < -0.22, compania: compania, companiaTope: compania >= 0.06, suc: 0, rel: rb.pMod, cap: capBonus, nM: nM };
     }
@@ -2433,14 +2433,14 @@
       const tope = (on) => on ? ' <i class="hacp-esc-tope">tope</i>' : '';
       const rows = [`<li><span>Base · dificultad</span><b>${Math.round(p.base * 100)}%</b></li>`,
         `<li><span>Aptitudes de la banda</span><b class="${cls(p.stat)}">${mod(p.stat)}${tope(p.statTope || p.statPiso)}</b></li>`];
-      // Compañía: SIEMPRE visible (aunque sea +0) para que se vea que arranca en el 3.er mecenas.
-      rows.push(`<li class="${p.compania ? '' : 'nil'}"><span>Compañía · ${p.nM} mecenas${p.nM < 3 ? ' <em>(desde el 3.º)</em>' : ''}</span><b class="${cls(p.compania)}">${mod(p.compania)}${tope(p.companiaTope)}</b></li>`);
+      // Compañía: SIEMPRE visible (aunque sea +0) para que se vea que cada compañero suma.
+      rows.push(`<li class="${p.compania ? '' : 'nil'}"><span>Compañía · ${p.nM} mecenas${p.nM < 2 ? ' <em>(recluta compañeros)</em>' : ''}</span><b class="${cls(p.compania)}">${mod(p.compania)}${tope(p.companiaTope)}</b></li>`);
       if (p.suc) rows.push(`<li><span>Doctrina y sucesos</span><b class="${cls(p.suc)}">${mod(p.suc)}</b></li>`);
       if (p.rel) rows.push(`<li><span>Vínculos entre mecenas</span><b class="${cls(p.rel)}">${mod(p.rel)}</b></li>`);
       if (p.cap) rows.push(`<li><span>Talento del capitán</span><b class="pos">${mod(p.cap)}</b></li>`);
       // El consejo se adapta: si ya estás al tope de aptitudes, reclutar más NO sube esa línea.
       const tip = p.statTope
-        ? 'Tus aptitudes ya superan de sobra el requisito (al tope). Suma un 3.er mecenas para el bono de compañía.'
+        ? 'Tus aptitudes ya superan de sobra el requisito (al tope). Suma más mecenas: cada compañero aporta al bono de compañía (hasta +6).'
         : 'Recluta mecenas con la aptitud pedida para subir «aptitudes de la banda».';
       return `<details class="hacp-esc-desglose"><summary>¿Cómo se calcula el éxito?</summary><ul>${rows.join('')}<li class="hacp-esc-desglose-tip">${tip}</li></ul></details>`;
     }
