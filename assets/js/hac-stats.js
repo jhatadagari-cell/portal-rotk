@@ -144,6 +144,30 @@ const HacStats = (function () {
     const simple = !(m.xp && typeof m.xp === 'object');
     return { ok: true, ganado, dom: simple ? m.dom : null, xp: simple ? (m.xp || 0) : null };
   }
+  // COME una vitualla de la mochila (raciones, té, vino y carne): la consume y
+  // devuelve cuánta energía da. La energía la suma quien llama (HacEnergia vive
+  // por hacienda, no aquí). {ok, energia, motivo}.
+  function comerItem(mid, id) {
+    const it = window.HacTienda ? HacTienda.get(id) : null;
+    const en = it && it.efecto && it.efecto.energia;
+    if (!en) return { ok: false, motivo: 'No es comida' };
+    const r = ensure(mid);
+    if (!quita(r.inv, id)) return { ok: false, motivo: 'No lo llevas en la mochila' };
+    persist(r);
+    return { ok: true, energia: en };
+  }
+  // Usa una AMPLIACIÓN de mochila (alforja) que llevas encima: +cap ranuras y se
+  // consume. Comprada en el mercado el efecto es inmediato, pero como botín cae a
+  // la mochila y hay que usarla. {ok, cap, motivo}.
+  function usarAmpliacion(mid, id) {
+    const it = window.HacTienda ? HacTienda.get(id) : null;
+    const cap = it && it.efecto && it.efecto.capInv;
+    if (!cap) return { ok: false, motivo: 'No amplía la mochila' };
+    const r = ensure(mid);
+    if (!quita(r.inv, id)) return { ok: false, motivo: 'No lo llevas en la mochila' };
+    r.cap += cap; persist(r);
+    return { ok: true, cap: r.cap };
+  }
   // Abre la «Recompensa semanal» del señor: la consume y suma +10% de la XP ACTUAL
   // de cada aptitud (con un suelo para que valga la pena a nivel bajo). {ok, ganado:{dom:xp}}.
   function abrirRecompensaSemanal(mid) {
@@ -361,13 +385,14 @@ const HacStats = (function () {
   }
 
   // Compra de un artículo del mercado: descuenta dinero y aplica el efecto en una
-  // sola escritura (XP / ampliación de inventario / objeto guardado). La energía
-  // (comida) la añade quien llama vía HacEnergia. Devuelve {ok, motivo}.
+  // sola escritura (XP / ampliación de inventario / objeto guardado). Devuelve {ok, motivo}.
   function comprar(mid, item, precioOverride) {
     if (!mid || !item) return { ok: false, motivo: 'Artículo inválido' };
     const r = ensure(mid), ef = item.efecto || {};
     const precio = (precioOverride != null) ? Math.max(0, precioOverride | 0) : item.precio;   // descuento del mercado (政)
-    const aInv = ef.guardable || ef.equip || ef.manual;   // objetos, equipables y manuales van a la MOCHILA
+    // La COMIDA también va a la mochila (se come cuando hace falta, desde la ficha
+    // del objeto): comprarla con la energía llena ya no tira el dinero.
+    const aInv = ef.guardable || ef.equip || ef.manual || ef.energia;
     if (r.dinero < precio) return { ok: false, motivo: 'No tienes suficiente dinero' };
     if (aInv && ocupadas(mid) >= r.cap) return { ok: false, motivo: 'Inventario lleno' };
     r.dinero -= precio;
@@ -493,6 +518,6 @@ const HacStats = (function () {
   function encargosHechos(mid, dia) { const p = prodObj(mid); if (p.encargos.dia !== dia) { p.encargos.dia = dia; p.encargos.hechos = []; } return p.encargos.hechos.slice(); }
   function marcarEncargo(mid, dia, id) { const p = prodObj(mid); if (p.encargos.dia !== dia) { p.encargos.dia = dia; p.encargos.hechos = []; } if (p.encargos.hechos.indexOf(id) < 0) { p.encargos.hechos.push(id); persist(ensure(mid)); } }
 
-  return { ready, reload, dinero, ahorro, casaPos, casasReclamadas, duenoDeCasa, comprarCasa, liberarCasa, abandonar, heridas, penHerida, malherido, herir, curar, secuelas, tieneSecuela, escaramuzaCd, bonusDinero, bonusExped, bonusPrestigio, bonusAntirrobo, usarManual, abrirRecompensaSemanal, xp, nivel, progresoNivel, bonus, nivelTotal, nivelPersonaje, setNiveles, puntosTalento, talentos, puntosGastados, puntosLibres, tieneTalento, aprenderTalento, equipados, equipar, desequipar, slotDe, MAX_EQUIP, bonusPct, bonusPctNiveles, torsoViste, vestir, otorgarArmaInicial, award, comprar, guardar, sacar, darItem, quitarItem, meterEnCasa, sacarDeCasa, inventario, casaInventario, capInventario, ocupadas, recompensaExped, caballo, tieneCaballo, comprarCaballo, venderItem, ventaCd, ventaEnfriada, ventaCdRestanteMs, enfriarVenta, bonusRegateo, recursos, recursoTotal, recursoDesdeCal, addLote, quitaRecurso, quitaCal, oficioNivel, subirOficio, recolectarRenta, rentaPendiente, encargosHechos, marcarEncargo, DOMS, dbOk: () => ok, TABLE };
+  return { ready, reload, dinero, ahorro, casaPos, casasReclamadas, duenoDeCasa, comprarCasa, liberarCasa, abandonar, heridas, penHerida, malherido, herir, curar, secuelas, tieneSecuela, escaramuzaCd, bonusDinero, bonusExped, bonusPrestigio, bonusAntirrobo, usarManual, comerItem, usarAmpliacion, abrirRecompensaSemanal, xp, nivel, progresoNivel, bonus, nivelTotal, nivelPersonaje, setNiveles, puntosTalento, talentos, puntosGastados, puntosLibres, tieneTalento, aprenderTalento, equipados, equipar, desequipar, slotDe, MAX_EQUIP, bonusPct, bonusPctNiveles, torsoViste, vestir, otorgarArmaInicial, award, comprar, guardar, sacar, darItem, quitarItem, meterEnCasa, sacarDeCasa, inventario, casaInventario, capInventario, ocupadas, recompensaExped, caballo, tieneCaballo, comprarCaballo, venderItem, ventaCd, ventaEnfriada, ventaCdRestanteMs, enfriarVenta, bonusRegateo, recursos, recursoTotal, recursoDesdeCal, addLote, quitaRecurso, quitaCal, oficioNivel, subirOficio, recolectarRenta, rentaPendiente, encargosHechos, marcarEncargo, DOMS, dbOk: () => ok, TABLE };
 })();
 if (typeof window !== 'undefined') window.HacStats = HacStats;

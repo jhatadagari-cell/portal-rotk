@@ -171,7 +171,7 @@ const HacTienda = (function () {
   const NOM = { militar: 'Militar', cultural: 'Cultural', administrativo: 'Administrativo' };
   function efectoTexto(item) {
     const e = item.efecto || {};
-    if (e.energia) return `+${e.energia} de energía ⚡`;
+    if (e.energia) return `Comestible · +${e.energia} de energía ⚡`;
     if (e.equip) {
       const parts = [];
       Object.keys(e.equip).forEach(d => {

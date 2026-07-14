@@ -3451,18 +3451,22 @@
       const slots = Array.from({ length: cap }, (_, i) => {
         const def = flat[i];
         if (!def) return '<div class="hacp-slot"></div>';
-        if (def.tipo === 'recompensa' && d.mine) {   // Recompensa del señor: botón «abrir» (+10% XP ×3)
-          return `<button type="button" class="hacp-slot full recompensa" data-abrir="${esc(def.id)}" title="${esc(def.nombre)} · toca para ABRIR (+10% XP en tus tres aptitudes)">${def.icon || '🎁'}<span class="hacp-slot-xp" style="color:#e7c66a">abrir</span></button>`;
-        }
-        const man = def.efecto && def.efecto.manual;
-        if (man && d.mine) {
+        if (!d.mine) return `<div class="hacp-slot full${def.raro ? ' rare' : ''}" title="${esc(def.nombre)} ${esc(def.zh || '')}${def.raro ? ' · RARO' : ''}">${def.icon || '∎'}</div>`;
+        // MÍO: cada ranura abre la FICHA del objeto (qué es, qué hace y qué puedes
+        // hacer con él). En móvil no hay hover, así que el `title` no bastaba.
+        const e = def.efecto || {};
+        let tag = '', cls = '';
+        if (e.energia) { tag = `<span class="hacp-slot-xp" style="color:#7fc9a0">+${e.energia}⚡</span>`; cls = ' comida'; }
+        else if (e.manual) {
           // XP de un dominio (manuales clásicos) o de VARIOS (libros de conclusiones → xp es un mapa).
-          // La etiqueta va SIN chino (el glifo confundía): "+N XP" y el dominio en el tooltip/diálogo.
-          const map = man.xp && typeof man.xp === 'object', dks = map ? Object.keys(man.xp) : [man.dom];
-          const val = map ? man.xp[dks[0]] : man.xp, col = map ? 'var(--gold)' : (DOM_COLOR[man.dom] || 'var(--gold)');
-          return `<button type="button" class="hacp-slot full manual" data-usar="${esc(def.id)}" title="${esc(def.nombre)} · toca para usar (${esc(HacTienda.efectoTexto(def))})">${def.icon || '∎'}<span class="hacp-slot-xp" style="color:${col}">+${val} XP</span></button>`;
-        }
-        return `<div class="hacp-slot full${def.raro ? ' rare' : ''}" title="${esc(def.nombre)} ${esc(def.zh || '')}${def.raro ? ' · RARO' : ''}">${def.icon || '∎'}</div>`;
+          // La etiqueta va SIN chino (el glifo confundía): "+N XP" y el dominio en la ficha.
+          const map = e.manual.xp && typeof e.manual.xp === 'object', dks = map ? Object.keys(e.manual.xp) : [e.manual.dom];
+          const val = map ? e.manual.xp[dks[0]] : e.manual.xp, col = map ? 'var(--gold)' : (DOM_COLOR[e.manual.dom] || 'var(--gold)');
+          tag = `<span class="hacp-slot-xp" style="color:${col}">+${val} XP</span>`; cls = ' manual';
+        } else if (def.tipo === 'recompensa') { tag = '<span class="hacp-slot-xp" style="color:#e7c66a">abrir</span>'; cls = ' recompensa'; }
+        else if (e.capInv) tag = `<span class="hacp-slot-xp" style="color:#c9a84c">+${e.capInv} 🎒</span>`;
+        else if (e.equip) tag = '<span class="hacp-slot-xp hacp-slot-eq">equipar</span>';
+        return `<button type="button" class="hacp-slot full act${cls}${def.raro ? ' rare' : ''}" data-item="${esc(def.id)}" title="${esc(def.nombre)} · toca para ver qué hace">${def.icon || '∎'}${tag}</button>`;
       }).join('');
       const canStore = hasHome && d.mine && d.money > 0;
       const canTake = hasHome && d.mine && d.ahorro > 0;
@@ -3491,6 +3495,95 @@
     // Botón para abrir la tienda, solo si la finca tiene un mercado construido.
     function marketBtnHTML() {
       return hasMarket ? `<button type="button" class="hacp-cp-btn hacp-cp-shop" data-act="shop">市 Comprar en el mercado</button>` : '';
+    }
+    // ── FICHA DE OBJETO (tocas una ranura de la mochila) ──────────────────────
+    //   En móvil no hay hover: el `title` de la ranura era invisible y los objetos
+    //   parecían inertes. Al tocar uno se abre esta ficha: qué es, qué hace y TODO
+    //   lo que puedes hacer con él (comer, estudiar, equipar, guardar en casa).
+    let objEl = null;
+    const TIPO_NOMBRE = { comida: 'Vitualla', equipo: 'Equipable', arma: 'Arma', manual: 'Consumible', inventario: 'Alforja', mascota: 'Compañía', recompensa: 'Presente', caballo: 'Montura' };
+    function ensureObjEl() {
+      if (objEl) return objEl;
+      objEl = document.createElement('div');
+      objEl.className = 'hacp-shop hacp-obj-ov'; objEl.id = 'hacp-obj'; objEl.hidden = true;
+      overlayHost().appendChild(objEl);
+      ['pointerdown', 'pointerup', 'wheel', 'click'].forEach(ev => objEl.addEventListener(ev, (e) => e.stopPropagation(), { passive: false }));
+      objEl.addEventListener('click', (e) => { if (e.target === objEl) cerrarObjeto(); });
+      return objEl;
+    }
+    function cerrarObjeto() { if (objEl) objEl.hidden = true; }
+    function abrirObjeto(id) {
+      const def = window.HacTienda ? HacTienda.get(id) : null;
+      if (!def || !myId || !window.HacStats) return;
+      const el = ensureObjEl();
+      const e = def.efecto || {};
+      const E = window.HacEnergia;
+      const eNow = E ? Math.round(E.current(h.id, myId)) : 100, eMax = E ? E.MAX : 100;
+      const lleno = eNow >= eMax;
+      const equipable = !!HacTienda.equipBonus(id);
+      const reqNo = equipable ? reqNoCumplido(def) : null;
+      const it = HacStats.inventario(myId).find(x => x.id === id);
+      const n = it ? (it.n || 1) : 1;
+      const tieneCasa = !!miCasa(myId);
+      const acts = [];
+      if (e.energia) {
+        acts.push(`<button type="button" class="hacp-cp-btn hacp-cp-go" data-oact="comer"${lleno ? ' disabled' : ''}>🍚 Comer · +${e.energia} ⚡</button>`);
+      }
+      if (e.manual) acts.push(`<button type="button" class="hacp-cp-btn hacp-cp-go" data-oact="usar">📖 ${def.calidad ? 'Usar el libro' : 'Estudiar'}</button>`);
+      if (def.tipo === 'recompensa') acts.push('<button type="button" class="hacp-cp-btn hacp-cp-go" data-oact="abrir">🎁 Abrir el presente</button>');
+      if (e.capInv) acts.push(`<button type="button" class="hacp-cp-btn hacp-cp-go" data-oact="alforja">🎒 Usar · +${e.capInv} ranuras</button>`);
+      if (equipable) acts.push(`<button type="button" class="hacp-cp-btn hacp-cp-go" data-oact="equipar"${reqNo ? ' disabled' : ''}>⚔ Equipar</button>`);
+      if (tieneCasa) acts.push('<button type="button" class="hacp-cp-btn" data-oact="casa">🏠 Guardar en casa</button>');
+      // Avisos honestos de por qué un botón está apagado / qué NO hace el objeto.
+      const notas = [];
+      if (e.energia && lleno) notas.push('Tu energía ya está al máximo: guárdalo para cuando la necesites.');
+      if (reqNo) notas.push(`Para empuñarla necesitas ${DOM_GLYPH[reqNo] || reqNo} ${DOM_NOMBRE[reqNo] || reqNo} ${def.req[reqNo]}.`);
+      if (!acts.length) notas.push('Es una pieza de colección: ocupa una ranura y no se usa. Puedes venderla en el mercado.');
+      else notas.push('También puedes venderlo en el 市 Mercado (pestaña «Vender»).');
+      const tipo = TIPO_NOMBRE[def.tipo] || 'Objeto';
+      el.innerHTML = `
+        <div class="hacp-shop-box hacp-obj-box">
+          <button type="button" class="hacp-shop-x" data-oact="cerrar" aria-label="Cerrar">✕</button>
+          <div class="hacp-obj-head">
+            <span class="hacp-obj-ic${def.raro ? ' rare' : ''}">${def.icon || '∎'}</span>
+            <div>
+              <div class="hacp-obj-nm">${esc(def.nombre)}${n > 1 ? ` <span class="hacp-obj-n">×${n}</span>` : ''}</div>
+              <div class="hacp-obj-sub">${esc(def.zh || '')} · ${tipo}${def.raro ? ' · <b class="rare">RARO</b>' : ''}</div>
+            </div>
+          </div>
+          <div class="hacp-obj-ef">${esc(HacTienda.efectoTexto(def) || 'Sin efecto')}</div>
+          <p class="hacp-obj-desc">${esc(def.desc || '')}</p>
+          ${e.energia ? `<div class="hacp-obj-ener">⚡ Energía ahora: <b>${eNow}%</b> de ${eMax}%</div>` : ''}
+          <div class="hacp-obj-acts">${acts.join('')}</div>
+          ${notas.map(t => `<div class="hacp-inv-note">${t}</div>`).join('')}
+        </div>`;
+      el.hidden = false;
+      el.querySelectorAll('[data-oact]').forEach(b => b.addEventListener('click', () => {
+        const a = b.dataset.oact;
+        if (a === 'cerrar') { cerrarObjeto(); return; }
+        if (a === 'comer') { comerUI(id); return; }
+        if (a === 'usar') { cerrarObjeto(); usarManualUI(id); return; }
+        if (a === 'abrir') { cerrarObjeto(); abrirRecompensaUI(id); return; }
+        if (a === 'alforja') { const r = HacStats.usarAmpliacion(myId, id); toast(r.ok ? `🎒 Mochila ampliada · ${r.cap} ranuras` : (r.motivo || 'No se pudo usar')); cerrarObjeto(); if (charId) buildCharPanel(charId); return; }
+        if (a === 'equipar') { const r = HacStats.equipar(myId, id); toast(r.ok ? `⚔ ${def.nombre} equipado` : (r.motivo || 'No se pudo equipar')); if (r.ok) cerrarObjeto(); if (charId) buildCharPanel(charId); return; }
+        if (a === 'casa') { const r = HacStats.meterEnCasa(myId, id); toast(r.ok ? `🏠 ${def.nombre} guardado en casa` : (r.motivo || 'No se pudo guardar')); cerrarObjeto(); if (charId) buildCharPanel(charId); }
+      }));
+    }
+    // COMER una vitualla de la mochila: la consume y suma su energía (topada al máx).
+    function comerUI(id) {
+      const def = window.HacTienda ? HacTienda.get(id) : null;
+      const en = def && def.efecto && def.efecto.energia;
+      if (!en || !myId || !window.HacStats || !HacStats.comerItem) return;
+      const E = window.HacEnergia;
+      const antes = E ? Math.round(E.current(h.id, myId)) : 0;
+      if (E && antes >= E.MAX) { toast('⚡ Ya estás a plena energía · guárdalo para luego'); return; }
+      const r = HacStats.comerItem(myId, id);
+      if (!r.ok) { toast(r.motivo || 'No se pudo comer'); return; }
+      const gan = E ? Math.min(en, E.MAX - antes) : en;
+      cerrarObjeto();
+      toast(`${def.icon || '🍚'} ${def.nombre} · +${gan} ⚡`);
+      if (window.HacBitacora) HacBitacora.log(myId, 'progreso', `🍚 Comiste ${def.nombre} · +${gan} de energía`);
+      Promise.resolve(E ? E.add(h.id, myId, en) : null).then(() => { if (charId) buildCharPanel(charId); });
     }
     // Usa un MANUAL de la mochila (+XP fija a su dominio, se consume).
     function usarManualUI(id) {
@@ -3871,8 +3964,7 @@
       if (shb) shb.addEventListener('click', openShop);
       const pdb = charEl.querySelector('[data-act="prod"]');
       if (pdb) pdb.addEventListener('click', openProd);
-      charEl.querySelectorAll('[data-usar]').forEach(b => b.addEventListener('click', () => usarManualUI(b.dataset.usar)));
-      charEl.querySelectorAll('[data-abrir]').forEach(b => b.addEventListener('click', () => abrirRecompensaUI(b.dataset.abrir)));
+      charEl.querySelectorAll('[data-item]').forEach(b => b.addEventListener('click', () => abrirObjeto(b.dataset.item)));
       const gh = charEl.querySelector('[data-act="gohome"]');
       if (gh) gh.addEventListener('click', openHome);
       const escb = charEl.querySelector('[data-act="esc"]');
@@ -4071,8 +4163,10 @@
       }
       const res = HacStats.comprar(myId, item, precioMercado(item));   // precio con descuento del pabellón 政
       if (!res.ok) { toast(res.motivo || 'No se pudo comprar'); return; }
-      if (item.efecto && item.efecto.energia && window.HacEnergia) HacEnergia.add(h.id, myId, item.efecto.energia);
-      toast(`${item.icon || ''} ${item.nombre} · ${HacTienda.efectoTexto(item)}`.trim());
+      // La comida ya NO se consume al comprarla: va a la mochila y se come desde su ficha.
+      toast(item.efecto && item.efecto.energia
+        ? `🎒 ${item.icon || ''} ${item.nombre} · a la mochila (tócalo para comerlo)`.trim()
+        : `${item.icon || ''} ${item.nombre} · ${HacTienda.efectoTexto(item)}`.trim());
       buildShop();                 // refresca dinero y botones
       if (charId) buildCharPanel(charId);   // refresca monedero/inventario/energía
     }
