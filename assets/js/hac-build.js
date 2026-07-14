@@ -374,11 +374,9 @@ const HacBuild = (function () {
   }
   // ¿La región vale como pabellón? Tamaño mínimo, no es toda la finca y está
   // realmente delimitada por al menos un muro interior contiguo.
-  // Válido = rectángulo de al menos MIN_PABELLON tiles y que no acapara toda la finca.
+  // Válido = rectángulo de al menos MIN_PABELLON tiles (puede llegar a cubrir toda la finca).
   function regionValidaPabellon(mapa, tier, cells) {
-    if (!cells || cells.length < MIN_PABELLON) return false;
-    const dims = gridDims(tier);
-    return cells.length < dims[0] * dims[1];
+    return !!(cells && cells.length >= MIN_PABELLON);
   }
 
   // ── SINERGIA DE PABELLÓN ───────────────────────────────────────────────────
