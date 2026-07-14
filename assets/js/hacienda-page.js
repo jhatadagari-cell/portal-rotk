@@ -459,8 +459,9 @@
     // ¿mi mecenas tiene un talento de senda? (efectos personales, C1)
     const tieneT = (id) => !!(window.HacStats && HacStats.tieneTalento && HacStats.tieneTalento(myId, id));
     // CABALLO: montura propia → −% tiempo de expedición mientras lo tengas.
-    const CABALLO_EXPED = 0.12;
-    const caballoExped = () => (window.HacStats && HacStats.tieneCaballo && HacStats.tieneCaballo(myId)) ? CABALLO_EXPED : 0;
+    const CABALLO_EXPED = 0.12, CABALLO_EXPED_BLANCO = 0.18;   // el blanco del norte (research 武) es superior
+    const caballoExpedDe = (c) => c ? (c.id === 'caballo-blanco' ? CABALLO_EXPED_BLANCO : CABALLO_EXPED) : 0;
+    const caballoExped = () => caballoExpedDe((window.HacStats && HacStats.caballo) ? HacStats.caballo(myId) : null);
     // ── BUFOS/DEBUFOS (modificadores %): registro EXTENSIBLE de todo lo que te afecta.
     // tipo → cómo se muestra (etiqueta, signo, si es reductor bueno o un debuf). Añadir
     // fuentes nuevas (eventos, relaciones…) = empujar más entradas en recopilarBufos().
@@ -511,7 +512,7 @@
       SENDA_FX.forEach(s => { if (tieneT(s.id)) add(s.tipo, s.label, s.val); });
       if (window.HacStats && HacStats.tieneCaballo && HacStats.tieneCaballo(myId)) {
         const c = HacStats.caballo(myId);
-        add('exped', '🐎 ' + ((c && c.nombre) || 'Caballo'), CABALLO_EXPED);
+        add('exped', (c && c.id === 'caballo-blanco' ? '🐎 白馬 ' : '🐎 ') + ((c && c.nombre) || 'Caballo'), caballoExpedDe(c));
       }
       add('heridas', 'Heridas', (window.HacStats && HacStats.penHerida) ? HacStats.penHerida(myId) : 0);
       // 🏯 Bono de hacienda por un libro de conclusiones DONADO al fundador (7 días).
@@ -3857,15 +3858,16 @@
     function caballoInfoHTML() {
       const c = (window.HacStats && HacStats.caballo) ? HacStats.caballo(myId) : null;
       if (!c) return `<div class="hacp-inv-note">Aún no tienes caballo. Cómpralo en el <b>市 Mercado</b> (requiere 武 5): lo bautizas, rondará libre por los campos de la finca y saldrás <b>montado</b> en tus expediciones y escaramuzas.</div>`;
+      const blanco = c.id === 'caballo-blanco';
       return `<div class="hacp-caballo-card">
           <div class="hacp-caballo-ic">🐎</div>
           <div class="hacp-caballo-nm">${esc(c.nombre)}</div>
-          <div class="hacp-caballo-sub">Caballo de raza · 寶馬</div>
+          <div class="hacp-caballo-sub">${blanco ? '白馬義從 · Caballo Blanco del Norte' : 'Caballo de raza · 寶馬'}</div>
         </div>
         <div class="hacp-caballo-fx">
           <div>道 Ronda libre por los campos, fuera de la finca.</div>
           <div>⚔ Sales <b>montado</b> en expediciones y escaramuzas.</div>
-          <div>⏱ <b>−${Math.round(CABALLO_EXPED * 100)}%</b> de tiempo de expedición.</div>
+          <div>⏱ <b>−${Math.round(caballoExpedDe(c) * 100)}%</b> de tiempo de expedición.${blanco ? ' <span style="color:#8fb6c9">(élite del norte)</span>' : ''}</div>
         </div>`;
     }
     function openCaballo() {
@@ -4412,11 +4414,16 @@
       const el = ensureCaballoEl();
       const sug = CABALLO_NOMBRES[Math.floor(Math.random() * CABALLO_NOMBRES.length)];
       const precio = precioMercado(item);
+      // 白馬義從: si la casa investigó el caballo blanco, se ofrece como pelaje PREMIUM
+      // (montura superior: −18% de expedición en vez de −12%). Reusa la variante.
+      const desbBlanco = (typeof pabDesbloqueado === 'function') && pabDesbloqueado('caballo-blanco') && item.id === 'caballo';
+      const pelajes = CABALLO_PELAJES.map(p => ({ nombre: p.nombre, tono: p.tono, variante: 'caballo' }));
+      if (desbBlanco) pelajes.push({ nombre: '白馬 Blanco del Norte', tono: '#e9edf1', variante: 'caballo-blanco', premium: true });
       el.innerHTML = `<div class="hacp-suc-box hacp-horse-box">
         <div class="hacp-suc-eyebrow">🐎 ${esc(item.zh || '')} · Caballo de raza</div>
         <div class="hacp-suc-ttl">Bautiza a tu corcel</div>
-        <div class="hacp-suc-desc">Vivirá suelto por los campos de la finca. Solo tendrás uno · cuesta 💰 ${precio}.</div>
-        <div class="hacp-horse-coats">${CABALLO_PELAJES.map((p, i) => `<button type="button" class="hacp-horse-coat${i === 0 ? ' sel' : ''}" data-coat="${p.tono}" title="${esc(p.nombre)}" aria-label="Pelaje ${esc(p.nombre)}"><span class="hacp-horse-coat-sw" style="background:${p.tono}"></span><span class="hacp-horse-coat-nm">${esc(p.nombre)}</span></button>`).join('')}</div>
+        <div class="hacp-suc-desc">Vivirá suelto por los campos de la finca. Solo tendrás uno · cuesta 💰 ${precio}.${desbBlanco ? ' <b style="color:#cfe0e6">El 白馬 del Norte es superior (−18% de expedición).</b>' : ''}</div>
+        <div class="hacp-horse-coats">${pelajes.map((p, i) => `<button type="button" class="hacp-horse-coat${i === 0 ? ' sel' : ''}${p.premium ? ' premium' : ''}" data-coat="${p.tono}" data-var="${p.variante}" title="${esc(p.nombre)}" aria-label="Pelaje ${esc(p.nombre)}"><span class="hacp-horse-coat-sw" style="background:${p.tono}"></span><span class="hacp-horse-coat-nm">${esc(p.nombre)}</span></button>`).join('')}</div>
         <input type="text" class="hacp-horse-in" maxlength="24" value="${esc(sug)}" placeholder="Nombre del caballo" />
         <div class="hacp-horse-sug">${CABALLO_NOMBRES.map(n => `<button type="button" class="hacp-horse-chip" data-nom="${esc(n)}">${esc(n)}</button>`).join('')}</div>
         <div class="hacp-suc-confirm">
@@ -4424,21 +4431,21 @@
           <button type="button" class="hacp-cp-btn hacp-suc-ok" data-h-ok>Bautizar 💰 ${precio}</button>
         </div></div>`;
       el.hidden = false;
-      let coatSel = CABALLO_PELAJES[0].tono;   // pelaje elegido (arranca en el primero, ya marcado)
+      let coatSel = pelajes[0].tono, varSel = pelajes[0].variante;   // pelaje/variante (arranca en el primero)
       const input = el.querySelector('.hacp-horse-in');
       if (input) { try { input.focus(); input.select(); } catch (e) {} }
       el.querySelectorAll('[data-nom]').forEach(b => b.addEventListener('click', () => { if (input) { input.value = b.dataset.nom; input.focus(); } }));
       el.querySelectorAll('[data-coat]').forEach(b => b.addEventListener('click', () => {
-        coatSel = b.dataset.coat;
+        coatSel = b.dataset.coat; varSel = b.dataset.var || 'caballo';
         el.querySelectorAll('[data-coat]').forEach(x => x.classList.toggle('sel', x === b));
       }));
       el.querySelector('[data-h-cancel]').addEventListener('click', cerrarBautizo);
       el.querySelector('[data-h-ok]').addEventListener('click', () => {
         const nombre = (input && input.value || '').trim() || CABALLO_NOMBRES[0];
-        const res = HacStats.comprarCaballo(myId, item.id, nombre, precio, coatSel);
+        const res = HacStats.comprarCaballo(myId, varSel, nombre, precio, coatSel);
         if (!res.ok) { toast(res.motivo || 'No se pudo comprar'); return; }
         cerrarBautizo();
-        toast(`🐎 ${esc(res.caballo.nombre)} · ¡tu corcel ronda ya por los campos!`);
+        toast(`🐎 ${esc(res.caballo.nombre)} · ¡tu ${varSel === 'caballo-blanco' ? '白馬 del Norte' : 'corcel'} ronda ya por los campos!`);
         if (window.HacBitacora) HacBitacora.log(myId, 'compra', `🐎 Compraste un caballo y lo llamaste ${res.caballo.nombre}`);
         syncCaballosFolk();          // que aparezca al instante
         buildShop();                 // refresca dinero y marca «ya lo tienes»

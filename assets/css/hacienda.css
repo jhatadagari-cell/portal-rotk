@@ -1021,6 +1021,9 @@ button.hacp-slot.comida:hover{ background:rgba(127,201,160,.24); }
   background:transparent; border:1px solid transparent; border-radius:10px; transition:border-color .15s,background .15s; }
 .hacp-horse-coat:hover{ background:rgba(201,168,76,.10); }
 .hacp-horse-coat.sel{ border-color:var(--gold,#c9a84c); background:rgba(201,168,76,.16); }
+.hacp-horse-coat.premium{ border-color:rgba(143,182,201,.55); background:rgba(143,182,201,.10); }
+.hacp-horse-coat.premium .hacp-horse-coat-nm{ color:#cfe0e6; font-weight:700; }
+.hacp-horse-coat.premium.sel{ border-color:#8fb6c9; background:rgba(143,182,201,.2); }
 .hacp-horse-coat-sw{ width:30px; height:30px; border-radius:50%; border:1px solid rgba(0,0,0,.45); box-shadow:inset 0 2px 3px rgba(255,255,255,.28), inset 0 -3px 4px rgba(0,0,0,.35); }
 .hacp-horse-coat.sel .hacp-horse-coat-sw{ box-shadow:inset 0 2px 3px rgba(255,255,255,.28), inset 0 -3px 4px rgba(0,0,0,.35), 0 0 0 2px rgba(201,168,76,.55); }
 .hacp-horse-coat-nm{ font:700 12px 'Noto Serif SC',serif; color:var(--gold,#c9a84c); }
