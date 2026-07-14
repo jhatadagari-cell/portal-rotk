@@ -464,6 +464,9 @@
     // ── BUFOS/DEBUFOS (modificadores %): registro EXTENSIBLE de todo lo que te afecta.
     // tipo → cómo se muestra (etiqueta, signo, si es reductor bueno o un debuf). Añadir
     // fuentes nuevas (eventos, relaciones…) = empujar más entradas en recopilarBufos().
+    // Diezmo de casa: al día = +prestigio; pendiente = debufo de prestigio. El
+    // efecto (premioPrestigio) y el panel de Bufos leen estas mismas cifras.
+    const TITHE_BUFF = 0.10, TITHE_DEBUFF = 0.20;
     const BUF_TIPOS = {
       dinero:    { label: 'Dinero de misiones',    signo: '+', color: '#c9a84c', good: true },
       xpMision:  { label: 'XP de misiones',        signo: '+', color: '#3a8a5a', good: true },
@@ -472,6 +475,8 @@
       exped:     { label: 'Tiempo de expedición',  signo: '−', color: '#c98a3a', good: true },
       riesgo:    { label: 'Riesgo de misión',      signo: '−', color: '#7aa26e', good: true },
       prestigio: { label: 'Prestigio en tareas',   signo: '+', color: '#c9a84c', good: true },
+      diezmo:    { label: 'Prestigio · diezmo al día',    signo: '+', color: '#3a8a5a', good: true },
+      diezmoPend:{ label: 'Prestigio · diezmo pendiente', signo: '−', color: '#b23b2e', good: false },
       botin:     { label: 'Botín de escaramuza',   signo: '+', color: '#c98a3a', good: true, num: true },
       heridas:   { label: 'Merma por heridas',     signo: '−', color: '#b23b2e', good: false },
     };
@@ -512,9 +517,35 @@
       // 🏯 Bono de hacienda por un libro de conclusiones DONADO al fundador (7 días).
       const bh = (window.HacBuff && HacBuff.activo) ? HacBuff.activo(h.id, 'xp') : null;
       if (bh) add('xpMision', '🏯 Donación al fundador' + (bh.donanteNombre ? ' · ' + bh.donanteNombre : ''), bh.valor);
+      // 📜 Diezmo diario: al día suma prestigio, pendiente lo merma (mismo signo que el efecto).
+      if (diezmoDisponible()) {
+        if (HacProdCasa.pagadoHoy(h.id, myId, prodDia())) add('diezmo', '📜 Al día con el diezmo', TITHE_BUFF);
+        else add('diezmoPend', '📜 Diezmo pendiente hoy', TITHE_DEBUFF);
+      }
       const totales = {};
       items.forEach(it => { totales[it.tipo] = (totales[it.tipo] || 0) + it.val; });
       return { items, totales };
+    }
+    // ¿El diezmo aplica? (tabla de casa cargada y disponible).
+    const diezmoDisponible = () => !!(window.HacProdCasa && HacProdCasa.dbOk && HacProdCasa.dbOk());
+    // Modificador de prestigio por el diezmo: +buff al día, −debufo si pendiente.
+    const diezmoFrac = () => !diezmoDisponible() ? 0 : (HacProdCasa.pagadoHoy(h.id, myId, prodDia()) ? TITHE_BUFF : -TITHE_DEBUFF);
+    // Prestigio a otorgar con TODOS los modificadores (objetos + diezmo). Fuente única
+    // para que lo premiado coincida con lo que muestra el panel de Bufos.
+    const premioPrestigio = (base) => {
+      const frac = ((window.HacStats && HacStats.bonusPrestigio) ? HacStats.bonusPrestigio(myId) : 0) + diezmoFrac();
+      return Math.max(0, Math.round((base || 0) * Math.max(0.1, 1 + frac)));
+    };
+    // Aviso DIRECTIVO del diezmo en el panel de personaje: dice al jugador qué hacer.
+    function diezmoCTA(d) {
+      if (!d.mine || !diezmoDisponible()) return '';
+      if (HacProdCasa.pagadoHoy(h.id, myId, prodDia()))
+        return `<div class="hacp-cp-diezmo ok" data-tip="Pagaste el diezmo de hoy: +${Math.round(TITHE_BUFF * 100)}% de prestigio en tus tareas.">📜 Al día con el diezmo · <b>+${Math.round(TITHE_BUFF * 100)}% prestigio</b></div>`;
+      return `<div class="hacp-cp-diezmo due">
+        <div class="hacp-cp-diezmo-t">📜 Paga el diezmo de hoy</div>
+        <div class="hacp-cp-diezmo-s">Mientras no lo pagues pierdes <b>−${Math.round(TITHE_DEBUFF * 100)}% de prestigio</b>. Cuesta ${DIEZMO_MONEDAS}💰 + material.</div>
+        <button type="button" class="hacp-cp-btn hacp-cp-go" style="width:100%" data-act="diezmo-cta">Pagar diezmo ahora</button>
+      </div>`;
     }
     // Fracción de XP extra para UNA misión: el bono cultural (政→文… 文) aplica a
     // todas; el militar (军) SOLO se suma en expediciones de dominio militar.
@@ -694,7 +725,7 @@
           r = Math.round(r * (n <= 1 ? 1 : 1 + Math.min(n, 20) * 0.1));
           if (tieneT('canciller')) r = Math.round(r * 1.3);   // 丞相: +30% prestigio en tareas internas
         }
-        if (HacStats && HacStats.bonusPrestigio) r = Math.round(r * (1 + HacStats.bonusPrestigio(myId)));   // ropa de torso rara: +% prestigio
+        r = premioPrestigio(r);   // +% ropa de torso rara + diezmo (al día suma / pendiente merma)
         HacPuntos.award(h.id, myId, r);
         retoAdd('prestigio', r);   // reto semanal: prestigio ganado
         // La misión del tablón da, además del prestigio, dinero + XP PERSONAL (al dominio).
@@ -1195,7 +1226,7 @@
         libroOk = !!(rr && rr.ok !== false);
         extra = libroOk ? ` · 📔 Conclusiones ${(DEB.CALIDADES[cal] || {}).nombre || cal}` : ' · 📔 (mochila llena)';
       }
-      if (soyGanador && window.HacPuntos && HacPuntos.award) { let pr = HacPuntos.recompensa ? HacPuntos.recompensa(20, 300) : 8; if (HacStats && HacStats.bonusPrestigio) pr = Math.round(pr * (1 + HacStats.bonusPrestigio(myId))); HacPuntos.award(h.id, myId, pr); }
+      if (soyGanador && window.HacPuntos && HacPuntos.award) { const pr = premioPrestigio(HacPuntos.recompensa ? HacPuntos.recompensa(20, 300) : 8); HacPuntos.award(h.id, myId, pr); }
       const otro = (myId === d.hostId) ? d.invitadoNombre : d.hostNombre;
       const xpTxt = oc.doms.length ? ` · +${xpCada} XP (${oc.doms.map(dm => DOM_NOMBRE_XP[dm] || dm).join(', ')})` : '';
       if (window.HacBitacora) HacBitacora.log(myId, 'debate', `🗣 Debate de ${t ? t.nombre : d.tema} con ${otro || 'otro mecenas'}: ${soyGanador ? '✔ ganaste' : '✘ perdiste'}${xpTxt}${extra}`, { clave: 'debate:' + d.id });
@@ -3667,7 +3698,7 @@
         .then(() => {
           toast(`🏯 Presentaste el libro a ${fund} · +${pctv}% XP a la hacienda (7 días)`);
           if (window.HacBitacora) HacBitacora.log(myId, 'progreso', `🏯 Presentaste «${def.nombre}» a ${fund} · +${pctv}% XP a toda la hacienda durante 7 días`);
-          if (window.HacPuntos && HacPuntos.award) { const pr = HacPuntos.recompensa ? HacPuntos.recompensa(30, 300) : 12; HacPuntos.award(h.id, myId, pr); retoAdd('prestigio', pr); }   // prestigio de casa al donante (+ reto semanal)
+          if (window.HacPuntos && HacPuntos.award) { const pr = premioPrestigio(HacPuntos.recompensa ? HacPuntos.recompensa(30, 300) : 12); HacPuntos.award(h.id, myId, pr); retoAdd('prestigio', pr); }   // prestigio de casa al donante (+ reto semanal)
           // Ideas REVELADORAS → el fundador puede recompensarte con una RELIQUIA RARA (baja prob.).
           if (cal === 'reveladoras' && window.HacTienda && HacTienda.raroAleatorio && Math.random() < 0.25) {
             const rid = HacTienda.raroAleatorio(), rdef = rid && HacTienda.get(rid);
@@ -3935,6 +3966,7 @@
         ${equipoHTML(d)}
         ${woundsHTML(d)}
         ${d.mine ? toolbarHTML(d) : ''}
+        ${diezmoCTA(d)}
         ${mision}
         ${(d.mine && invOpen) ? invPanelHTML(d) : ''}
         ${d.mine ? `<button type="button" class="hacp-cp-btn hacp-cp-leave" data-act="leave">Abandonar la hacienda</button>` : ''}`;
@@ -3965,6 +3997,8 @@
       const pdb = charEl.querySelector('[data-act="prod"]');
       if (pdb) pdb.addEventListener('click', openProd);
       charEl.querySelectorAll('[data-item]').forEach(b => b.addEventListener('click', () => abrirObjeto(b.dataset.item)));
+      const dcb = charEl.querySelector('[data-act="diezmo-cta"]');
+      if (dcb) dcb.addEventListener('click', () => pagarDiezmo(dcb));
       const gh = charEl.querySelector('[data-act="gohome"]');
       if (gh) gh.addEventListener('click', openHome);
       const escb = charEl.querySelector('[data-act="esc"]');
@@ -4828,8 +4862,9 @@
       if (HacStats.encargosHechos(myId, dia).indexOf(id) >= 0) return;
       if (!HacStats.quitaRecurso(myId, e.recurso, e.calMin, e.cantidad)) { toast('Te falta material para el encargo'); return; }
       HacStats.award(myId, { dinero: e.dinero });
-      if (window.HacPuntos && HacPuntos.award) HacPuntos.award(h.id, myId, e.prestigio);
-      retoAdd('prestigio', e.prestigio);
+      const prEnc = premioPrestigio(e.prestigio);
+      if (window.HacPuntos && HacPuntos.award) HacPuntos.award(h.id, myId, prEnc);
+      retoAdd('prestigio', prEnc);
       HacStats.marcarEncargo(myId, dia, id);
       toast(`✔ Encargo cumplido · +${e.dinero}💰 · +${e.prestigio}★`);
       if (window.HacBitacora) HacBitacora.log(myId, 'progreso', `委 Cumpliste un encargo de ${HacProd.RECURSOS[e.recurso].nombre} · +${e.dinero}💰`);
@@ -5067,6 +5102,7 @@
     if (window.HacEscaramuzas) HacEscaramuzas.ready().then(escPulse);
     if (DEB) DEB.ready().then(debPulse);
     if (window.HacBuff) HacBuff.ready().then(() => { if (charId) refreshCharPanel(); });   // bono de hacienda (F2)
+    if (window.HacProdCasa) HacProdCasa.ready().then(() => { if (charId) buildCharPanel(charId); });   // diezmo: bufo/debufo de prestigio + aviso
     if (window.HacMisTomadas) HacMisTomadas.ready();   // misiones ya cogidas hoy (para esconderlas del tablón)
     if (window.HacRetos) HacRetos.ready().then(checkConvocatoria);   // retos semanales: avisa si ya están cumplidos
     if (window.HacOrdenes) {
