@@ -460,6 +460,8 @@ html.hacp-pseudofs, html.hacp-pseudofs body{ overflow:hidden; }
 .hacp-pab-bar i{ display:block; height:100%; border-radius:6px 0 0 6px; transition:width .6s cubic-bezier(.4,1.3,.5,1); box-shadow:0 0 8px rgba(255,255,255,.18) inset; }
 .hacp-pab-inv-s{ font-size:11px; color:var(--parch2); font-variant-numeric:tabular-nums; }
 .hacp-pab-inv-s b{ color:var(--gold); }
+.hacp-pab-inv-t{ font-size:11px; color:var(--parch2); line-height:1.4; margin-top:6px; padding-top:6px; border-top:1px dashed rgba(201,168,76,.18); }
+.hacp-pab-inv-t b{ color:var(--parch); }
 .hacp-cp-mis{ margin-top:9px; border-top:1px solid rgba(201,168,76,.18); padding-top:8px; }
 .hacp-cp-mis-on{ display:flex; align-items:center; gap:8px; }
 .hacp-cp-mis-on .hacp-cp-btn{ margin-left:auto; }

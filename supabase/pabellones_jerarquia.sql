@@ -24,8 +24,10 @@ begin
   if not found then raise exception 'La hacienda no existe'; end if;
   if not exists (select 1 from jsonb_array_elements(coalesce(h.miembros, '[]'::jsonb)) e where e ->> 'personajeId' = p_pj) then
     raise exception 'No perteneces a esta hacienda'; end if;
+  -- El escalafón se GANA por mérito (aporte a la investigación), no se regala:
+  -- al cambiar de pabellón el aporte arranca de cero (rango fresco en el nuevo).
   update public.haciendas set miembros = (
-    select jsonb_agg(case when e ->> 'personajeId' = p_pj then e || jsonb_build_object('pabellon', p_rol) else e end)
+    select jsonb_agg(case when e ->> 'personajeId' = p_pj then e || jsonb_build_object('pabellon', p_rol, 'aporte', 0) else e end)
     from jsonb_array_elements(coalesce(miembros, '[]'::jsonb)) e)
     where id = p_hac returning * into h;
   return jsonb_build_object('miembros', h.miembros);
@@ -99,7 +101,10 @@ end; $$;
 
 -- Un MIEMBRO fija el progreso (pasivo acumulado + aportación activa). Nunca baja.
 -- Al alcanzar el objetivo con p_done_key, marca el desbloqueo y `done`.
-create or replace function public.pab_investig_prog(p_hac text, p_pj text, p_rol text, p_prog int, p_ts bigint, p_target int, p_done_key text)
+-- p_aporte = puntos de trabajo REAL que aporta este miembro (base, sin escalar);
+-- se acumulan en su `aporte`, de donde se DERIVA su escalafón (mérito, no regalo).
+drop function if exists public.pab_investig_prog(text, text, text, int, bigint, int, text);
+create or replace function public.pab_investig_prog(p_hac text, p_pj text, p_rol text, p_prog int, p_ts bigint, p_target int, p_done_key text, p_aporte int default 0)
 returns jsonb language plpgsql security definer set search_path = public as $$
 declare h public.haciendas; v_cur jsonb; v_prog int; v_tgt int;
 begin
@@ -124,7 +129,16 @@ begin
         array['investig', p_rol], jsonb_build_object('id', v_cur ->> 'id', 'prog', v_prog, 'ts', p_ts))
       where id = p_hac returning * into h;
   end if;
-  return jsonb_build_object('mapa', h.mapa);
+  -- Acredita el aporte de mérito del miembro que contribuye (solo si va a su pabellón).
+  if coalesce(p_aporte, 0) > 0 then
+    update public.haciendas set miembros = (
+      select jsonb_agg(case when e ->> 'personajeId' = p_pj and (e ->> 'pabellon') = p_rol
+          then e || jsonb_build_object('aporte', coalesce((e ->> 'aporte')::int, 0) + p_aporte)
+          else e end)
+      from jsonb_array_elements(coalesce(miembros, '[]'::jsonb)) e)
+      where id = p_hac returning * into h;
+  end if;
+  return jsonb_build_object('mapa', h.mapa, 'miembros', h.miembros);
 end; $$;
 
 -- ── TALENTOS (F3 文): un miembro vuelve de expedición con un NPC ──────────────
@@ -182,7 +196,7 @@ grant execute on function public.pab_unirse(text,text,text)           to authent
 grant execute on function public.pab_responsable(text,text,text,text) to authenticated, anon;
 grant execute on function public.pab_escalafon(text,text,text,int)    to authenticated, anon;
 grant execute on function public.pab_investig_elegir(text,text,text,text,bigint)      to authenticated, anon;
-grant execute on function public.pab_investig_prog(text,text,text,int,bigint,int,text) to authenticated, anon;
+grant execute on function public.pab_investig_prog(text,text,text,int,bigint,int,text,int) to authenticated, anon;
 grant execute on function public.casa_reclutar(text,text,jsonb)                       to authenticated, anon;
 grant execute on function public.pab_delimitar(text,text,text,text,jsonb,int)         to authenticated, anon;
 grant execute on function public.pab_borrar(text,text,uuid)                           to authenticated, anon;

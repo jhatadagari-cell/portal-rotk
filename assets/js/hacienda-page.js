@@ -5146,9 +5146,18 @@
       let s = 0; ((h.mapa && h.mapa.construcciones) || []).forEach(c => { const t = HacBuild.tipo(c.tipo); if (t && t.dominio === rol && reg.has(c.pos[0] + ',' + c.pos[1])) s += t.restringido ? 2 : 1; });
       return s;
     }
-    function pabPassiveRate(rol) {   // pts/hora = gente ×2 + suma de escalafones + edificios del patio
+    // El escalafón (rango 0..5) se GANA por mérito: se DERIVA del `aporte` acumulado
+    // de cada miembro a su pabellón (trabajo real). Nadie lo regala a mano.
+    const ESC_UMBRAL = [25, 70, 150, 280, 480];   // aporte necesario para rango 1..5
+    function escDeAporte(aporte) { const a = Number(aporte) || 0; let n = 0; for (let i = 0; i < ESC_UMBRAL.length; i++) if (a >= ESC_UMBRAL[i]) n = i + 1; return n; }
+    const escDeMiembro = (m) => escDeAporte(m && m.aporte);
+    // Acciones REALES que aportan a la investigación de cada dominio (feeders de aportarInvestig).
+    const tareasDe = (rol) => rol === 'militar' ? 'gana <b>misiones militares</b>, <b>escaramuzas</b> o trabaja un <b>oficio 军</b> en la jornada'
+      : rol === 'cultural' ? 'completa <b>misiones culturales</b> o trabaja un <b>oficio 文</b> en la jornada'
+      : 'completa <b>misiones administrativas</b> o trabaja un <b>oficio 政</b> en la jornada';
+    function pabPassiveRate(rol) {   // pts/hora = gente ×2 + suma de escalafones (mérito) + edificios del patio
       const ms = (h.miembros || []).filter(m => m.pabellon === rol);
-      return ms.length * 2 + ms.reduce((a, m) => a + (Number(m.escalafon) || 0), 0) + pabSinergia(rol);
+      return ms.length * 2 + ms.reduce((a, m) => a + escDeMiembro(m), 0) + pabSinergia(rol);
     }
     const pabInvestig = (rol) => (h.mapa && h.mapa.investig && h.mapa.investig[rol]) || null;
     function pabLiveProg(rol) {
@@ -5163,9 +5172,9 @@
       const inv = pabInvestig(dom), def = INVESTIG[dom]; if (!inv || inv.done || !def || !myId) return;
       const yo = (h.miembros || []).find(m => String(m.personajeId) === String(myId));
       if (!yo || yo.pabellon !== dom) return;                              // solo contribuyes a TU pabellón
-      const chunk = Math.round((base || 0) * (1 + (Number(yo.escalafon) || 0) * 0.25));
+      const chunk = Math.round((base || 0) * (1 + escDeMiembro(yo) * 0.25));   // el rango acelera la investigación (perk)
       const np = Math.min(def.target, Math.round(pabLiveProg(dom)) + chunk);
-      try { const d = await pabRPC('pab_investig_prog', { p_hac: h.id, p_pj: myId, p_rol: dom, p_prog: np, p_ts: nowMs(), p_target: def.target, p_done_key: np >= def.target ? def.unlock : '' }); if (d && d.mapa) h.mapa = d.mapa; } catch (e) { return; }
+      try { const d = await pabRPC('pab_investig_prog', { p_hac: h.id, p_pj: myId, p_rol: dom, p_prog: np, p_ts: nowMs(), p_target: def.target, p_done_key: np >= def.target ? def.unlock : '', p_aporte: Math.round(base || 0) }); if (d && d.mapa) h.mapa = d.mapa; if (d && d.miembros) h.miembros = d.miembros; } catch (e) { return; }
       if (np >= def.target) toast(`🔬 ¡Investigación completada: ${def.nombre}!`);
     }
     async function pabCompletar(rol) {   // completar por acumulación pasiva (al abrir el panel)
@@ -5255,14 +5264,13 @@
       const regSet = new Set(reg.map(c => c[0] + ',' + c[1]));
       let sin = 0; ((h.mapa && h.mapa.construcciones) || []).forEach(c => { const t = HacBuild.tipo(c.tipo); if (t && t.dominio === rol && regSet.has(c.pos[0] + ',' + c.pos[1])) sin += t.restringido ? 2 : 1; });
       const pct = Math.min(15, sin * 3);
-      const puedeAscender = soyResp || soyFund;
       const filaM = (m) => {
-        const e5 = Math.max(0, Math.min(5, Number(m.escalafon) || 0)), pips = '●'.repeat(e5) + '○'.repeat(5 - e5);
+        const e5 = escDeMiembro(m), pips = '●'.repeat(e5) + '○'.repeat(5 - e5), ap = Number(m.aporte) || 0;
+        const falta = e5 < 5 ? ESC_UMBRAL[e5] - ap : 0;
         const esRes = String(m.personajeId) === String(resId), yo = String(m.personajeId) === String(myId);
         return `<div class="hacp-pab-m${yo ? ' yo' : ''}">
           <span class="nm">${esc(m.nombre || '—')}${esRes ? ' <i class="hacp-pab-resb">責 responsable</i>' : ''}${yo ? ' <em>(tú)</em>' : ''}</span>
-          <span class="esc" title="Escalafón (rango) ${e5}/5" style="color:${R.color}">${pips}</span>
-          ${puedeAscender ? `<span class="hacp-pab-escb"><button type="button" class="hacp-pab-mini" data-esc="-1" data-pj="${esc(m.personajeId)}" title="Bajar de escalafón"${e5 <= 0 ? ' disabled' : ''}>−</button><button type="button" class="hacp-pab-mini" data-esc="1" data-pj="${esc(m.personajeId)}" title="Ascender de escalafón"${e5 >= 5 ? ' disabled' : ''}>+</button></span>` : ''}
+          <span class="esc" title="Escalafón ${e5}/5 · aporte ${ap}${falta > 0 ? ` · faltan ${falta} para subir` : ''}" style="color:${R.color}">${pips}</span>
         </div>`;
       };
       const listaM = mios.length ? mios.map(filaM).join('') : '<div class="hacp-inv-note">Aún nadie se ha unido a este pabellón.</div>';
@@ -5286,7 +5294,8 @@
         invHtml = `<div class="hacp-pab-inv${inv.done ? ' done' : ''}">
           <div class="hacp-pab-inv-h">🔬 ${idef.zh} ${esc(idef.nombre)}${inv.done ? ' <span class="ok">✔ desbloqueada</span>' : ''}</div>
           <div class="hacp-pab-bar"><i style="width:${Math.min(100, pctp)}%;background:${R.color}"></i></div>
-          <div class="hacp-pab-inv-s">${inv.done ? 'Completada · beneficio activo para la casa.' : `${Math.round(live)}/${idef.target} · <b>+${rate}/h</b> pasivo · sube haciendo tareas ${R.zh}`}</div>
+          <div class="hacp-pab-inv-s">${inv.done ? 'Completada · beneficio activo para la casa.' : `${Math.round(live)}/${idef.target} · avanza <b>+${rate}/h</b> sola (miembros y edificios ${R.zh} dentro del patio)`}</div>
+          ${inv.done ? '' : `<div class="hacp-pab-inv-t">Acelérala tú: ${tareasDe(rol)}.</div>`}
         </div>`;
       }
       el.innerHTML = `<div class="hacp-shop-box hacp-pab-box">
@@ -5298,7 +5307,7 @@
         <div class="hacp-pab-resp">責 Responsable: <b>${resM ? esc(resM.nombre) : '— sin nombrar —'}</b></div>
         ${nombrarHtml}
         <div class="hacp-prod-seclbl">Miembros 部眾</div>
-        <div class="hacp-pab-hint">Los puntos ●●●○○ son el <b>escalafón</b> (rango dentro del pabellón, 0–5): a más escalafón, más aporta esa persona a la investigación.${puedeAscender ? ' Con <b>−/+</b> el responsable lo ajusta.' : ''}</div>
+        <div class="hacp-pab-hint">Los puntos ●●●○○ son el <b>escalafón</b> (rango 0–5). <b>Se gana solo</b>: sube según lo que cada uno haya <b>aportado</b> a la investigación con su trabajo; a más rango, más rinde su aportación. Nadie lo reparte a mano.</div>
         <div class="hacp-pab-ms">${listaM}</div>
         <div class="hacp-prod-seclbl">Investigación 研究</div>
         ${invHtml}
@@ -5309,7 +5318,6 @@
       const unir = el.querySelector('[data-pab-unir]'); if (unir) unir.addEventListener('click', () => pabAccion('unir', rol));
       const salir = el.querySelector('[data-pab-salir]'); if (salir) salir.addEventListener('click', () => pabAccion('unir', ''));
       const rsel = el.querySelector('[data-pab-resp]'); if (rsel) rsel.addEventListener('change', () => pabAccion('resp', rol, rsel.value));
-      el.querySelectorAll('[data-esc]').forEach(b => b.addEventListener('click', () => pabAccion('esc', b.dataset.pj, Number(b.dataset.esc))));
       const invb = el.querySelector('[data-inv-start]'); if (invb) invb.addEventListener('click', () => pabAccion('inv-start', rol));
     }
     async function pabAccion(kind, a, b) {
@@ -5317,7 +5325,6 @@
       try {
         if (kind === 'unir') { const d = await pabRPC('pab_unirse', { p_hac: h.id, p_pj: myId, p_rol: a }); if (d && d.miembros) h.miembros = d.miembros; toast(a ? '部 Te uniste al pabellón' : 'Saliste del pabellón'); }
         else if (kind === 'resp') { const d = await pabRPC('pab_responsable', { p_hac: h.id, p_pj: myId, p_rol: a, p_target: b || '' }); if (d && d.mapa) h.mapa = d.mapa; toast('責 Responsable actualizado'); }
-        else if (kind === 'esc') { const d = await pabRPC('pab_escalafon', { p_hac: h.id, p_pj: myId, p_target: a, p_delta: b }); if (d && d.miembros) h.miembros = d.miembros; }
         else if (kind === 'inv-start') { const def = INVESTIG[a]; const d = await pabRPC('pab_investig_elegir', { p_hac: h.id, p_pj: myId, p_rol: a, p_id: def.id, p_ts: nowMs() }); if (d && d.mapa) h.mapa = d.mapa; toast(`🔬 Investigación iniciada: ${def.nombre}`); }
       } catch (e) { toast(String(e && e.message || e)); return; }
       buildPabPanel();
