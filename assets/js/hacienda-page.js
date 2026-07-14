@@ -559,6 +559,17 @@
         <button type="button" class="hacp-cp-btn hacp-cp-go" style="width:100%" data-act="diezmo-cta">Pagar diezmo ahora</button>
       </div>`;
     }
+    // Guía de PRÓXIMO PASO: dirige al jugador a lo menos descubrible (dirigirle, que
+    // es el problema core). Muestra UNA sola pista, la de mayor prioridad que aplique.
+    function guiaHTML(d) {
+      if (!d.mine || !myId) return '';
+      const yo = (h.miembros || []).find(m => String(m.personajeId) === String(myId));
+      if (!yo) return '';
+      const pabs = (window.HacStore && HacStore.pabellones) ? HacStore.pabellones(h.id) : [];
+      if (!yo.pabellon && pabs.length) return `<div class="hacp-cp-guia"><b>部 Únete a un pabellón</b><span>Toca un <b>patio</b> de tu finca (militar 军 · cultural 文 · administrativo 政) para elegir el tuyo, subir escalafón y contribuir a sus investigaciones.</span></div>`;
+      if (yo.pabellon === 'administrativo' && typeof tributoPresente === 'function' && tributoPresente()) return `<div class="hacp-cp-guia"><b>貢 Recibe el tributo</b><span>Un carro de tributo aguarda en la <b>puerta</b> de la finca · tócalo para llevar su carga a la casa.</span></div>`;
+      return '';
+    }
     // Fracción de XP extra para UNA misión: el bono cultural (政→文… 文) aplica a
     // todas; el militar (军) SOLO se suma en expediciones de dominio militar.
     const buffHacXp = () => (window.HacBuff && HacBuff.xpActivo) ? HacBuff.xpActivo(h.id) : 0;   // 🏯 bono por libro donado al fundador
@@ -3985,6 +3996,7 @@
         ${woundsHTML(d)}
         ${d.mine ? toolbarHTML(d) : ''}
         ${diezmoCTA(d)}
+        ${guiaHTML(d)}
         ${mision}
         ${(d.mine && invOpen) ? invPanelHTML(d) : ''}
         ${d.mine ? `<button type="button" class="hacp-cp-btn hacp-cp-leave" data-act="leave">Abandonar la hacienda</button>` : ''}`;

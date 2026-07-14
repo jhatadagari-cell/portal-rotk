@@ -365,6 +365,11 @@ html.hacp-pseudofs, html.hacp-pseudofs body{ overflow:hidden; }
 .hacp-cp-diezmo-t{ font:700 13px 'Noto Sans SC',sans-serif; color:#f0c874; margin-bottom:3px; }
 .hacp-cp-diezmo-s{ font-size:11px; color:var(--parch2); line-height:1.35; margin-bottom:7px; }
 .hacp-cp-diezmo-s b{ color:#e6a85a; }
+/* Guía de próximo paso (dirigir al jugador) */
+.hacp-cp-guia{ margin-top:9px; border-radius:8px; padding:8px 10px; border:1px solid rgba(90,166,230,.4); background:rgba(90,166,230,.09); }
+.hacp-cp-guia b{ display:block; font:700 12.5px 'Noto Sans SC',sans-serif; color:#9bc7ec; margin-bottom:2px; }
+.hacp-cp-guia span{ font-size:11px; color:var(--parch2); line-height:1.35; }
+.hacp-cp-guia span b{ display:inline; color:var(--parch); font-size:11px; }
 /* Obras 營造: panel de construcción del fundador (rejilla 2D cenital) */
 .hacp-obras-box{ width:min(440px,94%); }
 .hacp-ob-pool{ font:700 12px 'Noto Sans SC',sans-serif; color:var(--parch); margin:6px 0 8px; }
