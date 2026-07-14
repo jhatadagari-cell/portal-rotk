@@ -104,6 +104,7 @@ const HacChar = (function () {
     const v = viewOf(base);
     if (pose === 'sit') { figureSit(px, P, v, sec); return; }
     if (pose === 'bow') { figureBow(px, P, v); return; }
+    if (pose === 'work') { figureWork(px, P, v, sec); return; }
     shadow(px);
     if (P.cape) cape(px, P, v, g);
     legs(px, P, v, g);
@@ -146,6 +147,124 @@ const HacChar = (function () {
     px(c - 2, tTop - 2, 4, 3, P.skinDk);
     headFace(px, P, v, c, hy, sec);
     hairAndCap(px, P, v, c, hy);
+  }
+
+  // ── Poses de TRABAJO (jornada de producción) ────────────────────────────
+  // forja (martillea el yunque), letras (traza con el pincel), campo (siega con
+  // la hoz). Diseñadas para la vista SE (mira a la derecha); la animación llega
+  // en sec.workPhase∈[0,1). SW sale por espejo del transform.
+  function figureWork(px, P, v, sec) {
+    sec = sec || {};
+    if (sec.oficio === 'campo') { figureWorkCampo(px, P, v, sec); return; }
+    // forja y letras comparten CUERPO sentado en un taburete, mirando la labor.
+    const baseY = BASEY, c = CX + Math.round(v.dx * 0.6), lean = 2;
+    const wood = '#6b4a2a', woodHi = light(wood, 0.18), woodDk = dark(wood, 0.3);
+    shadow(px);
+    // Taburete.
+    px(c - 6, baseY - 3, 12, 3, wood); px(c - 6, baseY - 3, 12, 1, woodHi);
+    px(c - 5, baseY, 2, 3, woodDk); px(c + 3, baseY, 2, 3, woodDk);
+    // Muslos hacia delante + espinilla + pie.
+    px(c - 4, baseY - 9, 12, 5, P.robe); px(c - 4, baseY - 9, 12, 1, P.robeHi); px(c - 4, baseY - 5, 12, 1, P.robeSh);
+    px(c + 7, baseY - 9, 4, 4, P.robeDk);
+    px(c + 7, baseY - 5, 4, 5, P.robe);
+    px(c + 6, baseY, 5, 2, P.boot); px(c + 6, baseY, 5, 1, P.bootHi);
+    // Torso erguido, ligeramente inclinado al frente.
+    const tBot = baseY - 9, tTop = baseY - 26;
+    for (let y = tTop; y < tBot; y++) {
+      const t = (y - tTop) / (tBot - tTop), lx = c - 5 + Math.round(lean * (1 - t));
+      px(lx, y, 10, 1, P.robe); px(lx, y, 2, 1, P.robeHi); px(lx + 8, y, 2, 1, P.robeDk);
+    }
+    if (!v.back) for (let i = 0; i < 7; i++) px(c - 3 + lean + i, tTop + 2 + i, 2, 1, P.trim);   // solapa
+    px(c - 5 + lean, tBot - 3, 10, 2, P.sash);                                                   // faja
+    // Cabeza mirando la labor.
+    const hy = tTop - 10;
+    px(c - 2 + lean, tTop - 3, 4, 4, P.skinDk);                                                  // cuello
+    headFace(px, P, v, c + lean, hy, sec);
+    hairAndCap(px, P, v, c + lean, hy);
+    const shY = tTop + 1, fx = c - 3 + lean, nx = c + 5 + lean, w = P.kind === 'armor' ? 3 : 4;
+    if (sec.oficio === 'letras') figureWorkLetras(px, P, v, sec, c, baseY, shY, fx, nx, w);
+    else figureWorkForja(px, P, v, sec, c, baseY, shY, fx, nx, w);
+  }
+
+  // FORJA: sentado ante el yunque, el martillo pivota en el codo (siempre a la
+  // DERECHA, despejando la cara): se alza y golpea la pieza al rojo.
+  function figureWorkForja(px, P, v, sec, c, baseY, shY, fx, nx, w) {
+    const iron = '#41474e', ironHi = '#5b636c', ironDk = '#2b2f34', wood = '#6b4a2a', woodHi = light(wood, 0.2);
+    const ember = '#ff8a3c', emberHi = '#ffd15a', emberCore = '#fff2b0';
+    const ax = c + 8, atop = baseY - 15;
+    px(ax - 1, baseY - 7, 8, 7, ironDk);                                       // base
+    px(ax + 1, baseY - 10, 4, 3, iron);                                        // cintura
+    px(ax - 2, atop, 10, 4, iron); px(ax - 2, atop, 10, 1, ironHi); px(ax - 2, atop + 3, 10, 1, ironDk);   // cara
+    px(ax + 8, atop + 1, 2, 2, iron);                                          // cuerno
+    const bar = ax + 1;                                                        // pieza al rojo
+    px(bar, atop - 1, 5, 1, emberHi); px(bar, atop, 6, 1, ember); px(bar + 1, atop - 1, 3, 1, emberCore);
+    const ph = sec.workPhase || 0;
+    let lift; if (ph < 0.55) lift = 1; else if (ph < 0.72) lift = 1 - (ph - 0.55) / 0.17;
+    else if (ph < 0.80) lift = 0; else lift = (ph - 0.80) / 0.20;
+    // Mano FIJA agarrando; la cabeza del martillo pivota en la muñeca de alzada
+    // (arriba, despejando la cara) a golpe (sobre la pieza al rojo).
+    const H = { x: c + 6, y: baseY - 19 };                                     // muñeca
+    const tx = Math.round((bar + 2) + ((H.x + 5) - (bar + 2)) * lift);          // cabeza: brasa→arriba-dcha
+    const ty = Math.round((atop - 1) + ((H.y - 12) - (atop - 1)) * lift);
+    // Brazo de apoyo con TENAZAS sujetando la pieza sobre el yunque.
+    armBent(px, P, fx, shY, c + 2, shY + 6, bar - 2, atop + 1, P.robeDk, w, true);
+    px(bar - 2, atop - 1, 1, 3, ironDk); px(bar - 1, atop, 3, 1, ironDk);       // tenazas
+    // Brazo del martillo hasta la muñeca fija.
+    limbSeg(px, P.robe, nx, shY, c + 6, shY + 6, w); limbSeg(px, P.robe, c + 6, shY + 6, H.x, H.y, Math.max(2, w - 1));
+    hand(px, P, H.x, H.y, false);
+    // Mango + cabeza (bloque perpendicular al mango).
+    limbSeg(px, wood, H.x, H.y, tx, ty, 2); px(tx - 1, ty - 1, 2, 2, woodHi);
+    const dx = tx - H.x, dy = ty - H.y, len = Math.max(1, Math.hypot(dx, dy)), pcx = -dy / len, pcy = dx / len;
+    for (let s = -2; s <= 2; s++) { const bx = Math.round(tx + s * pcx), by = Math.round(ty + s * pcy); px(bx - 1, by - 1, 2, 2, s < 0 ? ironHi : iron); }
+    if (lift < 0.2 && ph > 0.68 && ph < 0.9) {                                 // chispas en el impacto
+      px(bar + 1, atop - 3, 1, 1, emberCore); px(bar + 3, atop - 4, 1, 1, emberHi);
+      px(bar - 1, atop - 3, 1, 1, ember); px(bar + 4, atop - 2, 1, 1, emberHi);
+    }
+  }
+
+  // LETRAS: sentado a una mesita alta, el pincel traza sobre el papel y los
+  // caracteres se acumulan por ciclo.
+  function figureWorkLetras(px, P, v, sec, c, baseY, shY, fx, nx, w) {
+    const wood = '#6b4a2a', woodHi = light(wood, 0.18), woodDk = dark(wood, 0.3);
+    const paper = '#ece0c2', paperSh = dark(paper, 0.15), inkC = P.ink;
+    const dx0 = c + 2, dtop = shY + 9;                                         // tablero a la altura del regazo/pecho
+    px(dx0, dtop, 13, 2, wood); px(dx0, dtop, 13, 1, woodHi);                   // tablero
+    px(dx0 + 1, dtop + 2, 2, baseY - 2 - (dtop + 2), woodDk);                   // patas
+    px(dx0 + 10, dtop + 2, 2, baseY - 2 - (dtop + 2), woodDk);
+    px(dx0 + 1, dtop - 2, 8, 2, paper); px(dx0 + 1, dtop - 2, 8, 1, light(paper, 0.15)); px(dx0 + 1, dtop, 8, 1, paperSh);  // papel
+    px(dx0 + 10, dtop - 1, 2, 1, inkC);                                        // piedra de tinta
+    const ph = sec.workPhase || 0, col = Math.floor(ph * 4);
+    for (let k = 0; k <= col && k < 4; k++) { px(dx0 + 2 + k * 2, dtop - 2, 1, 2, inkC); px(dx0 + 2 + k * 2, dtop - 1, 2, 1, inkC); }  // trazos
+    const bx = dx0 + 2 + Math.min(col, 3) * 2, by = dtop - 3 - Math.round(Math.abs(Math.sin(ph * Math.PI * 4)));
+    armBent(px, P, fx, shY, c + 1, shY + 6, dx0 + 1, dtop - 1, P.robeDk, w, true);  // mano de apoyo en la mesa
+    armBent(px, P, nx, shY, c + 6, shY + 5, bx, by, P.robe, w, false);          // brazo del pincel
+    px(bx, by - 4, 1, 4, wood); px(bx, by, 1, 2, inkC);                         // pincel (mango + punta)
+  }
+
+  // CAMPO: agachado entre las espigas, la hoz barre a ras de suelo.
+  function figureWorkCampo(px, P, v, sec) {
+    const baseY = BASEY, c = CX + Math.round(v.dx * 0.6);
+    const grain = P.gold, grainHi = P.goldHi, stalk = '#a9812f';
+    const steel = P.steel, steelHi = P.steelHi, wood = '#6b4a2a';
+    shadow(px);
+    for (let i = 0; i < 4; i++) { const gx = c + 6 + i * 2; px(gx, baseY - 10, 1, 10, stalk); px(gx - 1, baseY - 12, 3, 2, grain); px(gx, baseY - 13, 1, 1, grainHi); }  // espigas
+    px(c - 6, baseY - 6, 8, 6, P.robe); px(c - 6, baseY - 6, 8, 1, P.robeHi);   // muslos plegados
+    px(c - 6, baseY, 4, 2, P.boot); px(c + 1, baseY, 4, 2, P.boot);             // pies
+    const hipY = baseY - 6, shY = baseY - 20;
+    for (let y = shY; y < hipY; y++) { const t = (y - shY) / (hipY - shY), lx = c - 4 + Math.round(6 * t); px(lx, y, 9, 1, P.robe); px(lx, y, 2, 1, P.robeHi); px(lx + 7, y, 2, 1, P.robeDk); }  // torso inclinado
+    px(c - 3, hipY - 2, 9, 2, P.sash);
+    const hcx = c + 5, hy = shY - 8;                                            // cabeza agachada
+    px(hcx - 2, shY - 2, 4, 3, P.skinDk);
+    headFace(px, P, v, hcx, hy, sec); hairAndCap(px, P, v, hcx, hy);
+    const ph = sec.workPhase || 0, sweep = Math.sin(ph * Math.PI * 2);
+    const hx = c + 9 + Math.round(sweep * 3), hyv = baseY - 10, w = P.kind === 'armor' ? 3 : 4;
+    armBent(px, P, c + 4, shY + 2, c + 7, shY + 6, hx, hyv, P.robe, w, false);        // brazo de la hoz
+    armBent(px, P, c - 1, shY + 2, c + 2, shY + 7, c + 4, baseY - 9, P.robeDk, w, true);  // recoge las espigas
+    // HOZ: mango corto en la mano + hoja de acero curva (gancho) a ras de las espigas.
+    px(hx, hyv - 2, 2, 4, wood); px(hx, hyv - 2, 1, 4, light(wood, 0.2));       // mango
+    px(hx - 4, hyv, 5, 1, steel); px(hx - 4, hyv, 5, 1, steelHi);               // filo horizontal
+    px(hx - 6, hyv - 1, 2, 1, steel); px(hx - 6, hyv - 2, 1, 1, steel);         // punta que curva hacia arriba
+    px(hx - 4, hyv + 1, 4, 1, dark(steel, 0.3));                                 // sombra del filo
   }
 
   // Pose de REVERENCIA (抱拳禮 Bào Quán Lǐ): saludo marcial deferente. La cabeza
@@ -645,7 +764,8 @@ const HacChar = (function () {
     // SECUELAS permanentes (cosméticas) + pose de COJERA. `secuelas` = ['manco','tuerto',…].
     const secArr = Array.isArray(opts.secuelas) ? opts.secuelas : [];
     const sec = { manco: secArr.indexOf('manco') >= 0, tuerto: secArr.indexOf('tuerto') >= 0,
-                  gesture, expr: opts.expr || null, gframe: (opts.frame | 0) };
+                  gesture, expr: opts.expr || null, gframe: (opts.frame | 0),
+                  oficio: opts.oficio || null, workPhase: (typeof opts.workPhase === 'number' ? opts.workPhase : 0) };
     if (opts.pose === 'limp') g.limp = true;   // el herido arrastra una pierna (peregrinaje)
     const wantOutline = opts.outline !== false && typeof document !== 'undefined' && document.createElement;
 

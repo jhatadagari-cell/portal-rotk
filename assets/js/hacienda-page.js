@@ -4775,7 +4775,25 @@
       ['pointerdown', 'pointerup', 'wheel', 'click'].forEach(ev => jornEl.addEventListener(ev, (e) => e.stopPropagation(), { passive: false }));
       return jornEl;
     }
-    function cerrarJornEl() { if (jornEl) jornEl.hidden = true; }
+    function cerrarJornEl() { stopJornFig(); if (jornEl) jornEl.hidden = true; }
+    // Figura del mecenas TRABAJANDO el oficio, animada (rAF) mientras dura la jornada.
+    let jornRAF = 0;
+    function stopJornFig() { if (jornRAF) { cancelAnimationFrame(jornRAF); jornRAF = 0; } }
+    function pintaJornFig(cv, st) {
+      stopJornFig();
+      if (!cv || !window.HacChar || !HacChar.draw) return;
+      const a = regYoAspecto();
+      const frame = (opts) => { try { HacChar.draw(cv, Object.assign({ aptitud: a.aptitud, aspecto: a.aspecto, dir: 'SE', scale: 3, frame: 0 }, opts)); } catch (e) {} };
+      if (st.fin) { frame({ pose: 'stand', gesture: st.fin === 'chapuza' ? 'frustrado' : null }); return; }   // terminada: reacción de pie
+      if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) { frame({ pose: 'work', oficio: st.of, workPhase: 0.72 }); return; }
+      const DUR = 1100; if (!st.animT0) st.animT0 = performance.now();
+      const loop = () => {
+        if (!cv.isConnected || (jornEl && jornEl.hidden)) { stopJornFig(); return; }
+        frame({ pose: 'work', oficio: st.of, workPhase: ((performance.now() - st.animT0) % DUR) / DUR });
+        jornRAF = requestAnimationFrame(loop);
+      };
+      jornRAF = requestAnimationFrame(loop);
+    }
     function abrirJornada(of) {
       const O = HacProd.OFICIOS[of]; if (!O || !myId) return;
       const st = { of, O, recurso: O.recurso, dom: O.dom, nivel: HacStats.oficioNivel(myId, of), lote: {}, total: 0, sumCal: 0, fatiga: 0, esf: 0, fin: null, last: null };
@@ -4822,8 +4840,7 @@
           ? `<button type="button" class="hacp-cp-btn hacp-suc-ok" data-jorn-cerrar>Recoger${st.total ? ` ${st.total} ${R.icon}` : ''}</button>`
           : `<button type="button" class="hacp-cp-btn hacp-suc-cancel" data-jorn-cerrar>Cerrar el lote${st.total ? ` (${st.total}${R.icon})` : ''}</button><button type="button" class="hacp-cp-btn hacp-suc-ok" data-jorn-seguir${ener < HacProd.E_ESF ? ' disabled' : ''}>Seguir (−${HacProd.E_ESF}⚡)</button>`}</div>
       </div>`;
-      const cv = el.querySelector('.hacp-jorn-cv');
-      if (cv && window.HacChar && HacChar.draw) { const a = regYoAspecto(); try { HacChar.draw(cv, { aptitud: a.aptitud, aspecto: a.aspecto, dir: 'SE', pose: 'stand', gesture: (st.fin === 'chapuza' ? 'frustrado' : null), frame: 0, scale: 3 }); } catch (e) {} }
+      pintaJornFig(el.querySelector('.hacp-jorn-cv'), st);
       const seg = el.querySelector('[data-jorn-seguir]'); if (seg) seg.addEventListener('click', () => { jornEsforzar(st); renderJornada(el, st); });
       const cer = el.querySelector('[data-jorn-cerrar]'); if (cer) cer.addEventListener('click', () => { jornBanco(st); cerrarJornEl(); if (st.total > 0) toast(`${O.icon} Lote: ${st.total} ${R.icon} · cal media ${(st.sumCal / st.total).toFixed(1)} · +${st.total * HacProd.XP_UD} XP ${HacProd.GLIFOS[st.dom]}`); refrescarProd(); });
     }
