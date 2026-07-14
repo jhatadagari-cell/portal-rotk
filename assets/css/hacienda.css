@@ -377,20 +377,21 @@ html.hacp-pseudofs, html.hacp-pseudofs body{ overflow:hidden; }
 .hacp-ob-fp{ margin-left:auto; opacity:.7; font-size:10.5px; }
 .hacp-ob-gridwrap{ overflow:auto; max-height:44vh; padding:2px; overscroll-behavior:contain; -webkit-overflow-scrolling:touch; touch-action:pan-x pan-y; }
 .hacp-ob-grid{ display:grid; gap:2px; width:max-content; margin:0 auto; }
-.hacp-ob-cell{ width:var(--ob-cell,28px); height:var(--ob-cell,28px); border:1px solid rgba(201,168,76,.2); border-radius:3px; background:rgba(255,255,255,.03); cursor:pointer; padding:0; }
+.hacp-ob-cell{ width:var(--ob-cell,28px); height:var(--ob-cell,28px); border:1px solid rgba(201,168,76,.2); border-radius:3px; background:rgba(255,255,255,.03); cursor:pointer; padding:0; display:flex; align-items:center; justify-content:center; overflow:hidden; box-sizing:border-box; }
+.hacp-ob-lbl{ font-size:calc(var(--ob-cell,28px)*0.52); line-height:1; color:rgba(255,255,255,.95); text-shadow:0 1px 1px rgba(0,0,0,.6); font-family:'Noto Serif SC',serif; pointer-events:none; }
 /* Zoom de la rejilla (celdas más grandes/pequeñas para fincas grandes) */
 .hacp-ob-zoom{ display:flex; align-items:center; gap:6px; font-size:11px; color:var(--parch2); margin:6px 0 2px; }
 .hacp-ob-zoom button{ width:32px; height:28px; font:800 16px/1 'Noto Sans SC',sans-serif; background:rgba(201,168,76,.16); color:var(--gold); border:1px solid var(--hac,var(--gold)); border-radius:5px; cursor:pointer; }
 .hacp-ob-zoom .hint{ margin-left:auto; opacity:.75; }
 .hacp-ob-cell.free:hover{ background:rgba(201,168,76,.18); }
-.hacp-ob-cell.occ{ background:rgba(201,168,76,.5); border-color:rgba(201,168,76,.6); cursor:default; }
-.hacp-ob-cell.ghost.ok{ background:rgba(122,196,140,.6); border-color:#7fc9a0; }
-.hacp-ob-cell.ghost.bad{ background:rgba(224,113,90,.55); border-color:#e0715a; }
+.hacp-ob-cell.occ{ border-color:rgba(0,0,0,.35); cursor:default; }          /* bg = color del edificio (inline) */
+.hacp-ob-cell.ghost{ border-width:2px; }                                    /* bg = color del edificio (inline) */
+.hacp-ob-cell.ghost.ok{ border-color:#7fc9a0; }
+.hacp-ob-cell.ghost.bad{ border-color:#e0715a; filter:grayscale(.4) brightness(.8); }
 .hacp-ob-legend{ display:flex; align-items:center; gap:6px; font-size:10.5px; color:var(--parch2); margin:8px 0 4px; flex-wrap:wrap; }
-.hacp-ob-legend span{ width:13px; height:13px; border-radius:3px; display:inline-block; vertical-align:middle; }
-.hacp-ob-legend span.occ{ background:rgba(201,168,76,.5); }
-.hacp-ob-legend span.ghost.ok{ background:rgba(122,196,140,.6); }
-.hacp-ob-legend span.ghost.bad{ background:rgba(224,113,90,.55); }
+.hacp-ob-legend .sw{ width:14px; height:14px; border-radius:3px; display:inline-block; vertical-align:middle; border:2px solid; background:rgba(255,255,255,.06); }
+.hacp-ob-legend .sw.ok{ border-color:#7fc9a0; }
+.hacp-ob-legend .sw.bad{ border-color:#e0715a; }
 .hacp-ob-aviso{ font-size:11.5px; margin:4px 0 8px; min-height:1.2em; }
 .hacp-ob-aviso .ok{ color:#8fd6a0; } .hacp-ob-aviso .bad{ color:#e0715a; }
 .hacp-ob-acts{ display:flex; gap:8px; }

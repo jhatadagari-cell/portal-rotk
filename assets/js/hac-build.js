@@ -265,13 +265,18 @@ const HacBuild = (function () {
   function coste(idOrObj) {
     const t = typeof idOrObj === 'string' ? byId[idOrObj] : idOrObj;
     if (!t) return null;
-    const area = areaDe(t), tm = t.tierMin || 1;
     const out = { hierro: 0, tinta: 0, grano: 0, dinero: 0 };
+    // CAMINOS (y líneas de suelo): GRATIS — conectan la finca, deben poder trazarse sin coste.
+    if (t.id === 'camino' || (t.linea && t.capa === 'suelo')) return out;
+    const area = areaDe(t), tm = t.tierMin || 1;
+    // DECORADO de suelo (jardines, estanques, bonsáis…): muy barato, solo grano + monedas.
+    if (t.capa === 'suelo') { out.grano = Math.round(area); out.dinero = Math.round(area * (4 + tm * 2)); return out; }
+    // EDIFICIOS: material del dominio + grano de los obreros + monedas (mucho más baratos que antes).
     const mat = MAT_DOM[t.dominio] || 'grano';
-    out[mat] += Math.round(area * (5 + tm * 3));                  // material del dominio
-    out.grano += Math.round(area * (2 + tm));                     // grano de los obreros (universal)
-    out.dinero = Math.round(area * (40 + tm * 30));
-    if (t.principal || t.unico) { out[mat] = Math.round(out[mat] * 1.5); out.dinero = Math.round(out.dinero * 1.5); }
+    out[mat] += Math.round(area * (1 + tm));                      // material del dominio
+    out.grano += Math.round(area);                               // grano de los obreros (universal)
+    out.dinero = Math.round(area * (6 + tm * 5));
+    if (t.principal || t.unico) { out[mat] = Math.round(out[mat] * 1.4); out.dinero = Math.round(out.dinero * 1.4); }
     return out;
   }
 

@@ -4920,12 +4920,23 @@
         gCells = HacBuild.celdasOcupadas(c);
         const v = HacBuild.puedeColocar(c, tier, lista); gOk = v.ok; gMot = v.motivo || '';
       }
+      // Mapa de ocupación con COLOR + glifo del edificio en cada celda (como el admin),
+      // para VER qué hay construido (no cuadraditos anónimos).
+      const occ = new Map();
+      lista.forEach(cc => { const bt = HacBuild.tipo(cc.tipo); if (!bt) return; HacBuild.celdasOcupadas(cc).forEach(([cx, cy]) => occ.set(cx + ',' + cy, { color: bt.color || '#c9a84c', zh: bt.zh || '', nombre: bt.nombre || '', anchor: cc.pos[0] === cx && cc.pos[1] === cy })); });
+      const gt = obrasSt.tipo ? HacBuild.tipo(obrasSt.tipo) : null;
       const inG = (x, y) => gCells.some(p => p[0] === x && p[1] === y);
+      const isAnchor = (x, y) => obrasSt.pos && obrasSt.pos[0] === x && obrasSt.pos[1] === y;
       let cells = '';
       for (let y = 0; y < GH; y++) for (let x = 0; x < GW; x++) {
-        const occ = HacBuild.construccionEn(lista, x, y), g = inG(x, y);
-        const cls = occ ? 'occ' : g ? (gOk ? 'ghost ok' : 'ghost bad') : 'free';
-        cells += `<button type="button" class="hacp-ob-cell ${cls}" data-gx="${x}" data-gy="${y}"${occ ? ' disabled' : ''}></button>`;
+        const o = occ.get(x + ',' + y), g = inG(x, y);
+        if (o) {
+          cells += `<button type="button" class="hacp-ob-cell occ" disabled style="background:${o.color}" title="${esc(o.nombre)}">${o.anchor && o.zh ? `<span class="hacp-ob-lbl">${esc(o.zh)}</span>` : ''}</button>`;
+        } else if (g) {
+          cells += `<button type="button" class="hacp-ob-cell ghost ${gOk ? 'ok' : 'bad'}" data-gx="${x}" data-gy="${y}" style="background:${gt ? gt.color : 'transparent'}" title="${gt ? esc(gt.nombre) : ''}">${isAnchor(x, y) && gt && gt.zh ? `<span class="hacp-ob-lbl">${esc(gt.zh)}</span>` : ''}</button>`;
+        } else {
+          cells += `<button type="button" class="hacp-ob-cell free" data-gx="${x}" data-gy="${y}"></button>`;
+        }
       }
       const puede = t && obrasSt.pos && gOk && obrasAsequible(co);
       const aviso = !obrasSt.pos ? 'Toca una celda libre para situar el edificio.'
@@ -4941,7 +4952,7 @@
         ${costeHtml}
         <div class="hacp-ob-zoom"><button type="button" data-ob-zoom="-1" aria-label="alejar">−</button><span>zoom</span><button type="button" data-ob-zoom="1" aria-label="acercar">+</button><span class="hint">arrastra para moverte · toca para colocar</span></div>
         <div class="hacp-ob-gridwrap"><div class="hacp-ob-grid" style="grid-template-columns:repeat(${GW},var(--ob-cell));--ob-cell:${obrasSt.zoom}px">${cells}</div></div>
-        <div class="hacp-ob-legend"><span class="occ"></span>ocupado <span class="ghost ok"></span>válido <span class="ghost bad"></span>no cabe</div>
+        <div class="hacp-ob-legend">Las celdas de color = lo ya construido · <span class="sw ok"></span> cabe · <span class="sw bad"></span> no cabe</div>
         <div class="hacp-ob-aviso">${aviso}</div>
         <div class="hacp-ob-acts">
           <button type="button" class="hacp-cp-btn" data-ob-rot>↻ Girar</button>
