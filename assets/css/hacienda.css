@@ -396,6 +396,14 @@ html.hacp-pseudofs, html.hacp-pseudofs body{ overflow:hidden; }
 .hacp-ob-aviso .ok{ color:#8fd6a0; } .hacp-ob-aviso .bad{ color:#e0715a; }
 .hacp-ob-acts{ display:flex; gap:8px; }
 .hacp-ob-acts .hacp-cp-btn{ flex:1; }
+/* Modos de Obras (Construir/Mover/Borrar) + resaltados de selección/movimiento */
+.hacp-ob-modos{ display:flex; gap:6px; margin:6px 0 8px; }
+.hacp-ob-mode{ flex:1; font:700 12px 'Noto Sans SC',sans-serif; background:rgba(255,255,255,.04); color:var(--parch2); border:1px solid rgba(201,168,76,.3); border-radius:6px; padding:7px 4px; cursor:pointer; }
+.hacp-ob-mode.on{ background:rgba(201,168,76,.2); color:var(--gold); border-color:var(--hac,var(--gold)); }
+.hacp-ob-cell.occ.sel{ outline:2px solid #e0715a; outline-offset:-2px; }
+.hacp-ob-cell.occ.moving{ opacity:.4; filter:grayscale(.5); }
+.hacp-suc-cancel{ background:rgba(200,80,66,.16)!important; border-color:rgba(224,113,90,.6)!important; color:#f0b8ab!important; font-weight:700; }
+.hacp-suc-cancel:hover{ background:rgba(200,80,66,.32)!important; color:#fff!important; }
 .hacp-cp-mis{ margin-top:9px; border-top:1px solid rgba(201,168,76,.18); padding-top:8px; }
 .hacp-cp-mis-on{ display:flex; align-items:center; gap:8px; }
 .hacp-cp-mis-on .hacp-cp-btn{ margin-left:auto; }

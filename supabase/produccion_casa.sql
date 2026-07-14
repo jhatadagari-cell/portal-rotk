@@ -109,9 +109,31 @@ begin
   return jsonb_build_object('mapa', h.mapa, 'almacen', r.almacen, 'tesoreria', r.tesoreria);
 end; $$;
 
+-- ── DEMOLER: el FUNDADOR derriba la construcción cuyo ANCLA está en p_pos ─────
+-- Sin reembolso (derribar = quitar del mapa). p_pos = [gx,gy]. Devuelve el mapa.
+-- Mover un edificio en el cliente = demoler + volver a construir sin coste.
+create or replace function public.casa_demoler(p_hac text, p_pj text, p_pos jsonb)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare h public.haciendas;
+begin
+  select * into h from public.haciendas where id = p_hac for update;
+  if not found then raise exception 'La hacienda no existe'; end if;
+  if coalesce(h.mapa ->> 'fundador','') <> p_pj
+     and not exists (select 1 from jsonb_array_elements(coalesce(h.miembros,'[]'::jsonb)) m
+                     where m ->> 'id' = (h.mapa ->> 'fundador') and m ->> 'personajeId' = p_pj) then
+    raise exception 'Solo el fundador de la casa puede derribar'; end if;
+  update public.haciendas set mapa = jsonb_set(
+      coalesce(mapa,'{"v":1,"construcciones":[]}'::jsonb), '{construcciones}',
+      coalesce((select jsonb_agg(e) from jsonb_array_elements(mapa -> 'construcciones') e
+                where not ((e -> 'pos' ->> 0) = (p_pos ->> 0) and (e -> 'pos' ->> 1) = (p_pos ->> 1))), '[]'::jsonb))
+    where id = p_hac returning * into h;
+  return jsonb_build_object('mapa', h.mapa);
+end; $$;
+
 -- ── RLS: lectura pública; escritura solo por las RPC SECURITY DEFINER ──
 alter table public.produccion_casa enable row level security;
 drop policy if exists prodcasa_read on public.produccion_casa;
 create policy prodcasa_read on public.produccion_casa for select using (true);
 grant execute on function public.casa_diezmo(text,text,text,int,jsonb,text)             to authenticated, anon;
 grant execute on function public.casa_construir(text,text,text,jsonb,int,text,jsonb,int) to authenticated, anon;
+grant execute on function public.casa_demoler(text,text,jsonb)                          to authenticated, anon;

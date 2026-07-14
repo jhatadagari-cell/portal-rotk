@@ -4873,7 +4873,7 @@
       if (window.HacFolk && HacFolk.repaintOverlay) HacFolk.repaintOverlay();
     }
     let obrasEl = null;
-    const obrasSt = { tipo: null, rot: 0, pos: null, lineA: null, zoom: 28 };   // edificio · rotación · ancla · inicio de línea · px de celda
+    const obrasSt = { tipo: null, rot: 0, pos: null, lineA: null, zoom: 28, modo: 'construir', sel: null, movingFrom: null };   // + modo construir/mover/borrar · sel (borrar) · movingFrom (mover)
     const obrasEsLinea = () => !!(obrasSt.tipo && window.HacBuild && HacBuild.esLinea && HacBuild.esLinea(obrasSt.tipo));   // camino/muro → se trazan A→B
     // Celdas de una línea recta ortogonal a→b (el eje más largo), + rotación (igual que el admin).
     function obrasLineCells(a, b) {
@@ -4891,7 +4891,7 @@
     function closeObras() { if (obrasEl) obrasEl.hidden = true; }
     function openObras() {
       if (!esFundador()) { toast('Solo el fundador de la casa puede construir'); return; }
-      obrasSt.pos = null; obrasSt.lineA = null;
+      obrasSt.pos = null; obrasSt.lineA = null; obrasSt.modo = 'construir'; obrasSt.sel = null; obrasSt.movingFrom = null;
       if (!obrasSt.tipo) { const first = HacBuild.CONSTRUCCIONES.find(t => (t.tierMin || 1) <= tier); obrasSt.tipo = first ? first.id : null; }
       buildObras(); ensureObrasEl().hidden = false;
       if (window.HacProdCasa) HacProdCasa.ready().then(() => { if (obrasEl && !obrasEl.hidden) buildObras(); }).catch(() => {});
@@ -4909,86 +4909,112 @@
       const alm = window.HacProdCasa ? HacProdCasa.almacen(h.id) : { hierro: 0, tinta: 0, grano: 0 };
       const teso = window.HacProdCasa ? HacProdCasa.tesoreria(h.id) : 0;
       const R = HacProd.RECURSOS;
+      const [GW, GH] = HacBuild.gridDims(tier);
+      const lista = (h.mapa && h.mapa.construcciones) || [];
+      const modo = obrasSt.modo || 'construir';
+      const linea = modo === 'construir' && obrasEsLinea();                 // trazado A→B (solo al construir)
+      const moviendo = modo === 'mover' && !!obrasSt.movingFrom;            // paso 2 de mover (recolocando)
+      const colocando = modo === 'construir' || moviendo;                   // hay fantasma de colocación
+      const seleccionable = modo === 'borrar' || (modo === 'mover' && !moviendo);   // se tocan edificios ya puestos
+      // Al mover, validar EXCLUYENDO el propio edificio (no colisiona consigo mismo).
+      const listaVal = moviendo ? lista.filter(cc => !(cc.pos[0] === obrasSt.movingFrom[0] && cc.pos[1] === obrasSt.movingFrom[1])) : lista;
       const opts = HacBuild.CONSTRUCCIONES.filter(t => (t.tierMin || 1) <= tier).map(t => {
         const co = HacBuild.coste(t.id);
         const ct = [co.hierro ? co.hierro + '⛓' : '', co.tinta ? co.tinta + '🖋' : '', co.grano ? co.grano + '🌾' : '', co.dinero ? co.dinero + '🏛' : ''].filter(Boolean).join(' ');
-        return `<option value="${t.id}"${obrasSt.tipo === t.id ? ' selected' : ''}>${esc(t.nombre)} ${t.zh} · ${ct}</option>`;
+        return `<option value="${t.id}"${obrasSt.tipo === t.id ? ' selected' : ''}>${esc(t.nombre)} ${t.zh} · ${ct || 'gratis'}</option>`;
       }).join('');
       const t = obrasSt.tipo ? HacBuild.tipo(obrasSt.tipo) : null, co = obrasCoste();
       const falta = (need, have) => need > have ? ' short' : '';
-      const costeHtml = t ? `<div class="hacp-ob-coste">Coste:
+      const costeHtml = (modo === 'construir' && t) ? `<div class="hacp-ob-coste">Coste:
         ${co.hierro ? `<span class="${falta(co.hierro, alm.hierro)}">${R.hierro.icon}${co.hierro}</span>` : ''}
         ${co.tinta ? `<span class="${falta(co.tinta, alm.tinta)}">${R.tinta.icon}${co.tinta}</span>` : ''}
         ${co.grano ? `<span class="${falta(co.grano, alm.grano)}">${R.grano.icon}${co.grano}</span>` : ''}
-        ${co.dinero ? `<span class="${falta(co.dinero, teso)}">🏛${co.dinero}</span>` : ''}
+        ${(co.hierro || co.tinta || co.grano || co.dinero) ? (co.dinero ? `<span class="${falta(co.dinero, teso)}">🏛${co.dinero}</span>` : '') : '<span class="ok">gratis</span>'}
         <span class="hacp-ob-fp">huella ${t.footprint[0]}×${t.footprint[1]}</span></div>` : '';
-      // Rejilla cenital: ocupado / fantasma (válido·inválido por celda) / libre.
-      const [GW, GH] = HacBuild.gridDims(tier);
-      const lista = (h.mapa && h.mapa.construcciones) || [];
-      const linea = obrasEsLinea();
+      // Fantasma de colocación (solo si estamos construyendo o recolocando).
       let gCells = [], gOk = false, gMot = '', gAnchor = null, lineRot = 0, nLineOk = 0;
       const gOkSet = new Set();
-      if (linea && obrasSt.lineA) {                                    // CAMINO/MURO: traza A→B
+      if (colocando && linea && obrasSt.lineA) {                            // CAMINO/MURO: traza A→B
         const lc = obrasLineCells(obrasSt.lineA, obrasSt.pos || obrasSt.lineA); lineRot = lc.rot;
         gCells = lc.cells; gAnchor = obrasSt.lineA;
         gCells.forEach(([cx, cy]) => { if (HacBuild.puedeColocar({ tipo: obrasSt.tipo, pos: [cx, cy], rot: lineRot }, tier, lista).ok) { gOkSet.add(cx + ',' + cy); nLineOk++; } });
         gOk = nLineOk > 0; if (!gOk) gMot = 'La línea no cabe (celdas ocupadas o fuera).';
-      } else if (!linea && obrasSt.pos) {                              // EDIFICIO: huella en la celda ancla
+      } else if (colocando && !linea && obrasSt.pos) {                      // EDIFICIO: huella en la celda ancla
         const c = { tipo: obrasSt.tipo, pos: [obrasSt.pos[0], obrasSt.pos[1]], rot: obrasSt.rot };
         gCells = HacBuild.celdasOcupadas(c); gAnchor = obrasSt.pos;
-        const v = HacBuild.puedeColocar(c, tier, lista); gOk = v.ok; gMot = v.motivo || '';
+        const v = HacBuild.puedeColocar(c, tier, listaVal); gOk = v.ok; gMot = v.motivo || '';
         if (gOk) gCells.forEach(([cx, cy]) => gOkSet.add(cx + ',' + cy));
       }
-      // Mapa de ocupación con COLOR + glifo del edificio en cada celda (como el admin),
-      // para VER qué hay construido (no cuadraditos anónimos).
+      // Celdas del edificio SELECCIONADO (borrar) o EN MOVIMIENTO — para resaltarlas.
+      const selAnchor = obrasSt.sel, movFrom = obrasSt.movingFrom;
+      const selSet = new Set(), movSet = new Set();
+      const ccAt = (p) => p ? lista.find(x => x.pos[0] === p[0] && x.pos[1] === p[1]) : null;
+      const selCc = ccAt(selAnchor); if (selCc) HacBuild.celdasOcupadas(selCc).forEach(([cx, cy]) => selSet.add(cx + ',' + cy));
+      const movCc = moviendo ? ccAt(movFrom) : null; if (movCc) HacBuild.celdasOcupadas(movCc).forEach(([cx, cy]) => movSet.add(cx + ',' + cy));
+      const selDef = selCc ? HacBuild.tipo(selCc.tipo) : null;
+      // Mapa de ocupación con COLOR + glifo del edificio (como el admin) — se ve qué hay.
       const occ = new Map();
-      lista.forEach(cc => { const bt = HacBuild.tipo(cc.tipo); if (!bt) return; HacBuild.celdasOcupadas(cc).forEach(([cx, cy]) => occ.set(cx + ',' + cy, { color: bt.color || '#c9a84c', zh: bt.zh || '', nombre: bt.nombre || '', anchor: cc.pos[0] === cx && cc.pos[1] === cy })); });
-      const gt = obrasSt.tipo ? HacBuild.tipo(obrasSt.tipo) : null;
+      lista.forEach(cc => { const bt = HacBuild.tipo(cc.tipo); if (!bt) return; HacBuild.celdasOcupadas(cc).forEach(([cx, cy]) => occ.set(cx + ',' + cy, { color: bt.color || '#c9a84c', zh: bt.zh || '', nombre: bt.nombre || '', anchor: cc.pos[0] === cx && cc.pos[1] === cy, ax: cc.pos[0], ay: cc.pos[1] })); });
+      const gt = colocando && obrasSt.tipo ? HacBuild.tipo(obrasSt.tipo) : null;
       const inG = (x, y) => gCells.some(p => p[0] === x && p[1] === y);
       const isAnchor = (x, y) => gAnchor && gAnchor[0] === x && gAnchor[1] === y;
       let cells = '';
       for (let y = 0; y < GH; y++) for (let x = 0; x < GW; x++) {
-        const o = occ.get(x + ',' + y), g = inG(x, y);
+        const k = x + ',' + y, o = occ.get(k), g = inG(x, y);
         if (o) {
-          cells += `<button type="button" class="hacp-ob-cell occ" disabled style="background:${o.color}" title="${esc(o.nombre)}">${o.anchor && o.zh ? `<span class="hacp-ob-lbl">${esc(o.zh)}</span>` : ''}</button>`;
+          const isMov = movSet.has(k), isSel = selSet.has(k), clickable = seleccionable && !isMov;
+          cells += `<button type="button" class="hacp-ob-cell occ${isSel ? ' sel' : ''}${isMov ? ' moving' : ''}"${clickable ? ` data-occ="${o.ax},${o.ay}"` : ' disabled'} style="background:${o.color}" title="${esc(o.nombre)}">${o.anchor && o.zh ? `<span class="hacp-ob-lbl">${esc(o.zh)}</span>` : ''}</button>`;
         } else if (g) {
-          const cellOk = gOkSet.has(x + ',' + y);
-          cells += `<button type="button" class="hacp-ob-cell ghost ${cellOk ? 'ok' : 'bad'}" data-gx="${x}" data-gy="${y}" style="background:${gt ? gt.color : 'transparent'}" title="${gt ? esc(gt.nombre) : ''}">${isAnchor(x, y) && gt && gt.zh ? `<span class="hacp-ob-lbl">${esc(gt.zh)}</span>` : ''}</button>`;
+          cells += `<button type="button" class="hacp-ob-cell ghost ${gOkSet.has(k) ? 'ok' : 'bad'}" data-gx="${x}" data-gy="${y}" style="background:${gt ? gt.color : 'transparent'}" title="${gt ? esc(gt.nombre) : ''}">${isAnchor(x, y) && gt && gt.zh ? `<span class="hacp-ob-lbl">${esc(gt.zh)}</span>` : ''}</button>`;
         } else {
-          cells += `<button type="button" class="hacp-ob-cell free" data-gx="${x}" data-gy="${y}"></button>`;
+          cells += `<button type="button" class="hacp-ob-cell free"${colocando ? ` data-gx="${x}" data-gy="${y}"` : ' disabled'}></button>`;
         }
       }
-      // Coste total (una línea gasta por tramo válido).
-      const nCobra = linea ? Math.max(1, nLineOk) : 1;
-      const cazaN = obrasAsequibleN(co, nCobra);
-      let puede, aviso;
-      if (linea) {
-        if (!obrasSt.lineA) { puede = false; aviso = `Toca el <b>inicio</b> del ${esc((t && t.nombre || 'camino').toLowerCase())}.`; }
-        else if (!obrasSt.pos) { puede = false; aviso = 'Ahora toca el <b>final</b> (se traza en recto).'; }
-        else if (!gOk) { puede = false; aviso = `<span class="bad">${esc(gMot)}</span>`; }
-        else if (!cazaN) { puede = false; aviso = '<span class="bad">La casa no reúne recursos para toda la línea.</span>'; }
-        else { puede = true; aviso = `<span class="ok">${nLineOk} tramo${nLineOk !== 1 ? 's' : ''} · listo para trazar.</span>`; }
-      } else {
-        puede = t && obrasSt.pos && gOk && cazaN;
-        aviso = !obrasSt.pos ? 'Toca una celda libre para situar el edificio.'
-          : !gOk ? `<span class="bad">${esc(gMot)}</span>`
-          : !cazaN ? '<span class="bad">La casa no tiene tesorería o materiales suficientes.</span>'
-          : '<span class="ok">Listo para construir.</span>';
+      // Acción principal + aviso, según el modo.
+      let puede = false, aviso = '', mainLbl = '', secLbl = '';
+      if (modo === 'borrar') {
+        puede = !!selCc; mainLbl = selCc ? `🗑 Derribar` : 'Derribar';
+        aviso = selCc ? `Vas a derribar <b>${esc(selDef ? selDef.nombre : '')}</b>. Sin reembolso.` : 'Toca un edificio para derribarlo.';
+      } else if (modo === 'mover') {
+        if (!moviendo) { aviso = 'Toca el edificio que quieres <b>mover</b>.'; mainLbl = 'Mover aquí'; }
+        else {
+          secLbl = '↺ Cancelar';
+          puede = !!obrasSt.pos && gOk; mainLbl = 'Mover aquí';
+          aviso = !obrasSt.pos ? `Toca el <b>nuevo sitio</b> para ${esc((HacBuild.tipo(obrasSt.tipo) || {}).nombre || 'el edificio')}.`
+            : !gOk ? `<span class="bad">${esc(gMot || 'Ahí no cabe.')}</span>` : '<span class="ok">Listo para mover aquí.</span>';
+        }
+      } else {   // construir
+        const cazaN = obrasAsequibleN(co, linea ? Math.max(1, nLineOk) : 1);
+        secLbl = linea ? '↺ Reiniciar' : '↻ Girar';
+        if (linea) {
+          if (!obrasSt.lineA) { aviso = `Toca el <b>inicio</b> del ${esc((t && t.nombre || 'camino').toLowerCase())}.`; }
+          else if (!obrasSt.pos) { aviso = 'Ahora toca el <b>final</b> (se traza en recto).'; }
+          else if (!gOk) { aviso = `<span class="bad">${esc(gMot)}</span>`; }
+          else if (!cazaN) { aviso = '<span class="bad">La casa no reúne recursos para toda la línea.</span>'; }
+          else { puede = true; aviso = `<span class="ok">${nLineOk} tramo${nLineOk !== 1 ? 's' : ''} · listo para trazar.</span>`; }
+          mainLbl = `Trazar${nLineOk ? ` (${nLineOk})` : ''}`;
+        } else {
+          puede = !!(t && obrasSt.pos && gOk && cazaN); mainLbl = 'Construir aquí';
+          aviso = !obrasSt.pos ? 'Toca una celda libre para situar el edificio.'
+            : !gOk ? `<span class="bad">${esc(gMot)}</span>`
+            : !cazaN ? '<span class="bad">La casa no tiene tesorería o materiales suficientes.</span>'
+            : '<span class="ok">Listo para construir.</span>';
+        }
       }
+      const modeBtn = (m, lbl) => `<button type="button" class="hacp-ob-mode${modo === m ? ' on' : ''}" data-ob-modo="${m}">${lbl}</button>`;
       el.innerHTML = `<div class="hacp-shop-box hacp-obras-box">
         <button type="button" class="hacp-shop-x" data-act="obras-close" aria-label="Cerrar">✕</button>
         <div class="hacp-shop-h"><span class="hacp-shop-zh">營</span> Obras de la casa</div>
-        <div class="hacp-shop-sub">Como fundador, levantas edificios con la <b>tesorería</b> y el <b>almacén</b> que la casa reúne con los diezmos.</div>
         <div class="hacp-ob-pool">Casa: <b>🏛 ${teso}</b> · ${R.hierro.icon}${alm.hierro} · ${R.tinta.icon}${alm.tinta} · ${R.grano.icon}${alm.grano}</div>
-        <div class="hacp-ob-pick"><label>Edificio</label><select class="hacp-ob-sel" data-ob-sel>${opts}</select></div>
-        ${costeHtml}
-        <div class="hacp-ob-zoom"><button type="button" data-ob-zoom="-1" aria-label="alejar">−</button><span>zoom</span><button type="button" data-ob-zoom="1" aria-label="acercar">+</button><span class="hint">arrastra para moverte · toca para colocar</span></div>
+        <div class="hacp-ob-modos">${modeBtn('construir', '營 Construir')}${modeBtn('mover', '✥ Mover')}${modeBtn('borrar', '🗑 Borrar')}</div>
+        ${modo === 'construir' ? `<div class="hacp-ob-pick"><label>Edificio</label><select class="hacp-ob-sel" data-ob-sel>${opts}</select></div>${costeHtml}` : ''}
+        <div class="hacp-ob-zoom"><button type="button" data-ob-zoom="-1" aria-label="alejar">−</button><span>zoom</span><button type="button" data-ob-zoom="1" aria-label="acercar">+</button><span class="hint">arrastra para moverte</span></div>
         <div class="hacp-ob-gridwrap"><div class="hacp-ob-grid" style="grid-template-columns:repeat(${GW},var(--ob-cell));--ob-cell:${obrasSt.zoom}px">${cells}</div></div>
         <div class="hacp-ob-legend">Las celdas de color = lo ya construido · <span class="sw ok"></span> cabe · <span class="sw bad"></span> no cabe</div>
         <div class="hacp-ob-aviso">${aviso}</div>
         <div class="hacp-ob-acts">
-          <button type="button" class="hacp-cp-btn" data-ob-rot>${linea ? '↺ Reiniciar' : '↻ Girar'}</button>
-          <button type="button" class="hacp-cp-btn hacp-suc-ok" data-ob-build${puede ? '' : ' disabled'}>${linea ? `Trazar${nLineOk ? ` (${nLineOk})` : ''}` : 'Construir aquí'}</button>
+          ${secLbl ? `<button type="button" class="hacp-cp-btn" data-ob-rot>${secLbl}</button>` : ''}
+          <button type="button" class="hacp-cp-btn ${modo === 'borrar' ? 'hacp-suc-cancel' : 'hacp-suc-ok'}" data-ob-build${puede ? '' : ' disabled'}>${mainLbl}</button>
         </div>
       </div>`;
       el.querySelector('[data-act="obras-close"]').addEventListener('click', closeObras);
@@ -4997,15 +5023,61 @@
         obrasSt.zoom = Math.max(16, Math.min(58, obrasSt.zoom + Number(b.dataset.obZoom) * 6));
         if (grid) grid.style.setProperty('--ob-cell', obrasSt.zoom + 'px');
       }));
+      el.querySelectorAll('[data-ob-modo]').forEach(b => b.addEventListener('click', () => {
+        obrasSt.modo = b.dataset.obModo; obrasSt.pos = null; obrasSt.lineA = null; obrasSt.sel = null; obrasSt.movingFrom = null; buildObras();
+      }));
       const sel = el.querySelector('[data-ob-sel]'); if (sel) sel.addEventListener('change', () => { obrasSt.tipo = sel.value; obrasSt.pos = null; obrasSt.lineA = null; buildObras(); });
-      const rot = el.querySelector('[data-ob-rot]'); if (rot) rot.addEventListener('click', () => { if (linea) { obrasSt.lineA = null; obrasSt.pos = null; } else { obrasSt.rot = (obrasSt.rot + 1) % 4; } buildObras(); });
+      const rot = el.querySelector('[data-ob-rot]'); if (rot) rot.addEventListener('click', () => {
+        if (modo === 'mover') { obrasSt.movingFrom = null; obrasSt.pos = null; }
+        else if (linea) { obrasSt.lineA = null; obrasSt.pos = null; }
+        else { obrasSt.rot = (obrasSt.rot + 1) % 4; }
+        buildObras();
+      });
       el.querySelectorAll('.hacp-ob-cell.free, .hacp-ob-cell.ghost').forEach(b => b.addEventListener('click', () => {
+        if (!colocando) return;
         const gx = Number(b.dataset.gx), gy = Number(b.dataset.gy);
         if (linea) { if (!obrasSt.lineA) { obrasSt.lineA = [gx, gy]; obrasSt.pos = null; } else { obrasSt.pos = [gx, gy]; } }
         else { obrasSt.pos = [gx, gy]; }
         buildObras();
       }));
-      const bb = el.querySelector('[data-ob-build]'); if (bb && !bb.disabled) bb.addEventListener('click', obrasConstruir);
+      el.querySelectorAll('.hacp-ob-cell.occ[data-occ]').forEach(b => b.addEventListener('click', () => {
+        const p = b.dataset.occ.split(',').map(Number);
+        if (modo === 'borrar') { obrasSt.sel = p; }
+        else if (modo === 'mover') { const cc = ccAt(p); if (cc) { obrasSt.movingFrom = p; obrasSt.tipo = cc.tipo; obrasSt.rot = cc.rot || 0; obrasSt.pos = null; } }
+        buildObras();
+      }));
+      const bb = el.querySelector('[data-ob-build]'); if (bb && !bb.disabled) bb.addEventListener('click', () => {
+        if (modo === 'borrar') obrasDerribar(obrasSt.sel);
+        else if (modo === 'mover') obrasMover();
+        else obrasConstruir();
+      });
+    }
+    async function obrasDerribar(pos) {
+      if (!esFundador() || !pos || !window.HacProdCasa) return;
+      const cc = ((h.mapa && h.mapa.construcciones) || []).find(x => x.pos[0] === pos[0] && x.pos[1] === pos[1]);
+      const nom = cc ? ((HacBuild.tipo(cc.tipo) || {}).nombre || '') : '';
+      try { const res = await HacProdCasa.demoler({ haciendaId: h.id, pj: myId, pos: pos }); if (res && res.mapa) h.mapa = res.mapa; }
+      catch (e) { toast('No se pudo derribar: ' + (e && e.message || e)); return; }
+      toast(`營 Derribado${nom ? ': ' + nom : ''}`);
+      if (window.HacBitacora && nom) HacBitacora.log(myId, 'progreso', `營 El fundador derribó ${nom}`);
+      obrasSt.sel = null; redrawIso(); buildObras();
+    }
+    async function obrasMover() {
+      if (!esFundador() || !obrasSt.movingFrom || !obrasSt.pos || !window.HacProdCasa) return;
+      const from = obrasSt.movingFrom, to = obrasSt.pos;
+      const cc = ((h.mapa && h.mapa.construcciones) || []).find(x => x.pos[0] === from[0] && x.pos[1] === from[1]);
+      if (!cc) { obrasSt.movingFrom = null; buildObras(); return; }
+      const tipo = cc.tipo, rot = cc.rot || 0, dueno = cc.dueno || null, nom = (HacBuild.tipo(tipo) || {}).nombre || '';
+      const listaSin = ((h.mapa && h.mapa.construcciones) || []).filter(x => !(x.pos[0] === from[0] && x.pos[1] === from[1]));
+      const v = HacBuild.puedeColocar({ tipo: tipo, pos: to, rot: rot }, tier, listaSin);
+      if (!v.ok) { toast(v.motivo); return; }
+      try {
+        const d = await HacProdCasa.demoler({ haciendaId: h.id, pj: myId, pos: from }); if (d && d.mapa) h.mapa = d.mapa;
+        const r = await HacProdCasa.construir({ haciendaId: h.id, pj: myId, tipo: tipo, pos: to, rot: rot, dueno: dueno, mat: {}, dinero: 0 }); if (r && r.mapa) h.mapa = r.mapa;
+      } catch (e) { toast('No se pudo mover: ' + (e && e.message || e)); redrawIso(); buildObras(); return; }
+      toast(`營 Movido${nom ? ': ' + nom : ''}`);
+      if (window.HacBitacora && nom) HacBitacora.log(myId, 'progreso', `營 El fundador movió ${nom}`);
+      obrasSt.movingFrom = null; obrasSt.pos = null; redrawIso(); buildObras();
     }
     async function obrasConstruir() {
       if (!esFundador() || !obrasSt.tipo || !obrasSt.pos || !window.HacProdCasa) return;

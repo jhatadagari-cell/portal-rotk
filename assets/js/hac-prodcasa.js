@@ -87,6 +87,14 @@ const HacProdCasa = (function () {
     return data;
   }
 
-  return { ready, reload, dbOk, almacen, tesoreria, aporteDe, pagadoHoy, diezmo, construir, RECS, TABLE };
+  // El FUNDADOR derriba la construcción cuyo ancla está en pos [gx,gy]. Devuelve { mapa }.
+  async function demoler({ haciendaId, pj, pos }) {
+    const c = await sb();
+    const { data, error } = await c.rpc('casa_demoler', { p_hac: haciendaId, p_pj: pj, p_pos: pos });
+    if (error) throw new Error(error.message || 'No se pudo derribar');
+    return data;
+  }
+
+  return { ready, reload, dbOk, almacen, tesoreria, aporteDe, pagadoHoy, diezmo, construir, demoler, RECS, TABLE };
 })();
 if (typeof window !== 'undefined') window.HacProdCasa = HacProdCasa;
