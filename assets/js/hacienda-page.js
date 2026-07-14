@@ -5079,6 +5079,94 @@
       if (window.HacBitacora && nom) HacBitacora.log(myId, 'progreso', `營 El fundador movió ${nom}`);
       obrasSt.movingFrom = null; obrasSt.pos = null; redrawIso(); buildObras();
     }
+
+    // ══ PABELLÓN (F1): estructura social — se abre al TOCAR el patio en la finca ══
+    async function pabRPC(name, args) {
+      if (typeof Auth === 'undefined') throw new Error('Auth no está cargado');
+      await Auth.ready(); const c = Auth.client(); if (!c) throw new Error('Supabase no disponible');
+      const { data, error } = await c.rpc(name, args);
+      if (error) throw new Error(error.message || 'No se pudo'); return data;
+    }
+    // ¿Qué pabellón contiene la celda (gx,gy)? (región flood-fill desde su semilla).
+    function pabEnCelda(gx, gy) {
+      if (!window.HacStore || !window.HacBuild || !HacBuild.regionPabellon) return null;
+      const pabs = HacStore.pabellones(h.id) || [];
+      for (const p of pabs) {
+        if (!Array.isArray(p.seed)) continue;
+        if (HacBuild.regionPabellon(h.mapa, tier, p.seed[0], p.seed[1]).some(c => c[0] === gx && c[1] === gy)) return p;
+      }
+      return null;
+    }
+    let pabEl = null, pabAbierto = null;
+    function ensurePabEl() {
+      if (pabEl) return pabEl;
+      pabEl = document.createElement('div'); pabEl.className = 'hacp-shop hacp-pab-panel-ov'; pabEl.hidden = true; overlayHost().appendChild(pabEl);
+      ['pointerdown', 'pointerup', 'wheel', 'click'].forEach(ev => pabEl.addEventListener(ev, (e) => e.stopPropagation(), { passive: false }));
+      pabEl.addEventListener('click', (e) => { if (e.target === pabEl) pabEl.hidden = true; });
+      return pabEl;
+    }
+    function openPabPanel(p) { pabAbierto = p; buildPabPanel(); ensurePabEl().hidden = false; }
+    function buildPabPanel() {
+      const p = pabAbierto; if (!p) return;
+      const el = ensurePabEl(), rol = p.rol;
+      const R = (HacBuild.rolPabellon && HacBuild.rolPabellon(rol)) || { zh: '', nombre: rol, color: '#c9a84c' };
+      const miembros = h.miembros || [];
+      const resId = (h.mapa && h.mapa.responsables && h.mapa.responsables[rol]) || null;
+      const resM = resId ? miembros.find(m => String(m.personajeId) === String(resId)) : null;
+      const soyFund = esFundador(), soyResp = resId && String(resId) === String(myId);
+      const mios = miembros.filter(m => m.pabellon === rol);
+      const yoM = miembros.find(m => String(m.personajeId) === String(myId));
+      const yoEnEste = !!(yoM && yoM.pabellon === rol);
+      // Sinergia: edificios del dominio dentro de la región (los de CLASE cuentan doble).
+      const reg = Array.isArray(p.seed) ? HacBuild.regionPabellon(h.mapa, tier, p.seed[0], p.seed[1]) : [];
+      const regSet = new Set(reg.map(c => c[0] + ',' + c[1]));
+      let sin = 0; ((h.mapa && h.mapa.construcciones) || []).forEach(c => { const t = HacBuild.tipo(c.tipo); if (t && t.dominio === rol && regSet.has(c.pos[0] + ',' + c.pos[1])) sin += t.restringido ? 2 : 1; });
+      const pct = Math.min(15, sin * 3);
+      const puedeAscender = soyResp || soyFund;
+      const filaM = (m) => {
+        const e5 = Math.max(0, Math.min(5, Number(m.escalafon) || 0)), pips = '●'.repeat(e5) + '○'.repeat(5 - e5);
+        const esRes = String(m.personajeId) === String(resId), yo = String(m.personajeId) === String(myId);
+        return `<div class="hacp-pab-m${yo ? ' yo' : ''}">
+          <span class="nm">${esc(m.nombre || '—')}${esRes ? ' <i class="hacp-pab-resb">責 responsable</i>' : ''}${yo ? ' <em>(tú)</em>' : ''}</span>
+          <span class="esc" title="Escalafón ${e5}/5" style="color:${R.color}">${pips}</span>
+          ${puedeAscender ? `<span class="hacp-pab-escb"><button type="button" class="hacp-pab-mini" data-esc="-1" data-pj="${esc(m.personajeId)}"${e5 <= 0 ? ' disabled' : ''}>−</button><button type="button" class="hacp-pab-mini" data-esc="1" data-pj="${esc(m.personajeId)}"${e5 >= 5 ? ' disabled' : ''}>+</button></span>` : ''}
+        </div>`;
+      };
+      const listaM = mios.length ? mios.map(filaM).join('') : '<div class="hacp-inv-note">Aún nadie se ha unido a este pabellón.</div>';
+      const nombrarHtml = soyFund ? `<div class="hacp-pab-setresp"><label>Nombrar responsable</label>
+        <select data-pab-resp><option value="">— sin responsable —</option>${mios.map(m => `<option value="${esc(m.personajeId)}"${String(m.personajeId) === String(resId) ? ' selected' : ''}>${esc(m.nombre)}</option>`).join('')}</select></div>` : '';
+      const miAccion = yoM ? (yoEnEste
+        ? `<button type="button" class="hacp-cp-btn" data-pab-salir>Salir del pabellón</button>`
+        : `<button type="button" class="hacp-cp-btn hacp-suc-ok" data-pab-unir="${rol}">Unirme a este pabellón${yoM.pabellon ? ' (dejo el otro)' : ''}</button>`)
+        : '<div class="hacp-inv-note">Solo los miembros de la hacienda pueden unirse.</div>';
+      el.innerHTML = `<div class="hacp-shop-box hacp-pab-box">
+        <button type="button" class="hacp-shop-x" data-pab-x aria-label="Cerrar">✕</button>
+        <div class="hacp-shop-h"><span class="hacp-shop-zh" style="color:${R.color}">${R.zh}</span> ${esc(p.nombre || R.nombre)}</div>
+        <div class="hacp-shop-sub">Pabellón <b style="color:${R.color}">${esc(R.nombre)}</b> · lo potencian sus edificios y su gente.</div>
+        <div class="hacp-pab-pot">🏗 <b>${sin}</b> edificio${sin !== 1 ? 's' : ''} <span style="color:${R.color}">${R.zh}</span> dentro → <b style="color:${R.color}">+${pct}%</b> bono pasivo de la finca</div>
+        <div class="hacp-pab-resp">責 Responsable: <b>${resM ? esc(resM.nombre) : '— sin nombrar —'}</b></div>
+        ${nombrarHtml}
+        <div class="hacp-prod-seclbl">Miembros 部眾</div>
+        <div class="hacp-pab-ms">${listaM}</div>
+        <div class="hacp-pab-invnote">🔬 Investigación del pabellón: <i>próximamente</i>.</div>
+        <div class="hacp-pab-acts">${miAccion}</div>
+      </div>`;
+      el.querySelector('[data-pab-x]').addEventListener('click', () => { el.hidden = true; });
+      const unir = el.querySelector('[data-pab-unir]'); if (unir) unir.addEventListener('click', () => pabAccion('unir', rol));
+      const salir = el.querySelector('[data-pab-salir]'); if (salir) salir.addEventListener('click', () => pabAccion('unir', ''));
+      const rsel = el.querySelector('[data-pab-resp]'); if (rsel) rsel.addEventListener('change', () => pabAccion('resp', rol, rsel.value));
+      el.querySelectorAll('[data-esc]').forEach(b => b.addEventListener('click', () => pabAccion('esc', b.dataset.pj, Number(b.dataset.esc))));
+    }
+    async function pabAccion(kind, a, b) {
+      if (!myId) return;
+      try {
+        if (kind === 'unir') { const d = await pabRPC('pab_unirse', { p_hac: h.id, p_pj: myId, p_rol: a }); if (d && d.miembros) h.miembros = d.miembros; toast(a ? '部 Te uniste al pabellón' : 'Saliste del pabellón'); }
+        else if (kind === 'resp') { const d = await pabRPC('pab_responsable', { p_hac: h.id, p_pj: myId, p_rol: a, p_target: b || '' }); if (d && d.mapa) h.mapa = d.mapa; toast('責 Responsable actualizado'); }
+        else if (kind === 'esc') { const d = await pabRPC('pab_escalafon', { p_hac: h.id, p_pj: myId, p_target: a, p_delta: b }); if (d && d.miembros) h.miembros = d.miembros; }
+      } catch (e) { toast(String(e && e.message || e)); return; }
+      buildPabPanel();
+      if (charId) buildCharPanel(charId);
+    }
     async function obrasConstruir() {
       if (!esFundador() || !obrasSt.tipo || !obrasSt.pos || !window.HacProdCasa) return;
       const t = HacBuild.tipo(obrasSt.tipo), co = HacBuild.coste(obrasSt.tipo);
@@ -5524,6 +5612,9 @@
       const cell = (window.HacIso && HacIso.cellAt) ? HacIso.cellAt(iso, e.clientX, e.clientY) : null;
       const bld = cell ? edificioEnCelda(cell[0], cell[1]) : null;
       if (bld) { showBldPop(e.clientX, e.clientY, bld); return; }
+      // ¿el suelo de un PATIO (pabellón)? → abre su panel (estructura social).
+      const pab = cell ? pabEnCelda(cell[0], cell[1]) : null;
+      if (pab) { hidePop(); openPabPanel(pab); return; }
       hidePop(); deselect();
     });
     document.addEventListener('pointerdown', (e) => { if (pop && !pop.contains(e.target) && !vp.contains(e.target)) hidePop(); });
