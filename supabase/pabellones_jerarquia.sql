@@ -71,6 +71,64 @@ begin
   return jsonb_build_object('miembros', h.miembros);
 end; $$;
 
+-- ── INVESTIGACIONES (F2) ──────────────────────────────────────────────────
+-- Estado por hacienda en mapa.investig = { rol: {id, prog, ts, done?} } y los
+-- desbloqueos en mapa.desbloqueos = { clave: true }. El progreso PASIVO lo calcula
+-- el cliente (conoce miembros/escalafones/edificios) y estas RPCs fijan el valor
+-- absoluto (clamp, nunca a menos). Confianza cliente como el diezmo/terreno.
+
+-- El RESPONSABLE (o fundador) INICIA/cambia la investigación del pabellón (prog 0).
+create or replace function public.pab_investig_elegir(p_hac text, p_pj text, p_rol text, p_id text, p_ts bigint)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare h public.haciendas; v_ok boolean;
+begin
+  if p_rol not in ('militar', 'cultural', 'administrativo') then raise exception 'Rol no válido'; end if;
+  select * into h from public.haciendas where id = p_hac for update;
+  if not found then raise exception 'La hacienda no existe'; end if;
+  v_ok := coalesce(h.mapa ->> 'fundador', '') = p_pj
+     or exists (select 1 from jsonb_array_elements(coalesce(h.miembros, '[]'::jsonb)) m
+                where m ->> 'id' = (h.mapa ->> 'fundador') and m ->> 'personajeId' = p_pj)
+     or (h.mapa -> 'responsables' ->> p_rol) = p_pj;
+  if not v_ok then raise exception 'Solo el responsable o el fundador eligen la investigación'; end if;
+  update public.haciendas set mapa = jsonb_set(
+      jsonb_set(coalesce(mapa, '{}'::jsonb), '{investig}', coalesce(mapa -> 'investig', '{}'::jsonb)),
+      array['investig', p_rol], jsonb_build_object('id', p_id, 'prog', 0, 'ts', p_ts))
+    where id = p_hac returning * into h;
+  return jsonb_build_object('mapa', h.mapa);
+end; $$;
+
+-- Un MIEMBRO fija el progreso (pasivo acumulado + aportación activa). Nunca baja.
+-- Al alcanzar el objetivo con p_done_key, marca el desbloqueo y `done`.
+create or replace function public.pab_investig_prog(p_hac text, p_pj text, p_rol text, p_prog int, p_ts bigint, p_target int, p_done_key text)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare h public.haciendas; v_cur jsonb; v_prog int; v_tgt int;
+begin
+  select * into h from public.haciendas where id = p_hac for update;
+  if not found then raise exception 'La hacienda no existe'; end if;
+  if not exists (select 1 from jsonb_array_elements(coalesce(h.miembros, '[]'::jsonb)) m where m ->> 'personajeId' = p_pj) then
+    raise exception 'No perteneces a esta hacienda'; end if;
+  v_cur := h.mapa -> 'investig' -> p_rol;
+  if v_cur is null or coalesce((v_cur ->> 'done')::boolean, false) then raise exception 'No hay investigación en curso'; end if;
+  v_tgt := coalesce(p_target, 999999);
+  v_prog := least(v_tgt, greatest(coalesce((v_cur ->> 'prog')::int, 0), greatest(0, coalesce(p_prog, 0))));
+  if v_prog >= v_tgt and coalesce(p_done_key, '') <> '' then
+    update public.haciendas set mapa = jsonb_set(
+        jsonb_set(
+          jsonb_set(coalesce(mapa, '{}'::jsonb), '{desbloqueos}', coalesce(mapa -> 'desbloqueos', '{}'::jsonb) || jsonb_build_object(p_done_key, true)),
+          '{investig}', coalesce(mapa -> 'investig', '{}'::jsonb)),
+        array['investig', p_rol], jsonb_build_object('id', v_cur ->> 'id', 'prog', v_tgt, 'ts', p_ts, 'done', true))
+      where id = p_hac returning * into h;
+  else
+    update public.haciendas set mapa = jsonb_set(
+        jsonb_set(coalesce(mapa, '{}'::jsonb), '{investig}', coalesce(mapa -> 'investig', '{}'::jsonb)),
+        array['investig', p_rol], jsonb_build_object('id', v_cur ->> 'id', 'prog', v_prog, 'ts', p_ts))
+      where id = p_hac returning * into h;
+  end if;
+  return jsonb_build_object('mapa', h.mapa);
+end; $$;
+
 grant execute on function public.pab_unirse(text,text,text)           to authenticated, anon;
 grant execute on function public.pab_responsable(text,text,text,text) to authenticated, anon;
 grant execute on function public.pab_escalafon(text,text,text,int)    to authenticated, anon;
+grant execute on function public.pab_investig_elegir(text,text,text,text,bigint)      to authenticated, anon;
+grant execute on function public.pab_investig_prog(text,text,text,int,bigint,int,text) to authenticated, anon;

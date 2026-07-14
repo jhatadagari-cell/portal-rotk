@@ -425,6 +425,16 @@ html.hacp-pseudofs, html.hacp-pseudofs body{ overflow:hidden; }
 .hacp-pab-invnote{ font-size:11px; color:var(--parch2); opacity:.8; margin:4px 0 8px; }
 .hacp-pab-acts{ display:flex; gap:8px; }
 .hacp-pab-acts .hacp-cp-btn{ flex:1; }
+/* Investigación del pabellón */
+.hacp-pab-inv{ border:1px solid rgba(201,168,76,.28); border-radius:8px; padding:9px 11px; margin-bottom:8px; }
+.hacp-pab-inv.done{ border-color:rgba(122,196,140,.5); background:rgba(122,196,140,.07); }
+.hacp-pab-inv-h{ font:700 13px 'Noto Sans SC',sans-serif; color:var(--parch); margin-bottom:5px; }
+.hacp-pab-inv-h .ok{ color:#8fd6a0; font-size:11px; }
+.hacp-pab-inv-d{ font-size:11px; color:var(--parch2); line-height:1.35; margin-bottom:8px; }
+.hacp-pab-bar{ height:10px; border-radius:6px; background:rgba(0,0,0,.32); border:1px solid rgba(201,168,76,.25); overflow:hidden; margin:2px 0 5px; }
+.hacp-pab-bar i{ display:block; height:100%; border-radius:6px 0 0 6px; transition:width .6s cubic-bezier(.4,1.3,.5,1); box-shadow:0 0 8px rgba(255,255,255,.18) inset; }
+.hacp-pab-inv-s{ font-size:11px; color:var(--parch2); font-variant-numeric:tabular-nums; }
+.hacp-pab-inv-s b{ color:var(--gold); }
 .hacp-cp-mis{ margin-top:9px; border-top:1px solid rgba(201,168,76,.18); padding-top:8px; }
 .hacp-cp-mis-on{ display:flex; align-items:center; gap:8px; }
 .hacp-cp-mis-on .hacp-cp-btn{ margin-left:auto; }

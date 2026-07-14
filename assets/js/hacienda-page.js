@@ -738,6 +738,7 @@
         r = premioPrestigio(r);   // +% ropa de torso rara + diezmo (al día suma / pendiente merma)
         HacPuntos.award(h.id, myId, r);
         retoAdd('prestigio', r);   // reto semanal: prestigio ganado
+        if (mis && mis.dom) aportarInvestig(mis.dom, 12);   // contribución ACTIVA a la investigación de tu pabellón
         // La misión del tablón da, además del prestigio, dinero + XP PERSONAL (al dominio).
         let extra = '';
         if (mis && window.HacStats) {
@@ -1236,7 +1237,7 @@
         libroOk = !!(rr && rr.ok !== false);
         extra = libroOk ? ` · 📔 Conclusiones ${(DEB.CALIDADES[cal] || {}).nombre || cal}` : ' · 📔 (mochila llena)';
       }
-      if (soyGanador && window.HacPuntos && HacPuntos.award) { const pr = premioPrestigio(HacPuntos.recompensa ? HacPuntos.recompensa(20, 300) : 8); HacPuntos.award(h.id, myId, pr); }
+      if (soyGanador && window.HacPuntos && HacPuntos.award) { const pr = premioPrestigio(HacPuntos.recompensa ? HacPuntos.recompensa(20, 300) : 8); HacPuntos.award(h.id, myId, pr); aportarInvestig('militar', 20); }   // escaramuza ganada → investigación 武
       const otro = (myId === d.hostId) ? d.invitadoNombre : d.hostNombre;
       const xpTxt = oc.doms.length ? ` · +${xpCada} XP (${oc.doms.map(dm => DOM_NOMBRE_XP[dm] || dm).join(', ')})` : '';
       if (window.HacBitacora) HacBitacora.log(myId, 'debate', `🗣 Debate de ${t ? t.nombre : d.tema} con ${otro || 'otro mecenas'}: ${soyGanador ? '✔ ganaste' : '✘ perdiste'}${xpTxt}${extra}`, { clave: 'debate:' + d.id });
@@ -5097,6 +5098,46 @@
       }
       return null;
     }
+    // ── Investigaciones (F2): 1 por aptitud. `unlock` = clave de desbloqueo (efectos en F3). ──
+    const INVESTIG = {
+      militar:        { id: 'caballo-blanco', zh: '白馬義從', nombre: 'Jinetes del Caballo Blanco', target: 300, unlock: 'caballo-blanco', desc: 'Adiestra la caballería ligera del norte. Al completarla, la casa podrá criar caballos blancos.' },
+      cultural:       { id: 'talentos',       zh: '招賢',     nombre: 'Atraer talentos',            target: 300, unlock: 'talentos',       desc: 'La fama de la casa se extiende. Al completarla, en expediciones podrás toparte con talentos que quieran unirse.' },
+      administrativo: { id: 'tributo',        zh: '貢賦',     nombre: 'Rutas de tributo',           target: 300, unlock: 'tributo',        desc: 'Abre rutas de tributo. Al completarla, una caravana llegará cada cierto tiempo con monedas y materiales para la casa.' },
+    };
+    const nowMs = () => (window.HacClock && HacClock.now) ? HacClock.now() : Date.now();
+    function pabSinergia(rol) {
+      const pabs = (window.HacStore && HacStore.pabellones) ? HacStore.pabellones(h.id) : [];
+      const p = pabs.find(x => x.rol === rol); if (!p || !Array.isArray(p.seed)) return 0;
+      const reg = new Set(HacBuild.regionPabellon(h.mapa, tier, p.seed[0], p.seed[1]).map(c => c[0] + ',' + c[1]));
+      let s = 0; ((h.mapa && h.mapa.construcciones) || []).forEach(c => { const t = HacBuild.tipo(c.tipo); if (t && t.dominio === rol && reg.has(c.pos[0] + ',' + c.pos[1])) s += t.restringido ? 2 : 1; });
+      return s;
+    }
+    function pabPassiveRate(rol) {   // pts/hora = gente ×2 + suma de escalafones + edificios del patio
+      const ms = (h.miembros || []).filter(m => m.pabellon === rol);
+      return ms.length * 2 + ms.reduce((a, m) => a + (Number(m.escalafon) || 0), 0) + pabSinergia(rol);
+    }
+    const pabInvestig = (rol) => (h.mapa && h.mapa.investig && h.mapa.investig[rol]) || null;
+    function pabLiveProg(rol) {
+      const inv = pabInvestig(rol), def = INVESTIG[rol]; if (!inv || !def) return 0;
+      if (inv.done) return def.target;
+      const hrs = Math.max(0, (nowMs() - (Number(inv.ts) || nowMs())) / 3600000);
+      return Math.min(def.target, (Number(inv.prog) || 0) + pabPassiveRate(rol) * hrs);
+    }
+    const pabDesbloqueado = (key) => !!(h.mapa && h.mapa.desbloqueos && h.mapa.desbloqueos[key]);
+    // Aportación ACTIVA: al hacer una tarea de TU pabellón, sumas a su investigación.
+    async function aportarInvestig(dom, base) {
+      const inv = pabInvestig(dom), def = INVESTIG[dom]; if (!inv || inv.done || !def || !myId) return;
+      const yo = (h.miembros || []).find(m => String(m.personajeId) === String(myId));
+      if (!yo || yo.pabellon !== dom) return;                              // solo contribuyes a TU pabellón
+      const chunk = Math.round((base || 0) * (1 + (Number(yo.escalafon) || 0) * 0.25));
+      const np = Math.min(def.target, Math.round(pabLiveProg(dom)) + chunk);
+      try { const d = await pabRPC('pab_investig_prog', { p_hac: h.id, p_pj: myId, p_rol: dom, p_prog: np, p_ts: nowMs(), p_target: def.target, p_done_key: np >= def.target ? def.unlock : '' }); if (d && d.mapa) h.mapa = d.mapa; } catch (e) { return; }
+      if (np >= def.target) toast(`🔬 ¡Investigación completada: ${def.nombre}!`);
+    }
+    async function pabCompletar(rol) {   // completar por acumulación pasiva (al abrir el panel)
+      const def = INVESTIG[rol]; if (!def) return;
+      try { const d = await pabRPC('pab_investig_prog', { p_hac: h.id, p_pj: myId, p_rol: rol, p_prog: def.target, p_ts: nowMs(), p_target: def.target, p_done_key: def.unlock }); if (d && d.mapa) { h.mapa = d.mapa; toast(`🔬 ¡Investigación completada: ${def.nombre}!`); buildPabPanel(); } } catch (e) {}
+    }
     let pabEl = null, pabAbierto = null;
     function ensurePabEl() {
       if (pabEl) return pabEl;
@@ -5105,7 +5146,12 @@
       pabEl.addEventListener('click', (e) => { if (e.target === pabEl) pabEl.hidden = true; });
       return pabEl;
     }
-    function openPabPanel(p) { pabAbierto = p; buildPabPanel(); ensurePabEl().hidden = false; }
+    function openPabPanel(p) {
+      pabAbierto = p;
+      const def = INVESTIG[p.rol], inv = pabInvestig(p.rol);
+      if (inv && !inv.done && def && pabLiveProg(p.rol) >= def.target) pabCompletar(p.rol);
+      buildPabPanel(); ensurePabEl().hidden = false;
+    }
     function buildPabPanel() {
       const p = pabAbierto; if (!p) return;
       const el = ensurePabEl(), rol = p.rol;
@@ -5139,6 +5185,23 @@
         ? `<button type="button" class="hacp-cp-btn" data-pab-salir>Salir del pabellón</button>`
         : `<button type="button" class="hacp-cp-btn hacp-suc-ok" data-pab-unir="${rol}">Unirme a este pabellón${yoM.pabellon ? ' (dejo el otro)' : ''}</button>`)
         : '<div class="hacp-inv-note">Solo los miembros de la hacienda pueden unirse.</div>';
+      // Investigación del pabellón.
+      const idef = INVESTIG[rol], inv = pabInvestig(rol);
+      let invHtml;
+      if (!inv) {
+        invHtml = `<div class="hacp-pab-inv">
+          <div class="hacp-pab-inv-h">🔬 ${idef.zh} ${esc(idef.nombre)}</div>
+          <div class="hacp-pab-inv-d">${esc(idef.desc)}</div>
+          ${(soyResp || soyFund) ? '<button type="button" class="hacp-cp-btn hacp-suc-ok" data-inv-start>Iniciar investigación</button>' : '<div class="hacp-inv-note">El responsable ha de iniciarla.</div>'}
+        </div>`;
+      } else {
+        const live = pabLiveProg(rol), pctp = Math.round(live / idef.target * 100), rate = pabPassiveRate(rol);
+        invHtml = `<div class="hacp-pab-inv${inv.done ? ' done' : ''}">
+          <div class="hacp-pab-inv-h">🔬 ${idef.zh} ${esc(idef.nombre)}${inv.done ? ' <span class="ok">✔ desbloqueada</span>' : ''}</div>
+          <div class="hacp-pab-bar"><i style="width:${Math.min(100, pctp)}%;background:${R.color}"></i></div>
+          <div class="hacp-pab-inv-s">${inv.done ? 'Completada · beneficio activo para la casa.' : `${Math.round(live)}/${idef.target} · <b>+${rate}/h</b> pasivo · sube haciendo tareas ${R.zh}`}</div>
+        </div>`;
+      }
       el.innerHTML = `<div class="hacp-shop-box hacp-pab-box">
         <button type="button" class="hacp-shop-x" data-pab-x aria-label="Cerrar">✕</button>
         <div class="hacp-shop-h"><span class="hacp-shop-zh" style="color:${R.color}">${R.zh}</span> ${esc(p.nombre || R.nombre)}</div>
@@ -5148,7 +5211,8 @@
         ${nombrarHtml}
         <div class="hacp-prod-seclbl">Miembros 部眾</div>
         <div class="hacp-pab-ms">${listaM}</div>
-        <div class="hacp-pab-invnote">🔬 Investigación del pabellón: <i>próximamente</i>.</div>
+        <div class="hacp-prod-seclbl">Investigación 研究</div>
+        ${invHtml}
         <div class="hacp-pab-acts">${miAccion}</div>
       </div>`;
       el.querySelector('[data-pab-x]').addEventListener('click', () => { el.hidden = true; });
@@ -5156,6 +5220,7 @@
       const salir = el.querySelector('[data-pab-salir]'); if (salir) salir.addEventListener('click', () => pabAccion('unir', ''));
       const rsel = el.querySelector('[data-pab-resp]'); if (rsel) rsel.addEventListener('change', () => pabAccion('resp', rol, rsel.value));
       el.querySelectorAll('[data-esc]').forEach(b => b.addEventListener('click', () => pabAccion('esc', b.dataset.pj, Number(b.dataset.esc))));
+      const invb = el.querySelector('[data-inv-start]'); if (invb) invb.addEventListener('click', () => pabAccion('inv-start', rol));
     }
     async function pabAccion(kind, a, b) {
       if (!myId) return;
@@ -5163,6 +5228,7 @@
         if (kind === 'unir') { const d = await pabRPC('pab_unirse', { p_hac: h.id, p_pj: myId, p_rol: a }); if (d && d.miembros) h.miembros = d.miembros; toast(a ? '部 Te uniste al pabellón' : 'Saliste del pabellón'); }
         else if (kind === 'resp') { const d = await pabRPC('pab_responsable', { p_hac: h.id, p_pj: myId, p_rol: a, p_target: b || '' }); if (d && d.mapa) h.mapa = d.mapa; toast('責 Responsable actualizado'); }
         else if (kind === 'esc') { const d = await pabRPC('pab_escalafon', { p_hac: h.id, p_pj: myId, p_target: a, p_delta: b }); if (d && d.miembros) h.miembros = d.miembros; }
+        else if (kind === 'inv-start') { const def = INVESTIG[a]; const d = await pabRPC('pab_investig_elegir', { p_hac: h.id, p_pj: myId, p_rol: a, p_id: def.id, p_ts: nowMs() }); if (d && d.mapa) h.mapa = d.mapa; toast(`🔬 Investigación iniciada: ${def.nombre}`); }
       } catch (e) { toast(String(e && e.message || e)); return; }
       buildPabPanel();
       if (charId) buildCharPanel(charId);
@@ -5279,7 +5345,7 @@
       if (e.chapuza) { const perd = Math.round(st.total * HacProd.CHAPUZA_PERDIDA); jornQuitaLote(st, perd); st.last = { chapuza: true, perd }; st.fin = 'chapuza'; return; }
       st.lote[e.cal] = (st.lote[e.cal] || 0) + e.rinde; st.total += e.rinde; st.sumCal += e.cal * e.rinde; st.last = { rinde: e.rinde, cal: e.cal };
     }
-    function jornBanco(st) { if (st.total > 0) { HacStats.addLote(myId, st.recurso, st.lote); HacStats.award(myId, { xp: { [st.dom]: st.total * HacProd.XP_UD } }); } }
+    function jornBanco(st) { if (st.total > 0) { HacStats.addLote(myId, st.recurso, st.lote); HacStats.award(myId, { xp: { [st.dom]: st.total * HacProd.XP_UD } }); aportarInvestig(st.dom, 6); } }
     function renderJornada(el, st) {
       const O = st.O, R = HacProd.RECURSOS[st.recurso], nivDom = HacStats.nivelTotal(myId, st.dom);
       const media = st.total ? (st.sumCal / st.total) : 0, ener = window.HacEnergia ? Math.round(HacEnergia.current(h.id, myId)) : 0;
