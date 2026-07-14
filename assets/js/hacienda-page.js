@@ -4654,6 +4654,8 @@
 
     // ══ HACIENDA PRODUCTIVA (Fase 1, personal) ═══════════════════════════════
     let prodEl = null, jornEl = null;
+    const DIEZMO_MONEDAS = 8;                 // diezmo diario de dinero a la casa (tuneable)
+    const DIEZMO_MAT = 5;                     // tope de material de cada recurso que aporta el diezmo
     const prodDia = () => (window.HacProd ? HacProd.diaStr() : '');
     const prodOk = () => !!(myId && window.HacProd && window.HacStats && HacStats.recursos);
     const refrescarProd = () => { if (prodEl && !prodEl.hidden) buildProd(); if (charId) buildCharPanel(charId); };
@@ -4688,6 +4690,8 @@
       HacProd.OFICIO_IDS.forEach(of => { const o = HacProd.OFICIOS[of], niv = HacStats.oficioNivel(myId, of); const g = HacStats.recolectarRenta(myId, of, HacProd.rentaPorHora(niv), HacProd.rentaCap(niv), o.recurso); if (g > 0) { rec += g; recs[o.recurso] = (recs[o.recurso] || 0) + g; } });
       if (rec > 0) toast('🧺 Renta del feudo: ' + Object.keys(recs).map(r => `+${recs[r]} ${HacProd.RECURSOS[r].icon}`).join(' · '));
       buildProd(); ensureProdEl().hidden = false;
+      // Carga el almacén/tesorería de casa (diezmo) y repinta cuando llegue.
+      if (window.HacProdCasa) HacProdCasa.ready().then(() => { if (prodEl && !prodEl.hidden) buildProd(); }).catch(() => {});
     }
     function buildProd() {
       const el = ensureProdEl(), dia = prodDia();
@@ -4711,6 +4715,19 @@
           <div class="hacp-prod-of-acts"><button type="button" class="hacp-cp-btn hacp-suc-ok" data-trabajar="${of}">${esc(O.verbo)} 勞作</button><button type="button" class="hacp-cp-btn${enTecho && !enTope ? ' hacp-prod-locked' : ''}" data-mejorar="${of}"${enTope || !puede ? ' disabled' : ''}>${mLbl}</button></div>
         </div>`;
       }).join('');
+      // ── Diezmo de casa (納貢): monedas + material → tesorería/almacén compartidos ──
+      const casaOn = !!window.HacProdCasa;
+      const alDia = casaOn && HacProdCasa.pagadoHoy(h.id, myId, dia);
+      const alm = casaOn ? HacProdCasa.almacen(h.id) : { hierro: 0, tinta: 0, grano: 0 };
+      const teso = casaOn ? HacProdCasa.tesoreria(h.id) : 0;
+      const diezmoHtml = !casaOn ? '' : `<div class="hacp-prod-seclbl">Diezmo de casa 納貢</div>
+        <div class="hacp-diezmo ${alDia ? 'aldia' : 'pend'}">
+          <div class="hacp-diezmo-pool">Casa: <b>🏛 ${teso}</b> tesorería · ${HacProd.RECURSOS.hierro.icon}${alm.hierro} · ${HacProd.RECURSOS.tinta.icon}${alm.tinta} · ${HacProd.RECURSOS.grano.icon}${alm.grano}</div>
+          <div class="hacp-diezmo-st">${alDia
+            ? '<b class="ok">Al día con pagos ✓</b> · bufo activo (+ganancia de prestigio)'
+            : '<b class="pend">Diezmo pendiente hoy</b> · págalo para el bufo (+prestigio) y evitar el debufo'}</div>
+          ${alDia ? '' : `<button type="button" class="hacp-cp-btn hacp-suc-ok" data-diezmo>Pagar diezmo (${DIEZMO_MONEDAS}💰 + hasta ${DIEZMO_MAT} de cada material)</button>`}
+        </div>`;
       const hechos = HacStats.encargosHechos(myId, dia);
       const encargos = HacProd.encargosDelDia(h.id, tier).map(e => {
         const R = HacProd.RECURSOS[e.recurso], hecho = hechos.indexOf(e.id) >= 0, tengo = HacStats.recursoDesdeCal(myId, e.recurso, e.calMin), listo = !hecho && tengo >= e.cantidad;
@@ -4725,6 +4742,7 @@
         <div class="hacp-prod-seclbl">Almacén 倉</div>
         <div class="hacp-prod-tip">Cada unidad tiene <b>calidad 1–5</b> · trabajar y <b>subir el oficio</b> dan más calidad · los encargos piden una calidad mínima.</div>
         <div class="hacp-prod-alm">${almacen}</div>
+        ${diezmoHtml}
         <div class="hacp-prod-seclbl">Oficios 工</div><div class="hacp-prod-ofs">${oficios}</div>
         <div class="hacp-prod-seclbl">Encargos del día 委託</div><div class="hacp-prod-encs">${encargos}</div>
       </div>`;
@@ -4733,6 +4751,33 @@
       el.querySelectorAll('[data-mejorar]').forEach(b => b.addEventListener('click', () => mejorarOficio(b.dataset.mejorar)));
       el.querySelectorAll('[data-entregar]').forEach(b => b.addEventListener('click', () => entregarEncargo(b.dataset.entregar)));
       el.querySelectorAll('[data-vender]').forEach(b => b.addEventListener('click', () => venderRecurso(b.dataset.vender)));
+      const bd = el.querySelector('[data-diezmo]'); if (bd) bd.addEventListener('click', () => pagarDiezmo(bd));
+    }
+    // Pagar el DIEZMO diario: DIEZMO_MONEDAS del monedero/ahorro + hasta DIEZMO_MAT
+    // de cada material (calidad baja primero) → tesorería + almacén de casa. Descuenta
+    // en LOCAL solo si la RPC va bien (optimista sin perder recursos si falla).
+    async function pagarDiezmo(btn) {
+      if (!window.HacProdCasa || !prodOk()) return;
+      const dia = prodDia();
+      if (HacProdCasa.pagadoHoy(h.id, myId, dia)) { toast('Ya pagaste el diezmo hoy'); return; }
+      const enAhorro = HacStats.ahorro ? HacStats.ahorro(myId) : 0;
+      if (HacStats.dinero(myId) + enAhorro < DIEZMO_MONEDAS) { toast(`Necesitas ${DIEZMO_MONEDAS}💰 para el diezmo`); return; }
+      const lote = {};
+      HacProd.RECURSO_IDS.forEach(rec => { const give = Math.min(DIEZMO_MAT, HacStats.recursoTotal(myId, rec)); if (give > 0) lote[rec] = give; });
+      const nombre = ((h.miembros || []).find(m => String(m.id) === String(myId)) || {}).nombre || '';
+      if (btn) btn.disabled = true;
+      try {
+        await HacProdCasa.diezmo({ haciendaId: h.id, pj: myId, pjNombre: nombre, dinero: DIEZMO_MONEDAS, lote, dia });
+      } catch (e) { toast('No se pudo pagar el diezmo: ' + (e && e.message || e)); if (btn) btn.disabled = false; return; }
+      // Éxito → descuenta local: dinero (ahorro primero) + materiales.
+      const delAhorro = Math.min(DIEZMO_MONEDAS, enAhorro);
+      if (delAhorro > 0 && HacStats.sacar) HacStats.sacar(myId, delAhorro);
+      HacStats.award(myId, { dinero: -DIEZMO_MONEDAS });
+      HacProd.RECURSO_IDS.forEach(rec => { if (lote[rec]) HacStats.quitaRecurso(myId, rec, 1, lote[rec]); });
+      const matTxt = Object.keys(lote).map(r => `${lote[r]}${HacProd.RECURSOS[r].icon}`).join(' ');
+      toast(`納貢 Diezmo pagado · ${DIEZMO_MONEDAS}💰${matTxt ? ' + ' + matTxt : ''} · al día ✓`);
+      if (window.HacBitacora) HacBitacora.log(myId, 'progreso', `納 Pagaste el diezmo de casa · ${DIEZMO_MONEDAS}💰`);
+      refrescarProd();
     }
     function mejorarOficio(of) {
       const O = HacProd.OFICIOS[of]; if (!O) return; const niv = HacStats.oficioNivel(myId, of); if (niv >= HacProd.NIVEL_MAX) return;

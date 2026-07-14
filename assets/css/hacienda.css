@@ -880,6 +880,15 @@ button.hacp-slot.comida:hover{ background:rgba(127,201,160,.24); }
 
 .hacp-prod-tip{ font-size:10.5px; color:var(--parch2); opacity:.85; line-height:1.35; margin:-2px 0 6px; }
 .hacp-prod-tip b{ color:var(--parch); font-weight:700; }
+/* Diezmo de casa (納貢) */
+.hacp-diezmo{ border:1px solid rgba(201,168,76,.28); border-radius:8px; padding:8px 10px; display:flex; flex-direction:column; gap:6px; }
+.hacp-diezmo.aldia{ border-color:rgba(122,196,140,.45); background:rgba(122,196,140,.07); }
+.hacp-diezmo.pend{ border-color:rgba(224,168,74,.5); background:rgba(224,168,74,.07); }
+.hacp-diezmo-pool{ font:700 12px 'Noto Sans SC',sans-serif; color:var(--parch); font-variant-numeric:tabular-nums; }
+.hacp-diezmo-pool b{ color:var(--gold); }
+.hacp-diezmo-st{ font-size:10.5px; color:var(--parch2); line-height:1.35; }
+.hacp-diezmo-st .ok{ color:#8fd6a0; } .hacp-diezmo-st .pend{ color:#e6b968; }
+.hacp-diezmo [data-diezmo]{ align-self:flex-start; }
 /* La jornada (empujar la suerte) */
 .hacp-jorn-box{ width:min(460px,94%); }
 .hacp-jorn-say{ font:italic 400 12px 'IM Fell English','Noto Serif SC',serif; color:var(--parch2,#c9bda6); margin:2px 0 2px; min-height:16px; }
