@@ -375,9 +375,13 @@ html.hacp-pseudofs, html.hacp-pseudofs body{ overflow:hidden; }
 .hacp-ob-coste{ font-size:12px; color:var(--parch2); display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:8px; }
 .hacp-ob-coste span.short{ color:#e0715a; font-weight:700; }
 .hacp-ob-fp{ margin-left:auto; opacity:.7; font-size:10.5px; }
-.hacp-ob-gridwrap{ overflow:auto; max-height:44vh; padding:2px; }
+.hacp-ob-gridwrap{ overflow:auto; max-height:44vh; padding:2px; overscroll-behavior:contain; -webkit-overflow-scrolling:touch; touch-action:pan-x pan-y; }
 .hacp-ob-grid{ display:grid; gap:2px; width:max-content; margin:0 auto; }
-.hacp-ob-cell{ width:26px; height:26px; border:1px solid rgba(201,168,76,.2); border-radius:3px; background:rgba(255,255,255,.03); cursor:pointer; padding:0; }
+.hacp-ob-cell{ width:var(--ob-cell,28px); height:var(--ob-cell,28px); border:1px solid rgba(201,168,76,.2); border-radius:3px; background:rgba(255,255,255,.03); cursor:pointer; padding:0; }
+/* Zoom de la rejilla (celdas más grandes/pequeñas para fincas grandes) */
+.hacp-ob-zoom{ display:flex; align-items:center; gap:6px; font-size:11px; color:var(--parch2); margin:6px 0 2px; }
+.hacp-ob-zoom button{ width:32px; height:28px; font:800 16px/1 'Noto Sans SC',sans-serif; background:rgba(201,168,76,.16); color:var(--gold); border:1px solid var(--hac,var(--gold)); border-radius:5px; cursor:pointer; }
+.hacp-ob-zoom .hint{ margin-left:auto; opacity:.75; }
 .hacp-ob-cell.free:hover{ background:rgba(201,168,76,.18); }
 .hacp-ob-cell.occ{ background:rgba(201,168,76,.5); border-color:rgba(201,168,76,.6); cursor:default; }
 .hacp-ob-cell.ghost.ok{ background:rgba(122,196,140,.6); border-color:#7fc9a0; }

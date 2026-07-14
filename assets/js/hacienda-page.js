@@ -4863,7 +4863,7 @@
       if (window.HacFolk && HacFolk.repaintOverlay) HacFolk.repaintOverlay();
     }
     let obrasEl = null;
-    const obrasSt = { tipo: null, rot: 0, pos: null };   // edificio elegido · rotación · celda ancla
+    const obrasSt = { tipo: null, rot: 0, pos: null, zoom: 28 };   // edificio · rotación · celda ancla · px de celda (zoom)
     function ensureObrasEl() {
       if (obrasEl) return obrasEl;
       obrasEl = document.createElement('div'); obrasEl.className = 'hacp-shop hacp-obras-ov'; obrasEl.hidden = true; overlayHost().appendChild(obrasEl);
@@ -4931,7 +4931,8 @@
         <div class="hacp-ob-pool">Casa: <b>🏛 ${teso}</b> · ${R.hierro.icon}${alm.hierro} · ${R.tinta.icon}${alm.tinta} · ${R.grano.icon}${alm.grano}</div>
         <div class="hacp-ob-pick"><label>Edificio</label><select class="hacp-ob-sel" data-ob-sel>${opts}</select></div>
         ${costeHtml}
-        <div class="hacp-ob-gridwrap"><div class="hacp-ob-grid" style="grid-template-columns:repeat(${GW},1fr)">${cells}</div></div>
+        <div class="hacp-ob-zoom"><button type="button" data-ob-zoom="-1" aria-label="alejar">−</button><span>zoom</span><button type="button" data-ob-zoom="1" aria-label="acercar">+</button><span class="hint">arrastra para moverte · toca para colocar</span></div>
+        <div class="hacp-ob-gridwrap"><div class="hacp-ob-grid" style="grid-template-columns:repeat(${GW},var(--ob-cell));--ob-cell:${obrasSt.zoom}px">${cells}</div></div>
         <div class="hacp-ob-legend"><span class="occ"></span>ocupado <span class="ghost ok"></span>válido <span class="ghost bad"></span>no cabe</div>
         <div class="hacp-ob-aviso">${aviso}</div>
         <div class="hacp-ob-acts">
@@ -4940,6 +4941,11 @@
         </div>
       </div>`;
       el.querySelector('[data-act="obras-close"]').addEventListener('click', closeObras);
+      const grid = el.querySelector('.hacp-ob-grid');
+      el.querySelectorAll('[data-ob-zoom]').forEach(b => b.addEventListener('click', () => {   // zoom en vivo (sin re-render → conserva el scroll)
+        obrasSt.zoom = Math.max(16, Math.min(58, obrasSt.zoom + Number(b.dataset.obZoom) * 6));
+        if (grid) grid.style.setProperty('--ob-cell', obrasSt.zoom + 'px');
+      }));
       const sel = el.querySelector('[data-ob-sel]'); if (sel) sel.addEventListener('change', () => { obrasSt.tipo = sel.value; obrasSt.pos = null; buildObras(); });
       const rot = el.querySelector('[data-ob-rot]'); if (rot) rot.addEventListener('click', () => { obrasSt.rot = (obrasSt.rot + 1) % 4; buildObras(); });
       el.querySelectorAll('.hacp-ob-cell.free, .hacp-ob-cell.ghost').forEach(b => b.addEventListener('click', () => { obrasSt.pos = [Number(b.dataset.gx), Number(b.dataset.gy)]; buildObras(); }));
