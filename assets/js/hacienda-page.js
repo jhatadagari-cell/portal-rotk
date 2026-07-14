@@ -4338,6 +4338,7 @@
       if (st.fin === 'marcha') estado = `<div class="hacp-reg-hint bad">🧔 «¡Se acabó, no te compro nada!» · no aceptará este objeto en 24 h</div>`;
       else if (st.fin === 'trato') estado = `<div class="hacp-reg-hint">🧔 «Última palabra. ${st.precio} y cerramos.»</div>`;
       else if (clash) estado = `<div class="hacp-reg-hint">Ronda ${st.ronda}: <b>${st.last.win === 'me' ? 'ganas terreno' : st.last.win === 'foe' ? 'cede tu oferta' : 'tablas'}</b></div>`;
+      else if (st.ronda === 0) estado = `<div class="hacp-reg-hint">Tu labia 〔文·政〕 <b>${st.labia}</b> · paciencia <span class="hacp-reg-pac">${dots}</span><br><span class="warn">Si regateas te comprometes: venderás al precio que salga, no al fijo.</span></div>`;
       else estado = `<div class="hacp-reg-hint">Tu labia 〔文·政〕 <b>${st.labia}</b> · paciencia del mercader <span class="hacp-reg-pac">${dots}</span></div>`;
       el.innerHTML = `<div class="hacp-suc-box hacp-reg-box${clash ? ' clashing' : ''}">
         <div class="hacp-suc-eyebrow">💰 Regateo · ${esc(it.nombre)} <span class="zh">${esc(it.zh || '')}</span></div>
@@ -4357,11 +4358,13 @@
           acabado
             ? (st.fin === 'marcha'
                 ? `<button type="button" class="hacp-cp-btn hacp-suc-cancel" data-v-close>Cerrar</button>`
-                : `<button type="button" class="hacp-cp-btn hacp-suc-cancel" data-v-close>Dejarlo</button><button type="button" class="hacp-cp-btn hacp-suc-ok" data-v-ok>Aceptar 💰 ${st.precio}</button>`)
+                : `<button type="button" class="hacp-cp-btn hacp-suc-ok" data-v-ok>Cerrar el trato 💰 ${st.precio}</button>`)
             : clash
               ? `<div class="hacp-reg-wait">…</div>`
               : `<div class="hacp-reg-tacs">${REG_TAC.map(t => `<button type="button" class="hacp-reg-tac t-${t.id}" data-tac="${t.id}"><span class="zh">${t.zh}</span><span class="nb">${esc(t.nombre)}</span><span class="beat">vence a ${esc(regTacBy[t.vence].zh)}</span></button>`).join('')}</div>
-                 <div class="hacp-reg-close"><button type="button" class="hacp-cp-btn hacp-suc-cancel" data-v-cancel>Dejarlo</button><button type="button" class="hacp-cp-btn hacp-suc-ok" data-v-ok>Aceptar 💰 ${st.precio}</button></div>`
+                 <div class="hacp-reg-close">${st.ronda === 0
+                   ? `<button type="button" class="hacp-cp-btn hacp-suc-cancel" data-v-cancel>Dejarlo (vender al fijo)</button>`
+                   : `<button type="button" class="hacp-cp-btn hacp-suc-ok" data-v-ok>Aceptar 💰 ${st.precio}</button>`}</div>`
         }</div></div>`;
       regRetratos(el, st);
       const close = el.querySelector('[data-v-close]'); if (close) close.addEventListener('click', cerrarVenta);
