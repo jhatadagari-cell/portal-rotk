@@ -147,6 +147,10 @@ const HacStore = (function () {
     const { error } = await client.from(PAB_TABLE).delete().eq('id', id);
     if (error) { console.error('[HacStore] removePabellon', error); throw error; }
   }
+  // Solo CACHÉ (sin escribir en BD): para cuando el FUNDADOR crea/borra vía RPC
+  // (la escritura la hace la RPC SECURITY DEFINER; aquí solo refrescamos la UI).
+  function pabCacheUpsert(p) { const i = pabCache.findIndex(x => x.id === p.id); if (i >= 0) pabCache[i] = p; else pabCache.push(p); return p; }
+  function pabCacheRemove(id) { pabCache = pabCache.filter(p => p.id !== id); }
 
   // ── Escritores (admin) — actualizan caché y persisten ───────────────────
   async function upsert(h) {
@@ -192,7 +196,7 @@ const HacStore = (function () {
   }
 
   return { ready, reload, all, get, upsert, remove, clear, resetToSeed, makeId, TABLE,
-    pabellones, addPabellon, updatePabellon, removePabellon, PAB_TABLE };
+    pabellones, addPabellon, updatePabellon, removePabellon, pabCacheUpsert, pabCacheRemove, PAB_TABLE };
 })();
 
 if (typeof window !== 'undefined') window.HacStore = HacStore;

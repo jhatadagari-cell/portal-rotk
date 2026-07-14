@@ -374,7 +374,8 @@ html.hacp-pseudofs, html.hacp-pseudofs body{ overflow:hidden; }
 .hacp-obras-box{ width:min(440px,94%); }
 .hacp-ob-pool{ font:700 12px 'Noto Sans SC',sans-serif; color:var(--parch); margin:6px 0 8px; }
 .hacp-ob-pool b{ color:var(--gold); }
-.hacp-ob-pick{ display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+.hacp-ob-pick{ display:flex; align-items:center; gap:8px; margin-bottom:6px; flex-wrap:wrap; }
+.hacp-ob-pabnm{ flex:1; min-width:120px; background:rgba(0,0,0,.3); color:var(--parch); border:1px solid rgba(201,168,76,.4); border-radius:5px; padding:5px 7px; font:600 12px 'Noto Sans SC',sans-serif; }
 .hacp-ob-pick label{ font-size:11px; color:var(--parch2); text-transform:uppercase; letter-spacing:.05em; }
 .hacp-ob-sel{ flex:1; min-width:0; background:rgba(0,0,0,.3); color:var(--parch); border:1px solid rgba(201,168,76,.4); border-radius:5px; padding:5px 7px; font:600 12px 'Noto Sans SC',sans-serif; }
 .hacp-ob-coste{ font-size:12px; color:var(--parch2); display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:8px; }

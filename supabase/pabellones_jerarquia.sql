@@ -143,9 +143,46 @@ begin
   return jsonb_build_object('miembros', h.miembros);
 end; $$;
 
+-- ── DELIMITAR / BORRAR pabellón (el FUNDADOR, desde la finca) ─────────────────
+-- La tabla `pabellones` es escritura solo-admin (RLS), así que el fundador crea/borra
+-- por estas funciones SECURITY DEFINER. p_seed = [x,y,w,h] (rectángulo ≥100 tiles, lo
+-- valida el cliente). p_max = tope de pabellones del tier (lo pasa el cliente).
+create or replace function public.pab_delimitar(p_hac text, p_pj text, p_rol text, p_nombre text, p_seed jsonb, p_max int)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare h public.haciendas; n int; nid uuid;
+begin
+  if p_rol not in ('militar', 'cultural', 'administrativo') then raise exception 'Rol no válido'; end if;
+  select * into h from public.haciendas where id = p_hac;
+  if not found then raise exception 'La hacienda no existe'; end if;
+  if coalesce(h.mapa ->> 'fundador', '') <> p_pj
+     and not exists (select 1 from jsonb_array_elements(coalesce(h.miembros, '[]'::jsonb)) m
+                     where m ->> 'id' = (h.mapa ->> 'fundador') and m ->> 'personajeId' = p_pj) then
+    raise exception 'Solo el fundador delimita pabellones'; end if;
+  select count(*) into n from public.pabellones where hacienda_id = p_hac;
+  if n >= greatest(1, coalesce(p_max, 1)) then raise exception 'Has alcanzado el máximo de pabellones para este nivel'; end if;
+  insert into public.pabellones (hacienda_id, nombre, rol, seed) values (p_hac, coalesce(p_nombre, ''), p_rol, p_seed) returning id into nid;
+  return jsonb_build_object('id', nid);
+end; $$;
+
+create or replace function public.pab_borrar(p_hac text, p_pj text, p_id uuid)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare h public.haciendas;
+begin
+  select * into h from public.haciendas where id = p_hac;
+  if not found then raise exception 'La hacienda no existe'; end if;
+  if coalesce(h.mapa ->> 'fundador', '') <> p_pj
+     and not exists (select 1 from jsonb_array_elements(coalesce(h.miembros, '[]'::jsonb)) m
+                     where m ->> 'id' = (h.mapa ->> 'fundador') and m ->> 'personajeId' = p_pj) then
+    raise exception 'Solo el fundador borra pabellones'; end if;
+  delete from public.pabellones where id = p_id and hacienda_id = p_hac;
+  return jsonb_build_object('ok', true);
+end; $$;
+
 grant execute on function public.pab_unirse(text,text,text)           to authenticated, anon;
 grant execute on function public.pab_responsable(text,text,text,text) to authenticated, anon;
 grant execute on function public.pab_escalafon(text,text,text,int)    to authenticated, anon;
 grant execute on function public.pab_investig_elegir(text,text,text,text,bigint)      to authenticated, anon;
 grant execute on function public.pab_investig_prog(text,text,text,int,bigint,int,text) to authenticated, anon;
 grant execute on function public.casa_reclutar(text,text,jsonb)                       to authenticated, anon;
+grant execute on function public.pab_delimitar(text,text,text,text,jsonb,int)         to authenticated, anon;
+grant execute on function public.pab_borrar(text,text,uuid)                           to authenticated, anon;
