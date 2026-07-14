@@ -528,8 +528,16 @@
     }
     // ¿El diezmo aplica? (tabla de casa cargada y disponible).
     const diezmoDisponible = () => !!(window.HacProdCasa && HacProdCasa.dbOk && HacProdCasa.dbOk());
-    // ¿Soy el FUNDADOR de esta casa? (mapa.fundador, designado por el admin).
-    const esFundador = () => !!(h && h.mapa && myId && String(h.mapa.fundador) === String(myId));
+    // ¿Soy el FUNDADOR de esta casa? mapa.fundador lo fija el admin y puede estar
+    // guardado como personajeId O como id de MIEMBRO (histórico); myId es personajeId,
+    // así que toleramos ambos resolviendo el miembro → su personajeId.
+    const esFundador = () => {
+      if (!h || !h.mapa || !myId || !h.mapa.fundador) return false;
+      const fid = String(h.mapa.fundador);
+      if (fid === String(myId)) return true;
+      const m = (h.miembros || []).find(x => String(x.id) === fid);
+      return !!(m && String(m.personajeId) === String(myId));
+    };
     // Modificador de prestigio por el diezmo: +buff al día, −debufo si pendiente.
     const diezmoFrac = () => !diezmoDisponible() ? 0 : (HacProdCasa.pagadoHoy(h.id, myId, prodDia()) ? TITHE_BUFF : -TITHE_DEBUFF);
     // Prestigio a otorgar con TODOS los modificadores (objetos + diezmo). Fuente única

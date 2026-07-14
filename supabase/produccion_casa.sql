@@ -80,7 +80,11 @@ declare h public.haciendas; r public.produccion_casa; k text; need int; have int
 begin
   select * into h from public.haciendas where id = p_hac for update;
   if not found then raise exception 'La hacienda no existe'; end if;
-  if coalesce(h.mapa ->> 'fundador','') <> p_pj then
+  -- mapa.fundador puede ser el personajeId directo O el id de MIEMBRO (histórico):
+  -- p_pj es personajeId, así que aceptamos ambos (resolviendo el miembro).
+  if coalesce(h.mapa ->> 'fundador','') <> p_pj
+     and not exists (select 1 from jsonb_array_elements(coalesce(h.miembros,'[]'::jsonb)) m
+                     where m ->> 'id' = (h.mapa ->> 'fundador') and m ->> 'personajeId' = p_pj) then
     raise exception 'Solo el fundador de la casa puede construir'; end if;
   insert into public.produccion_casa (hacienda_id) values (p_hac) on conflict (hacienda_id) do nothing;
   select * into r from public.produccion_casa where hacienda_id = p_hac for update;
