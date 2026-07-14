@@ -2680,9 +2680,11 @@
           const accionItem = mio ? '<span class="hacp-esc-loot-tag mio">tuyo</span>'
             : taken ? `<span class="hacp-esc-loot-tag">${esc(dueno)}</span>`
             : (yaCogi ? '' : `<button class="hacp-cp-btn" data-loot="${i}">Coger</button>`);
+          const ef = it ? ((window.HacTienda && HacTienda.efectoTexto && HacTienda.efectoTexto(it)) || it.desc || '') : '';
           return `<div class="hacp-esc-loot${taken ? ' taken' : ''}${mio ? ' mine' : ''}">
             <div class="hacp-esc-loot-ic">${it ? (it.icon || '∎') : '∎'}</div>
-            <div class="hacp-esc-loot-nm">${it ? esc(it.nombre) : 'objeto'}</div>${accionItem}</div>`;
+            <div class="hacp-esc-loot-nm">${it ? esc(it.nombre) : 'objeto'}</div>
+            ${ef ? `<div class="hacp-esc-loot-ef">${esc(ef)}</div>` : ''}${accionItem}</div>`;
         }).join('');
         accion = `<div class="hacp-esc-result ok">✔ ¡Volvisteis con éxito!</div>
           ${escEncReportHTML(b)}
