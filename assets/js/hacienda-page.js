@@ -720,6 +720,12 @@
         // regresa a la finca hasta que los atiendas (bloqueo). El botón «Misiones»
         // parpadea; la orden NO se limpia → sigue "ocupado" y no puede salir de nuevo.
         if (mis && encPend(o, mis)) { _wasOnMission = false; return; }
+        // El jugador está VIENDO ahora mismo la viñeta/carta de un encuentro (overlay
+        // abierto): NO cobres ni limpies por debajo. El cobro llama sucClear(o), que
+        // borraría el estado de encuentros que «Continuar» usa → encAbrir lo recalcularía
+        // vacío y RE-MOSTRARÍA el encuentro. Espera a que cierre el overlay: «Continuar»
+        // hace closeSuc() antes de applyOrders(), y entonces sí se cobra.
+        if (mis && sucEl && !sucEl.hidden) { _wasOnMission = false; return; }
         if (mis) dom = mis.dom;
         else if (o.tipo !== 'expedicion') { const task = (window.HacTareas && HacTareas.get) ? HacTareas.get(o.targetId) : null; dom = (task && window.HacBuild) ? (HacBuild.tipo(task.tipo) || {}).dominio : null; }
         // Efectos ACUMULADOS de los encuentros ya resueltos (0 si no es expedición).
