@@ -280,8 +280,11 @@ const HacIso = (function () {
         g.beginPath(); g.moveTo(cx + i * 1.7, cy + 1.5); g.lineTo(cx + i * 2.3, cy - 3); g.stroke();
       }
     };
-    const loX = -M, hiX = GW - 1 + M, loY = -M, hiY = GH - 1 + M, BS = 2;
-    const blk = (v) => v - (((v % BS) + BS) % BS);     // alinea costuras a rejilla par
+    // BS = tamaño de la losa en celdas. 1 = una baldosa por CELDA, así el pavimento
+    // coincide con la rejilla de colocación (el camino y los edificios caen en las
+    // juntas visibles, no cortan por el medio de losas 2×2 como antes).
+    const loX = -M, hiX = GW - 1 + M, loY = -M, hiY = GH - 1 + M, BS = 1;
+    const blk = (v) => v - (((v % BS) + BS) % BS);     // alinea costuras a la rejilla
 
     // ── Territorio exterior: campo ESTACIONAL que rodea la finca ────────────
     // Fuera de las murallas se ve algo de campo (hierba, árboles y un río si la
