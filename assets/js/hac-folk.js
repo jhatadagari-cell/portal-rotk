@@ -1829,15 +1829,14 @@ const HacFolk = (function () {
     if (document.fonts.addEventListener) document.fonts.addEventListener('loadingdone', rebakeBanners);
   }
   function bannerKey(w, hot) {
-    const pre = (w.npc ? '客 ' : '') + (w.cargoIcon ? w.cargoIcon + ' ' : '') + (w.aptIcon ? w.aptIcon + ' ' : '');
-    return pre + String(w.name || '').slice(0, 16) + '|' + (Number(w.cargoTier) || 0) + '|' + (hot ? 1 : 0) + '|' + (w.npc ? 'n' : '');
+    // Solo el NOMBRE: el rango se lee por el ESTILO del pendón (RANK_STYLE), no por iconos.
+    return String(w.name || '').slice(0, 16) + '|' + (Number(w.cargoTier) || 0) + '|' + (hot ? 1 : 0) + '|' + (w.npc ? 'n' : '');
   }
   function bannerSprite(w, hot) {
     const key = bannerKey(w, hot);
     let s = bannerCache.get(key);
     if (s) return s;
-    const pre = (w.npc ? '客 ' : '') + (w.cargoIcon ? w.cargoIcon + ' ' : '') + (w.aptIcon ? w.aptIcon + ' ' : '');
-    const label = pre + String(w.name || '').slice(0, 16);
+    const label = String(w.name || '').slice(0, 16);
     const lvl = Math.max(0, Math.min(6, Number(w.cargoTier) || 0));
     if (!bannerMeasure) bannerMeasure = document.createElement('canvas').getContext('2d');
     bannerMeasure.font = '700 8px "Noto Serif SC","Noto Sans SC",sans-serif';
@@ -1861,9 +1860,7 @@ const HacFolk = (function () {
   }
 
   function paintBannerInto(g, cx, topY, w, hot) {
-    const name = String(w.name || '').slice(0, 16);
-    const pre = (w.cargoIcon ? w.cargoIcon + ' ' : '') + (w.aptIcon ? w.aptIcon + ' ' : '');
-    const label = pre + name;
+    const label = String(w.name || '').slice(0, 16);   // solo el nombre (sin iconos): banner limpio
     const lvl = Math.max(0, Math.min(6, Number(w.cargoTier) || 0));
     const S = RANK_STYLE[lvl];
     g.font = '700 8px "Noto Serif SC","Noto Sans SC",sans-serif';
