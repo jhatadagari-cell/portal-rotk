@@ -4913,7 +4913,7 @@
       if (window.HacFolk && HacFolk.repaintOverlay) HacFolk.repaintOverlay();
     }
     let obrasEl = null;
-    const obrasSt = { tipo: null, rot: 0, pos: null, lineA: null, zoom: 28, modo: 'construir', sel: null, movingFrom: null, pabRol: 'militar', pabName: '', pabSel: null };   // modo pabellon: pabRol/pabName + rect (lineA→pos) · pabSel (borrar)
+    const obrasSt = { tipo: null, rot: 0, pos: null, lineA: null, zoom: 28, modo: 'construir', sel: null, movingFrom: null, pabRol: 'militar', pabName: '', pabSel: null, pickOpen: false };   // modo pabellon: pabRol/pabName + rect (lineA→pos) · pabSel (borrar) · pickOpen: selector de edificio desplegado
     const obrasEsLinea = () => !!(obrasSt.tipo && window.HacBuild && HacBuild.esLinea && HacBuild.esLinea(obrasSt.tipo));   // camino/muro → se trazan A→B
     // Celdas de una línea recta ortogonal a→b (el eje más largo), + rotación (igual que el admin).
     function obrasLineCells(a, b) {
@@ -4931,7 +4931,7 @@
     function closeObras() { if (obrasEl) obrasEl.hidden = true; }
     function openObras() {
       if (!esFundador()) { toast('Solo el fundador de la casa puede construir'); return; }
-      obrasSt.pos = null; obrasSt.lineA = null; obrasSt.modo = 'construir'; obrasSt.sel = null; obrasSt.movingFrom = null; obrasSt.pabSel = null;
+      obrasSt.pos = null; obrasSt.lineA = null; obrasSt.modo = 'construir'; obrasSt.sel = null; obrasSt.movingFrom = null; obrasSt.pabSel = null; obrasSt.pickOpen = false;
       if (!obrasSt.tipo) { const first = HacBuild.CONSTRUCCIONES.find(t => (t.tierMin || 1) <= tier); obrasSt.tipo = first ? first.id : null; }
       buildObras(); ensureObrasEl().hidden = false;
       if (window.HacProdCasa) HacProdCasa.ready().then(() => { if (obrasEl && !obrasEl.hidden) buildObras(); }).catch(() => {});
@@ -4944,6 +4944,53 @@
       return alm.hierro >= co.hierro * n && alm.tinta >= co.tinta * n && alm.grano >= co.grano * n && teso >= co.dinero * n;
     }
     const obrasAsequible = (co) => obrasAsequibleN(co, 1);
+    // ── Selector de edificio (rico, categorizado) ──────────────────────────
+    // Orden de utilidad: lo más usado (Edificios) primero. La categoría de cada
+    // construcción la deriva HacBuild.categoriaDe → toda pieza nueva cae sola aquí.
+    const OB_CATS = [
+      { key: 'edificio',   label: 'Edificios',          ic: '🏛' },
+      { key: 'jardin',     label: 'Suelos y jardines',  ic: '🌿' },
+      { key: 'muro',       label: 'Muros y puertas',    ic: '🧱' },
+      { key: 'decoracion', label: 'Decoración',         ic: '✦' },
+    ];
+    // Solo estos jardines habilitan DEBATES (coinciden con gardensFinca: área ≥ 4).
+    const OB_JARD_DEBATE = { jardin: 1, 'jardin-flores': 1 };
+    // Píldora del dominio (军/文/政) con su color; vacío si el edificio no tiene dominio.
+    function obDomPill(t) {
+      if (!t.dominio) return '';
+      return `<span class="hacp-ob-dom" style="--dc:${DOM_COL[t.dominio]}">${DOM_GLYPH[t.dominio]} ${esc(DOM_NOMBRE[t.dominio])}</span>`;
+    }
+    // Una línea que resume QUÉ APORTA el edificio (su papel real en el juego), no su coste.
+    function obAporta(t) {
+      if (t.id === 'mercado') return '⚙ Desbloquea la tienda';
+      if (t.id === 'tablon')  return '⚙ Desbloquea las misiones';
+      if (t.id === 'casa')    return '🏦 Guarda a salvo el dinero de su dueño';
+      if (t.principal)        return '★ Edificio principal · aquí se atienden las misiones';
+      if (t.restringido)      return `🔒 Clase ${esc(DOM_NOMBRE[t.dominio] || '')} · solo entrena aquí quien domina ${DOM_GLYPH[t.dominio] || ''}`;
+      const cat = HacBuild.categoriaDe(t.id);
+      if (cat === 'jardin')     return OB_JARD_DEBATE[t.id] ? '🗣 Jardín · permite convocar debates' : '🌿 Jardín · embellece la finca';
+      if (cat === 'muro')       return '🧱 Divide el recinto en patios';
+      if (cat === 'decoracion') return '✦ Adorno · realza el prestigio de la finca';
+      if (t.dominio)            return `⬆ Potencia el pabellón ${esc(DOM_NOMBRE[t.dominio])} de la finca`;
+      return '🏛 Construcción de la casa';
+    }
+    // Coste compacto (icono+cantidad) para las tarjetas del selector.
+    function obCosteCorto(t) {
+      const co = HacBuild.coste(t.id), R = HacProd.RECURSOS;
+      const s = [co.hierro ? R.hierro.icon + co.hierro : '', co.tinta ? R.tinta.icon + co.tinta : '',
+                 co.grano ? R.grano.icon + co.grano : '', co.dinero ? '🏛' + co.dinero : ''].filter(Boolean).join(' ');
+      return s || 'gratis';
+    }
+    // Tarjeta de un edificio (usada en el desplegable y en el resumen del elegido).
+    function obCardHTML(t, sel) {
+      return `<button type="button" class="hacp-ob-card${sel ? ' on' : ''}" data-ob-card="${t.id}">
+        <span class="hacp-ob-sw" style="background:${t.color}"><span class="g">${esc(t.zh)}</span></span>
+        <span class="hacp-ob-cbody">
+          <span class="hacp-ob-cname">${esc(t.nombre)}${obDomPill(t)}${t.unico ? '<i class="hacp-ob-uni">único</i>' : ''}</span>
+          <span class="hacp-ob-capt">${obAporta(t)}</span>
+          <span class="hacp-ob-ccost">${obCosteCorto(t)} · huella ${t.footprint[0]}×${t.footprint[1]}</span>
+        </span></button>`;
+    }
     function buildObras() {
       const el = ensureObrasEl();
       if (obrasSt.modo === 'pabellon') return buildObrasPab(el);
@@ -4959,12 +5006,23 @@
       const seleccionable = modo === 'borrar' || (modo === 'mover' && !moviendo);   // se tocan edificios ya puestos
       // Al mover, validar EXCLUYENDO el propio edificio (no colisiona consigo mismo).
       const listaVal = moviendo ? lista.filter(cc => !(cc.pos[0] === obrasSt.movingFrom[0] && cc.pos[1] === obrasSt.movingFrom[1])) : lista;
-      const opts = HacBuild.CONSTRUCCIONES.filter(t => (t.tierMin || 1) <= tier).map(t => {
-        const co = HacBuild.coste(t.id);
-        const ct = [co.hierro ? co.hierro + '⛓' : '', co.tinta ? co.tinta + '🖋' : '', co.grano ? co.grano + '🌾' : '', co.dinero ? co.dinero + '🏛' : ''].filter(Boolean).join(' ');
-        return `<option value="${t.id}"${obrasSt.tipo === t.id ? ' selected' : ''}>${esc(t.nombre)} ${t.zh} · ${ct || 'gratis'}</option>`;
-      }).join('');
+      const disponibles = HacBuild.CONSTRUCCIONES.filter(t => (t.tierMin || 1) <= tier);
       const t = obrasSt.tipo ? HacBuild.tipo(obrasSt.tipo) : null, co = obrasCoste();
+      // Desplegable RICO por categorías (sustituye al <select> plano): cada tarjeta
+      // deja ver de un vistazo la categoría (por sección), el dominio y QUÉ APORTA.
+      const porCat = {};
+      disponibles.forEach(tt => { const c = HacBuild.categoriaDe(tt.id); (porCat[c] = porCat[c] || []).push(tt); });
+      const menuHtml = OB_CATS.filter(c => porCat[c.key] && porCat[c.key].length).map(c =>
+        `<div class="hacp-ob-catsec"><div class="hacp-ob-cathdr">${c.ic} ${esc(c.label)} <span class="n">${porCat[c.key].length}</span></div>`
+        + porCat[c.key].map(tt => obCardHTML(tt, obrasSt.tipo === tt.id)).join('') + '</div>').join('');
+      // Barra-resumen del edificio elegido; al tocarla se despliega/pliega el menú.
+      const pickedHtml = t ? `<button type="button" class="hacp-ob-picked${obrasSt.pickOpen ? ' open' : ''}" data-ob-pick aria-expanded="${obrasSt.pickOpen ? 'true' : 'false'}">
+        <span class="hacp-ob-sw" style="background:${t.color}"><span class="g">${esc(t.zh)}</span></span>
+        <span class="hacp-ob-cbody">
+          <span class="hacp-ob-cname">${esc(t.nombre)}${obDomPill(t)}${t.unico ? '<i class="hacp-ob-uni">único</i>' : ''}</span>
+          <span class="hacp-ob-capt">${obAporta(t)}</span>
+        </span>
+        <span class="hacp-ob-chev">${obrasSt.pickOpen ? '▲' : '▼'}</span></button>` : '';
       const falta = (need, have) => need > have ? ' short' : '';
       const costeHtml = (modo === 'construir' && t) ? `<div class="hacp-ob-coste">Coste:
         ${co.hierro ? `<span class="${falta(co.hierro, alm.hierro)}">${R.hierro.icon}${co.hierro}</span>` : ''}
@@ -5048,11 +5106,12 @@
         <div class="hacp-shop-h"><span class="hacp-shop-zh">營</span> Obras de la casa</div>
         <div class="hacp-ob-pool">Casa: <b>🏛 ${teso}</b> · ${R.hierro.icon}${alm.hierro} · ${R.tinta.icon}${alm.tinta} · ${R.grano.icon}${alm.grano}</div>
         <div class="hacp-ob-modos">${modeBtn('construir', '營 Construir')}${modeBtn('mover', '✥ Mover')}${modeBtn('borrar', '🗑 Borrar')}${modeBtn('pabellon', '⬚ Pabellón')}</div>
-        ${modo === 'construir' ? `<div class="hacp-ob-pick"><label>Edificio</label><select class="hacp-ob-sel" data-ob-sel>${opts}</select></div>${costeHtml}` : ''}
+        ${modo === 'construir' ? `<div class="hacp-ob-pick2">${pickedHtml}${obrasSt.pickOpen ? `<div class="hacp-ob-menu">${menuHtml}</div>` : ''}</div>${obrasSt.pickOpen ? '' : costeHtml}` : ''}
+        ${modo === 'construir' && obrasSt.pickOpen ? '' : `
         <div class="hacp-ob-zoom"><button type="button" data-ob-zoom="-1" aria-label="alejar">−</button><span>zoom</span><button type="button" data-ob-zoom="1" aria-label="acercar">+</button><span class="hint">arrastra para moverte</span></div>
         <div class="hacp-ob-gridwrap"><div class="hacp-ob-grid" style="grid-template-columns:repeat(${GW},var(--ob-cell));--ob-cell:${obrasSt.zoom}px">${cells}</div></div>
         <div class="hacp-ob-legend">Las celdas de color = lo ya construido · <span class="sw ok"></span> cabe · <span class="sw bad"></span> no cabe</div>
-        <div class="hacp-ob-aviso">${aviso}</div>
+        <div class="hacp-ob-aviso">${aviso}</div>`}
         <div class="hacp-ob-acts">
           ${secLbl ? `<button type="button" class="hacp-cp-btn" data-ob-rot>${secLbl}</button>` : ''}
           <button type="button" class="hacp-cp-btn ${modo === 'borrar' ? 'hacp-suc-cancel' : 'hacp-suc-ok'}" data-ob-build${puede ? '' : ' disabled'}>${mainLbl}</button>
@@ -5065,9 +5124,10 @@
         if (grid) grid.style.setProperty('--ob-cell', obrasSt.zoom + 'px');
       }));
       el.querySelectorAll('[data-ob-modo]').forEach(b => b.addEventListener('click', () => {
-        obrasSt.modo = b.dataset.obModo; obrasSt.pos = null; obrasSt.lineA = null; obrasSt.sel = null; obrasSt.movingFrom = null; obrasSt.pabSel = null; buildObras();
+        obrasSt.modo = b.dataset.obModo; obrasSt.pos = null; obrasSt.lineA = null; obrasSt.sel = null; obrasSt.movingFrom = null; obrasSt.pabSel = null; obrasSt.pickOpen = false; buildObras();
       }));
-      const sel = el.querySelector('[data-ob-sel]'); if (sel) sel.addEventListener('change', () => { obrasSt.tipo = sel.value; obrasSt.pos = null; obrasSt.lineA = null; buildObras(); });
+      const pickBtn = el.querySelector('[data-ob-pick]'); if (pickBtn) pickBtn.addEventListener('click', () => { obrasSt.pickOpen = !obrasSt.pickOpen; buildObras(); });
+      el.querySelectorAll('[data-ob-card]').forEach(b => b.addEventListener('click', () => { obrasSt.tipo = b.dataset.obCard; obrasSt.pos = null; obrasSt.lineA = null; obrasSt.rot = 0; obrasSt.pickOpen = false; buildObras(); }));
       const rot = el.querySelector('[data-ob-rot]'); if (rot) rot.addEventListener('click', () => {
         if (modo === 'mover') { obrasSt.movingFrom = null; obrasSt.pos = null; }
         else if (linea) { obrasSt.lineA = null; obrasSt.pos = null; }

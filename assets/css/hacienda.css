@@ -382,6 +382,38 @@ html.hacp-pseudofs, html.hacp-pseudofs body{ overflow:hidden; }
 .hacp-ob-pabnm{ flex:1; min-width:120px; background:rgba(0,0,0,.3); color:var(--parch); border:1px solid rgba(201,168,76,.4); border-radius:5px; padding:5px 7px; font:600 12px 'Noto Sans SC',sans-serif; }
 .hacp-ob-pick label{ font-size:11px; color:var(--parch2); text-transform:uppercase; letter-spacing:.05em; }
 .hacp-ob-sel{ flex:1; min-width:0; background:rgba(0,0,0,.3); color:var(--parch); border:1px solid rgba(201,168,76,.4); border-radius:5px; padding:5px 7px; font:600 12px 'Noto Sans SC',sans-serif; }
+/* ── Selector RICO de edificio (sustituye al <select> plano) ─────────────── */
+.hacp-ob-pick2{ margin-bottom:8px; }
+/* Muestra del edificio elegido (barra que despliega el menú) + tarjeta base */
+.hacp-ob-picked,.hacp-ob-card{ display:flex; align-items:center; gap:9px; width:100%; text-align:left;
+  background:rgba(255,255,255,.04); border:1px solid rgba(201,168,76,.28); border-radius:8px;
+  padding:8px 10px; cursor:pointer; color:var(--parch); transition:background .12s,border-color .12s; }
+.hacp-ob-picked{ border-color:rgba(201,168,76,.5); }
+.hacp-ob-picked:hover,.hacp-ob-card:hover{ background:rgba(255,255,255,.08); border-color:rgba(201,168,76,.55); }
+.hacp-ob-picked.open{ border-color:var(--hac,var(--gold)); border-bottom-left-radius:0; border-bottom-right-radius:0; }
+.hacp-ob-card.on{ background:color-mix(in srgb, var(--hac,var(--gold)) 16%, transparent); border-color:var(--hac,var(--gold)); }
+.hacp-ob-sw{ flex:none; width:34px; height:34px; border-radius:6px; display:flex; align-items:center; justify-content:center;
+  border:1px solid rgba(0,0,0,.35); box-shadow:inset 0 0 0 1px rgba(255,255,255,.08); }
+.hacp-ob-sw .g{ font:700 17px/1 'Noto Serif SC',serif; color:#fff; text-shadow:0 1px 2px rgba(0,0,0,.65); }
+.hacp-ob-cbody{ flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; }
+.hacp-ob-cname{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; font:700 13px 'Noto Sans SC',sans-serif; color:var(--parch); }
+.hacp-ob-dom{ font:700 10px 'Noto Sans SC',sans-serif; color:var(--dc); border:1px solid color-mix(in srgb, var(--dc) 55%, transparent);
+  background:color-mix(in srgb, var(--dc) 16%, transparent); border-radius:999px; padding:1px 7px; letter-spacing:.02em; }
+.hacp-ob-uni{ font:700 9.5px 'Noto Sans SC',sans-serif; font-style:normal; text-transform:uppercase; letter-spacing:.06em;
+  color:#e6c96a; border:1px solid rgba(230,201,106,.5); border-radius:4px; padding:1px 5px; }
+.hacp-ob-capt{ font-size:11.5px; line-height:1.35; color:var(--parch2); }
+.hacp-ob-ccost{ font-size:11px; color:var(--parch2); opacity:.85; font-variant-numeric:tabular-nums; }
+.hacp-ob-chev{ flex:none; color:var(--gold); font-size:11px; opacity:.8; }
+/* Menú desplegado: categorías apiladas, se hace con el hueco de la rejilla */
+.hacp-ob-menu{ border:1px solid var(--hac,var(--gold)); border-top:none; border-radius:0 0 8px 8px;
+  background:rgba(0,0,0,.28); max-height:56vh; overflow:auto; overscroll-behavior:contain; -webkit-overflow-scrolling:touch;
+  padding:6px; display:flex; flex-direction:column; gap:5px; }
+.hacp-ob-catsec{ display:flex; flex-direction:column; gap:5px; }
+.hacp-ob-cathdr{ position:sticky; top:-6px; z-index:1; background:linear-gradient(rgba(24,18,12,.98),rgba(24,18,12,.9));
+  font:700 11px 'Noto Sans SC',sans-serif; text-transform:uppercase; letter-spacing:.06em; color:var(--gold);
+  padding:6px 4px 4px; margin-top:2px; display:flex; align-items:center; gap:6px; }
+.hacp-ob-cathdr .n{ margin-left:auto; font-size:10px; color:var(--parch2); background:rgba(255,255,255,.06);
+  border-radius:999px; padding:0 7px; font-weight:600; }
 .hacp-ob-coste{ font-size:12px; color:var(--parch2); display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:8px; }
 .hacp-ob-coste span.short{ color:#e0715a; font-weight:700; }
 .hacp-ob-fp{ margin-left:auto; opacity:.7; font-size:10.5px; }
