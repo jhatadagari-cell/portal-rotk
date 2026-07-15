@@ -116,16 +116,20 @@ const HacChar = (function () {
     if (pose === 'bow') { figureBow(px, P, v); return; }
     if (pose === 'work') { figureWork(px, P, v, sec); return; }
     shadow(px);
-    if (P.cape) (P.capeLong ? capeImperial : cape)(px, P, v, g);
+    const longCape = P.cape && P.capeLong;
+    const capeOverBack = longCape && v.back;   // DE ESPALDAS la capa cae sobre la espalda y TAPA el cuerpo
+    if (P.cape && !capeOverBack) (longCape ? capeImperial : cape)(px, P, v, g);   // capa por DETRÁS (frente/perfil)
     legs(px, P, v, g);
     torso(px, P, v, g);
+    if (capeOverBack) capeImperial(px, P, v, g);   // capa POR ENCIMA: cubre la espalda entera
     // GESTO de debate: reemplaza los brazos en reposo por brazos expresivos (y la
     // cara la resuelve headFace con sec.expr). Los brazos van por delante de la cabeza.
-    if (sec.gesture) { head(px, P, v, g, sec); gestureArms(px, P, v, g, sec); return; }
-    backArm(px, P, v, g);     // brazo lejano (detrás del torso)
+    if (sec.gesture) { if (longCape) capeCollar(px, P, v, g); head(px, P, v, g, sec); gestureArms(px, P, v, g, sec); return; }
+    if (!capeOverBack) backArm(px, P, v, g);     // brazo lejano (detrás del torso); de espaldas va bajo la capa
+    if (longCape) capeCollar(px, P, v, g);       // esclavina + cuello dorado sobre los hombros (siempre encima)
     head(px, P, v, g, sec);
     // MANCO: falta el brazo cercano (y lo que sostuviera). Se ve el costado desnudo.
-    if (!sec.manco) { frontArm(px, P, v, g); prop(px, P, v, g); }
+    if (!capeOverBack && !sec.manco) { frontArm(px, P, v, g); prop(px, P, v, g); }
   }
 
   // Pose SENTADA (descansando en el jardín). Figura compacta apoyada en el suelo.
@@ -672,35 +676,60 @@ const HacChar = (function () {
     px(c - 6, hy - 6, 1, 1, dark(P.gold, 0.15)); px(c + 6, hy - 6, 1, 1, dark(P.gold, 0.15));
   }
 
-  // Capa IMPERIAL larga: cae de los hombros al suelo, ondea al andar (fase por
-  // fotograma) y ARRASTRA una cola por detrás (opuesta al avance). Va detrás del
-  // cuerpo (se dibuja antes que piernas/torso) y se posa/empoza en el suelo.
+  // Capa IMPERIAL larga y DRAPEADA (pixelart cuidado): cae de los hombros al suelo
+  // con PLIEGUES verticales (columnas luz/sombra que dan volumen de tela), FILO
+  // dorado a ambos lados, festón y hem dorado en el bajo, ONDEO sutil al andar y
+  // COLA que se arrastra por detrás (opuesta al avance). De ESPALDAS se dibuja sobre
+  // el cuerpo (lo cubre); de frente/perfil, por detrás. El cuello va en capeCollar.
   function capeImperial(px, P, v, g) {
     const A = anchors(g), top = A.shoulder - 1, c = CX + Math.round(v.dx * 0.6);
-    const phase = g.f;                                  // 0..3 del ciclo de andar
-    const ground = BASEY + 2;                           // se arrastra por el suelo
-    const drag = -(v.dx === 0 ? 0 : (v.dx > 0 ? 1 : -1)) || (v.side === 0 ? 0 : 0);   // cola opuesta al avance
-    for (let y = top; y <= ground; y++) {
-      const t = (y - top) / (ground - top);
-      const hw = Math.max(2, Math.round(4 + 12 * Math.pow(t, 0.92)));
-      const wave = Math.round(1.7 * Math.sin(t * 3.3 + phase * 0.85));           // ondeo del vuelo
-      const tail = Math.round(drag * 5 * Math.pow(t, 1.9));                      // arrastre creciente hacia el bajo
-      const cx = c + tail + wave;
-      const band = ((y + phase) % 2 === 0);
-      px(cx - hw, y, hw * 2, 1, band ? P.capeC : P.capeHi);
-      px(cx - hw, y, 1, 1, dark(P.capeC, 0.38));                                 // filo izq en sombra
-      px(cx + hw - 1, y, 1, 1, light(P.capeC, 0.10));                            // filo dcho con luz
+    const phase = g.f, ground = BASEY + 2, span = ground - top;
+    const dragDir = v.dx > 0 ? -1 : (v.dx < 0 ? 1 : 0);            // cola opuesta al avance
+    const topHalf = v.back ? 8 : 6, botHalf = v.back ? 15 : 15;    // de espaldas cubre hombros
+    const lit  = mix(P.robe, '#ffffff', 0.14);                    // pliegue iluminado
+    const mid  = dark(P.robe, 0.24);                              // tela base
+    const sh   = dark(P.robe, 0.42);                              // pliegue en sombra
+    const deep = dark(P.robe, 0.60);                              // filo hondo
+    const goldD = dark(P.gold, 0.24);                             // ribete dorado
+    const folds = [[-0.60, sh], [-0.22, lit], [0.20, sh], [0.58, lit]];
+    for (let i = 0; i <= span; i++) {
+      const y = top + i, t = i / span;
+      const hw = Math.max(3, Math.round(topHalf + (botHalf - topHalf) * Math.pow(t, 0.82)));
+      const wave = Math.round(1.3 * Math.sin(t * 3.0 + phase * 0.8));            // ondeo del vuelo
+      const tail = Math.round(dragDir * 4 * Math.pow(t, 2.0));                   // arrastre creciente
+      const cx = c + wave + tail;
+      px(cx - hw, y, hw * 2, 1, mid);                                            // relleno base
+      folds.forEach(f => px(cx + Math.round(f[0] * hw), y, 1, 1, f[1]));         // pliegues verticales
+      px(cx - hw, y, 1, 1, deep); px(cx - hw + 1, y, 1, 1, goldD);              // filo + ribete izq
+      px(cx + hw - 1, y, 1, 1, sh); px(cx + hw - 2, y, 1, 1, goldD);            // filo + ribete dcho
     }
-    // Charco/cola arrastrada en el suelo (se estira detrás con el paso).
-    const puddleW = 9 + (phase % 2 ? 2 : 0);
-    const pTail = Math.round(drag * 6);
-    px(c + pTail - puddleW, ground, puddleW * 2, 1, dark(P.capeC, 0.15));
-    px(c + pTail - puddleW, ground, Math.round(puddleW * 0.6), 1, P.capeC);
-    // Filo dorado del bajo de la capa.
-    px(c + pTail - puddleW, ground - 1, puddleW * 2, 1, dark(P.gold, 0.25));
-    // Broche/cuello dorado sobre los hombros.
-    px(c - 5, top - 1, 10, 1, P.trim); px(c - 5, top, 10, 1, P.trimDk);
-    px(c - 1, top - 1, 2, 2, P.goldHi);                                          // fíbula central
+    // Bajo de la capa: festón (dientes de 1px) con hem dorado, arrastrado por el suelo.
+    const bt = Math.round(dragDir * 5), bhw = botHalf + 1;
+    for (let x = -bhw; x < bhw; x++) {
+      const y = ground - (x & 1 ? 1 : 0);
+      px(c + bt + x, y - 1, 1, 1, P.gold); px(c + bt + x, y, 1, 1, goldD);
+    }
+  }
+
+  // Esclavina + cuello alto dorado, SIEMPRE sobre los hombros (encima de la capa y
+  // el torso). Da el remate de canciller imperial y separa la cabeza de la capa.
+  function capeCollar(px, P, v, g) {
+    const A = anchors(g), top = A.shoulder - 1, c = CX + Math.round(v.dx * 0.6);
+    const mid = dark(P.robe, 0.22), lit = mix(P.robe, '#ffffff', 0.16), sh = dark(P.robe, 0.44);
+    const hw = v.side >= 1 ? 6 : 9;
+    // Esclavina redondeada sobre los hombros (se estrecha hacia arriba).
+    for (let i = 0; i < 3; i++) {
+      const y = top + i, w = hw - i;
+      px(c - w, y, w * 2, 1, i === 0 ? lit : mid);
+      px(c - w, y, 1, 1, sh); px(c + w - 1, y, 1, 1, sh);
+      px(c - w, y, 1, 1, dark(P.gold, 0.28)); px(c + w - 1, y, 1, 1, dark(P.gold, 0.28));   // ribete dorado del borde
+    }
+    // Cuello alto dorado (de espaldas sube y ensancha para tapar la nuca sin hueco).
+    const cw = v.back ? 5 : 4, ctop = top - (v.back ? 3 : 2);
+    px(c - cw, ctop, cw * 2, 1, P.goldHi); px(c - cw, ctop + 1, cw * 2, 1, P.gold);
+    px(c - cw, ctop + 2, cw * 2, 1, dark(P.gold, 0.30)); if (v.back) px(c - cw, ctop + 3, cw * 2, 1, dark(P.gold, 0.42));
+    // Fíbula con gema (frente/perfil).
+    if (!v.back) { px(c - 1, top + 1, 2, 2, P.goldHi); px(c, top + 2, 1, 1, P.jade); }
   }
 
   // ARMA equipada (兵): sustituye al prop de la aptitud cuando el mecenas empuña una.
