@@ -353,7 +353,26 @@ html{scrollbar-gutter:stable}
 .adm-pj-form-actions{display:flex;gap:10px}
 /* Lista de personajes registrados */
 .adm-pj-list{list-style:none;display:flex;flex-direction:column;gap:7px}
-.adm-pj-item{display:flex;align-items:center;gap:13px;background:rgba(255,255,255,.022);border:1px solid rgba(255,255,255,.06);border-left:3px solid var(--gold);border-radius:3px;padding:9px 13px}
+.adm-pj-item{display:flex;align-items:center;gap:13px;background:rgba(255,255,255,.022);border:1px solid rgba(255,255,255,.06);border-left:3px solid var(--fc,var(--gold));border-radius:3px;padding:9px 13px}
+/* ── Facciones: gestor + cabeceras de grupo en la lista de personajes ─────── */
+.adm-pj-grouphdr{list-style:none;display:flex;align-items:center;gap:8px;margin:12px 0 2px;padding:4px 6px 4px 9px;border-left:3px solid var(--fc,rgba(255,255,255,.2));font-family:'Noto Serif SC',serif;font-weight:700;font-size:13px;color:var(--parch);text-transform:uppercase;letter-spacing:.04em}
+.adm-pj-grouphdr:first-child{margin-top:0}
+.adm-pj-grouphdr-none{color:var(--muted,#a09878);opacity:.85}
+.adm-pj-groupsw{width:12px;height:12px;border-radius:3px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.35)}
+.adm-fac{margin:0 0 16px;border:1px solid rgba(201,168,76,.22);border-radius:6px;background:rgba(255,255,255,.02);padding:6px 10px 10px}
+.adm-fac-summary{cursor:pointer;font-family:'Noto Serif SC',serif;font-weight:700;color:var(--gold);padding:4px 0;user-select:none}
+.adm-fac-list{list-style:none;display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 8px;padding:0}
+.adm-fac-item{display:flex;align-items:center;gap:7px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:999px;padding:3px 6px 3px 9px;font-size:12.5px;color:var(--parch)}
+.adm-fac-item.on{border-color:var(--gold);background:rgba(201,168,76,.12)}
+.adm-fac-sw{width:13px;height:13px;border-radius:50%;box-shadow:inset 0 0 0 1px rgba(0,0,0,.4)}
+.adm-fac-nm{font-weight:600}
+.adm-fac-n{min-width:16px;text-align:center;font-size:10.5px;color:var(--muted,#a09878);background:rgba(0,0,0,.25);border-radius:999px;padding:0 5px}
+.adm-fac-edit,.adm-fac-del{background:none;border:none;cursor:pointer;color:var(--muted,#a09878);font-size:12px;padding:1px 3px;border-radius:3px}
+.adm-fac-edit:hover{color:var(--gold)} .adm-fac-del:hover{color:#e0715a}
+.adm-fac-form{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.adm-fac-form input[name=fnombre]{flex:1;min-width:160px;background:rgba(0,0,0,.3);color:var(--parch);border:1px solid rgba(201,168,76,.4);border-radius:5px;padding:5px 8px;font:inherit;font-size:13px}
+.adm-fac-form .adm-fac-zhin{width:52px;text-align:center;background:rgba(0,0,0,.3);color:var(--parch);border:1px solid rgba(201,168,76,.4);border-radius:5px;padding:5px 4px;font-family:'Noto Serif SC',serif}
+.adm-fac-form input[type=color]{width:38px;height:30px;padding:0;border:1px solid rgba(201,168,76,.4);border-radius:5px;background:none;cursor:pointer}
 .adm-pj-sello{font-family:'Noto Serif SC',serif;font-size:24px;font-weight:900;color:var(--gold);line-height:1;flex-shrink:0;width:30px;text-align:center}
 .adm-pj-body{display:flex;flex-direction:row;align-items:center;justify-content:flex-start;gap:13px;min-width:0;flex:1;cursor:pointer;background:none;border:none;text-align:left;padding:0;font:inherit;color:inherit}
 .adm-pj-name{font-family:'Noto Serif SC',serif;font-size:15px;font-weight:700;color:var(--parch)}

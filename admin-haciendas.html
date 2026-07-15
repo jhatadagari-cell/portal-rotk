@@ -177,7 +177,8 @@
 <script src="assets/js/hac-tareas.js?v=2"></script>
 <script src="assets/js/personajes-data.js?v=2"></script>
 <script src="assets/js/hac-char.js?v=15"></script>
-<script src="assets/js/hac-personajes.js?v=3"></script>
+<script src="assets/js/hac-personajes.js?v=4"></script>
+<script src="assets/js/hac-facciones.js?v=1"></script>
 <script src="assets/js/hac-solicitudes.js?v=2"></script>
 <script src="assets/js/hac-perfiles.js?v=1"></script>
 <script src="assets/js/hac-competencias.js?v=1"></script>
@@ -220,6 +221,8 @@
   // Registro global de personajes (para la pestaña «Personajes» y el alta de
   // mecenas). Degrada a vacío si falta la tabla.
   if (window.HacPersonajes) await HacPersonajes.ready();
+  // Facciones (bandos/clanes) para agrupar y colorear a los personajes NPC.
+  if (window.HacFacciones) await HacFacciones.ready();
   // Competencias otorgadas (para mostrar/editar los chips por mecenas).
   if (window.HacCompetencias) await HacCompetencias.ready();
   // Puntos de misión (para el prestigio colectivo y confirmar la subida de nivel).
@@ -251,6 +254,8 @@
   // ── Estado de la pestaña «Personajes» ──
   let pjEditId = null;                                  // id en edición (null = creando)
   let pjAspecto = { robe: '', piel: 0, pelo: 0 };       // aspecto del formulario
+  let pjFaccion = '';                                   // facción elegida en el formulario (id | '')
+  let facEditId = null;                                 // facción en edición en el gestor (null = creando)
   let pjAnim = null;                                    // intervalo de animación del preview
   const pjPv = { dir: 'S', dirIdx: 0, frame: 0, tick: 0, auto: true };  // estado del preview
 
@@ -660,10 +665,18 @@
       ? `<p class="adm-addmember-empty">Cupo de mecenas completo (<b>${nMiembros}/${cupo}</b>). Sube de nivel la finca para admitir más.</p>`
       : pjLibres.length
       ? `<form class="adm-addmember" id="form-addmember">
-          <select name="personajeId" required>${pjLibres.map(p => {
-            const apt = HacPersonajeDefs.aptitud(p.aptitud);
-            return `<option value="${esc(p.id)}">${esc(p.nombre)}${apt ? ' · ' + esc(apt.nombre) : ''}</option>`;
-          }).join('')}</select>
+          <select name="personajeId" required>${(() => {
+            const facs = window.HacFacciones ? HacFacciones.all() : [];
+            const opt = (p) => { const apt = HacPersonajeDefs.aptitud(p.aptitud); return `<option value="${esc(p.id)}">${esc(p.nombre)}${apt ? ' · ' + esc(apt.nombre) : ''}</option>`; };
+            let html = '';
+            facs.forEach(f => {
+              const items = pjLibres.filter(p => p.faccion === f.id);
+              if (items.length) html += `<optgroup label="${esc(f.zh ? f.zh + ' ' : '')}${esc(f.nombre)}" style="color:${esc(f.color)}">${items.map(opt).join('')}</optgroup>`;
+            });
+            const sin = pjLibres.filter(p => !p.faccion || !facs.some(f => f.id === p.faccion));
+            if (sin.length) html += `<optgroup label="Sin facción">${sin.map(opt).join('')}</optgroup>`;
+            return html;
+          })()}</select>
           <input name="puntos" type="number" min="0" value="0" title="Puntos de salida">
           <input name="nota" placeholder="Nota (opcional)">
           <button type="submit" class="adm-btn adm-btn-gold">+ Añadir mecenas</button>
@@ -1584,14 +1597,55 @@
     </div>`;
 
     const lista = HacPersonajes.all();
-    const rows = lista.map(pj => {
+
+    // ── Facciones (bandos/clanes) ─────────────────────────────────────────────
+    const facs = window.HacFacciones ? HacFacciones.all() : [];
+    const facDbOk = window.HacFacciones ? HacFacciones.dbOk() : false;
+    const facById = {}; facs.forEach(f => facById[f.id] = f);
+    const facEditing = facEditId && window.HacFacciones ? HacFacciones.get(facEditId) : null;
+    const nEnFac = (fid) => lista.filter(p => p.faccion === fid).length;
+    const facRows = facs.map(f => `
+      <li class="adm-fac-item${f.id === facEditId ? ' on' : ''}">
+        <span class="adm-fac-sw" style="background:${esc(f.color)}"></span>
+        <span class="adm-fac-nm">${f.zh ? esc(f.zh) + ' ' : ''}${esc(f.nombre)}</span>
+        <span class="adm-fac-n">${nEnFac(f.id)}</span>
+        <button type="button" class="adm-fac-edit" data-fac-edit="${esc(f.id)}" title="Editar"${dis}>✎</button>
+        <button type="button" class="adm-fac-del" data-fac-del="${esc(f.id)}" title="Borrar facción"${dis}>✕</button>
+      </li>`).join('');
+    const facManagerHtml = `
+      <details class="adm-fac"${facs.length || facEditing ? ' open' : ''}>
+        <summary class="adm-fac-summary">Facciones <span class="adm-board-hint">${facs.length}</span></summary>
+        ${facDbOk ? '' : `<div class="adm-pj-stats-warn">⚠ Falta la tabla <b>facciones</b>. Ejecuta <code>supabase/facciones.sql</code> en Supabase para crear y asignar facciones.</div>`}
+        <ul class="adm-fac-list">${facRows || '<li class="adm-empty">Aún no hay facciones. Crea una abajo.</li>'}</ul>
+        <form class="adm-fac-form" id="form-fac">
+          <input name="fnombre" maxlength="30" placeholder="Nombre de la facción (p. ej. Wei 魏)" autocomplete="off" value="${esc(facEditing ? facEditing.nombre : '')}"${facDbOk ? '' : ' disabled'}>
+          <input name="fzh" maxlength="6" class="adm-fac-zhin" placeholder="魏" autocomplete="off" value="${esc(facEditing ? facEditing.zh : '')}"${facDbOk ? '' : ' disabled'}>
+          <input name="fcolor" type="color" value="${esc(facEditing ? facEditing.color : '#c9a84c')}"${facDbOk ? '' : ' disabled'} title="Color de la facción">
+          <button type="submit" class="adm-btn adm-btn-gold"${facDbOk ? '' : ' disabled'}>${facEditing ? 'Guardar' : '+ Facción'}</button>
+          ${facEditing ? '<button type="button" class="adm-btn" id="btn-fac-cancel">Cancelar</button>' : ''}
+        </form>
+      </details>`;
+
+    // Selector de facción para el formulario de personaje.
+    const facSelectHtml = `
+      <div class="adm-pj-pick">
+        <span class="adm-pj-picklbl">Facción <i>· bando del NPC</i></span>
+        <select id="pj-faccion"${(dis || !facDbOk) ? ' disabled' : ''}>
+          <option value="">— sin facción —</option>
+          ${facs.map(f => `<option value="${esc(f.id)}"${pjFaccion === f.id ? ' selected' : ''}>${f.zh ? esc(f.zh) + ' ' : ''}${esc(f.nombre)}</option>`).join('')}
+        </select>
+      </div>`;
+
+    // ── Listado de personajes AGRUPADO por facción (con color de la facción) ───
+    const rowFor = (pj) => {
       const per = D.personalidad(pj.personalidad);
       const apt = D.aptitud(pj.aptitud);
+      const f = pj.faccion ? facById[pj.faccion] : null;
       const doms = apt ? apt.dominios.map(d => {
         const dd = D.dominio(d) || {};
         return `<span class="adm-pj-dom">${esc(dd.zh || '')} ${esc(dd.nombre || d)}</span>`;
       }).join('') : '';
-      return `<li class="adm-pj-item${pj.id === pjEditId ? ' on' : ''}" data-id="${esc(pj.id)}">
+      return `<li class="adm-pj-item${pj.id === pjEditId ? ' on' : ''}" data-id="${esc(pj.id)}" style="--fc:${f ? esc(f.color) : 'rgba(255,255,255,.14)'}">
         <span class="adm-pj-body" data-edit="${esc(pj.id)}" title="Editar">
           <span class="adm-pj-sello">${esc(apt ? apt.zh : '?')}</span>
           <span class="adm-pj-info">
@@ -1605,9 +1659,21 @@
         </span>
         <button class="adm-pj-del" title="Borrar personaje"${dis}>✕</button>
       </li>`;
+    };
+    const grupos = [];
+    facs.forEach(f => { const items = lista.filter(p => p.faccion === f.id); if (items.length) grupos.push({ f, items }); });
+    const sinFac = lista.filter(p => !p.faccion || !facById[p.faccion]);
+    if (sinFac.length) grupos.push({ f: null, items: sinFac });
+    const rows = grupos.map(gr => {
+      const f = gr.f;
+      const hdr = f
+        ? `<li class="adm-pj-grouphdr" style="--fc:${esc(f.color)}"><span class="adm-pj-groupsw" style="background:${esc(f.color)}"></span>${f.zh ? esc(f.zh) + ' ' : ''}${esc(f.nombre)} <span class="adm-board-hint">${gr.items.length}</span></li>`
+        : `<li class="adm-pj-grouphdr adm-pj-grouphdr-none">Sin facción <span class="adm-board-hint">${gr.items.length}</span></li>`;
+      return hdr + gr.items.map(rowFor).join('');
     }).join('');
 
     host.innerHTML = `${dbWarn}
+      ${facManagerHtml}
       <form class="adm-pj-form" id="form-pj-add">
         <div class="adm-pj-grid">
           <div class="adm-pj-fields">
@@ -1622,6 +1688,7 @@
               <span class="adm-pj-picklbl">Aptitud <i>· dominios en que destaca</i></span>
               <div class="adm-pj-chips adm-pj-chips-apt">${aptChips}</div>
             </div>
+            ${facSelectHtml}
             <div class="adm-pj-pick adm-pj-appearance">
               <span class="adm-pj-picklbl">Aspecto</span>
               <div class="adm-pj-asp">
@@ -1695,7 +1762,32 @@
     };
   }
 
-  function pjResetForm() { pjEditId = null; pjAspecto = { robe: '', piel: 0, pelo: 0, atuendo: '' }; }
+  function pjResetForm() { pjEditId = null; pjAspecto = { robe: '', piel: 0, pelo: 0, atuendo: '' }; pjFaccion = ''; }
+
+  // Gestor de facciones: alta/edición/borrado (solo admin, tabla `facciones`).
+  function wireFacManager() {
+    if (!window.HacFacciones) return;
+    const onFacError = (accion) => (err) => { alert('No se pudo ' + accion + ' la facción: ' + (err && err.message || err)); HacFacciones.reload().then(renderPersonajes); };
+    const ff = document.getElementById('form-fac');
+    if (ff) ff.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const nombre = ff.fnombre.value.trim();
+      if (!nombre) { alert('Pon un nombre a la facción.'); return; }
+      const color = ff.fcolor.value || '#c9a84c', zh = (ff.fzh.value || '').trim();
+      if (facEditId) HacFacciones.update({ id: facEditId, nombre, color, zh }).catch(onFacError('guardar'));
+      else HacFacciones.add({ nombre, color, zh }).catch(onFacError('crear'));
+      facEditId = null; renderPersonajes();
+    });
+    const fcancel = document.getElementById('btn-fac-cancel');
+    if (fcancel) fcancel.addEventListener('click', () => { facEditId = null; renderPersonajes(); });
+    document.querySelectorAll('#adm-pj [data-fac-edit]').forEach(b => b.addEventListener('click', () => { facEditId = b.dataset.facEdit; renderPersonajes(); }));
+    document.querySelectorAll('#adm-pj [data-fac-del]').forEach(b => b.addEventListener('click', () => {
+      const f = HacFacciones.get(b.dataset.facDel); if (!f) return;
+      if (!confirm('¿Borrar la facción «' + f.nombre + '»? Los personajes que la tuvieran quedarán sin facción.')) return;
+      if (facEditId === f.id) facEditId = null;
+      HacFacciones.remove(f.id).then(() => HacPersonajes.reload()).then(renderPersonajes).catch(onFacError('borrar'));
+    }));
+  }
 
   function wirePersonajes() {
     const f = document.getElementById('form-pj-add');
@@ -1707,6 +1799,13 @@
     // Atuendo especial (modelo por aspecto, p.ej. 'emperador' para Cao Cao).
     const atu = document.getElementById('pj-atuendo');
     if (atu) atu.addEventListener('change', () => { pjAspecto.atuendo = atu.value; pjDrawPreview(); });
+
+    // Facción del NPC.
+    const facSel = document.getElementById('pj-faccion');
+    if (facSel) facSel.addEventListener('change', () => { pjFaccion = facSel.value; });
+
+    // ── Gestor de FACCIONES (crear/editar/borrar) ─────────────────────────────
+    wireFacManager();
 
     // Al cambiar de aptitud, si no se ha tocado el color, refleja el nuevo por defecto.
     if (f) f.querySelectorAll('input[name=aptitud]').forEach(r => r.addEventListener('change', () => {
@@ -1759,11 +1858,12 @@
       });
       const hayCambios = Object.keys(cambios).length > 0;
 
+      const faccion = pjFaccion || null;
       if (editId) {
-        HacPersonajes.update({ id: editId, nombre, personalidad, aptitud, aspecto }).catch(onPjError('guardar'));
+        HacPersonajes.update({ id: editId, nombre, personalidad, aptitud, aspecto, faccion }).catch(onPjError('guardar'));
         if (hayCambios && window.HacStats && HacStats.setNiveles) HacStats.setNiveles(editId, cambios);
       } else {
-        HacPersonajes.add({ nombre, personalidad, aptitud, aspecto })
+        HacPersonajes.add({ nombre, personalidad, aptitud, aspecto, faccion })
           .then(obj => {
             if (obj && hayCambios && window.HacStats && HacStats.setNiveles) HacStats.setNiveles(obj.id, cambios);
             if (obj && window.HacStats && HacStats.otorgarArmaInicial) HacStats.otorgarArmaInicial(obj.id, aptitud);   // guerrero → Lanza quebradiza
@@ -1781,6 +1881,7 @@
       const pj = HacPersonajes.get(el.dataset.edit); if (!pj) return;
       pjEditId = pj.id;
       pjAspecto = { robe: (pj.aspecto && pj.aspecto.robe) || '', piel: (pj.aspecto && Number(pj.aspecto.piel)) || 0, pelo: (pj.aspecto && Number(pj.aspecto.pelo)) || 0, atuendo: (pj.aspecto && pj.aspecto.atuendo) || '' };
+      pjFaccion = pj.faccion || '';
       renderPersonajes();
       const host = document.getElementById('adm-pj'); if (host) host.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }));

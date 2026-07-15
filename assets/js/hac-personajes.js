@@ -27,7 +27,8 @@ const HacPersonajes = (function () {
       personalidad: r.personalidad || '',
       aptitud: r.aptitud || '',
       aspecto: (r.aspecto && typeof r.aspecto === 'object') ? r.aspecto : {},
-      owner: r.owner || null   // uuid del jugador dueño (null = NPC del admin)
+      owner: r.owner || null,  // uuid del jugador dueño (null = NPC del admin)
+      faccion: r.faccion || null   // id de facción (null = sin facción). Ver hac-facciones.js
     };
   }
   function objToRow(p) {
@@ -37,7 +38,8 @@ const HacPersonajes = (function () {
       personalidad: p.personalidad || '',
       aptitud: p.aptitud || '',
       aspecto: (p.aspecto && typeof p.aspecto === 'object') ? p.aspecto : {},
-      owner: p.owner || null
+      owner: p.owner || null,
+      faccion: p.faccion || null
     };
   }
 
@@ -83,7 +85,7 @@ const HacPersonajes = (function () {
 
   // ── Escritores (admin) — optimistas, persisten en Supabase ──────────────
   async function add(p) {
-    const obj = { id: uuid(), nombre: (p.nombre || '').trim(), personalidad: p.personalidad || '', aptitud: p.aptitud || '', aspecto: p.aspecto || {}, owner: p.owner || null };
+    const obj = { id: uuid(), nombre: (p.nombre || '').trim(), personalidad: p.personalidad || '', aptitud: p.aptitud || '', aspecto: p.aspecto || {}, owner: p.owner || null, faccion: p.faccion || null };
     cache.push(obj);
     const client = await sb();
     const { error } = await client.from(TABLE).insert(objToRow(obj));
