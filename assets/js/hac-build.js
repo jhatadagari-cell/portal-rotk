@@ -525,6 +525,13 @@ const HacBuild = (function () {
     // en el mapa (jsonb) para no requerir migración de la tabla. (Sin esto, la
     // normalización lo descartaba y el selector volvía a «sin fundador».)
     if (mapa && mapa.fundador) out.fundador = String(mapa.fundador);
+    // Pabellones: responsable designado por rol { rol: personajeId } y estado de
+    // investigación por rol { rol: {...} }. Viven en el mapa (jsonb) y los escribe
+    // la RPC (SECURITY DEFINER). La normalización los descartaba → al recargar la
+    // finca (o vía realtime) el panel volvía a «sin responsable» y perdía el
+    // progreso hasta un ida/vuelta de RPC.
+    if (mapa && mapa.responsables && typeof mapa.responsables === 'object') out.responsables = mapa.responsables;
+    if (mapa && mapa.investig && typeof mapa.investig === 'object') out.investig = mapa.investig;
     // Terreno exterior comprado (tier 3..6) y puntos de tesorería ya gastados.
     const eT = Math.floor(Number(mapa && mapa.exteriorTier) || 0);
     if (eT >= 3) out.exteriorTier = clampTier(eT);
