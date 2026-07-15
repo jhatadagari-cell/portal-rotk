@@ -845,22 +845,38 @@ const HacChar = (function () {
   // puntas. Diseñadas para leerse a este tamaño (frente/perfil).
   function beltSwords(px, P, v, g) {
     const A = anchors(g), beltY = A.belt, c = CX + Math.round(v.dx * 0.6);
-    const scab = dark(P.boot, 0.02), scabHi = light(scab, 0.14), gold = P.trim, goldHi = P.trimHi, cord = '#a83a2e';
-    if (v.back) { px(c - 6, beltY + 9, 2, 6, scab); px(c - 3, beltY + 10, 2, 6, scab); return; }   // solo puntas de vaina
-    // Cada espada: vaina (línea 2px) + guarda + empuñadura + pomo en el extremo alto.
-    const sword = (hx, hy, dx, len) => {
-      for (let i = 0; i < len; i++) { const x = Math.round(hx + dx * i), y = hy + i; px(x, y, 2, 1, i % 3 === 0 ? scabHi : scab); }
-      px(Math.round(hx + dx * len), hy + len, 2, 1, scabHi);            // contera
-      px(hx - 1, hy - 1, 4, 1, gold); px(hx - 1, hy - 1, 1, 1, goldHi);  // guarda (tsuba)
-      px(hx, hy - 4, 2, 3, dark(P.boot, 0.18));                          // empuñadura
-      px(hx - 1, hy - 5, 3, 1, goldHi); px(hx, hy - 6, 1, 1, gold);      // pomo
+    const scab = dark(P.boot, 0.02), scabHi = light(scab, 0.16), wrap = dark(P.boot, 0.24);
+    const gold = P.trim, goldHi = P.trimHi, cord = '#a83a2e';
+    // Una espada COMPACTA y legible: pomo + empuñadura + guarda + vaina con herrajes
+    // dorados (garganta, abrazadera y contera) que rompen la mancha oscura → se lee
+    // como espada, no como raya. Corta (no baja hasta el bajo). ang = inclinación.
+    const sword = (hx, hy, ang, scLen) => {
+      px(hx, hy - 3, 2, 1, goldHi);                                     // pomo
+      px(hx, hy - 2, 2, 2, wrap);                                       // empuñadura
+      px(hx - 1, hy, 4, 1, gold); px(hx - 1, hy, 1, 1, goldHi);         // guarda (tsuba)
+      const mid = Math.max(2, (scLen / 2) | 0);
+      for (let i = 1; i <= scLen; i++) {
+        const x = Math.round(hx + ang * i), y = hy + i;
+        const col = (i === 1 || i === scLen || i === mid) ? gold : (i % 2 ? scab : scabHi);   // herrajes dorados intercalados
+        px(x, y, 2, 1, col);
+      }
     };
-    // Cordón rojo del cinto del que penden.
-    px(c - 8, beltY + 1, 10, 2, cord); px(c - 8, beltY + 1, 10, 1, light(cord, 0.15));
-    sword(c - 6, beltY + 3, -0.30, 12);   // espada 1 (más abierta)
-    sword(c - 2, beltY + 4, -0.08, 13);   // espada 2 (casi vertical), gemela junto a la primera
-    // Hebilla de LEÓN dorada sobre el cinto (rasgo de la lámina).
-    if (P.beastBuckle) { px(c + 1, beltY, 4, 3, gold); px(c + 1, beltY, 4, 1, goldHi); px(c + 2, beltY + 1, 2, 1, P.ink); px(c + 2, beltY, 1, 1, P.ink); }
+    if (v.back) {
+      // DE ESPALDAS: solo asoman los pomos y el arranque de las vainas por el costado
+      // (su cadera izq), NO barras en el centro. Cortas, junto al cuerpo.
+      const hx = c - 8;
+      px(hx, beltY - 1, 2, 1, goldHi); px(hx + 3, beltY, 2, 1, goldHi);      // pomos
+      px(hx, beltY + 1, 2, 4, scab); px(hx + 3, beltY + 2, 2, 4, scab);      // vainas cortas
+      px(hx, beltY + 5, 2, 1, gold); px(hx + 3, beltY + 6, 2, 1, gold);      // conteras doradas
+      return;
+    }
+    // Frente/perfil: las dos gemelas juntas, en la cadera, cortas y algo inclinadas.
+    const baseX = v.side >= 1 ? c + 2 : c - 7;                          // perfil: cadera cercana · frente: a un lado
+    px(baseX - 1, beltY, 9, 2, cord); px(baseX - 1, beltY, 9, 1, light(cord, 0.15));   // tirante rojo del cinto
+    sword(baseX, beltY + 2, -0.12, 8);
+    sword(baseX + 3, beltY + 3, 0.10, 9);
+    // Hebilla de LEÓN dorada sobre el cinto (centro), rasgo de la lámina.
+    if (P.beastBuckle) { px(c + 1, beltY, 4, 3, gold); px(c + 1, beltY, 4, 1, goldHi); px(c + 2, beltY + 1, 2, 1, P.ink); }
   }
 
   // Pelo RECOGIDO (moño 髻) con corona/pincho imperial PROMINENTE: moño alto ceñido
