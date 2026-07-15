@@ -662,18 +662,21 @@ const HacChar = (function () {
   // Corona imperial alta 通天冠: casquete negro + bloque dorado vertical con
   //梁 (crestas), gema frontal y horquilla 簪 atravesada. Reemplaza casco/tocado.
   function crownImperial(px, P, v, c, hy) {
-    px(c - 5, hy - 3, 11, 3, P.ink); px(c - 5, hy - 3, 11, 1, light(P.ink, 0.20));   // casquete/base
-    px(c + 4, hy - 1, 2, 3, P.ink);                                                   // caída trasera del paño
-    // Cuerpo alto de la corona (bloque dorado con relieve).
-    px(c - 3, hy - 10, 7, 7, P.gold);
-    px(c - 3, hy - 10, 7, 1, P.goldHi);
-    px(c - 3, hy - 10, 1, 7, P.goldHi); px(c + 3, hy - 10, 1, 7, dark(P.gold, 0.28));
-    px(c - 1, hy - 10, 1, 7, dark(P.gold, 0.22)); px(c + 1, hy - 10, 1, 7, dark(P.gold, 0.22));  // 梁 (ranuras)
-    if (!v.back) { px(c - 1, hy - 7, 2, 2, P.jade); px(c - 1, hy - 7, 1, 1, light(P.jade, 0.2)); } // gema frontal
+    // top = hy-6: la corona se mantiene DENTRO del lienzo incluso con el bob del andar
+    // (que sube la figura 2px en los fotogramas de paso). Antes se recortaba por arriba.
+    const top = hy - 6;
+    px(c - 5, hy - 2, 11, 2, P.ink); px(c - 5, hy - 2, 11, 1, light(P.ink, 0.20));   // casquete/base
+    px(c + 4, hy, 2, 3, P.ink);                                                        // caída trasera del paño
+    // Cuerpo alto de la corona (bloque dorado con relieve y 梁/ranuras).
+    px(c - 3, top, 7, 6, P.gold);
+    px(c - 3, top, 7, 1, P.goldHi);
+    px(c - 3, top, 1, 6, P.goldHi); px(c + 3, top, 1, 6, dark(P.gold, 0.28));
+    px(c - 1, top, 1, 6, dark(P.gold, 0.22)); px(c + 1, top, 1, 6, dark(P.gold, 0.22));
+    if (!v.back) { px(c - 1, top + 2, 2, 2, P.jade); px(c - 1, top + 2, 1, 1, light(P.jade, 0.2)); }  // gema frontal
     // Horquilla 簪 dorada atravesando la corona de lado a lado.
-    px(c - 6, hy - 7, 13, 1, P.goldHi);
-    px(c - 6, hy - 7, 1, 1, dark(P.gold, 0.35)); px(c + 6, hy - 7, 1, 1, dark(P.gold, 0.35));
-    px(c - 6, hy - 6, 1, 1, dark(P.gold, 0.15)); px(c + 6, hy - 6, 1, 1, dark(P.gold, 0.15));
+    px(c - 6, top + 2, 13, 1, P.goldHi);
+    px(c - 6, top + 2, 1, 1, dark(P.gold, 0.35)); px(c + 6, top + 2, 1, 1, dark(P.gold, 0.35));
+    px(c - 6, top + 3, 1, 1, dark(P.gold, 0.15)); px(c + 6, top + 3, 1, 1, dark(P.gold, 0.15));
   }
 
   // Capa IMPERIAL larga y DRAPEADA (pixelart cuidado): cae de los hombros al suelo
@@ -684,30 +687,41 @@ const HacChar = (function () {
   function capeImperial(px, P, v, g) {
     const A = anchors(g), top = A.shoulder - 1, c = CX + Math.round(v.dx * 0.6);
     const phase = g.f, ground = BASEY + 2, span = ground - top;
-    const dragDir = v.dx > 0 ? -1 : (v.dx < 0 ? 1 : 0);            // cola opuesta al avance
-    const topHalf = v.back ? 8 : 6, botHalf = v.back ? 15 : 15;    // de espaldas cubre hombros
+    const side = v.side >= 1;
+    const facing = side ? (v.dx >= 0 ? 1 : -1) : 0;               // PERFIL: hacia dónde mira
+    const dragDir = v.dx > 0 ? -1 : (v.dx < 0 ? 1 : 0);           // "detrás" = opuesto al avance
+    const topHalf = v.back ? 8 : (side ? 5 : 6);
+    const botHalf = side ? 11 : 15;                               // de espaldas/frente cubre ancho
     const lit  = mix(P.robe, '#ffffff', 0.14);                    // pliegue iluminado
     const mid  = dark(P.robe, 0.24);                              // tela base
     const sh   = dark(P.robe, 0.42);                              // pliegue en sombra
     const deep = dark(P.robe, 0.60);                              // filo hondo
     const goldD = dark(P.gold, 0.24);                             // ribete dorado
-    const folds = [[-0.60, sh], [-0.22, lit], [0.20, sh], [0.58, lit]];
     for (let i = 0; i <= span; i++) {
       const y = top + i, t = i / span;
-      const hw = Math.max(3, Math.round(topHalf + (botHalf - topHalf) * Math.pow(t, 0.82)));
-      const wave = Math.round(1.3 * Math.sin(t * 3.0 + phase * 0.8));            // ondeo del vuelo
-      const tail = Math.round(dragDir * 4 * Math.pow(t, 2.0));                   // arrastre creciente
+      const base = Math.max(3, Math.round(topHalf + (botHalf - topHalf) * Math.pow(t, 0.82)));
+      const wave = Math.round(1.2 * Math.sin(t * 3.0 + phase * 0.8));           // ondeo del vuelo
+      const tail = Math.round(dragDir * 4 * Math.pow(t, 2.0));                  // arrastre creciente
       const cx = c + wave + tail;
-      px(cx - hw, y, hw * 2, 1, mid);                                            // relleno base
-      folds.forEach(f => px(cx + Math.round(f[0] * hw), y, 1, 1, f[1]));         // pliegues verticales
-      px(cx - hw, y, 1, 1, deep); px(cx - hw + 1, y, 1, 1, goldD);              // filo + ribete izq
-      px(cx + hw - 1, y, 1, 1, sh); px(cx + hw - 2, y, 1, 1, goldD);            // filo + ribete dcho
+      // En PERFIL la capa cuelga por DETRÁS: lado trasero ancho, delantero corto (bajo el cuerpo).
+      let hwL = base, hwR = base;
+      if (facing) { const fr = Math.max(2, 2 + Math.round(1.6 * t)); if (facing > 0) { hwR = fr; hwL = base + 2; } else { hwL = fr; hwR = base + 2; } }
+      const w = hwL + hwR, cc = cx - hwL;
+      px(cc, y, w, 1, mid);                                                      // relleno base
+      [0.16, 0.40, 0.62, 0.84].forEach((fr, k) => px(cc + Math.round(fr * w), y, 1, 1, k % 2 ? lit : sh));  // pliegues
+      px(cx - hwL, y, 1, 1, deep); px(cx - hwL + 1, y, 1, 1, goldD);            // filo + ribete izq
+      px(cx + hwR - 1, y, 1, 1, sh); px(cx + hwR - 2, y, 1, 1, goldD);          // filo + ribete dcho
     }
-    // Bajo de la capa: festón (dientes de 1px) con hem dorado, arrastrado por el suelo.
-    const bt = Math.round(dragDir * 5), bhw = botHalf + 1;
-    for (let x = -bhw; x < bhw; x++) {
+    // Bajo de la capa: festón + hem dorado que se ARRASTRA por el suelo (en perfil,
+    // sobre todo por detrás → cola que sigue al mecenas). Recortado al lienzo (sin clipping raro).
+    const bt = Math.round(dragDir * 5), sweep = phase % 2 ? 1 : 0;
+    const back = facing ? botHalf + 2 + sweep : botHalf + 1;      // extensión trasera (la cola)
+    const front = facing ? 3 : botHalf + 1;                       // delante, corto
+    const left = facing > 0 ? back : front, right = facing > 0 ? front : back;
+    for (let x = -left; x < right; x++) {
+      const xx = c + bt + x; if (xx < 1 || xx >= W - 1) continue;               // no clipar el borde
       const y = ground - (x & 1 ? 1 : 0);
-      px(c + bt + x, y - 1, 1, 1, P.gold); px(c + bt + x, y, 1, 1, goldD);
+      px(xx, y - 1, 1, 1, P.gold); px(xx, y, 1, 1, goldD);
     }
   }
 
