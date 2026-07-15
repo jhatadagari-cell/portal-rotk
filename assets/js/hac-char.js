@@ -49,7 +49,11 @@ const HacChar = (function () {
     // Modelo ESPECIAL (Cao Cao, canciller de Wei con aire imperial): armadura de
     // escamas oscura + capa púrpura imperial que ondea/se arrastra + corona alta
     // dorada (通天冠). No es una aptitud de juego: se asigna por `aspecto.atuendo`.
-    emperador:     { kind: 'armor', prop: 'none',   robe: '#4a2f6b', accent: '#e6c15a', cape: true, capeLong: true, imperial: true, crown: true, beard: 2 }
+    emperador:     { kind: 'armor', prop: 'none',   robe: '#4a2f6b', accent: '#e6c15a', cape: true, capeLong: true, imperial: true, crown: true, beard: 2 },
+    // Modelo ESPECIAL (Sun Quan, soberano de Wu): túnica ROJA larga y ondulada que
+    // se arrastra por el suelo, MANGAS RECOGIDAS (antebrazo a la vista) y pelo recogido
+    // con corona/pincho imperial (topknot). Se asigna por `aspecto.atuendo` = 'soberano'.
+    soberano:      { kind: 'robe',  prop: 'none',   robe: '#a83236', accent: '#e6c15a', beard: 2, robeLong: true, sleevesRolled: true, topknot: true }
   };
   const SKINS = ['#eac9a0', '#dcb487', '#c89a6e', '#ad7d54'];
   const HAIRS = ['#1b1712', '#2c2318', '#46301a', '#0f0d0b'];
@@ -70,7 +74,7 @@ const HacChar = (function () {
       // `aspecto.kind`/`aspecto.torsoLujo` permiten que una ROPA DE TORSO equipada
       // (HacTienda item.viste) redefina el atuendo del tronco sin tocar la cabeza:
       // p. ej. un guerrero (armadura) que se pone una túnica pasa a kind 'robe'.
-      kind: aspecto.kind || o.kind, prop: o.prop, arma: aspecto.arma || null, cape: flag('cape'), capeLong: flag('capeLong'), imperial, crown: flag('crown'), ornate: !!o.ornate, torsoLujo: !!aspecto.torsoLujo, torsoGala: !!aspecto.torsoGala, beard: o.beard || 0,
+      kind: aspecto.kind || o.kind, prop: o.prop, arma: aspecto.arma || null, cape: flag('cape'), capeLong: flag('capeLong'), imperial, crown: flag('crown'), topknot: flag('topknot'), robeLong: flag('robeLong'), sleevesRolled: flag('sleevesRolled'), ornate: !!o.ornate, torsoLujo: !!aspecto.torsoLujo, torsoGala: !!aspecto.torsoGala, beard: o.beard || 0,
       robe, robeHi: light(robe, 0.16), robeDk: dark(robe, 0.30), robeSh: dark(robe, 0.50),
       beardC: dark(hair, 0.05),
       sash: dark(mix(robe, accent, 0.25), 0.05),
@@ -121,6 +125,7 @@ const HacChar = (function () {
     if (P.cape && !capeOverBack) (longCape ? capeImperial : cape)(px, P, v, g);   // capa por DETRÁS (frente/perfil)
     legs(px, P, v, g);
     torso(px, P, v, g);
+    if (P.robeLong) robeSkirtLong(px, P, v, g);    // TÚNICA larga: cubre las piernas y se arrastra por el suelo
     if (capeOverBack) capeImperial(px, P, v, g);   // capa POR ENCIMA: cubre la espalda entera
     // GESTO de debate: reemplaza los brazos en reposo por brazos expresivos (y la
     // cara la resuelve headFace con sec.expr). Los brazos van por delante de la cabeza.
@@ -461,6 +466,18 @@ const HacChar = (function () {
   // Manga + puño + mano. wide=manga ancha (túnica).
   function sleeve(px, P, x, y, sw, sh, front) {
     const base = front ? P.robe : P.robeDk;
+    // MANGAS RECOGIDAS: manga corta hasta el codo + puño dorado + antebrazo y mano a la vista.
+    if (P.sleevesRolled) {
+      const up = sh - 5;
+      px(x, y, sw, up, base); px(x, y, sw, 1, front ? P.robeHi : P.robe);
+      px(x, y + up, sw, 2, front ? P.trim : P.trimDk);                       // vuelta/puño dorado
+      px(x, y + up, sw, 1, front ? P.trimHi : P.trim);
+      const fx = x + 1;
+      px(fx, y + up + 2, sw - 2, 3, front ? P.skin : P.skinDk);              // antebrazo desnudo
+      px(fx, y + up + 2, sw - 2, 1, front ? P.skinHi : P.skin);
+      px(fx, y + up + 5, sw - 2, 2, front ? P.skin : P.skinDk);              // mano
+      return;
+    }
     px(x, y, sw, sh, base);
     px(x, y, sw, 1, front ? P.robeHi : P.robe);
     px(x, y + sh - 2, sw, 2, P.robeSh);                    // puño en sombra
@@ -630,6 +647,7 @@ const HacChar = (function () {
     if (v.back) { px(c - 4, hy, 9, 9, P.hair); px(c - 5, hy + 1, 1, 7, P.hair); px(c + 4, hy + 1, 1, 7, P.hair); }
     else { px(c - 5, hy, 1, 6, P.hair); px(c + 4, hy, 1, 6, P.hair); }
     if (P.crown) { crownImperial(px, P, v, c, hy); return; }                   // corona alta dorada (通天冠)
+    if (P.topknot) { crownTopknot(px, P, v, c, hy); return; }                  // moño recogido con corona/pincho
     if (P.kind === 'armor') {                                                  // casco con frontal y cresta
       px(c - 5, hy - 3, 11, 4, P.steel); px(c - 5, hy - 3, 11, 1, P.steelHi);
       px(c - 5, hy + 1, 11, 1, P.steelDk);
@@ -744,6 +762,54 @@ const HacChar = (function () {
     px(c - cw, ctop + 2, cw * 2, 1, dark(P.gold, 0.30)); if (v.back) px(c - cw, ctop + 3, cw * 2, 1, dark(P.gold, 0.42));
     // Fíbula con gema (frente/perfil).
     if (!v.back) { px(c - 1, top + 1, 2, 2, P.goldHi); px(c, top + 2, 1, 1, P.jade); }
+  }
+
+  // TÚNICA larga (soberano): la falda cae de la cintura al SUELO cubriendo las
+  // piernas, ONDULA (pliegues verticales + bordes ondeantes) y se ARRASTRA por el
+  // suelo, con más cola por detrás al andar. Centrada (cubre frente y espalda). Va
+  // por ENCIMA de las piernas; el ribete dorado del bajo remata como en la lámina.
+  function robeSkirtLong(px, P, v, g) {
+    const A = anchors(g), c = CX + Math.round(v.dx * 0.6);
+    const topY = A.belt + 2, ground = BASEY + 2, span = ground - topY;
+    const phase = g.f, dragDir = v.dx > 0 ? -1 : (v.dx < 0 ? 1 : 0);
+    const hi = P.robeHi, mid = P.robe, dk = P.robeDk, sh = P.robeSh, goldD = dark(P.trim, 0.18);
+    for (let i = 0; i <= span; i++) {
+      const y = topY + i, t = i / span;
+      const hw = Math.round(9 + 6 * Math.pow(t, 0.78));                         // ensancha hacia el bajo
+      const wave = Math.round(1.3 * Math.sin(t * 3.4 + phase * 0.7));           // ondulación de la tela
+      const tail = Math.round(dragDir * 3 * Math.pow(t, 2.0));                  // arrastre creciente
+      const cx = c + wave + tail;
+      px(cx - hw, y, hw * 2, 1, mid);                                           // relleno
+      px(cx - hw, y, Math.max(1, Math.round(hw * 0.32)), 1, hi);               // luz (izq)
+      px(cx + Math.round(hw * 0.5), y, hw - Math.round(hw * 0.5), 1, dk);       // sombra (der)
+      px(cx - Math.round(hw * 0.55), y, 1, 1, sh); px(cx + Math.round(hw * 0.12), y, 1, 1, sh);  // pliegues
+      px(cx - hw, y, 1, 1, sh); px(cx + hw - 1, y, 1, 1, dk);                   // filos
+      if (!v.back && i > 2) px(cx, y, 1, 1, goldD);                             // vivo dorado central (delante)
+    }
+    // Bajo: ribete dorado ondulante que se arrastra (algo más de cola por detrás).
+    const bt = Math.round(dragDir * 4), extra = phase % 2 ? 1 : 0;
+    const bhw = 15;
+    for (let x = -bhw; x < bhw + (dragDir < 0 ? 0 : extra); x++) {
+      const xx = c + bt + x; if (xx < 1 || xx >= W - 1) continue;
+      const y = ground - (x & 1 ? 1 : 0);
+      px(xx, y - 1, 1, 1, P.trim); px(xx, y, 1, 1, goldD);
+    }
+  }
+
+  // Pelo RECOGIDO (moño 髻) con corona/pincho imperial: topknot dorado + horquilla
+  // 簪 atravesada. Más contenido que la corona alta (通天冠) de Cao Cao.
+  function crownTopknot(px, P, v, c, hy) {
+    // Casquete de pelo ceñido + moño alto.
+    px(c - 5, hy - 1, 11, 2, P.hair); px(c - 5, hy - 1, 11, 1, P.hairHi);
+    px(c - 2, hy - 5, 4, 4, P.hair); px(c - 2, hy - 5, 4, 1, P.hairHi);          // moño
+    px(c - 2, hy - 5, 1, 4, dark(P.hair, 0.3)); px(c + 1, hy - 5, 1, 4, dark(P.hair, 0.2));
+    // Corona/anillo dorado que ciñe el moño (束髮冠).
+    px(c - 3, hy - 2, 7, 1, P.gold); px(c - 3, hy - 1, 7, 1, dark(P.gold, 0.3));
+    px(c - 2, hy - 6, 4, 1, P.goldHi);                                           // remate del moño
+    px(c - 1, hy - 6, 2, 2, P.gold); px(c - 1, hy - 6, 1, 1, P.goldHi);          // pináculo (dentro del lienzo aun con bob)
+    // Horquilla 簪 dorada atravesada (asoma a ambos lados).
+    px(c - 5, hy - 3, 11, 1, P.goldHi);
+    px(c - 5, hy - 3, 1, 1, dark(P.gold, 0.35)); px(c + 5, hy - 3, 1, 1, dark(P.gold, 0.35));
   }
 
   // ARMA equipada (兵): sustituye al prop de la aptitud cuando el mecenas empuña una.
