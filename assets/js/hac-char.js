@@ -926,11 +926,17 @@ const HacChar = (function () {
     // GUANDAO 青龍偃月刀 (Guan Yu): asta larga con gran hoja en MEDIA LUNA, borla roja
     // y punta. Arma de asta → visible también de espaldas. Empuñada al costado.
     if (key === 'guandao') {
-      const hx = v.back ? c + 6 : c + 10, wood = '#5a3a1e';
+      // Empuñada al COSTADO (junto a la mano), no cruzada por la espalda. De espaldas
+      // se acerca un poco pero sigue al lado del cuerpo, no sobre él.
+      const hx = v.back ? c + 9 : c + 10, wood = '#5a3a1e';
       // ── Asta larga con anillas doradas y regatón ──
       px(hx, baseY - 46, 1, 46, wood); px(hx, baseY - 46, 1, 1, '#7a5a30');
       px(hx, baseY - 28, 1, 1, P.gold); px(hx, baseY - 12, 1, 1, P.gold);                       // anillas
       px(hx, baseY - 1, 1, 1, P.steelHi);                                                       // regatón
+      // ── MANO que agarra el asta (a la altura del puño) → se lee como empuñada ──
+      const gy = baseY - 17 + (g.step > 0 ? -1 : 1);
+      px(hx - 1, gy, 2, 3, v.back ? P.skinDk : P.skin); px(hx - 1, gy, 2, 1, v.back ? P.skin : P.skinHi);
+      px(hx - 1, gy + 1, 2, 1, dark(v.back ? P.skinDk : P.skin, 0.2));                          // nudillos
       // ── Collar de DRAGÓN 青龍 dorado donde nace la hoja + borla roja ──
       px(hx - 1, baseY - 40, 3, 3, P.gold); px(hx - 1, baseY - 40, 3, 1, P.goldHi);
       if (!v.back) px(hx + 1, baseY - 39, 1, 1, P.jade);                                        // ojo de jade del dragón
