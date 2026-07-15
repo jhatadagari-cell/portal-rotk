@@ -5704,6 +5704,27 @@
     HacFolk.start(iso, { mapa: h.mapa, tier, color, miembros: h.miembros, onState: applyOrders, seedKey: h.id, haciendaId: h.id, ordenes: {}, getTransform: (cam && cam.getT) || null });
     if (cam && cam.setOnApply) cam.setOnApply(() => { if (window.HacFolk && HacFolk.repaintOverlay) HacFolk.repaintOverlay(); });
     renderList();
+
+    // ── Realtime: Supabase empuja los cambios de ESTA hacienda y sus pabellones
+    // (responsable, investigación, altas/bajas de pabellón, aporte…). La caché se
+    // muta EN SITIO (h es la misma ref), así que solo re-renderizamos la base iso y
+    // los paneles abiertos — nunca reiniciamos el rAF de HacFolk (FPS intacto).
+    let sharedRT = null;
+    function rerenderShared() {
+      try {
+        redrawIso();
+        if (pabEl && !pabEl.hidden && pabAbierto) {
+          const fresh = (HacStore.pabellones(h.id) || []).find(p => String(p.id) === String(pabAbierto.id));
+          if (fresh) { pabAbierto = fresh; buildPabPanel(); } else { pabEl.hidden = true; }   // lo borraron
+        }
+        if (charId) buildCharPanel(charId);
+      } catch (e) {}
+    }
+    function onSharedChange() { if (sharedRT) return; sharedRT = setTimeout(() => { sharedRT = null; rerenderShared(); }, 150); }   // coalesce ráfagas
+    if (window.HacStore && HacStore.subscribe) {
+      HacStore.subscribe(h.id, onSharedChange);
+      window.addEventListener('beforeunload', () => { try { HacStore.unsubscribe(); } catch (e) {} });
+    }
     // Carga órdenes + energía + competencias (compartidas); refresca por poll (≤5 s).
     if (window.HacEnergia) HacEnergia.ready().then(refresh);
     if (window.HacCompetencias) HacCompetencias.ready().then(refresh);
@@ -5730,6 +5751,7 @@
         if (window.HacEscaramuzas) HacEscaramuzas.reload().then(escPulse);   // saca al mecenas y resuelve si toca
         if (DEB) DEB.reload().then(debPulse);                                // debates: sim, auto-accept NPC, resolución
         if (window.HacBuff) HacBuff.reload();                                // bono de hacienda: refresca vigencia
+        if (window.HacStore && HacStore.reloadOne) HacStore.reloadOne(h.id).then(ch => { if (ch) onSharedChange(); });   // red de seguridad si el realtime no llega
 
         HacOrdenes.reload().then(applyOrders);
       }, 5000);

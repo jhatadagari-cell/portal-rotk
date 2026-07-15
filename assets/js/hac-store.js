@@ -196,7 +196,67 @@ const HacStore = (function () {
     return base + '-' + n;
   }
 
-  return { ready, reload, all, get, upsert, remove, clear, resetToSeed, makeId, TABLE,
+  // ── Realtime + recarga DIRIGIDA de una hacienda ─────────────────────────
+  // El juego es multi-jugador pero no había realtime: los cambios en `haciendas`
+  // (mapa.responsables/investig, miembros[].pabellon/aporte) y en `pabellones`
+  // no llegaban a los demás hasta recargar la página. Estas funciones actualizan
+  // SOLO una hacienda mutando el objeto en la caché EN SITIO (para que las
+  // referencias vivas —p.ej. la `h` de la página— reflejen el cambio sin recargar).
+  function applyHacRow(row) {
+    if (!row || !row.id) return false;
+    const mapped = rowToHac(row), cur = cache.find(x => x.id === row.id);
+    if (!cur) { cache.push(mapped); return true; }
+    const key = (o) => JSON.stringify([o.mapa, o.miembros, o.nombre, o.color, o.puntosExtra]);
+    const before = key(cur); Object.assign(cur, mapped); return before !== key(cur);
+  }
+  function applyPabRows(hacId, rows) {
+    const mine = () => JSON.stringify(pabCache.filter(p => p.haciendaId === hacId));
+    const before = mine();
+    pabCache = pabCache.filter(p => p.haciendaId !== hacId).concat((rows || []).map(rowToPab));
+    return before !== mine();
+  }
+  // Recarga SOLO esta hacienda + sus pabellones (1 fila, ligero). Devuelve true si algo cambió.
+  async function reloadOne(hacId) {
+    try {
+      const client = await sb();
+      const [hr, pr] = await Promise.all([
+        client.from(TABLE).select('*').eq('id', hacId).maybeSingle(),
+        client.from(PAB_TABLE).select('*').eq('hacienda_id', hacId),
+      ]);
+      let changed = false;
+      if (hr && hr.data) changed = applyHacRow(hr.data) || changed;
+      changed = applyPabRows(hacId, (pr && pr.data) || []) || changed;
+      return changed;
+    } catch (e) { return false; }
+  }
+  // Suscripción realtime a ESTA hacienda + sus pabellones. `cb(kind)` se llama tras
+  // aplicar cada cambio. Degrada en silencio si el realtime no está disponible
+  // (el poll dirigido de la página hace de red de seguridad).
+  let rtChannel = null;
+  function subscribe(hacId, cb) {
+    try {
+      unsubscribe();
+      if (typeof Auth === 'undefined' || !Auth.client) return null;
+      const client = Auth.client();
+      if (!client || !client.channel) return null;
+      rtChannel = client.channel('hac-rt-' + hacId)
+        .on('postgres_changes', { event: '*', schema: 'public', table: TABLE, filter: 'id=eq.' + hacId },
+            (p) => { if (p && p.new) applyHacRow(p.new); if (cb) cb('hacienda'); })
+        .on('postgres_changes', { event: '*', schema: 'public', table: PAB_TABLE, filter: 'hacienda_id=eq.' + hacId },
+            () => { reloadOne(hacId).then(() => { if (cb) cb('pabellones'); }); })   // DELETE no trae la fila → resync
+        .subscribe((status) => {
+          if (status === 'SUBSCRIBED') console.info('[HacStore] realtime ON ·', hacId);
+          else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') console.warn('[HacStore] realtime no disponible (' + status + ') — se usa el poll de seguridad');
+        });
+      return rtChannel;
+    } catch (e) { console.warn('[HacStore] realtime error', e); return null; }
+  }
+  function unsubscribe() {
+    try { if (rtChannel && typeof Auth !== 'undefined' && Auth.client) { const c = Auth.client(); if (c && c.removeChannel) c.removeChannel(rtChannel); } } catch (e) {}
+    rtChannel = null;
+  }
+
+  return { ready, reload, reloadOne, subscribe, unsubscribe, all, get, upsert, remove, clear, resetToSeed, makeId, TABLE,
     pabellones, addPabellon, updatePabellon, removePabellon, pabCacheUpsert, pabCacheRemove, PAB_TABLE };
 })();
 
