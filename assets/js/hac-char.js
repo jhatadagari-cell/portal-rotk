@@ -53,7 +53,11 @@ const HacChar = (function () {
     // Modelo ESPECIAL (Sun Quan, soberano de Wu): túnica ROJA larga y ondulada que
     // se arrastra por el suelo, MANGAS RECOGIDAS (antebrazo a la vista) y pelo recogido
     // con corona/pincho imperial (topknot). Se asigna por `aspecto.atuendo` = 'soberano'.
-    soberano:      { kind: 'robe',  prop: 'none',   robe: '#b0323a', accent: '#e6c15a', beard: 2, beardLong: true, robeLong: true, sleevesRolled: true, topknot: true, ornate: true }
+    soberano:      { kind: 'robe',  prop: 'none',   robe: '#b0323a', accent: '#e6c15a', beard: 2, beardLong: true, robeLong: true, sleevesRolled: true, topknot: true, ornate: true },
+    // Modelo ESPECIAL (Liu Bei, soberano de Shu): túnica BLANCA larga + MANTO verde
+    // jade con brocado dorado sobre los hombros, HEBILLA de león y sus DOS ESPADAS
+    // gemelas (雌雄雙股劍) al cinto. Aire virtuoso y humilde pero regio. `atuendo`='virtuoso'.
+    virtuoso:      { kind: 'robe',  prop: 'none',   robe: '#dcd6c4', accent: '#d8b65a', beard: 2, robeLong: true, topknot: true, mantle: '#3f6b4a', dualSwords: true, beastBuckle: true }
   };
   const SKINS = ['#eac9a0', '#dcb487', '#c89a6e', '#ad7d54'];
   const HAIRS = ['#1b1712', '#2c2318', '#46301a', '#0f0d0b'];
@@ -75,6 +79,7 @@ const HacChar = (function () {
       // (HacTienda item.viste) redefina el atuendo del tronco sin tocar la cabeza:
       // p. ej. un guerrero (armadura) que se pone una túnica pasa a kind 'robe'.
       kind: aspecto.kind || o.kind, prop: o.prop, arma: aspecto.arma || null, cape: flag('cape'), capeLong: flag('capeLong'), imperial, crown: flag('crown'), topknot: flag('topknot'), robeLong: flag('robeLong'), sleevesRolled: flag('sleevesRolled'), ornate: !!o.ornate, torsoLujo: !!aspecto.torsoLujo, torsoGala: !!aspecto.torsoGala, beard: o.beard || 0, beardLong: !!o.beardLong,
+      mantle: okHex(aspecto.mantle) ? aspecto.mantle : (okHex(o.mantle) ? o.mantle : null), dualSwords: flag('dualSwords'), beastBuckle: flag('beastBuckle'),
       robe, robeHi: light(robe, 0.16), robeDk: dark(robe, 0.30), robeSh: dark(robe, 0.50),
       beardC: dark(hair, 0.05),
       sash: dark(mix(robe, accent, 0.25), 0.05),
@@ -126,6 +131,8 @@ const HacChar = (function () {
     legs(px, P, v, g);
     torso(px, P, v, g);
     if (P.robeLong) robeSkirtLong(px, P, v, g);    // TÚNICA larga: cubre las piernas y se arrastra por el suelo
+    if (P.mantle) robeMantle(px, P, v, g);         // MANTO (Liu Bei): sobretúnica verde jade con brocado
+    if (P.dualSwords) beltSwords(px, P, v, g);     // DOS espadas gemelas al cinto
     if (capeOverBack) capeImperial(px, P, v, g);   // capa POR ENCIMA: cubre la espalda entera
     // GESTO de debate: reemplaza los brazos en reposo por brazos expresivos (y la
     // cara la resuelve headFace con sec.expr). Los brazos van por delante de la cabeza.
@@ -802,6 +809,58 @@ const HacChar = (function () {
       const y = ground - (x & 1 ? 1 : 0);
       px(xx, y - 1, 1, 1, gold); px(xx, y, 1, 1, goldD);
     }
+  }
+
+  // MANTO (Liu Bei): sobretúnica de color propio (verde jade) sobre los hombros y
+  // los costados, ABIERTA por el centro para que asome la túnica blanca; solapa con
+  // brocado dorado en V y hombrera dorada. Cubre hasta la cadera (la falda blanca
+  // fluye por debajo). De espaldas cubre toda la espalda.
+  function robeMantle(px, P, v, g) {
+    const A = anchors(g), top = A.shoulder - 1, beltY = A.belt, c = CX + Math.round(v.dx * 0.6);
+    const mid = P.mantle, hi = light(mid, 0.14), dk = dark(mid, 0.30), sh = dark(mid, 0.48);
+    const gold = P.trim, goldHi = P.trimHi, goldD = dark(P.trim, 0.22);
+    const shHalf = Math.round(9 - 3 * v.side), bottom = beltY + 6;
+    for (let y = top + 1; y <= bottom; y++) {
+      const t = (y - top) / (bottom - top);
+      const outer = Math.round(shHalf + 2 + 2 * t);
+      const inner = Math.round(3 + 3 * t);
+      if (v.back) {
+        px(c - outer, y, outer * 2, 1, y % 2 ? mid : hi);
+        px(c - outer, y, 1, 1, sh); px(c + outer - 1, y, 1, 1, dk);
+      } else {
+        px(c + inner, y, outer - inner, 1, y % 2 ? mid : hi);        // panel derecho
+        px(c + outer - 1, y, 1, 1, dk); px(c + inner, y, 1, 1, goldD);
+        px(c - outer, y, outer - inner, 1, y % 2 ? dk : mid);        // panel izquierdo
+        px(c - outer, y, 1, 1, sh); px(c - inner - 1, y, 1, 1, goldD);
+      }
+    }
+    // Solapa/cuello verde con brocado dorado en V + hombrera dorada (león).
+    px(c - shHalf, top, shHalf * 2, 2, mid); px(c - shHalf, top, shHalf * 2, 1, hi);
+    if (!v.back) { for (let i = 0; i < 7; i++) px(c - 4 + i, top + 2 + i, 1, 1, i % 2 ? gold : goldHi); }
+    if (!v.back) { px(c + shHalf - 2, top - 1, 4, 3, gold); px(c + shHalf - 1, top - 1, 2, 1, goldHi); px(c + shHalf, top + 1, 1, 1, P.ink); }
+  }
+
+  // DOS ESPADAS gemelas (雌雄雙股劍) al cinto: vainas diagonales con guarda dorada,
+  // empuñadura y pomo. Colgadas juntas del costado; de espaldas solo asoman las
+  // puntas. Diseñadas para leerse a este tamaño (frente/perfil).
+  function beltSwords(px, P, v, g) {
+    const A = anchors(g), beltY = A.belt, c = CX + Math.round(v.dx * 0.6);
+    const scab = dark(P.boot, 0.02), scabHi = light(scab, 0.14), gold = P.trim, goldHi = P.trimHi, cord = '#a83a2e';
+    if (v.back) { px(c - 6, beltY + 9, 2, 6, scab); px(c - 3, beltY + 10, 2, 6, scab); return; }   // solo puntas de vaina
+    // Cada espada: vaina (línea 2px) + guarda + empuñadura + pomo en el extremo alto.
+    const sword = (hx, hy, dx, len) => {
+      for (let i = 0; i < len; i++) { const x = Math.round(hx + dx * i), y = hy + i; px(x, y, 2, 1, i % 3 === 0 ? scabHi : scab); }
+      px(Math.round(hx + dx * len), hy + len, 2, 1, scabHi);            // contera
+      px(hx - 1, hy - 1, 4, 1, gold); px(hx - 1, hy - 1, 1, 1, goldHi);  // guarda (tsuba)
+      px(hx, hy - 4, 2, 3, dark(P.boot, 0.18));                          // empuñadura
+      px(hx - 1, hy - 5, 3, 1, goldHi); px(hx, hy - 6, 1, 1, gold);      // pomo
+    };
+    // Cordón rojo del cinto del que penden.
+    px(c - 8, beltY + 1, 10, 2, cord); px(c - 8, beltY + 1, 10, 1, light(cord, 0.15));
+    sword(c - 6, beltY + 3, -0.30, 12);   // espada 1 (más abierta)
+    sword(c - 2, beltY + 4, -0.08, 13);   // espada 2 (casi vertical), gemela junto a la primera
+    // Hebilla de LEÓN dorada sobre el cinto (rasgo de la lámina).
+    if (P.beastBuckle) { px(c + 1, beltY, 4, 3, gold); px(c + 1, beltY, 4, 1, goldHi); px(c + 2, beltY + 1, 2, 1, P.ink); px(c + 2, beltY, 1, 1, P.ink); }
   }
 
   // Pelo RECOGIDO (moño 髻) con corona/pincho imperial PROMINENTE: moño alto ceñido
