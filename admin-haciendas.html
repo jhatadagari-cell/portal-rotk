@@ -1570,7 +1570,7 @@
     }).join('');
 
     // Aspecto: color de túnica + tonos de piel/pelo.
-    const robeDefault = (HacChar.OUTFIT[curApt] || {}).robe || '#5b4a8a';
+    const robeDefault = (HacChar.OUTFIT[pjAspecto.atuendo] || HacChar.OUTFIT[curApt] || {}).robe || '#5b4a8a';
     const robeVal = pjAspecto.robe || robeDefault;
     const skinSw = HacChar.SKINS.map((c, i) => `<button type="button" class="adm-pj-sw${i === (Number(pjAspecto.piel) || 0) ? ' on' : ''}" data-piel="${i}" style="--sw:${c}" title="Piel"${dis}></button>`).join('');
     const hairSw = HacChar.HAIRS.map((c, i) => `<button type="button" class="adm-pj-sw${i === (Number(pjAspecto.pelo) || 0) ? ' on' : ''}" data-pelo="${i}" style="--sw:${c}" title="Pelo"${dis}></button>`).join('');
@@ -1628,6 +1628,10 @@
                 <label class="adm-pj-asp-row">Túnica <input type="color" id="pj-robe" value="${esc(robeVal)}"${dis}></label>
                 <span class="adm-pj-asp-row">Piel <span class="adm-pj-sws">${skinSw}</span></span>
                 <span class="adm-pj-asp-row">Pelo <span class="adm-pj-sws">${hairSw}</span></span>
+                <label class="adm-pj-asp-row">Atuendo especial <select id="pj-atuendo"${dis}>
+                  <option value="">— por aptitud —</option>
+                  <option value="emperador"${pjAspecto.atuendo === 'emperador' ? ' selected' : ''}>Emperador 帝 (Cao Cao)</option>
+                </select></label>
               </div>
             </div>
             <div class="adm-pj-pick adm-pj-stats">
@@ -1690,7 +1694,7 @@
     };
   }
 
-  function pjResetForm() { pjEditId = null; pjAspecto = { robe: '', piel: 0, pelo: 0 }; }
+  function pjResetForm() { pjEditId = null; pjAspecto = { robe: '', piel: 0, pelo: 0, atuendo: '' }; }
 
   function wirePersonajes() {
     const f = document.getElementById('form-pj-add');
@@ -1698,6 +1702,10 @@
     // Color de la túnica.
     const robe = document.getElementById('pj-robe');
     if (robe) robe.addEventListener('input', () => { pjAspecto.robe = robe.value; pjDrawPreview(); });
+
+    // Atuendo especial (modelo por aspecto, p.ej. 'emperador' para Cao Cao).
+    const atu = document.getElementById('pj-atuendo');
+    if (atu) atu.addEventListener('change', () => { pjAspecto.atuendo = atu.value; pjDrawPreview(); });
 
     // Al cambiar de aptitud, si no se ha tocado el color, refleja el nuevo por defecto.
     if (f) f.querySelectorAll('input[name=aptitud]').forEach(r => r.addEventListener('change', () => {
@@ -1733,6 +1741,7 @@
       const personalidad = (f.querySelector('input[name=personalidad]:checked') || {}).value || '';
       const aptitud = (f.querySelector('input[name=aptitud]:checked') || {}).value || '';
       const aspecto = { robe: pjAspecto.robe || '', piel: Number(pjAspecto.piel) || 0, pelo: Number(pjAspecto.pelo) || 0 };
+      if (pjAspecto.atuendo) aspecto.atuendo = pjAspecto.atuendo;   // modelo especial (Cao Cao → emperador)
 
       // Niveles editados. Solo guardamos los dominios cuyo nivel CAMBIÓ respecto al
       // actual (evita pisar el XP parcial de un dominio que no se ha tocado). Para
@@ -1770,7 +1779,7 @@
     document.querySelectorAll('#adm-pj .adm-pj-body[data-edit]').forEach(el => el.addEventListener('click', () => {
       const pj = HacPersonajes.get(el.dataset.edit); if (!pj) return;
       pjEditId = pj.id;
-      pjAspecto = { robe: (pj.aspecto && pj.aspecto.robe) || '', piel: (pj.aspecto && Number(pj.aspecto.piel)) || 0, pelo: (pj.aspecto && Number(pj.aspecto.pelo)) || 0 };
+      pjAspecto = { robe: (pj.aspecto && pj.aspecto.robe) || '', piel: (pj.aspecto && Number(pj.aspecto.piel)) || 0, pelo: (pj.aspecto && Number(pj.aspecto.pelo)) || 0, atuendo: (pj.aspecto && pj.aspecto.atuendo) || '' };
       renderPersonajes();
       const host = document.getElementById('adm-pj'); if (host) host.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }));

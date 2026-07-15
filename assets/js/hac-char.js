@@ -45,31 +45,41 @@ const HacChar = (function () {
     administrador: { kind: 'robe',  prop: 'tablet', robe: '#284b3c', accent: '#d8b65a', beard: 1 },
     estratega:     { kind: 'robe',  prop: 'fan',    robe: '#6a6f86', accent: '#eae4d2', beard: 2 },
     caudillo:      { kind: 'armor', prop: 'none',   robe: '#5a1f1f', accent: '#d8b65a', cape: true, beard: 1 },
-    canciller:     { kind: 'robe',  prop: 'tablet', robe: '#5b2c83', accent: '#d8b65a', ornate: true, beard: 2 }
+    canciller:     { kind: 'robe',  prop: 'tablet', robe: '#5b2c83', accent: '#d8b65a', ornate: true, beard: 2 },
+    // Modelo ESPECIAL (Cao Cao, canciller de Wei con aire imperial): armadura de
+    // escamas oscura + capa púrpura imperial que ondea/se arrastra + corona alta
+    // dorada (通天冠). No es una aptitud de juego: se asigna por `aspecto.atuendo`.
+    emperador:     { kind: 'armor', prop: 'none',   robe: '#4a2f6b', accent: '#e6c15a', cape: true, capeLong: true, imperial: true, crown: true, beard: 2 }
   };
   const SKINS = ['#eac9a0', '#dcb487', '#c89a6e', '#ad7d54'];
   const HAIRS = ['#1b1712', '#2c2318', '#46301a', '#0f0d0b'];
 
   function palette(aptId, aspecto) {
     aspecto = aspecto || {};
-    const o = OUTFIT[aptId] || { kind: 'robe', prop: 'none', robe: '#5b4a8a', accent: '#d8b65a' };
+    // `aspecto.atuendo` fuerza un MODELO concreto (p.ej. 'emperador' para Cao Cao)
+    // sin cambiar la aptitud de juego del personaje. Si no, el atuendo va por aptitud.
+    const o = OUTFIT[aspecto.atuendo] || OUTFIT[aptId] || { kind: 'robe', prop: 'none', robe: '#5b4a8a', accent: '#d8b65a' };
     const robe = okHex(aspecto.robe) ? aspecto.robe : o.robe;
     const accent = okHex(aspecto.accent) ? aspecto.accent : o.accent;
     const skin = SKINS[(Number(aspecto.piel) || 0) % SKINS.length];
     const hair = HAIRS[(Number(aspecto.pelo) || 0) % HAIRS.length];
+    // Flags de modelo: por defecto los del atuendo, con override opcional por aspecto.
+    const flag = (k) => aspecto[k] != null ? !!aspecto[k] : !!o[k];
+    const imperial = flag('imperial');
     return {
       // `aspecto.kind`/`aspecto.torsoLujo` permiten que una ROPA DE TORSO equipada
       // (HacTienda item.viste) redefina el atuendo del tronco sin tocar la cabeza:
       // p. ej. un guerrero (armadura) que se pone una túnica pasa a kind 'robe'.
-      kind: aspecto.kind || o.kind, prop: o.prop, arma: aspecto.arma || null, cape: !!o.cape, ornate: !!o.ornate, torsoLujo: !!aspecto.torsoLujo, torsoGala: !!aspecto.torsoGala, beard: o.beard || 0,
+      kind: aspecto.kind || o.kind, prop: o.prop, arma: aspecto.arma || null, cape: flag('cape'), capeLong: flag('capeLong'), imperial, crown: flag('crown'), ornate: !!o.ornate, torsoLujo: !!aspecto.torsoLujo, torsoGala: !!aspecto.torsoGala, beard: o.beard || 0,
       robe, robeHi: light(robe, 0.16), robeDk: dark(robe, 0.30), robeSh: dark(robe, 0.50),
       beardC: dark(hair, 0.05),
       sash: dark(mix(robe, accent, 0.25), 0.05),
       trim: accent, trimHi: light(accent, 0.22), trimDk: dark(accent, 0.3),
       skin, skinHi: light(skin, 0.13), skinDk: dark(skin, 0.22),
       hair, hairHi: light(hair, 0.18),
-      steel: '#9aa4ae', steelHi: '#cfd6dd', steelDk: '#565e68',
-      capeC: dark(robe, 0.45), capeHi: dark(robe, 0.30),
+      // Armadura IMPERIAL: acero casi negro (escamas oscuras de la lámina) en vez del gris.
+      steel: imperial ? '#3b3946' : '#9aa4ae', steelHi: imperial ? '#615d70' : '#cfd6dd', steelDk: imperial ? '#201e28' : '#565e68',
+      capeC: dark(robe, 0.42), capeHi: dark(robe, 0.26),
       boot: '#241a12', bootHi: '#3a2c1d',
       gold: '#d8b65a', goldHi: '#f0d98a', jade: '#7fc9a0', ink: '#16110b'
     };
@@ -106,7 +116,7 @@ const HacChar = (function () {
     if (pose === 'bow') { figureBow(px, P, v); return; }
     if (pose === 'work') { figureWork(px, P, v, sec); return; }
     shadow(px);
-    if (P.cape) cape(px, P, v, g);
+    if (P.cape) (P.capeLong ? capeImperial : cape)(px, P, v, g);
     legs(px, P, v, g);
     torso(px, P, v, g);
     // GESTO de debate: reemplaza los brazos en reposo por brazos expresivos (y la
@@ -307,7 +317,11 @@ const HacChar = (function () {
     px(c - 4, topY + 1, 8, 1, P.hairHi);                                   // brillo de la coronilla
     if (!v.back) { px(c - 3, topY + 7, 6, 2, P.skin); px(c - 3, topY + 7, 6, 1, P.skinHi); px(c - 3, topY + 9, 6, 1, P.skinDk); } // frente agachada
     // Tocado / casco inclinado hacia el observador.
-    if (P.kind === 'armor') {                                              // casco con cresta al frente
+    if (P.crown) {                                                         // corona imperial picada
+      px(c - 4, topY - 4, 9, 4, P.gold); px(c - 4, topY - 4, 9, 1, P.goldHi);
+      px(c - 1, topY - 4, 1, 4, dark(P.gold, 0.22)); px(c + 1, topY - 4, 1, 4, dark(P.gold, 0.22));
+      px(c - 6, topY - 2, 13, 1, P.goldHi);                               // horquilla 簪
+    } else if (P.kind === 'armor') {                                       // casco con cresta al frente
       px(c - 5, topY - 1, 10, 3, P.steel); px(c - 5, topY - 1, 10, 1, P.steelHi); px(c - 5, topY + 2, 10, 1, P.steelDk);
       px(c - 1, topY - 4, 3, 4, P.trim); px(c - 1, topY - 5, 3, 1, P.goldHi);   // cresta
     } else if (P.ornate) {                                                 // tocado alto de oficial
@@ -388,7 +402,7 @@ const HacChar = (function () {
         px(c - aHalf, aTop + r, aHalf * 2, 2, P.steelDk);
         px(c - aHalf, aTop + r, aHalf * 2, 1, P.steel);
         const off = ((r / 2) % 2) ? 1 : 0;
-        for (let s = -aHalf + 1 + off; s < aHalf; s += 2) px(c + s, aTop + r, 1, 1, P.steelHi);
+        for (let s = -aHalf + 1 + off; s < aHalf; s += 2) px(c + s, aTop + r, 1, 1, P.imperial ? P.gold : P.steelHi);   // tachones dorados en la armadura imperial
       }
       // Hombreras redondeadas.
       if (v.side < 1) plate(px, P, c - aHalf - 3, top + 1, 5, 5);
@@ -611,6 +625,7 @@ const HacChar = (function () {
     px(c - 5, hy - 1, 11, 3, P.hair); px(c - 5, hy - 1, 11, 1, P.hairHi);
     if (v.back) { px(c - 4, hy, 9, 9, P.hair); px(c - 5, hy + 1, 1, 7, P.hair); px(c + 4, hy + 1, 1, 7, P.hair); }
     else { px(c - 5, hy, 1, 6, P.hair); px(c + 4, hy, 1, 6, P.hair); }
+    if (P.crown) { crownImperial(px, P, v, c, hy); return; }                   // corona alta dorada (通天冠)
     if (P.kind === 'armor') {                                                  // casco con frontal y cresta
       px(c - 5, hy - 3, 11, 4, P.steel); px(c - 5, hy - 3, 11, 1, P.steelHi);
       px(c - 5, hy + 1, 11, 1, P.steelDk);
@@ -638,6 +653,54 @@ const HacChar = (function () {
       px(c + hw - 1, y, 1, 1, light(P.capeC, 0.08));
     }
     px(c - 5, top - 1, 10, 1, P.trim); px(c - 5, top, 10, 1, P.trimDk);        // cuello de la capa
+  }
+
+  // Corona imperial alta 通天冠: casquete negro + bloque dorado vertical con
+  //梁 (crestas), gema frontal y horquilla 簪 atravesada. Reemplaza casco/tocado.
+  function crownImperial(px, P, v, c, hy) {
+    px(c - 5, hy - 3, 11, 3, P.ink); px(c - 5, hy - 3, 11, 1, light(P.ink, 0.20));   // casquete/base
+    px(c + 4, hy - 1, 2, 3, P.ink);                                                   // caída trasera del paño
+    // Cuerpo alto de la corona (bloque dorado con relieve).
+    px(c - 3, hy - 10, 7, 7, P.gold);
+    px(c - 3, hy - 10, 7, 1, P.goldHi);
+    px(c - 3, hy - 10, 1, 7, P.goldHi); px(c + 3, hy - 10, 1, 7, dark(P.gold, 0.28));
+    px(c - 1, hy - 10, 1, 7, dark(P.gold, 0.22)); px(c + 1, hy - 10, 1, 7, dark(P.gold, 0.22));  // 梁 (ranuras)
+    if (!v.back) { px(c - 1, hy - 7, 2, 2, P.jade); px(c - 1, hy - 7, 1, 1, light(P.jade, 0.2)); } // gema frontal
+    // Horquilla 簪 dorada atravesando la corona de lado a lado.
+    px(c - 6, hy - 7, 13, 1, P.goldHi);
+    px(c - 6, hy - 7, 1, 1, dark(P.gold, 0.35)); px(c + 6, hy - 7, 1, 1, dark(P.gold, 0.35));
+    px(c - 6, hy - 6, 1, 1, dark(P.gold, 0.15)); px(c + 6, hy - 6, 1, 1, dark(P.gold, 0.15));
+  }
+
+  // Capa IMPERIAL larga: cae de los hombros al suelo, ondea al andar (fase por
+  // fotograma) y ARRASTRA una cola por detrás (opuesta al avance). Va detrás del
+  // cuerpo (se dibuja antes que piernas/torso) y se posa/empoza en el suelo.
+  function capeImperial(px, P, v, g) {
+    const A = anchors(g), top = A.shoulder - 1, c = CX + Math.round(v.dx * 0.6);
+    const phase = g.f;                                  // 0..3 del ciclo de andar
+    const ground = BASEY + 2;                           // se arrastra por el suelo
+    const drag = -(v.dx === 0 ? 0 : (v.dx > 0 ? 1 : -1)) || (v.side === 0 ? 0 : 0);   // cola opuesta al avance
+    for (let y = top; y <= ground; y++) {
+      const t = (y - top) / (ground - top);
+      const hw = Math.max(2, Math.round(4 + 12 * Math.pow(t, 0.92)));
+      const wave = Math.round(1.7 * Math.sin(t * 3.3 + phase * 0.85));           // ondeo del vuelo
+      const tail = Math.round(drag * 5 * Math.pow(t, 1.9));                      // arrastre creciente hacia el bajo
+      const cx = c + tail + wave;
+      const band = ((y + phase) % 2 === 0);
+      px(cx - hw, y, hw * 2, 1, band ? P.capeC : P.capeHi);
+      px(cx - hw, y, 1, 1, dark(P.capeC, 0.38));                                 // filo izq en sombra
+      px(cx + hw - 1, y, 1, 1, light(P.capeC, 0.10));                            // filo dcho con luz
+    }
+    // Charco/cola arrastrada en el suelo (se estira detrás con el paso).
+    const puddleW = 9 + (phase % 2 ? 2 : 0);
+    const pTail = Math.round(drag * 6);
+    px(c + pTail - puddleW, ground, puddleW * 2, 1, dark(P.capeC, 0.15));
+    px(c + pTail - puddleW, ground, Math.round(puddleW * 0.6), 1, P.capeC);
+    // Filo dorado del bajo de la capa.
+    px(c + pTail - puddleW, ground - 1, puddleW * 2, 1, dark(P.gold, 0.25));
+    // Broche/cuello dorado sobre los hombros.
+    px(c - 5, top - 1, 10, 1, P.trim); px(c - 5, top, 10, 1, P.trimDk);
+    px(c - 1, top - 1, 2, 2, P.goldHi);                                          // fíbula central
   }
 
   // ARMA equipada (兵): sustituye al prop de la aptitud cuando el mecenas empuña una.
