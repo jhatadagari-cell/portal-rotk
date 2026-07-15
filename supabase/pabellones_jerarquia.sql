@@ -79,10 +79,13 @@ end; $$;
 -- el cliente (conoce miembros/escalafones/edificios) y estas RPCs fijan el valor
 -- absoluto (clamp, nunca a menos). Confianza cliente como el diezmo/terreno.
 
--- El RESPONSABLE (o fundador) INICIA/cambia la investigación del pabellón (prog 0).
+-- El RESPONSABLE (o fundador) INICIA la investigación del pabellón (prog 0).
+-- IDEMPOTENTE: si YA hay una en curso (no `done`) NO la reinicia — devuelve la
+-- actual tal cual. Así un cliente con datos viejos (que cree que no hay ninguna)
+-- no puede borrar el progreso real al pulsar «Iniciar» otra vez.
 create or replace function public.pab_investig_elegir(p_hac text, p_pj text, p_rol text, p_id text, p_ts bigint)
 returns jsonb language plpgsql security definer set search_path = public as $$
-declare h public.haciendas; v_ok boolean;
+declare h public.haciendas; v_ok boolean; v_cur jsonb;
 begin
   if p_rol not in ('militar', 'cultural', 'administrativo') then raise exception 'Rol no válido'; end if;
   select * into h from public.haciendas where id = p_hac for update;
@@ -92,6 +95,10 @@ begin
                 where m ->> 'id' = (h.mapa ->> 'fundador') and m ->> 'personajeId' = p_pj)
      or (h.mapa -> 'responsables' ->> p_rol) = p_pj;
   if not v_ok then raise exception 'Solo el responsable o el fundador eligen la investigación'; end if;
+  v_cur := h.mapa -> 'investig' -> p_rol;
+  if v_cur is not null and coalesce((v_cur ->> 'done')::boolean, false) = false then
+    return jsonb_build_object('mapa', h.mapa);   -- ya en curso → no reiniciar
+  end if;
   update public.haciendas set mapa = jsonb_set(
       jsonb_set(coalesce(mapa, '{}'::jsonb), '{investig}', coalesce(mapa -> 'investig', '{}'::jsonb)),
       array['investig', p_rol], jsonb_build_object('id', p_id, 'prog', 0, 'ts', p_ts))

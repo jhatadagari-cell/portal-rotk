@@ -4037,7 +4037,7 @@
       const ggb = charEl.querySelector('[data-guia]');
       if (ggb) ggb.addEventListener('click', () => {
         const k = ggb.dataset.guia;
-        if (k === 'pabellon') { const pl = (window.HacStore && HacStore.pabellones) ? HacStore.pabellones(h.id) : []; if (pl && pl[0]) openPabPanel(pl[0]); }
+        if (k === 'pabellon') openPabPanelSmart();
         else if (k === 'tributo') recibirTributo();
       });
       const gh = charEl.querySelector('[data-act="gohome"]');
@@ -5229,7 +5229,20 @@
       pabEl.addEventListener('click', (e) => { if (e.target === pabEl) pabEl.hidden = true; });
       return pabEl;
     }
-    function openPabPanelSmart() {
+    // Re-sincroniza esta hacienda con Supabase (mutando `h` en sitio, que es const)
+    // ANTES de abrir el panel: como no hay realtime, evita actuar sobre datos viejos
+    // (p.ej. pulsar «Iniciar investigación» creyendo que no hay ninguna y reiniciarla)
+    // y hace que cada cuenta vea al momento lo que otras cambiaron.
+    async function refrescarHacienda() {
+      try {
+        if (!(window.HacStore && HacStore.reload)) return;
+        await HacStore.reload();
+        const fresh = HacStore.get(h.id);
+        if (fresh) { h.mapa = fresh.mapa; h.miembros = fresh.miembros; if (fresh.nombre) h.nombre = fresh.nombre; }
+      } catch (e) { /* si falla la red seguimos con lo que había */ }
+    }
+    async function openPabPanelSmart() {
+      await refrescarHacienda();
       const pabs = (window.HacStore && HacStore.pabellones) ? HacStore.pabellones(h.id) : [];
       if (!pabs.length) { toast('Aún no hay pabellones en esta finca'); return; }
       const yo = (h.miembros || []).find(m => String(m.personajeId) === String(myId));
@@ -5325,7 +5338,7 @@
       try {
         if (kind === 'unir') { const d = await pabRPC('pab_unirse', { p_hac: h.id, p_pj: myId, p_rol: a }); if (d && d.miembros) h.miembros = d.miembros; toast(a ? '部 Te uniste al pabellón' : 'Saliste del pabellón'); }
         else if (kind === 'resp') { const d = await pabRPC('pab_responsable', { p_hac: h.id, p_pj: myId, p_rol: a, p_target: b || '' }); if (d && d.mapa) h.mapa = d.mapa; toast('責 Responsable actualizado'); }
-        else if (kind === 'inv-start') { const def = INVESTIG[a]; const d = await pabRPC('pab_investig_elegir', { p_hac: h.id, p_pj: myId, p_rol: a, p_id: def.id, p_ts: nowMs() }); if (d && d.mapa) h.mapa = d.mapa; toast(`🔬 Investigación iniciada: ${def.nombre}`); }
+        else if (kind === 'inv-start') { const def = INVESTIG[a]; const yaEnCurso = !!(pabInvestig(a) && !pabInvestig(a).done); const d = await pabRPC('pab_investig_elegir', { p_hac: h.id, p_pj: myId, p_rol: a, p_id: def.id, p_ts: nowMs() }); if (d && d.mapa) h.mapa = d.mapa; toast(yaEnCurso ? '🔬 Esa investigación ya estaba en curso' : `🔬 Investigación iniciada: ${def.nombre}`); }
       } catch (e) { toast(String(e && e.message || e)); return; }
       buildPabPanel();
       if (charId) buildCharPanel(charId);
