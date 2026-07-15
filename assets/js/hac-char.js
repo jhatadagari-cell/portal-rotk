@@ -62,7 +62,11 @@ const HacChar = (function () {
     // BARBA larguísima (美髯公), pañuelo verde 綸巾, tez algo rojiza (rasgo icónico) y su
     // GUANDAO 青龍偃月刀 en la mano. Además, ligeramente más ALTO (hac-folk lee la talla).
     // `atuendo`='general'.
-    general:       { kind: 'robe',  prop: 'none',   arma: 'guandao', robe: '#2f6a41', accent: '#e6c15a', beard: 2, beardLong: true, robeLong: true, ornate: true, headwrap: true, ruddy: true }
+    general:       { kind: 'robe',  prop: 'none',   arma: 'guandao', robe: '#2f6a41', accent: '#e6c15a', beard: 2, beardLong: true, robeLong: true, ornate: true, headwrap: true, ruddy: true },
+    // Modelo ESPECIAL (Zhang Fei, 張飛 el fiero del puente de Changban): ARMADURA
+    // oscura de escamas con oro, CAPA roja, BANDANA roja 紅巾, BARBA hirsuta (虎鬚) y
+    // su LANZA SERPIENTE 丈八蛇矛 (punta ondulada con banderín rojo). `atuendo`='fiero'.
+    fiero:         { kind: 'armor', prop: 'none',   arma: 'serpentspear', robe: '#33402c', accent: '#d8b65a', imperial: true, cape: true, capeLong: true, capeColor: '#9e2f27', bandana: true, beard: 2, beardWild: true }
   };
   const SKINS = ['#eac9a0', '#dcb487', '#c89a6e', '#ad7d54'];
   const HAIRS = ['#1b1712', '#2c2318', '#46301a', '#0f0d0b'];
@@ -86,6 +90,7 @@ const HacChar = (function () {
       // p. ej. un guerrero (armadura) que se pone una túnica pasa a kind 'robe'.
       kind: aspecto.kind || o.kind, prop: o.prop, arma: aspecto.arma || o.arma || null, cape: flag('cape'), capeLong: flag('capeLong'), imperial, crown: flag('crown'), topknot: flag('topknot'), headwrap: flag('headwrap'), robeLong: flag('robeLong'), sleevesRolled: flag('sleevesRolled'), ornate: !!o.ornate, torsoLujo: !!aspecto.torsoLujo, torsoGala: !!aspecto.torsoGala, beard: o.beard || 0, beardLong: !!o.beardLong,
       mantle: okHex(aspecto.mantle) ? aspecto.mantle : (okHex(o.mantle) ? o.mantle : null), dualSwords: flag('dualSwords'), beastBuckle: flag('beastBuckle'),
+      capeColor: okHex(aspecto.capeColor) ? aspecto.capeColor : (okHex(o.capeColor) ? o.capeColor : null), bandana: flag('bandana'), beardWild: !!o.beardWild,
       robe, robeHi: light(robe, 0.16), robeDk: dark(robe, 0.30), robeSh: dark(robe, 0.50),
       beardC: dark(hair, 0.05),
       sash: dark(mix(robe, accent, 0.25), 0.05),
@@ -633,6 +638,7 @@ const HacChar = (function () {
       px(c - 2, hy + 5, 1, 2, P.skinDk);                                       // oreja
       if (P.beard) { px(c, hy + 9, 5, 1 + P.beard, P.beardC); px(c + 4, hy + 7, 1, 2 + P.beard, P.beardC); } // barba al frente
       if (P.beardLong) { px(c + 1, hy + 12, 4, 2, P.beardC); px(c + 1, hy + 14, 4, 2, P.beardC); px(c + 2, hy + 16, 3, 2, dark(P.beardC, 0.05)); px(c + 2, hy + 18, 2, 2, dark(P.beardC, 0.08)); px(c + 3, hy + 20, 1, 2, dark(P.beardC, 0.12)); }  // barba larga (perfil)
+      if (P.beardWild) { px(c - 1, hy + 8, 7, 5, P.beardC); px(c + 5, hy + 9, 1, 4, P.beardC); px(c, hy + 13, 6, 2, P.beardC); px(c + 1, hy + 15, 2, 3, P.beardC); px(c + 3, hy + 15, 2, 2, P.beardC); px(c - 1, hy + 8, 7, 1, dark(P.beardC, 0.18)); }  // barba HIRSUTA (perfil)
     } else {
       headBlock(px, c, hy, 5, 11, P.skin, P.skinHi, P.skinDk);
       if (!v.back) {
@@ -643,6 +649,7 @@ const HacChar = (function () {
           px(c - 1, hy + 9, 3, 1, dark(P.skin, 0.3));                          // boca
           if (P.beard) { px(c - 2, hy + 9, 5, 1, P.beardC); px(c - 1, hy + 10, 3, P.beard === 2 ? 4 : 2, P.beardC); }
           if (P.beardLong) { px(c - 1, hy + 14, 3, 2, P.beardC); px(c - 1, hy + 16, 3, 2, P.beardC); px(c, hy + 18, 2, 2, dark(P.beardC, 0.06)); px(c, hy + 20, 1, 2, dark(P.beardC, 0.12)); }  // barba larga (frente)
+          if (P.beardWild) { px(c - 4, hy + 8, 9, 5, P.beardC); px(c - 5, hy + 9, 1, 3, P.beardC); px(c + 4, hy + 9, 1, 3, P.beardC); px(c - 4, hy + 13, 8, 2, P.beardC); px(c - 4, hy + 15, 2, 2, P.beardC); px(c - 1, hy + 15, 2, 3, P.beardC); px(c + 2, hy + 15, 2, 2, P.beardC); px(c - 4, hy + 8, 9, 1, dark(P.beardC, 0.18)); }  // barba HIRSUTA (frente)
         } else {                                                               // 3/4 frontal
           px(c, hy + 5, 2, 1, P.hair); px(c + 3, hy + 5, 1, 1, P.hair);
           px(c, hy + 6, 1, 1, P.ink); px(c + 3, hy + 6, 1, 1, P.ink);
@@ -650,6 +657,7 @@ const HacChar = (function () {
           px(c + 1, hy + 9, 3, 1, dark(P.skin, 0.3));
           if (P.beard) { px(c, hy + 9, 5, 1, P.beardC); px(c + 1, hy + 10, 3, P.beard === 2 ? 4 : 2, P.beardC); }
           if (P.beardLong) { px(c + 1, hy + 14, 3, 2, P.beardC); px(c + 1, hy + 16, 3, 2, P.beardC); px(c + 1, hy + 18, 2, 2, dark(P.beardC, 0.06)); px(c + 2, hy + 20, 1, 2, dark(P.beardC, 0.12)); }  // barba larga (¾)
+          if (P.beardWild) { px(c - 3, hy + 8, 9, 5, P.beardC); px(c + 5, hy + 9, 1, 3, P.beardC); px(c - 3, hy + 13, 8, 2, P.beardC); px(c - 2, hy + 15, 2, 2, P.beardC); px(c + 1, hy + 15, 2, 3, P.beardC); px(c + 3, hy + 15, 2, 2, P.beardC); px(c - 3, hy + 8, 9, 1, dark(P.beardC, 0.18)); }  // barba HIRSUTA (¾)
         }
       }
     }
@@ -665,6 +673,7 @@ const HacChar = (function () {
     if (P.crown) { crownImperial(px, P, v, c, hy); return; }                   // corona alta dorada (通天冠)
     if (P.topknot) { crownTopknot(px, P, v, c, hy); return; }                  // moño recogido con corona/pincho
     if (P.headwrap) { headWrap(px, P, v, c, hy); return; }                     // pañuelo 綸巾 (Guan Yu)
+    if (P.bandana) { redBandana(px, P, v, c, hy); return; }                    // bandana roja 紅巾 (Zhang Fei)
     if (P.kind === 'armor') {                                                  // casco con frontal y cresta
       px(c - 5, hy - 3, 11, 4, P.steel); px(c - 5, hy - 3, 11, 1, P.steelHi);
       px(c - 5, hy + 1, 11, 1, P.steelDk);
@@ -727,10 +736,11 @@ const HacChar = (function () {
     const dragDir = v.dx > 0 ? -1 : (v.dx < 0 ? 1 : 0);           // "detrás" = opuesto al avance
     const topHalf = v.back ? 8 : (side ? 5 : 6);
     const botHalf = side ? 11 : 15;                               // de espaldas/frente cubre ancho
-    const lit  = mix(P.robe, '#ffffff', 0.14);                    // pliegue iluminado
-    const mid  = dark(P.robe, 0.24);                              // tela base
-    const sh   = dark(P.robe, 0.42);                              // pliegue en sombra
-    const deep = dark(P.robe, 0.60);                              // filo hondo
+    const RB = P.capeColor || P.robe;                            // color de la capa (independiente de la túnica)
+    const lit  = mix(RB, '#ffffff', 0.14);                       // pliegue iluminado
+    const mid  = dark(RB, 0.24);                                 // tela base
+    const sh   = dark(RB, 0.42);                                 // pliegue en sombra
+    const deep = dark(RB, 0.60);                                 // filo hondo
     const goldD = dark(P.gold, 0.24);                             // ribete dorado
     for (let i = 0; i <= span; i++) {
       const y = top + i, t = i / span;
@@ -764,7 +774,8 @@ const HacChar = (function () {
   // el torso). Da el remate de canciller imperial y separa la cabeza de la capa.
   function capeCollar(px, P, v, g) {
     const A = anchors(g), top = A.shoulder - 1, c = CX + Math.round(v.dx * 0.6);
-    const mid = dark(P.robe, 0.22), lit = mix(P.robe, '#ffffff', 0.16), sh = dark(P.robe, 0.44);
+    const RB = P.capeColor || P.robe;
+    const mid = dark(RB, 0.22), lit = mix(RB, '#ffffff', 0.16), sh = dark(RB, 0.44);
     const hw = v.side >= 1 ? 6 : 9;
     // Esclavina redondeada sobre los hombros (se estrecha hacia arriba).
     for (let i = 0; i < 3; i++) {
@@ -919,6 +930,18 @@ const HacChar = (function () {
     px(c + 4, hy, 2, 4, wd);                                                                   // caída trasera del paño
   }
 
+  // Bandana ROJA 紅巾 (Zhang Fei): banda ceñida a la frente con nudo lateral y COLA
+  // que ondea. Deja ver el pelo salvaje por debajo. Toma el rojo de la capa.
+  function redBandana(px, P, v, c, hy) {
+    const red = P.capeColor || '#9e2f27', rd = dark(red, 0.28), rl = light(red, 0.14);
+    px(c - 5, hy - 3, 11, 3, red); px(c - 5, hy - 3, 11, 1, rl); px(c - 5, hy - 1, 11, 1, rd);   // banda a la frente
+    px(c - 5, hy - 3, 1, 3, rd); px(c + 5, hy - 3, 1, 3, rd);
+    if (!v.back) { px(c - 1, hy - 2, 2, 1, P.gold); }                                            // tachón dorado
+    // Nudo lateral + cola ondeante (a un lado).
+    px(c - 7, hy - 1, 2, 2, red); px(c - 7, hy - 1, 2, 1, rl);                                   // nudo
+    px(c - 9, hy, 2, 1, red); px(c - 10, hy + 1, 2, 1, rd); px(c - 9, hy + 2, 1, 1, red);        // cola volando
+  }
+
   // ARMA equipada (兵): sustituye al prop de la aptitud cuando el mecenas empuña una.
   // Se dibuja en la mano delantera (o como asta si es de asta). key = viste.arma.
   function drawArma(px, P, v, g) {
@@ -955,6 +978,31 @@ const HacChar = (function () {
       px(bx, topB - 1, 1, 2, P.steelHi);                                                        // punta afilada
       // ── Púa/gancho trasero del lomo, al otro lado del asta ──
       px(hx - 2, baseY - 44, 2, 1, P.steelDk); px(hx - 3, baseY - 44, 1, 1, P.steelHi); px(hx - 2, baseY - 43, 1, 1, P.steelDk);
+      return;
+    }
+    // LANZA SERPIENTE 丈八蛇矛 (Zhang Fei): asta larga con punta ONDULADA (llama
+    // serpenteante) y banderín rojo. Arma de asta → visible también de espaldas.
+    if (key === 'serpentspear') {
+      const hx = v.back ? c + 9 : c + 10, wood = '#4a3320';
+      px(hx, baseY - 46, 1, 46, wood); px(hx, baseY - 46, 1, 1, '#6a4a2a');                       // asta
+      px(hx, baseY - 1, 1, 1, P.steelHi);                                                         // regatón
+      const gy = baseY - 17 + (g.step > 0 ? -1 : 1);                                              // mano que agarra
+      px(hx - 1, gy, 2, 3, v.back ? P.skinDk : P.skin); px(hx - 1, gy, 2, 1, v.back ? P.skin : P.skinHi);
+      // Abrazadera + banderín/borla ROJA bajo la punta.
+      px(hx - 1, baseY - 40, 3, 1, P.gold);
+      px(hx - 3, baseY - 39, 3, 2, '#a83028'); px(hx - 4, baseY - 38, 1, 2, dark('#a83028', 0.2)); px(hx - 2, baseY - 37, 2, 1, '#a83028');   // banderín ondeando
+      // PUNTA serpenteante (蛇矛): hoja en S con ACERO BRILLANTE (independiente del
+      // acero oscuro de la armadura), onda clara izquierda/derecha y punta afilada.
+      const st = '#c2cbd3', stHi = '#eef3f8', stDk = '#6c757f', t = baseY - 51;
+      px(hx, t, 1, 2, stHi);                                                                      // punta
+      px(hx, t + 2, 2, 1, st); px(hx + 1, t + 2, 1, 1, stHi);                                     // ola →
+      px(hx - 1, t + 3, 2, 1, st); px(hx - 1, t + 3, 1, 1, stHi);                                 // ola ←
+      px(hx - 1, t + 4, 2, 1, st);
+      px(hx, t + 5, 2, 1, st); px(hx + 1, t + 5, 1, 1, stHi);                                     // ola →
+      px(hx, t + 6, 2, 1, st);
+      px(hx - 1, t + 7, 2, 1, st); px(hx - 1, t + 7, 1, 1, stHi);                                 // ola ←
+      px(hx, t + 8, 1, 2, st);                                                                    // cuello al asta
+      px(hx, t + 2, 1, 6, stDk);                                                                  // nervio central
       return;
     }
     // Armas de ASTA: visibles incluso de espaldas (como la lanza).
