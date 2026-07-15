@@ -402,6 +402,9 @@ const HacFolk = (function () {
         // competencias y verificable en RLS). Fallback al id de miembro si no hay
         // personaje vinculado (mecenas sin cuenta, no controlable por un jugador).
         id: m.personajeId || m.id, name: m.nombre || '', color, aptitud, aspecto, npc: !!m.npc,
+        // NOMBRE DE CORTESÍA (字) y atuendo: para dirigirse por cortesía (no «¡eh, Guan!»)
+        // y detectar la HERMANDAD (Liu Bei/Guan Yu/Zhang Fei) al charlar.
+        cortesia: (aspecto && aspecto.cortesia) || '', atuendo: (aspecto && aspecto.atuendo) || '',
         // TALLA: factor de tamaño del sprite. Guan Yu (atuendo 'general') va algo más
         // alto que el resto; o vía aspecto.talla explícita. 1 = normal.
         talla: (aspecto && Number(aspecto.talla)) || (aspecto && aspecto.atuendo === 'general' ? 1.10 : 1),
@@ -816,14 +819,16 @@ const HacFolk = (function () {
     // lugar de charlar de igual a igual le suelta una directiva según SU aptitud,
     // y el inferior responde con deferencia, inclinándose en señal de respeto (揖).
     const ra = (a.rankIdx == null ? -1 : a.rankIdx), rb = (b.rankIdx == null ? -1 : b.rankIdx);
-    const directive = (ra >= 0 && rb >= 0 && Math.abs(ra - rb) >= RANK_GAP);
+    // Entre HERMANOS jurados no hay directiva de rango: charlan como iguales (hermandad).
+    const bros = bothBrothers(a, b);
+    const directive = !bros && (ra >= 0 && rb >= 0 && Math.abs(ra - rb) >= RANK_GAP);
     const lead = directive ? (ra >= rb ? a : b) : a;
     const follow = (lead === a) ? b : a;
     lead.chatWith = follow.id; follow.chatWith = lead.id;
     lead.chatLead = true; follow.chatLead = false;
     lead.chatRole = directive ? 'mentor' : null; follow.chatRole = directive ? 'pupil' : null;
     lead.bowing = false; follow.bowing = directive;
-    lead.convo = directive ? HacDialog.directiva(lead.aptitud) : HacDialog.charla(lead.aptitud);
+    lead.convo = bros ? HacDialog.hermandad() : (directive ? HacDialog.directiva(lead.aptitud) : HacDialog.charla(lead.aptitud));
     lead.convoIdx = -1; follow.convo = null;
     faceChat(lead, follow);
     convoAdvance(lead);                                                // arranca el primer turno
@@ -837,7 +842,7 @@ const HacFolk = (function () {
     const line = lead.convo[lead.convoIdx];
     const speaker = (lead.convoIdx % 2 === 0) ? lead : o;
     const listener = (speaker === lead) ? o : lead;
-    speaker.speech = line; listener.speech = null;
+    speaker.speech = fillAddr(line, speaker, listener); listener.speech = null;   // {n} = trato al otro (hermano/cortesía)
     lead.turnTimer = Math.min(5.2, Math.max(2.6, 1.6 + line.length * 0.05));   // dura según longitud + pausa
     faceChat(lead, o);
   }
@@ -868,7 +873,28 @@ const HacFolk = (function () {
   // De vez en cuando un mecenas avista a otro a media distancia, le grita una
   // exclamación y lo "llama"; el otro responde y ambos caminan a su encuentro
   // antes de ponerse a charlar. El texto sale de HacDialog ({n} = nombre del otro).
+  // ── HERMANDAD del jardín de los melocotoneros ──────────────────────────────
+  // Se detecta por el atuendo especial de cada uno. Rango: 1=mayor (Liu Bei),
+  // 2=segundo (Guan Yu), 3=tercero (Zhang Fei). Término fraterno por rango del
+  // que RECIBE el trato. Cortesía por defecto (字) si el admin no la rellenó.
+  const BROTHER_RANK = { virtuoso: 1, general: 2, fiero: 3 };
+  const BROTHER_TERM = { 1: 'hermano mayor', 2: 'segundo hermano', 3: 'tercer hermano' };
+  const DEFAULT_CORTESIA = { virtuoso: 'Xuande', general: 'Yunchang', fiero: 'Yide' };
+  const brotherRank = (w) => (w && BROTHER_RANK[w.atuendo]) || 0;
+  const cortesiaDe = (w) => (w && (w.cortesia || DEFAULT_CORTESIA[w.atuendo])) || '';
+  // Cómo se dirige `speaker` a `listener`: entre hermanos, por rango fraterno; si el
+  // destinatario tiene nombre de cortesía (字), por él; si no, por su nombre de pila.
+  function addressOf(speaker, listener) {
+    if (brotherRank(speaker) && brotherRank(listener)) {
+      const term = BROTHER_TERM[brotherRank(listener)], cort = cortesiaDe(listener);
+      return (cort && R.next() < 0.5) ? cort : term;     // mezcla: a veces por cortesía, a veces trato fraterno
+    }
+    const cort = cortesiaDe(listener); if (cort) return cort;   // a los demás, por su nombre de cortesía (字) si lo tienen
+    return String(listener.name || '').split(' ')[0] || 'amigo';
+  }
+  const bothBrothers = (a, b) => !!(brotherRank(a) && brotherRank(b));
   function fillName(tpl, name) { const n = String(name || '').split(' ')[0] || 'amigo'; return tpl.replace('{n}', n); }
+  const fillAddr = (tpl, speaker, listener) => tpl.replace('{n}', addressOf(speaker, listener));
 
   // Celda transitable más cercana a un punto (búsqueda en anillos crecientes).
   function findMeetCell(mx, my) {
@@ -889,10 +915,11 @@ const HacFolk = (function () {
     if (o && (o.state === 'avisado' || o.state === 'acudiendo' || o.state === 'llamando')) resetMeet(o);
   }
   function startHail(a, b) {
+    const herm = bothBrothers(a, b);
     a.state = 'llamando'; a.idleTimer = rng(1.5, 2.3); a.moving = false; a.path = null;
-    a.speech = fillName(HacDialog.hail(), b.name);
+    a.speech = fillAddr(herm ? HacDialog.hailHermano() : HacDialog.hail(), a, b);
     b.state = 'avisado'; b.idleTimer = 6; b.moving = false; b.path = null;     // espera a que el líder arranque
-    b.speech = fillName(HacDialog.ack(), a.name);
+    b.speech = fillAddr(herm ? HacDialog.ackHermano() : HacDialog.ack(), b, a);
     a.meetWith = b.id; b.meetWith = a.id; a.meetLead = true; b.meetLead = false;
     faceChat(a, b);
   }

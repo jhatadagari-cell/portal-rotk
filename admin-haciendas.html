@@ -1703,6 +1703,7 @@
                   <option value="general"${pjAspecto.atuendo === 'general' ? ' selected' : ''}>General 關 · túnica verde + guandao, más alto (Guan Yu)</option>
                   <option value="fiero"${pjAspecto.atuendo === 'fiero' ? ' selected' : ''}>Fiero 張 · armadura + capa roja + lanza serpiente (Zhang Fei)</option>
                 </select></label>
+                <label class="adm-pj-asp-row">Nombre de cortesía 字 <input type="text" id="pj-cortesia" maxlength="24" placeholder="p. ej. Yunchang" value="${esc(pjAspecto.cortesia || '')}"${dis}></label>
               </div>
             </div>
             <div class="adm-pj-pick adm-pj-stats">
@@ -1765,7 +1766,7 @@
     };
   }
 
-  function pjResetForm() { pjEditId = null; pjAspecto = { robe: '', piel: 0, pelo: 0, atuendo: '' }; pjFaccion = ''; }
+  function pjResetForm() { pjEditId = null; pjAspecto = { robe: '', piel: 0, pelo: 0, atuendo: '', cortesia: '' }; pjFaccion = ''; }
 
   // Gestor de facciones: alta/edición/borrado (solo admin, tabla `facciones`).
   function wireFacManager() {
@@ -1807,6 +1808,10 @@
     const facSel = document.getElementById('pj-faccion');
     if (facSel) facSel.addEventListener('change', () => { pjFaccion = facSel.value; });
 
+    // Nombre de cortesía (字): cómo lo llaman los demás mecenas (no «¡eh, Guan!»).
+    const cortIn = document.getElementById('pj-cortesia');
+    if (cortIn) cortIn.addEventListener('input', () => { pjAspecto.cortesia = cortIn.value; });
+
     // ── Gestor de FACCIONES (crear/editar/borrar) ─────────────────────────────
     wireFacManager();
 
@@ -1845,6 +1850,7 @@
       const aptitud = (f.querySelector('input[name=aptitud]:checked') || {}).value || '';
       const aspecto = { robe: pjAspecto.robe || '', piel: Number(pjAspecto.piel) || 0, pelo: Number(pjAspecto.pelo) || 0 };
       if (pjAspecto.atuendo) aspecto.atuendo = pjAspecto.atuendo;   // modelo especial (Cao Cao → emperador)
+      if (pjAspecto.cortesia && pjAspecto.cortesia.trim()) aspecto.cortesia = pjAspecto.cortesia.trim();   // nombre de cortesía 字
 
       // Niveles editados. Solo guardamos los dominios cuyo nivel CAMBIÓ respecto al
       // actual (evita pisar el XP parcial de un dominio que no se ha tocado). Para
@@ -1883,7 +1889,7 @@
     document.querySelectorAll('#adm-pj .adm-pj-body[data-edit]').forEach(el => el.addEventListener('click', () => {
       const pj = HacPersonajes.get(el.dataset.edit); if (!pj) return;
       pjEditId = pj.id;
-      pjAspecto = { robe: (pj.aspecto && pj.aspecto.robe) || '', piel: (pj.aspecto && Number(pj.aspecto.piel)) || 0, pelo: (pj.aspecto && Number(pj.aspecto.pelo)) || 0, atuendo: (pj.aspecto && pj.aspecto.atuendo) || '' };
+      pjAspecto = { robe: (pj.aspecto && pj.aspecto.robe) || '', piel: (pj.aspecto && Number(pj.aspecto.piel)) || 0, pelo: (pj.aspecto && Number(pj.aspecto.pelo)) || 0, atuendo: (pj.aspecto && pj.aspecto.atuendo) || '', cortesia: (pj.aspecto && pj.aspecto.cortesia) || '' };
       pjFaccion = pj.faccion || '';
       renderPersonajes();
       const host = document.getElementById('adm-pj'); if (host) host.scrollIntoView({ behavior: 'smooth', block: 'start' });

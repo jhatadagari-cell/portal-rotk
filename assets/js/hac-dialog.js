@@ -112,6 +112,21 @@ const HacDialog = (function () {
   const HAILS = ['¡Eh, {n}! ¡Aguardad!', '¡{n}! ¡Cuánto tiempo!', '¡Vaya, si es {n}!', '¡{n}, amigo mío!', '¡Eh! ¡Por aquí, {n}!', '¡Dichosos los ojos, {n}!'];
   const ACKS = ['¡Oh, {n}!', '¡Vaya sorpresa!', '¡Ya voy, ya voy!', '¡Qué alegría!', '¡{n}, viejo amigo!', '¡Aguardad, que llego!'];
 
+  // ── HERMANDAD del jardín de los melocotoneros (Liu Bei · Guan Yu · Zhang Fei) ──
+  // Cuando dos de los tres hermanos jurados se cruzan, no charlan como conocidos: se
+  // tratan de hermano y evocan su juramento, su lealtad y sus batallas. {n} = término
+  // fraterno del OTRO (hermano mayor / segundo hermano / tercer hermano).
+  const HERMANDAD = [
+    ['{n}, ¿recordáis nuestro juramento en el jardín?', 'Como si fuera hoy: un mismo día habremos de morir.', 'Mientras viváis, no temo a ejército alguno.', 'Ni yo, teniéndoos a mi lado.'],
+    ['Vuestra fama crece en todo el reino, {n}.', 'La gloria de uno es la de los tres, hermano.', 'Que jamás nos separe la fortuna.', 'Solo la muerte, y aun esa el mismo día.'],
+    ['He afilado la hoja pensando en la próxima campaña.', 'Donde vayáis, {n}, allí iré yo el primero.', 'Juntos no hay muralla que nos detenga.', 'Ni diez mil lanzas enemigas.'],
+    ['Bebamos, {n}, que la vida del guerrero es breve.', 'Por la hermandad, entonces, hasta el fondo.', 'Y por el señor a quien servimos.', 'Por él daría la vida sin dudarlo.'],
+    ['Os noto inquieto, {n}. ¿Qué os ronda?', 'Pienso en los caídos, y en cuánto nos queda por hacer.', 'Los honraremos con nuevas victorias.', 'Ese es el hermano que conozco.'],
+  ];
+  // Saludos/respuestas entre hermanos ({n} = término fraterno del otro).
+  const HAILS_H = ['¡{n}! ¡Venid a mis brazos!', '¡Hermano! ¡{n}!', '¡{n}! ¡Cuánto os echaba de menos!', '¡Eh, {n}! ¡Por aquí!'];
+  const ACKS_H = ['¡{n}! ¡Ya voy!', '¡Hermano!', '¡{n}, dichosos los ojos!', '¡Aquí estoy, {n}!'];
+
   // Elige una charla; con 60% de probabilidad, temática de la aptitud (si la hay).
   function charla(aptitud) {
     const tema = TEMA_POR_APT[aptitud];
@@ -120,6 +135,9 @@ const HacDialog = (function () {
   }
   const hail = () => pick(HAILS);
   const ack = () => pick(ACKS);
+  const hermandad = () => pick(HERMANDAD);
+  const hailHermano = () => pick(HAILS_H);
+  const ackHermano = () => pick(ACKS_H);
 
   // Escena directiva del SUPERIOR hacia un inferior, según la aptitud del que
   // manda. Sin aptitud reconocida → consejo de veteranía genérico. El líder
@@ -129,6 +147,6 @@ const HacDialog = (function () {
     return pick(banco && banco.length ? banco : DIR_GENERAL);
   }
 
-  return { charla, directiva, hail, ack };
+  return { charla, directiva, hail, ack, hermandad, hailHermano, ackHermano };
 })();
 if (typeof window !== 'undefined') window.HacDialog = HacDialog;
