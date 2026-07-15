@@ -404,7 +404,7 @@ const HacFolk = (function () {
         id: m.personajeId || m.id, name: m.nombre || '', color, aptitud, aspecto, npc: !!m.npc,
         // TALLA: factor de tamaño del sprite. Guan Yu (atuendo 'general') va algo más
         // alto que el resto; o vía aspecto.talla explícita. 1 = normal.
-        talla: (aspecto && Number(aspecto.talla)) || (aspecto && aspecto.atuendo === 'general' ? 1.12 : 1),
+        talla: (aspecto && Number(aspecto.talla)) || (aspecto && aspecto.atuendo === 'general' ? 1.10 : 1),
         basePuntos: Number(m.puntos) || 0,   // puntos base (admin); el ganado se suma al vuelo en refreshCargos
         cargoIcon: cargo ? (cargo.icon || '') : '', cargoNombre: cargo ? cargo.nombre : '', cargoTier: cargo ? (cargo.tier || 1) : 0, rankIdx,
         aptIcon: aptDef ? (aptDef.icon || '') : '', dominios: aptDef ? (aptDef.dominios || []) : [],
@@ -1716,7 +1716,10 @@ const HacFolk = (function () {
     let pose = (w.state === 'tumbado' || w.debSit) ? 'sit' : (w.bowing ? 'bow' : (moving ? 'walk' : 'stand'));
     if (hurt) pose = moving ? 'limp' : 'stand';
     const cv = window.HacChar ? spriteFor(w, w.dir || 'S', frame, pose) : null;
-    const disp = SPRITE_DISP * (w.talla || 1), FEET = charFEET();   // talla: Guan Yu algo más alto
+    const disp = SPRITE_DISP, FEET = charFEET();
+    // TALLA no uniforme: Guan Yu es más ALTO sin ensancharse apenas (el alto crece con
+    // `talla`; el ancho solo un 30% de esa subida). Así se ve espigado, no hinchado.
+    const talla = w.talla || 1, kH = talla, kW = 1 + (talla - 1) * 0.3;
     if (isMounted(w)) {
       drawMount(g, lx, ly, w, moving);   // caballo (ciclo de andar) + jinete sobre la silla
     } else if (cv) {
@@ -1725,12 +1728,12 @@ const HacFolk = (function () {
       g.save();
       g.setTransform(1, 0, 0, 1, 0, 0);
       g.imageSmoothingEnabled = pngOn();
-      const dx = Math.round(lx * SCALE - charW() * 0.5 * disp);
-      const dy = Math.round(ly * SCALE - FEET * disp);
-      g.drawImage(cv, dx, dy, Math.round(charW() * disp), Math.round(charH() * disp));
+      const dx = Math.round(lx * SCALE - charW() * 0.5 * disp * kW);
+      const dy = Math.round(ly * SCALE - FEET * disp * kH);
+      g.drawImage(cv, dx, dy, Math.round(charW() * disp * kW), Math.round(charH() * disp * kH));
       g.restore();
     }
-    if (o.banner !== false) banner(g, lx, ly - Math.round(FEET * disp / SCALE) + 1 - (isMounted(w) ? Math.round((RIDER_UP + 4) / SCALE) : 0), w, o.highlight);
+    if (o.banner !== false) banner(g, lx, ly - Math.round(FEET * disp * kH / SCALE) + 1 - (isMounted(w) ? Math.round((RIDER_UP + 4) / SCALE) : 0), w, o.highlight);
   }
 
   // Rectángulo redondeado (coords lógicas).

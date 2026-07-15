@@ -632,7 +632,7 @@ const HacChar = (function () {
       px(c + 2, hy + 8, 2, 1, P.skinDk);                                       // boca
       px(c - 2, hy + 5, 1, 2, P.skinDk);                                       // oreja
       if (P.beard) { px(c, hy + 9, 5, 1 + P.beard, P.beardC); px(c + 4, hy + 7, 1, 2 + P.beard, P.beardC); } // barba al frente
-      if (P.beardLong) { px(c + 1, hy + 12, 4, 2, P.beardC); px(c + 2, hy + 14, 3, 2, dark(P.beardC, 0.06)); px(c + 3, hy + 16, 1, 2, dark(P.beardC, 0.1)); }  // perilla larga (perfil)
+      if (P.beardLong) { px(c + 1, hy + 12, 4, 2, P.beardC); px(c + 1, hy + 14, 4, 2, P.beardC); px(c + 2, hy + 16, 3, 2, dark(P.beardC, 0.05)); px(c + 2, hy + 18, 2, 2, dark(P.beardC, 0.08)); px(c + 3, hy + 20, 1, 2, dark(P.beardC, 0.12)); }  // barba larga (perfil)
     } else {
       headBlock(px, c, hy, 5, 11, P.skin, P.skinHi, P.skinDk);
       if (!v.back) {
@@ -642,14 +642,14 @@ const HacChar = (function () {
           px(c, hy + 6, 1, 3, P.skinDk);                                       // nariz
           px(c - 1, hy + 9, 3, 1, dark(P.skin, 0.3));                          // boca
           if (P.beard) { px(c - 2, hy + 9, 5, 1, P.beardC); px(c - 1, hy + 10, 3, P.beard === 2 ? 4 : 2, P.beardC); }
-          if (P.beardLong) { px(c - 1, hy + 14, 3, 2, P.beardC); px(c, hy + 16, 1, 2, dark(P.beardC, 0.08)); }  // perilla larga (frente)
+          if (P.beardLong) { px(c - 1, hy + 14, 3, 2, P.beardC); px(c - 1, hy + 16, 3, 2, P.beardC); px(c, hy + 18, 2, 2, dark(P.beardC, 0.06)); px(c, hy + 20, 1, 2, dark(P.beardC, 0.12)); }  // barba larga (frente)
         } else {                                                               // 3/4 frontal
           px(c, hy + 5, 2, 1, P.hair); px(c + 3, hy + 5, 1, 1, P.hair);
           px(c, hy + 6, 1, 1, P.ink); px(c + 3, hy + 6, 1, 1, P.ink);
           px(c + 4, hy + 6, 1, 2, P.skinDk);                                   // nariz (perfil insinuado)
           px(c + 1, hy + 9, 3, 1, dark(P.skin, 0.3));
           if (P.beard) { px(c, hy + 9, 5, 1, P.beardC); px(c + 1, hy + 10, 3, P.beard === 2 ? 4 : 2, P.beardC); }
-          if (P.beardLong) { px(c + 1, hy + 14, 3, 2, P.beardC); px(c + 2, hy + 16, 1, 2, dark(P.beardC, 0.08)); }  // perilla larga (¾)
+          if (P.beardLong) { px(c + 1, hy + 14, 3, 2, P.beardC); px(c + 1, hy + 16, 3, 2, P.beardC); px(c + 1, hy + 18, 2, 2, dark(P.beardC, 0.06)); px(c + 2, hy + 20, 1, 2, dark(P.beardC, 0.12)); }  // barba larga (¾)
         }
       }
     }
@@ -926,20 +926,29 @@ const HacChar = (function () {
     // GUANDAO 青龍偃月刀 (Guan Yu): asta larga con gran hoja en MEDIA LUNA, borla roja
     // y punta. Arma de asta → visible también de espaldas. Empuñada al costado.
     if (key === 'guandao') {
-      const hx = v.back ? c + 6 : c + 10;
-      px(hx, baseY - 48, 1, 48, dark('#5a3a1e', 0)); px(hx, baseY - 48, 1, 1, '#7a5a30');       // asta
-      px(hx, baseY - 30, 1, 1, P.gold); px(hx, baseY - 15, 1, 1, P.gold);                       // anillas doradas
-      px(hx - 1, baseY - 41, 3, 2, P.gold);                                                     // abrazadera de la hoja
-      px(hx - 1, baseY - 39, 2, 3, '#a83a2e'); px(hx - 1, baseY - 36, 1, 2, dark('#a83a2e', 0.2)); // borla roja
-      // Hoja en MEDIA LUNA (偃月): nace del asta, se abre hacia fuera y curva a punta.
-      const bx = hx + 1;
-      px(hx, baseY - 50, 1, 2, P.steelHi);                                                      // pincho superior del asta
-      px(bx, baseY - 50, 2, 2, P.steelHi);
-      px(bx + 1, baseY - 48, 3, 2, P.steel);
-      px(bx + 2, baseY - 46, 3, 2, P.steel);
-      px(bx + 3, baseY - 44, 3, 2, P.steelDk);                                                  // vientre de la luna
-      px(bx + 2, baseY - 42, 2, 1, P.steelDk);                                                  // recurva/gancho hacia el asta
-      px(bx + 1, baseY - 50, 1, 1, light(P.steelHi, 0.35)); px(bx + 5, baseY - 45, 1, 2, P.steelHi);  // filo brillante
+      const hx = v.back ? c + 6 : c + 10, wood = '#5a3a1e';
+      // ── Asta larga con anillas doradas y regatón ──
+      px(hx, baseY - 46, 1, 46, wood); px(hx, baseY - 46, 1, 1, '#7a5a30');
+      px(hx, baseY - 28, 1, 1, P.gold); px(hx, baseY - 12, 1, 1, P.gold);                       // anillas
+      px(hx, baseY - 1, 1, 1, P.steelHi);                                                       // regatón
+      // ── Collar de DRAGÓN 青龍 dorado donde nace la hoja + borla roja ──
+      px(hx - 1, baseY - 40, 3, 3, P.gold); px(hx - 1, baseY - 40, 3, 1, P.goldHi);
+      if (!v.back) px(hx + 1, baseY - 39, 1, 1, P.jade);                                        // ojo de jade del dragón
+      px(hx - 1, baseY - 37, 3, 1, '#b83a2e'); px(hx, baseY - 36, 1, 4, '#a83a2e'); px(hx, baseY - 32, 1, 1, dark('#a83a2e', 0.3));  // borla roja
+      // ── HOJA en MEDIA LUNA 偃月: ancha, nace del collar, se abre hacia fuera con
+      // vientre en el medio, filo exterior brillante y punta afilada arriba ──
+      const bx = hx + 1, topB = baseY - 50;
+      const outer = [1, 2, 3, 4, 5, 5, 6, 6, 5, 4, 3, 2];                                        // ancho por fila (vientre al medio)
+      for (let i = 0; i < outer.length; i++) {
+        const y = topB + i, wdt = outer[i];
+        px(bx, y, wdt, 1, P.steel);                                                             // cuerpo
+        px(bx, y, 1, 1, P.steelDk);                                                             // lomo (junto al asta)
+        px(bx + wdt - 1, y, 1, 1, P.steelHi);                                                   // filo exterior brillante
+        if (i >= 3 && i <= 8) px(bx + 1, y, 1, 1, '#bfe6dd');                                   // reflejo verde-azulado (青)
+      }
+      px(bx, topB - 1, 1, 2, P.steelHi);                                                        // punta afilada
+      // ── Púa/gancho trasero del lomo, al otro lado del asta ──
+      px(hx - 2, baseY - 44, 2, 1, P.steelDk); px(hx - 3, baseY - 44, 1, 1, P.steelHi); px(hx - 2, baseY - 43, 1, 1, P.steelDk);
       return;
     }
     // Armas de ASTA: visibles incluso de espaldas (como la lanza).
