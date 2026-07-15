@@ -402,6 +402,9 @@ const HacFolk = (function () {
         // competencias y verificable en RLS). Fallback al id de miembro si no hay
         // personaje vinculado (mecenas sin cuenta, no controlable por un jugador).
         id: m.personajeId || m.id, name: m.nombre || '', color, aptitud, aspecto, npc: !!m.npc,
+        // TALLA: factor de tamaño del sprite. Guan Yu (atuendo 'general') va algo más
+        // alto que el resto; o vía aspecto.talla explícita. 1 = normal.
+        talla: (aspecto && Number(aspecto.talla)) || (aspecto && aspecto.atuendo === 'general' ? 1.12 : 1),
         basePuntos: Number(m.puntos) || 0,   // puntos base (admin); el ganado se suma al vuelo en refreshCargos
         cargoIcon: cargo ? (cargo.icon || '') : '', cargoNombre: cargo ? cargo.nombre : '', cargoTier: cargo ? (cargo.tier || 1) : 0, rankIdx,
         aptIcon: aptDef ? (aptDef.icon || '') : '', dominios: aptDef ? (aptDef.dominios || []) : [],
@@ -1713,7 +1716,7 @@ const HacFolk = (function () {
     let pose = (w.state === 'tumbado' || w.debSit) ? 'sit' : (w.bowing ? 'bow' : (moving ? 'walk' : 'stand'));
     if (hurt) pose = moving ? 'limp' : 'stand';
     const cv = window.HacChar ? spriteFor(w, w.dir || 'S', frame, pose) : null;
-    const disp = SPRITE_DISP, FEET = charFEET();
+    const disp = SPRITE_DISP * (w.talla || 1), FEET = charFEET();   // talla: Guan Yu algo más alto
     if (isMounted(w)) {
       drawMount(g, lx, ly, w, moving);   // caballo (ciclo de andar) + jinete sobre la silla
     } else if (cv) {

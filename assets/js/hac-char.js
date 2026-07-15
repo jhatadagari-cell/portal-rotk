@@ -57,7 +57,12 @@ const HacChar = (function () {
     // Modelo ESPECIAL (Liu Bei, soberano de Shu): túnica BLANCA larga + MANTO verde
     // jade con brocado dorado sobre los hombros, HEBILLA de león y sus DOS ESPADAS
     // gemelas (雌雄雙股劍) al cinto. Aire virtuoso y humilde pero regio. `atuendo`='virtuoso'.
-    virtuoso:      { kind: 'robe',  prop: 'none',   robe: '#dcd6c4', accent: '#d8b65a', beard: 2, robeLong: true, topknot: true, mantle: '#3f6b4a', dualSwords: true, beastBuckle: true }
+    virtuoso:      { kind: 'robe',  prop: 'none',   robe: '#dcd6c4', accent: '#d8b65a', beard: 2, robeLong: true, topknot: true, mantle: '#3f6b4a', dualSwords: true, beastBuckle: true },
+    // Modelo ESPECIAL (Guan Yu, 關羽 el Dios de la Guerra): gran TÚNICA verde y dorada,
+    // BARBA larguísima (美髯公), pañuelo verde 綸巾, tez algo rojiza (rasgo icónico) y su
+    // GUANDAO 青龍偃月刀 en la mano. Además, ligeramente más ALTO (hac-folk lee la talla).
+    // `atuendo`='general'.
+    general:       { kind: 'robe',  prop: 'none',   arma: 'guandao', robe: '#2f6a41', accent: '#e6c15a', beard: 2, beardLong: true, robeLong: true, ornate: true, headwrap: true, ruddy: true }
   };
   const SKINS = ['#eac9a0', '#dcb487', '#c89a6e', '#ad7d54'];
   const HAIRS = ['#1b1712', '#2c2318', '#46301a', '#0f0d0b'];
@@ -69,7 +74,8 @@ const HacChar = (function () {
     const o = OUTFIT[aspecto.atuendo] || OUTFIT[aptId] || { kind: 'robe', prop: 'none', robe: '#5b4a8a', accent: '#d8b65a' };
     const robe = okHex(aspecto.robe) ? aspecto.robe : o.robe;
     const accent = okHex(aspecto.accent) ? aspecto.accent : o.accent;
-    const skin = SKINS[(Number(aspecto.piel) || 0) % SKINS.length];
+    // Tez: normal por índice, o ROJIZA (Guan Yu, 關公 la cara roja) si el atuendo lo pide.
+    const skin = o.ruddy ? '#c06a4e' : SKINS[(Number(aspecto.piel) || 0) % SKINS.length];
     const hair = HAIRS[(Number(aspecto.pelo) || 0) % HAIRS.length];
     // Flags de modelo: por defecto los del atuendo, con override opcional por aspecto.
     const flag = (k) => aspecto[k] != null ? !!aspecto[k] : !!o[k];
@@ -78,7 +84,7 @@ const HacChar = (function () {
       // `aspecto.kind`/`aspecto.torsoLujo` permiten que una ROPA DE TORSO equipada
       // (HacTienda item.viste) redefina el atuendo del tronco sin tocar la cabeza:
       // p. ej. un guerrero (armadura) que se pone una túnica pasa a kind 'robe'.
-      kind: aspecto.kind || o.kind, prop: o.prop, arma: aspecto.arma || null, cape: flag('cape'), capeLong: flag('capeLong'), imperial, crown: flag('crown'), topknot: flag('topknot'), robeLong: flag('robeLong'), sleevesRolled: flag('sleevesRolled'), ornate: !!o.ornate, torsoLujo: !!aspecto.torsoLujo, torsoGala: !!aspecto.torsoGala, beard: o.beard || 0, beardLong: !!o.beardLong,
+      kind: aspecto.kind || o.kind, prop: o.prop, arma: aspecto.arma || o.arma || null, cape: flag('cape'), capeLong: flag('capeLong'), imperial, crown: flag('crown'), topknot: flag('topknot'), headwrap: flag('headwrap'), robeLong: flag('robeLong'), sleevesRolled: flag('sleevesRolled'), ornate: !!o.ornate, torsoLujo: !!aspecto.torsoLujo, torsoGala: !!aspecto.torsoGala, beard: o.beard || 0, beardLong: !!o.beardLong,
       mantle: okHex(aspecto.mantle) ? aspecto.mantle : (okHex(o.mantle) ? o.mantle : null), dualSwords: flag('dualSwords'), beastBuckle: flag('beastBuckle'),
       robe, robeHi: light(robe, 0.16), robeDk: dark(robe, 0.30), robeSh: dark(robe, 0.50),
       beardC: dark(hair, 0.05),
@@ -658,6 +664,7 @@ const HacChar = (function () {
     else { px(c - 5, hy, 1, 6, P.hair); px(c + 4, hy, 1, 6, P.hair); }
     if (P.crown) { crownImperial(px, P, v, c, hy); return; }                   // corona alta dorada (通天冠)
     if (P.topknot) { crownTopknot(px, P, v, c, hy); return; }                  // moño recogido con corona/pincho
+    if (P.headwrap) { headWrap(px, P, v, c, hy); return; }                     // pañuelo 綸巾 (Guan Yu)
     if (P.kind === 'armor') {                                                  // casco con frontal y cresta
       px(c - 5, hy - 3, 11, 4, P.steel); px(c - 5, hy - 3, 11, 1, P.steelHi);
       px(c - 5, hy + 1, 11, 1, P.steelDk);
@@ -901,10 +908,40 @@ const HacChar = (function () {
     px(c - 6, hy - 2, 1, 1, dark(P.gold, 0.2)); px(c + 6, hy - 2, 1, 1, dark(P.gold, 0.2));
   }
 
+  // Pañuelo/turbante 綸巾 verde (Guan Yu): paño ceñido con nudo alto, broche dorado
+  // y caída trasera. Toma el verde de la túnica (algo más oscuro).
+  function headWrap(px, P, v, c, hy) {
+    const wrap = dark(P.robe, 0.12), wd = dark(P.robe, 0.34), wl = light(P.robe, 0.12);
+    px(c - 5, hy - 4, 11, 5, wrap); px(c - 5, hy - 4, 11, 1, wl); px(c - 5, hy, 11, 1, wd);   // paño
+    px(c - 5, hy - 4, 1, 5, wd); px(c + 5, hy - 4, 1, 5, wd);                                  // lados
+    px(c - 2, hy - 6, 4, 2, wrap); px(c - 2, hy - 6, 4, 1, wl);                                // nudo/pico superior
+    if (!v.back) { px(c - 1, hy - 3, 2, 1, P.gold); px(c - 1, hy - 3, 1, 1, P.goldHi); }       // broche dorado frontal
+    px(c + 4, hy, 2, 4, wd);                                                                   // caída trasera del paño
+  }
+
   // ARMA equipada (兵): sustituye al prop de la aptitud cuando el mecenas empuña una.
   // Se dibuja en la mano delantera (o como asta si es de asta). key = viste.arma.
   function drawArma(px, P, v, g) {
     const A = anchors(g), c = CX + Math.round(v.dx * 0.6), baseY = A.baseY, key = P.arma;
+    // GUANDAO 青龍偃月刀 (Guan Yu): asta larga con gran hoja en MEDIA LUNA, borla roja
+    // y punta. Arma de asta → visible también de espaldas. Empuñada al costado.
+    if (key === 'guandao') {
+      const hx = v.back ? c + 6 : c + 10;
+      px(hx, baseY - 48, 1, 48, dark('#5a3a1e', 0)); px(hx, baseY - 48, 1, 1, '#7a5a30');       // asta
+      px(hx, baseY - 30, 1, 1, P.gold); px(hx, baseY - 15, 1, 1, P.gold);                       // anillas doradas
+      px(hx - 1, baseY - 41, 3, 2, P.gold);                                                     // abrazadera de la hoja
+      px(hx - 1, baseY - 39, 2, 3, '#a83a2e'); px(hx - 1, baseY - 36, 1, 2, dark('#a83a2e', 0.2)); // borla roja
+      // Hoja en MEDIA LUNA (偃月): nace del asta, se abre hacia fuera y curva a punta.
+      const bx = hx + 1;
+      px(hx, baseY - 50, 1, 2, P.steelHi);                                                      // pincho superior del asta
+      px(bx, baseY - 50, 2, 2, P.steelHi);
+      px(bx + 1, baseY - 48, 3, 2, P.steel);
+      px(bx + 2, baseY - 46, 3, 2, P.steel);
+      px(bx + 3, baseY - 44, 3, 2, P.steelDk);                                                  // vientre de la luna
+      px(bx + 2, baseY - 42, 2, 1, P.steelDk);                                                  // recurva/gancho hacia el asta
+      px(bx + 1, baseY - 50, 1, 1, light(P.steelHi, 0.35)); px(bx + 5, baseY - 45, 1, 2, P.steelHi);  // filo brillante
+      return;
+    }
     // Armas de ASTA: visibles incluso de espaldas (como la lanza).
     if (key === 'ji' || key === 'jie' || key === 'lanza') {
       const hx = v.back ? c + 6 : c + 10;
