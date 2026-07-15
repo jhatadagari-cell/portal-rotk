@@ -53,7 +53,7 @@ const HacChar = (function () {
     // Modelo ESPECIAL (Sun Quan, soberano de Wu): túnica ROJA larga y ondulada que
     // se arrastra por el suelo, MANGAS RECOGIDAS (antebrazo a la vista) y pelo recogido
     // con corona/pincho imperial (topknot). Se asigna por `aspecto.atuendo` = 'soberano'.
-    soberano:      { kind: 'robe',  prop: 'none',   robe: '#a83236', accent: '#e6c15a', beard: 2, robeLong: true, sleevesRolled: true, topknot: true }
+    soberano:      { kind: 'robe',  prop: 'none',   robe: '#b0323a', accent: '#e6c15a', beard: 2, beardLong: true, robeLong: true, sleevesRolled: true, topknot: true, ornate: true }
   };
   const SKINS = ['#eac9a0', '#dcb487', '#c89a6e', '#ad7d54'];
   const HAIRS = ['#1b1712', '#2c2318', '#46301a', '#0f0d0b'];
@@ -74,7 +74,7 @@ const HacChar = (function () {
       // `aspecto.kind`/`aspecto.torsoLujo` permiten que una ROPA DE TORSO equipada
       // (HacTienda item.viste) redefina el atuendo del tronco sin tocar la cabeza:
       // p. ej. un guerrero (armadura) que se pone una túnica pasa a kind 'robe'.
-      kind: aspecto.kind || o.kind, prop: o.prop, arma: aspecto.arma || null, cape: flag('cape'), capeLong: flag('capeLong'), imperial, crown: flag('crown'), topknot: flag('topknot'), robeLong: flag('robeLong'), sleevesRolled: flag('sleevesRolled'), ornate: !!o.ornate, torsoLujo: !!aspecto.torsoLujo, torsoGala: !!aspecto.torsoGala, beard: o.beard || 0,
+      kind: aspecto.kind || o.kind, prop: o.prop, arma: aspecto.arma || null, cape: flag('cape'), capeLong: flag('capeLong'), imperial, crown: flag('crown'), topknot: flag('topknot'), robeLong: flag('robeLong'), sleevesRolled: flag('sleevesRolled'), ornate: !!o.ornate, torsoLujo: !!aspecto.torsoLujo, torsoGala: !!aspecto.torsoGala, beard: o.beard || 0, beardLong: !!o.beardLong,
       robe, robeHi: light(robe, 0.16), robeDk: dark(robe, 0.30), robeSh: dark(robe, 0.50),
       beardC: dark(hair, 0.05),
       sash: dark(mix(robe, accent, 0.25), 0.05),
@@ -619,6 +619,7 @@ const HacChar = (function () {
       px(c + 2, hy + 8, 2, 1, P.skinDk);                                       // boca
       px(c - 2, hy + 5, 1, 2, P.skinDk);                                       // oreja
       if (P.beard) { px(c, hy + 9, 5, 1 + P.beard, P.beardC); px(c + 4, hy + 7, 1, 2 + P.beard, P.beardC); } // barba al frente
+      if (P.beardLong) { px(c + 1, hy + 12, 4, 2, P.beardC); px(c + 2, hy + 14, 3, 2, dark(P.beardC, 0.06)); px(c + 3, hy + 16, 1, 2, dark(P.beardC, 0.1)); }  // perilla larga (perfil)
     } else {
       headBlock(px, c, hy, 5, 11, P.skin, P.skinHi, P.skinDk);
       if (!v.back) {
@@ -628,12 +629,14 @@ const HacChar = (function () {
           px(c, hy + 6, 1, 3, P.skinDk);                                       // nariz
           px(c - 1, hy + 9, 3, 1, dark(P.skin, 0.3));                          // boca
           if (P.beard) { px(c - 2, hy + 9, 5, 1, P.beardC); px(c - 1, hy + 10, 3, P.beard === 2 ? 4 : 2, P.beardC); }
+          if (P.beardLong) { px(c - 1, hy + 14, 3, 2, P.beardC); px(c, hy + 16, 1, 2, dark(P.beardC, 0.08)); }  // perilla larga (frente)
         } else {                                                               // 3/4 frontal
           px(c, hy + 5, 2, 1, P.hair); px(c + 3, hy + 5, 1, 1, P.hair);
           px(c, hy + 6, 1, 1, P.ink); px(c + 3, hy + 6, 1, 1, P.ink);
           px(c + 4, hy + 6, 1, 2, P.skinDk);                                   // nariz (perfil insinuado)
           px(c + 1, hy + 9, 3, 1, dark(P.skin, 0.3));
           if (P.beard) { px(c, hy + 9, 5, 1, P.beardC); px(c + 1, hy + 10, 3, P.beard === 2 ? 4 : 2, P.beardC); }
+          if (P.beardLong) { px(c + 1, hy + 14, 3, 2, P.beardC); px(c + 2, hy + 16, 1, 2, dark(P.beardC, 0.08)); }  // perilla larga (¾)
         }
       }
     }
@@ -772,44 +775,55 @@ const HacChar = (function () {
     const A = anchors(g), c = CX + Math.round(v.dx * 0.6);
     const topY = A.belt + 2, ground = BASEY + 2, span = ground - topY;
     const phase = g.f, dragDir = v.dx > 0 ? -1 : (v.dx < 0 ? 1 : 0);
-    const hi = P.robeHi, mid = P.robe, dk = P.robeDk, sh = P.robeSh, goldD = dark(P.trim, 0.18);
+    const hi = P.robeHi, mid = P.robe, dk = P.robeDk, sh = P.robeSh;
+    const gold = P.trim, goldHi = P.trimHi, goldD = dark(P.trim, 0.2);
+    // Fracciones de los PLIEGUES (columnas de sombra/luz que dan cuerpo pomposo a la tela).
+    const foldsSh = [-0.62, -0.30, 0.02, 0.34, 0.66];
     for (let i = 0; i <= span; i++) {
       const y = topY + i, t = i / span;
-      const hw = Math.round(9 + 6 * Math.pow(t, 0.78));                         // ensancha hacia el bajo
-      const wave = Math.round(1.3 * Math.sin(t * 3.4 + phase * 0.7));           // ondulación de la tela
+      const hw = Math.round(10 + 7 * Math.pow(t, 0.76));                        // falda amplia que se abre
+      const wave = Math.round(1.5 * Math.sin(t * 3.2 + phase * 0.7));           // ondulación de la tela
       const tail = Math.round(dragDir * 3 * Math.pow(t, 2.0));                  // arrastre creciente
       const cx = c + wave + tail;
       px(cx - hw, y, hw * 2, 1, mid);                                           // relleno
-      px(cx - hw, y, Math.max(1, Math.round(hw * 0.32)), 1, hi);               // luz (izq)
-      px(cx + Math.round(hw * 0.5), y, hw - Math.round(hw * 0.5), 1, dk);       // sombra (der)
-      px(cx - Math.round(hw * 0.55), y, 1, 1, sh); px(cx + Math.round(hw * 0.12), y, 1, 1, sh);  // pliegues
+      px(cx - hw, y, Math.max(1, Math.round(hw * 0.30)), 1, hi);               // luz (izq)
+      px(cx + Math.round(hw * 0.52), y, hw - Math.round(hw * 0.52), 1, dk);     // sombra (der)
+      // Pliegues verticales alternando sombra honda / realce → tela con volumen.
+      foldsSh.forEach((fr, k) => px(cx + Math.round(fr * hw), y, 1, 1, k % 2 ? light(mid, 0.10) : sh));
       px(cx - hw, y, 1, 1, sh); px(cx + hw - 1, y, 1, 1, dk);                   // filos
-      if (!v.back && i > 2) px(cx, y, 1, 1, goldD);                             // vivo dorado central (delante)
+      // Brocado dorado central (banda de 2px con tachones), como el ribete de la lámina.
+      if (!v.back && i > 1) { px(cx - 1, y, 2, 1, gold); if (i % 3 === 0) px(cx - 1, y, 2, 1, goldHi); }
     }
     // Bajo: ribete dorado ondulante que se arrastra (algo más de cola por detrás).
     const bt = Math.round(dragDir * 4), extra = phase % 2 ? 1 : 0;
-    const bhw = 15;
+    const bhw = 17;
     for (let x = -bhw; x < bhw + (dragDir < 0 ? 0 : extra); x++) {
       const xx = c + bt + x; if (xx < 1 || xx >= W - 1) continue;
       const y = ground - (x & 1 ? 1 : 0);
-      px(xx, y - 1, 1, 1, P.trim); px(xx, y, 1, 1, goldD);
+      px(xx, y - 1, 1, 1, gold); px(xx, y, 1, 1, goldD);
     }
   }
 
-  // Pelo RECOGIDO (moño 髻) con corona/pincho imperial: topknot dorado + horquilla
-  // 簪 atravesada. Más contenido que la corona alta (通天冠) de Cao Cao.
+  // Pelo RECOGIDO (moño 髻) con corona/pincho imperial PROMINENTE: moño alto ceñido
+  // por un aro dorado ancho, guan sobre él, gema de jade y horquilla 簪 larga. Más
+  // rotundo que antes (a la altura del porte de Cao Cao), pero recogido (no la torre).
   function crownTopknot(px, P, v, c, hy) {
-    // Casquete de pelo ceñido + moño alto.
+    // Casquete de pelo ceñido.
     px(c - 5, hy - 1, 11, 2, P.hair); px(c - 5, hy - 1, 11, 1, P.hairHi);
-    px(c - 2, hy - 5, 4, 4, P.hair); px(c - 2, hy - 5, 4, 1, P.hairHi);          // moño
-    px(c - 2, hy - 5, 1, 4, dark(P.hair, 0.3)); px(c + 1, hy - 5, 1, 4, dark(P.hair, 0.2));
-    // Corona/anillo dorado que ciñe el moño (束髮冠).
-    px(c - 3, hy - 2, 7, 1, P.gold); px(c - 3, hy - 1, 7, 1, dark(P.gold, 0.3));
-    px(c - 2, hy - 6, 4, 1, P.goldHi);                                           // remate del moño
-    px(c - 1, hy - 6, 2, 2, P.gold); px(c - 1, hy - 6, 1, 1, P.goldHi);          // pináculo (dentro del lienzo aun con bob)
-    // Horquilla 簪 dorada atravesada (asoma a ambos lados).
-    px(c - 5, hy - 3, 11, 1, P.goldHi);
-    px(c - 5, hy - 3, 1, 1, dark(P.gold, 0.35)); px(c + 5, hy - 3, 1, 1, dark(P.gold, 0.35));
+    // Moño ancho y alto.
+    px(c - 3, hy - 5, 6, 4, P.hair); px(c - 3, hy - 5, 6, 1, P.hairHi);
+    px(c - 3, hy - 5, 1, 4, dark(P.hair, 0.3)); px(c + 2, hy - 5, 1, 4, dark(P.hair, 0.2));
+    // Aro dorado ANCHO (2px) que ciñe el moño (束髮嵌寶金冠).
+    px(c - 4, hy - 2, 8, 2, P.gold); px(c - 4, hy - 2, 8, 1, P.goldHi); px(c - 4, hy - 1, 8, 1, dark(P.gold, 0.32));
+    // Guan dorado que corona el moño + pináculo.
+    px(c - 2, hy - 6, 4, 2, P.gold); px(c - 2, hy - 6, 4, 1, P.goldHi);
+    px(c - 1, hy - 7, 2, 1, P.gold); px(c, hy - 7, 1, 1, P.goldHi);
+    // Gema de jade frontal engastada en el aro.
+    if (!v.back) { px(c - 1, hy - 2, 2, 2, P.jade); px(c - 1, hy - 2, 1, 1, light(P.jade, 0.25)); }
+    // Horquilla 簪 larga atravesada (asoma más a ambos lados).
+    px(c - 6, hy - 3, 13, 1, P.goldHi);
+    px(c - 6, hy - 3, 1, 1, dark(P.gold, 0.35)); px(c + 6, hy - 3, 1, 1, dark(P.gold, 0.35));
+    px(c - 6, hy - 2, 1, 1, dark(P.gold, 0.2)); px(c + 6, hy - 2, 1, 1, dark(P.gold, 0.2));
   }
 
   // ARMA equipada (兵): sustituye al prop de la aptitud cuando el mecenas empuña una.
