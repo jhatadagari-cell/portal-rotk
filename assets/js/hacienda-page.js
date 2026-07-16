@@ -1233,14 +1233,23 @@
     }
     // Nombres de dominio en castellano para la bitácora (nada de chino en texto informativo).
     const DOM_NOMBRE_XP = { militar: 'Militar', cultural: 'Cultural', administrativo: 'Administración' };
+    // ── Ledger LOCAL de debates ya cobrados ──────────────────────────────────
+    // La bitácora cachea solo las últimas 200 filas: con actividad, la entrada
+    // «debate:id» de un debate viejo caía fuera de la ventana y claimDebate volvía
+    // a regalar el libro de conclusiones (¡en cada sesión!). localStorage recuerda
+    // los ids cobrados en este dispositivo como guarda persistente.
+    const debLedgerKey = () => 'hacpDebCobrados:' + myId;
+    function debCobrado(id) { try { return (JSON.parse(localStorage.getItem(debLedgerKey())) || []).indexOf(id) >= 0; } catch (e) { return false; } }
+    function debMarcaCobrado(id) { try { const l = JSON.parse(localStorage.getItem(debLedgerKey())) || []; if (l.indexOf(id) < 0) { l.push(id); localStorage.setItem(debLedgerKey(), JSON.stringify(l.slice(-120))); } } catch (e) {} }
     // Reclama MIS recompensas de un debate terminado (XP, libro, prestigio) y lo registra.
     // Cada participante reclama lo SUYO por separado: antes solo cobraba quien sellaba el
     // resultado primero y el otro (¡aunque ganara!) se quedaba sin libro, sin XP y sin
     // entrada en la bitácora. Idempotente y PERSISTENTE: si ya tengo una entrada de bitácora
-    // de este debate, no vuelvo a cobrar (ni siquiera tras recargar).
+    // de este debate O está en el ledger local, no vuelvo a cobrar (ni siquiera tras recargar).
     function claimDebate(d) {
-      if (window.HacBitacora && HacBitacora.listar && HacBitacora.listar(myId, 300).some(e => e.clave === 'debate:' + d.id)) { _debDone[d.id] = true; return; }
-      _debDone[d.id] = true;
+      if (debCobrado(d.id)) { _debDone[d.id] = true; return; }
+      if (window.HacBitacora && HacBitacora.listar && HacBitacora.listar(myId, 300).some(e => e.clave === 'debate:' + d.id)) { _debDone[d.id] = true; debMarcaCobrado(d.id); return; }
+      _debDone[d.id] = true; debMarcaCobrado(d.id);
       const cierroEnVivo = d.estado === 'en_curso';   // lo cierro yo ahora → muestro el reveal
       const t = debTema(d.tema), doms = t ? t.doms : [];
       const oc = (d.resultado && d.resultado.ganador)
@@ -1275,7 +1284,12 @@
       DEB.all(h.id).forEach(d => {
         if (d.hostId !== myId && d.invitadoId !== myId) return;
         const terminado = d.estado === 'resuelto' || (d.estado === 'en_curso' && clock() >= d.finMs);
-        if (terminado && !_debDone[d.id]) claimDebate(d);
+        if (!terminado || _debDone[d.id]) return;
+        // PRESCRIPCIÓN: un debate acabado hace >7 días ya no se cobra (solo se anota
+        // como cobrado). Evita que un ledger frío (dispositivo nuevo, caché borrada)
+        // vuelva a regalar libros de debates antiguos.
+        if (d.finMs && clock() - d.finMs > 7 * 24 * 3600000) { _debDone[d.id] = true; debMarcaCobrado(d.id); return; }
+        claimDebate(d);
       });
     }
     // Notificación de invitación pendiente (para el invitado).

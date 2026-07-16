@@ -98,7 +98,7 @@ const HacTienda = (function () {
     // ── RELIQUIAS RARAS (rareza superior): NO se compran (oculto) → se ENCUENTRAN en
     //    misiones (baja probabilidad) o las regala tu señor. Contorno azul de "raro".
     //    Dan +3 a un stat, o +1/+1/+1 a los tres. tier alto = salen poco como botín.
-    { id: 'raro-mil', nombre: 'Alabarda del general',   zh: '名將戟', icon: '🗡️', tier: 3, tipo: 'equipo', raro: true, oculto: true, precio: 140, efecto: { equip: { militar: 3 } },                          desc: 'Reliquia de un gran general. Equípala para +3 武. (Raro)' },
+    { id: 'raro-mil', nombre: 'Alabarda del general',   zh: '名將戟', icon: '🗡️', tier: 3, tipo: 'arma', slot: 'arma', raro: true, oculto: true, precio: 140, efecto: { equip: { militar: 3 } }, viste: { arma: 'ji' }, desc: 'Reliquia de un gran general. Se lleva en la ranura de ARMA: equípala para +3 武. (Raro)' },
     { id: 'raro-cul', nombre: 'Tratado perdido',        zh: '秘典',   icon: '📜', tier: 3, tipo: 'equipo', raro: true, oculto: true, precio: 140, efecto: { equip: { cultural: 3 } },                         desc: 'Un saber casi olvidado. Equípalo para +3 文. (Raro)' },
     { id: 'raro-adm', nombre: 'Sello imperial',         zh: '玉璽',   icon: '🔶', tier: 3, tipo: 'equipo', raro: true, oculto: true, precio: 140, efecto: { equip: { administrativo: 3 } },                   desc: 'Autoridad de la corte. Equípalo para +3 政. (Raro)' },
     { id: 'raro-tri', nombre: 'Estandarte del dragón',  zh: '臥龍',   icon: '🐉', tier: 4, tipo: 'equipo', raro: true, oculto: true, precio: 180, efecto: { equip: { militar: 1, cultural: 1, administrativo: 1 } }, desc: 'La marca de un genio integral. Equípalo para +1 武 +1 文 +1 政. (Raro)' },
