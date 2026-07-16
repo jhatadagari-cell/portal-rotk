@@ -88,7 +88,11 @@ const HacChar = (function () {
       // `aspecto.kind`/`aspecto.torsoLujo` permiten que una ROPA DE TORSO equipada
       // (HacTienda item.viste) redefina el atuendo del tronco sin tocar la cabeza:
       // p. ej. un guerrero (armadura) que se pone una túnica pasa a kind 'robe'.
-      kind: aspecto.kind || o.kind, prop: o.prop, arma: aspecto.arma || o.arma || null, cape: flag('cape'), capeLong: flag('capeLong'), imperial, crown: flag('crown'), topknot: flag('topknot'), headwrap: flag('headwrap'), robeLong: flag('robeLong'), sleevesRolled: flag('sleevesRolled'), ornate: !!o.ornate, torsoLujo: !!aspecto.torsoLujo, torsoGala: !!aspecto.torsoGala, beard: o.beard || 0, beardLong: !!o.beardLong,
+      kind: aspecto.kind || o.kind, prop: o.prop, arma: aspecto.arma || o.arma || null, cape: flag('cape'), capeLong: flag('capeLong'), imperial, crown: flag('crown'), topknot: flag('topknot'), headwrap: flag('headwrap'), robeLong: flag('robeLong'), sleevesRolled: flag('sleevesRolled'), ornate: !!o.ornate, torsoLujo: !!aspecto.torsoLujo, torsoGala: !!aspecto.torsoGala,
+      // `gala` = SELLO VISUAL de la ROPA DE TORSO RARA equipada ('general', 'erudito',
+      // 'ministro', 'estratega', 'preceptor', 'intendente'): cada prenda de gala se
+      // dibuja DISTINTA (cf. galaSello y la rama armor de torso), no solo recoloreada.
+      gala: aspecto.torsoGala ? String(aspecto.gala || '') : '', beard: o.beard || 0, beardLong: !!o.beardLong,
       mantle: okHex(aspecto.mantle) ? aspecto.mantle : (okHex(o.mantle) ? o.mantle : null), dualSwords: flag('dualSwords'), beastBuckle: flag('beastBuckle'),
       capeColor: okHex(aspecto.capeColor) ? aspecto.capeColor : (okHex(o.capeColor) ? o.capeColor : null), bandana: flag('bandana'), beardWild: !!o.beardWild,
       robe, robeHi: light(robe, 0.16), robeDk: dark(robe, 0.30), robeSh: dark(robe, 0.50),
@@ -350,7 +354,7 @@ const HacChar = (function () {
       px(c - 6, topY - 2, 13, 1, P.goldHi);                               // horquilla 簪
     } else if (P.kind === 'armor') {                                       // casco con cresta al frente
       px(c - 5, topY - 1, 10, 3, P.steel); px(c - 5, topY - 1, 10, 1, P.steelHi); px(c - 5, topY + 2, 10, 1, P.steelDk);
-      px(c - 1, topY - 4, 3, 4, P.trim); px(c - 1, topY - 5, 3, 1, P.goldHi);   // cresta
+      px(c - 1, topY - 4, 3, 4, P.torsoGala ? '#a83a2e' : P.trim); px(c - 1, topY - 5, 3, 1, P.torsoGala ? '#c5543f' : P.goldHi);   // cresta (escarlata en la coraza de gala)
     } else if (P.ornate) {                                                 // tocado alto de oficial
       px(c - 4, topY - 3, 9, 4, P.ink); px(c - 4, topY - 3, 9, 1, dark(P.gold, 0.1)); px(c - 1, topY - 5, 3, 2, P.ink); px(c, topY - 5, 1, 1, P.gold);
     } else {                                                              // moño 髻 + gorro
@@ -443,6 +447,22 @@ const HacChar = (function () {
       const sTop = aTop + aH + 1;
       px(c - Math.round(hemHalf * 0.45), sTop, 1, hemY - sTop, P.robeSh);
       px(c + Math.round(hemHalf * 0.4), sTop, 1, hemY - sTop, P.robeSh);
+      // GALA (Casaca del General 名將袍): coraza de PARADA — gola y láminas con filo
+      // dorado, hombreras ribeteadas, espejo pectoral 護心鏡 con correas y fajín de
+      // mando escarlata. La distingue de la armadura corriente del guerrero.
+      if (P.torsoGala) {
+        px(c - 5, top, 10, 1, P.goldHi);                                                    // gola ribeteada en oro
+        for (let r = 0; r < aH; r += 4) px(c - aHalf, aTop + r + 1, aHalf * 2, 1, P.gold);  // filo dorado de las láminas (filas alternas)
+        if (v.side < 1) px(c - aHalf - 3, top + 1, 5, 1, P.gold);                           // ribete de las hombreras
+        px(c + aHalf - 2, top + 1, 5, 1, P.gold);
+        if (!v.back) {                                                                      // 護心鏡: espejo pectoral bruñido
+          const mx = c + Math.round(v.dx * 0.4);
+          px(mx - 4, aTop + 3, 3, 1, P.robeSh); px(mx + 2, aTop + 3, 3, 1, P.robeSh);       // correas a los hombros
+          px(mx - 2, aTop + 2, 4, 4, P.gold); px(mx - 1, aTop + 3, 2, 2, P.steelHi);        // marco dorado + espejo
+        }
+        if (v.front) { px(c - 1, aTop + aH + 1, 2, 4, '#a83a2e'); px(c - 1, aTop + aH + 1, 2, 1, '#c5543f'); }  // fajín de mando
+        for (let s = -aHalf + 1; s <= aHalf - 3; s += 3) px(c + s, aTop + aH + 6, 3, 1, P.gold);                // puntas doradas de los tassets
+      }
     } else {
       // Hombros + cuello.
       px(c - shHalf, top, shHalf * 2, 2, P.robeHi);
@@ -452,14 +472,19 @@ const HacChar = (function () {
       // ROPA DE TORSO fina (torsoLujo): charreteras de acento en ambos hombros.
       if (P.torsoLujo) { px(c - shHalf, top, 3, 2, P.trim); px(c + shHalf - 3, top, 3, 2, P.trim); px(c - shHalf, top, 3, 1, P.trimHi); px(c + shHalf - 3, top, 3, 1, P.trimHi); }
       if (gala) { px(c - shHalf + 1, top, 1, 1, P.goldHi); px(c + shHalf - 2, top, 1, 1, P.goldHi); }   // tachón dorado en cada charretera
-      // Solapa cruzada (jiaoling) con ribete.
+      // Solapa cruzada (jiaoling) con ribete. En las galas de CORTE (ministro,
+      // preceptor) es dorada; las de letras/viaje (erudito, estratega) llevan la
+      // vuelta CLARA del acento y el intendente la conserva sobria para que su
+      // bandolera de cuero se lea sin maraña.
+      const lapelC = gala ? ((P.gala === 'ministro' || P.gala === 'preceptor' || !P.gala) ? P.gold : P.trim) : P.trim;
       if (!v.back) {
-        for (let i = 0; i < 12; i++) px(c - 6 + i + Math.round(v.dx * 0.5), top + 2 + i, 2, 1, i < 2 ? P.skinDk : (gala ? P.gold : P.trim));
+        for (let i = 0; i < 12; i++) px(c - 6 + i + Math.round(v.dx * 0.5), top + 2 + i, 2, 1, i < 2 ? P.skinDk : lapelC);
         px(c - 5 + Math.round(v.dx * 0.5), top + 2, 2, 2, P.robeHi);   // cuello interior
       }
-      // Placket/brocado frontal (banda central). Dorado con tachones en ornate o gala.
+      // Placket/brocado frontal (banda central). Dorado con tachones en ornate o en
+      // las galas de corte; el resto de galas lo llevan sobrio (su sello va aparte).
       if (!v.back) {
-        const bandTop = top + 3, bandBot = beltY, rico = P.ornate || gala;
+        const bandTop = top + 3, bandBot = beltY, rico = P.ornate || (gala && lapelC === P.gold);
         px(c - 1 + Math.round(v.dx * 0.4), bandTop, 2, bandBot - bandTop, rico ? P.gold : P.trimDk);
         if (rico) for (let yy = bandTop + 1; yy < bandBot; yy += 2) px(c + Math.round(v.dx * 0.4), yy, 1, 1, gala ? P.goldHi : P.robeDk);
       }
@@ -469,7 +494,8 @@ const HacChar = (function () {
       px(c - hemHalf + 1, beltY + 2, hemHalf * 2 - 2, 1, dark(P.sash, 0.2));
       if (v.front) { px(c - 2, beltY + 2, 4, 4, P.trim); px(c - 1, beltY + 6, 2, 3, P.trimDk); }  // nudo + caída
       // MEDALLÓN de gala: gema de jade con marco dorado sobre la faja (solo de frente).
-      if (gala && v.front) { px(c - 2, beltY + 1, 4, 4, P.gold); px(c - 1, beltY + 2, 2, 2, P.jade); }
+      // Solo en las galas SIN sello con colgante propio (el preceptor lo conserva).
+      if (gala && v.front && (!P.gala || P.gala === 'preceptor')) { px(c - 2, beltY + 1, 4, 4, P.gold); px(c - 1, beltY + 2, 2, 2, P.jade); }
       if (P.ornate || gala) { px(c - hemHalf, hemY - 3, hemHalf * 2, 1, P.goldHi); px(c - hemHalf, hemY - 2, hemHalf * 2, 1, P.gold); px(c - hemHalf, hemY - 1, hemHalf * 2, 1, P.trimDk); if (v.front && P.ornate) px(c - 1, beltY + 2, 2, 3, P.jade); }
       // ROPA DE TORSO fina: banda de ribete en el bajo (si no es ya la ornamentada dorada).
       else if (P.torsoLujo) { px(c - hemHalf, hemY - 2, hemHalf * 2, 1, P.trimDk); px(c - hemHalf, hemY - 1, hemHalf * 2, 1, P.trim); }
@@ -478,6 +504,61 @@ const HacChar = (function () {
       px(c - Math.round(hemHalf * 0.5), sTop, 1, hemY - sTop, P.robeDk);
       px(c + Math.round(hemHalf * 0.45), sTop, 1, hemY - sTop, P.robeDk);
       px(c + Math.round(hemHalf * 0.45) + 1, sTop, 1, hemY - sTop, P.robeHi);
+      // SELLO VISUAL de la ropa rara (encima de todo el acabado genérico).
+      if (gala && P.gala) galaSello(px, P, v, { c, top, beltY, hemY, shHalf, hemHalf, rows });
+    }
+  }
+
+  // ── SELLO VISUAL de cada ROPA DE TORSO RARA (P.gala, cf. catálogo HacTienda) ──
+  // Cada gala de túnica añade un rasgo PROPIO reconocible de un vistazo (la del
+  // General no pasa por aquí: es kind 'armor' y se remata en la rama de armadura).
+  // `q` trae la geometría del torso ya calculada para la vista actual.
+  function galaSello(px, P, v, q) {
+    const { c, top, beltY, hemY, shHalf, hemHalf } = q;
+    const dx5 = Math.round(v.dx * 0.5), dx4 = Math.round(v.dx * 0.4);
+    if (P.gala === 'erudito') {
+      // GRAN ERUDITO 鴻儒: vuelta clara paralela a la solapa, colgante de jade 玉佩
+      // al cinto y nubes claras bordadas en la falda.
+      if (!v.back) for (let i = 2; i < 11; i++) px(c - 4 + i + dx5, top + 2 + i, 1, 1, P.trimHi);
+      if (v.front) { px(c - 3, beltY + 3, 1, 3, P.trimDk); px(c - 4, beltY + 6, 3, 3, P.jade); px(c - 3, beltY + 7, 1, 1, dark(P.jade, 0.45)); }
+      px(c + Math.round(hemHalf * 0.35), beltY + 7, 2, 1, P.trimHi);
+      px(c - Math.round(hemHalf * 0.55), beltY + 9, 2, 1, P.trimHi);
+      px(c + 1, hemY - 6, 2, 1, P.trimHi);
+    } else if (P.gala === 'ministro') {
+      // MINISTRO 相國: cinturón de placas DORADAS con jades engastados (玉帶) en vez
+      // de faja de tela + cordón escarlata del cargo (綬) colgando del cinto.
+      px(c - hemHalf + 1, beltY, hemHalf * 2 - 2, 3, P.gold);
+      px(c - hemHalf + 1, beltY, hemHalf * 2 - 2, 1, P.goldHi);
+      px(c - hemHalf + 1, beltY + 2, hemHalf * 2 - 2, 1, dark(P.gold, 0.35));
+      for (let s = -hemHalf + 3; s <= hemHalf - 5; s += 4) px(c + s, beltY + 1, 2, 1, P.jade);
+      if (v.front) { px(c + 3, beltY + 3, 2, 5, '#a83a2e'); px(c + 3, beltY + 8, 2, 1, P.gold); }
+    } else if (P.gala === 'estratega') {
+      // GRAN ESTRATEGA 臥龍: esclavina de viaje sobre los hombros (vivo claro en el
+      // borde, broche al frente) y el trigrama ☰ a la espalda.
+      const mC = dark(P.robe, 0.26), mHi = dark(P.robe, 0.10);
+      for (let i = 0; i < 7; i++) {
+        const t = i / (q.rows - 1);
+        const hw = Math.round(shHalf + (hemHalf - shHalf) * Math.pow(t, 0.8)) + 1;
+        px(c - hw, top + i, hw * 2, 1, i === 6 ? P.trimHi : mC);
+        if (i < 6) px(c - hw, top + i, 2, 1, mHi);
+      }
+      if (!v.back) px(c - 1 + dx4, top + 3, 2, 2, P.trim);                                   // broche de la esclavina
+      else { px(c - 2, top + 1, 4, 1, P.trimHi); px(c - 2, top + 3, 4, 1, P.trimHi); px(c - 2, top + 5, 4, 1, P.trimHi); }  // ☰
+    } else if (P.gala === 'preceptor') {
+      // PRECEPTOR 太傅: cuello de nubes dorado (vuelta + festón por la solapa) y
+      // brocado de trazos dorados sobre el bajo. Conserva el medallón de jade.
+      px(c - shHalf, top + 1, shHalf * 2, 1, P.gold);
+      if (!v.back) for (let i = 1; i < 11; i += 2) px(c - 6 + i + dx5, top + 2 + i, 1, 1, P.goldHi);
+      for (let s = -hemHalf + 2; s <= hemHalf - 3; s += 3) px(c + s, hemY - 5, 1, 2, P.gold);
+    } else if (P.gala === 'intendente') {
+      // GRAN INTENDENTE 大司農: bandolera de cuero cruzada (con remaches y hebilla
+      // dorada) y bolsas de avituallamiento colgadas del cinto.
+      for (let i = 0; i < 13; i++) {
+        const bx = v.back ? c - 6 + i : c + 5 - i + dx5;
+        px(bx, top + 2 + i, 2, 1, i % 5 === 2 ? P.bootHi : P.boot);
+      }
+      if (!v.back) px(c - 1 + dx4, top + 8, 2, 2, P.gold);                                   // hebilla
+      if (v.front) { px(c - 7, beltY + 3, 4, 4, P.boot); px(c - 7, beltY + 3, 4, 1, P.bootHi); px(c + 4, beltY + 4, 3, 3, P.boot); px(c + 4, beltY + 4, 3, 1, P.bootHi); }  // bolsas
     }
   }
 
@@ -677,7 +758,10 @@ const HacChar = (function () {
     if (P.kind === 'armor') {                                                  // casco con frontal y cresta
       px(c - 5, hy - 3, 11, 4, P.steel); px(c - 5, hy - 3, 11, 1, P.steelHi);
       px(c - 5, hy + 1, 11, 1, P.steelDk);
-      px(c - 1, hy - 7, 3, 4, P.trim); px(c - 1, hy - 8, 3, 1, P.goldHi);       // cresta
+      // Cresta: dorada de serie; PENACHO ESCARLATA en la coraza de gala (General).
+      const cresta = P.torsoGala ? '#a83a2e' : P.trim;
+      px(c - 1, hy - 7, 3, 4, cresta); px(c - 1, hy - 8, 3, 1, P.torsoGala ? '#c5543f' : P.goldHi);
+      if (P.torsoGala) px(c - 5, hy - 3, 11, 1, P.goldHi);                     // frontal dorado del casco de gala
       px(c - 5, hy + 1, 1, 4, P.steelDk); px(c + 5, hy + 1, 1, 4, P.steelDk);   // carrilleras
       px(c, hy - 1, 1, 1, P.goldHi);                                           // remache frontal
     } else if (P.ornate) {                                                     // tocado alto de oficial (進賢冠)
