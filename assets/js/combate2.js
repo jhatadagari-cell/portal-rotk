@@ -35,7 +35,7 @@ const Combate = (function () {
   let bg = null;                     // arena horneada (offscreen)
   let units = [], orden = [], turnPtr = 0, ronda = 1;
   let phase = 'intro';               // intro | menu | target | anim | over
-  let raf = 0, t0 = 0, shake = 0;
+  let raf = 0, t0 = 0, shake = 0, hitstop = 0;
   let floaters = [], slashes = [], pips = [];
   let anim = null;                   // animación de acción en curso
   let hovTarget = -1;                // índice de enemigo resaltado al elegir objetivo
@@ -62,7 +62,7 @@ const Combate = (function () {
   function mkUnit(o) {
     return Object.assign({
       dir: 'SE', maxHp: 30, hp: 30, spd: 10, atkMin: 2, atkMax: 3,
-      ox: 0, oy: 0, flash: 0, bob: rnd(0, 6.28), spr: {}, dead: false,
+      ox: 0, oy: 0, sq: 1, flash: 0, bob: rnd(0, 6.28), spr: {}, dead: false,
     }, o);
   }
   function nuevoEncuentro(nFoes) {
@@ -166,12 +166,12 @@ const Combate = (function () {
     renderMenu(u);
     u.dir = target.cell.x >= u.cell.x ? 'SE' : 'SW'; ensureSprite(u);
     anim = {
-      kind: 'attack', by: u, target, t: 0, dur: 560,
-      impact: false, perfectApplied: false,
-      // Ventana de tempo (fracción de dur) alrededor del impacto (0.5).
-      win: [0.40, 0.58], impactAt: 0.50,
+      kind: 'attack', by: u, target, t: 0, dur: 900, swing: 0,
+      impact: false,
+      // Ventana de tempo (fracción de dur) alrededor del impacto (0.52).
+      win: [0.45, 0.585], impactAt: 0.52,
     };
-    setLog('¡Pulsa <b>ESPACIO</b> (o clic) al conectar el golpe!');
+    setLog('¡Pulsa <b>ESPACIO</b> (o clic) cuando la espada golpee!');
   }
 
   // ── Turno del enemigo (pega al mecenas; el jugador puede BLOQUEAR con tempo) ─
@@ -182,8 +182,8 @@ const Combate = (function () {
     u.dir = target.cell.x >= u.cell.x ? 'SE' : 'SW'; ensureSprite(u);
     const raw = ri(u.atkMin, u.atkMax);
     anim = {
-      kind: 'enemyAtk', by: u, target, t: 0, dur: 620, impact: false, applied: false,
-      win: [0.42, 0.60], impactAt: 0.52, raw,
+      kind: 'enemyAtk', by: u, target, t: 0, dur: 900, swing: 0, impact: false,
+      win: [0.47, 0.61], impactAt: 0.54, raw,
     };
     setLog('¡<b>' + u.name + '</b> ataca! Pulsa <b>ESPACIO</b> para <b>bloquear</b>.');
   }
@@ -305,9 +305,23 @@ const Combate = (function () {
     paint(ts);
   }
 
+  // Curva de un golpe cuerpo a cuerpo LEGIBLE (para poder timear):
+  //   · anticipación (0-.34): se agacha y echa ATRÁS, levanta el arma (tell claro).
+  //   · golpe (.34-.52): embiste RÁPIDO hacia el objetivo; el arma barre.
+  //   · impacto (.52) → hitstop + destello.
+  //   · remate (.52-.70) y recuperación (.70-1): vuelve a su sitio.
+  // Devuelve: lunge (−=atrás, +=hacia el objetivo, 1=pegado), lift (px↑), squash, swing(0..1 del arma).
+  function meleeCurve(f) {
+    if (f < 0.34) { const w = easeOut(f / 0.34); return { lunge: -0.12 * w, lift: -3 * w, squash: 1 - 0.10 * w, swing: 0.22 * w }; }
+    if (f < 0.52) { const w = (f - 0.34) / 0.18; return { lunge: lerp(-0.12, 0.66, w * w), lift: -10 * Math.sin(w * Math.PI), squash: lerp(0.90, 1.04, w), swing: lerp(0.22, 0.92, easeOut(w)) }; }
+    if (f < 0.70) { const w = easeOut((f - 0.52) / 0.18); return { lunge: lerp(0.66, 0.52, w), lift: 0, squash: lerp(1.04, 1, w), swing: lerp(0.92, 1, w) }; }
+    const w = easeInOut((f - 0.70) / 0.30); return { lunge: 0.52 * (1 - w), lift: 0, squash: 1, swing: 1 - w };
+  }
+
   function update(dt) {
     shake *= Math.pow(0.86, dt / 16);
     if (shake < 0.4) shake = 0;
+    if (hitstop > 0) { hitstop = Math.max(0, hitstop - dt); return; }   // CONGELA el frame de impacto (punch)
     for (const f of floaters) f.t += dt;
     floaters = floaters.filter(f => f.t < f.dur);
     for (const s of slashes) s.t += dt;
@@ -327,18 +341,16 @@ const Combate = (function () {
       return;
     }
     if (anim.kind === 'attack' || anim.kind === 'enemyAtk') {
-      // Embestida: sale hacia el objetivo y vuelve. dx/dy en px de pantalla.
       const by = anim.by, tg = anim.target;
       const from = cellToScreen(by.cell.x, by.cell.y);
       const to = cellToScreen(tg.cell.x, tg.cell.y);
       const dx = (to.x - from.x), dy = (to.y - from.y);
-      const reach = 0.62;                 // no se solapa del todo con el objetivo
-      let k;                              // 0=reposo, 1=pegado al objetivo
-      if (f < 0.5) k = easeOut(f / 0.5); else k = 1 - easeInOut((f - 0.5) / 0.5);
-      by.ox = dx * reach * k; by.oy = dy * reach * k - Math.sin(Math.min(1, f * 2) * Math.PI) * 10;
-      // Impacto (una vez).
-      if (!anim.impact && f >= anim.impactAt) { anim.impact = true; applyImpact(); }
-      if (anim.t >= anim.dur) { by.ox = 0; by.oy = 0; animEnd(); }
+      const m = meleeCurve(f);
+      by.ox = dx * m.lunge; by.oy = dy * m.lunge + m.lift; by.sq = m.squash;
+      anim.swing = m.swing;
+      // Impacto (una vez): daño + hitstop que congela el instante del golpe.
+      if (!anim.impact && f >= anim.impactAt) { anim.impact = true; applyImpact(); hitstop = 80; }
+      if (anim.t >= anim.dur) { by.ox = 0; by.oy = 0; by.sq = 1; anim.swing = 0; animEnd(); }
       return;
     }
   }
@@ -378,6 +390,9 @@ const Combate = (function () {
     const draworder = units.slice().sort((a, b) => (a.cell.x + a.cell.y) - (b.cell.x + b.cell.y));
     for (const u of draworder) drawUnit(u);
 
+    // Arma barriendo + retículo de tempo (durante un golpe cuerpo a cuerpo).
+    if (anim && (anim.kind === 'attack' || anim.kind === 'enemyAtk')) drawTiming(anim);
+
     // FX por encima.
     for (const s of slashes) drawSlash(s);
     for (const f of floaters) drawFloater(f);
@@ -401,7 +416,9 @@ const Combate = (function () {
     const dw = CHAR_W * SPR_SCALE, dh = CHAR_H * SPR_SCALE;
     // Anclar los PIES (CHAR_FEET lógico) a la celda. Escala a pantalla ~0.9.
     const drawScale = 0.62;
-    const w = dw * drawScale, h = dh * drawScale;
+    // Squash & stretch (anticipación/golpe): alto ×sq, ancho compensado (conserva volumen).
+    const sq = u.sq || 1;
+    const w = dw * drawScale / Math.sqrt(sq), h = dh * drawScale * sq;
     const feetOff = (CHAR_FEET / CHAR_H) * h;
     const dx = x - w / 2, dy = y - feetOff + bob;
     ctx.save();
@@ -434,6 +451,60 @@ const Combate = (function () {
       ctx.strokeStyle = 'rgba(0,0,0,0.6)'; ctx.lineWidth = 1;
       for (let i = 1; i < u.maxHp; i++) { const gx = x - w / 2 + w * (i / u.maxHp); ctx.beginPath(); ctx.moveTo(gx, y); ctx.lineTo(gx, y + h); ctx.stroke(); }
     }
+    ctx.restore();
+  }
+
+  // ── APOYO VISUAL AL TEMPO: arma barriendo + retículo que se cierra al impacto ──
+  function drawTiming(a) {
+    const by = a.by, tg = a.target;
+    const bp = cellToScreen(by.cell.x, by.cell.y);
+    const tp = cellToScreen(tg.cell.x, tg.cell.y);
+    const f = a.t / a.dur, foe = a.kind === 'enemyAtk';
+    const face = (tg.cell.x >= by.cell.x) ? 1 : -1;
+    // Sable en la mano del atacante (altura hombro), barriendo con la fase `swing`.
+    drawSabre(bp.x + (by.ox || 0) + face * 9, bp.y + (by.oy || 0) - 58, a.swing || 0, face, foe);
+    // Retículo de tempo sobre el objetivo: se cierra hacia el centro justo en el impacto.
+    const rx = tp.x, ry = tp.y - 46;
+    let rf = (f < a.impactAt) ? 1 - f / a.impactAt : (f - a.impactAt) / (1 - a.impactAt);
+    const R = lerp(7, 44, clamp(rf, 0, 1));
+    const inWin = (f >= a.win[0] && f <= a.win[1]);
+    drawReticle(rx, ry, R, inWin, foe);
+    if (inWin) {
+      ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.font = '900 17px "Noto Serif SC",serif';
+      ctx.fillStyle = foe ? '#bfe0ff' : '#ffe08a'; ctx.strokeStyle = 'rgba(0,0,0,.85)'; ctx.lineWidth = 4;
+      const yy = ry - 26, tx = foe ? '¡BLOQUEA!' : '¡YA!';
+      ctx.strokeText(tx, rx, yy); ctx.fillText(tx, rx, yy);
+      ctx.restore();
+    }
+  }
+  function drawSabre(cx, cy, swing, face, foe) {
+    const A = -2.5, B = 0.6;                 // hoja: alzada atrás → abajo-delante (radianes)
+    const ang = lerp(A, B, swing);
+    ctx.save(); ctx.translate(cx, cy); if (face < 0) ctx.scale(-1, 1);
+    const trail = clamp((swing - 0.3) / 0.6, 0, 1);
+    for (let i = 3; i >= 1; i--) { if (trail <= 0) break; ctx.globalAlpha = 0.10 * i * trail; blade(lerp(A, ang, 1 - i * 0.16)); }
+    ctx.globalAlpha = 1; blade(ang);
+    ctx.restore();
+    function blade(aa) {
+      ctx.save(); ctx.rotate(aa);
+      const L = 42, base = 8;
+      ctx.beginPath(); ctx.moveTo(0, -base / 2); ctx.lineTo(L, -1); ctx.lineTo(L, 1); ctx.lineTo(0, base / 2); ctx.closePath();
+      ctx.fillStyle = foe ? '#c4c6cc' : '#d9dde6'; ctx.fill();
+      ctx.fillStyle = foe ? '#eef0f4' : '#f6f8fb'; ctx.fillRect(3, -1, L - 8, 1);   // filo brillante
+      ctx.fillStyle = '#caa23c'; ctx.fillRect(-2, -4, 4, 8);                          // guarda dorada
+      ctx.fillStyle = '#4a3117'; ctx.fillRect(-8, -1.5, 7, 3);                        // empuñadura
+      ctx.restore();
+    }
+  }
+  function drawReticle(x, y, R, win, foe) {
+    ctx.save(); ctx.translate(x, y);
+    ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(230,220,190,.32)';
+    ctx.beginPath(); ctx.arc(0, 0, 9, 0, 6.283); ctx.stroke();                        // anillo-diana fijo
+    const col = win ? (foe ? '#7fbfff' : '#ffdf80') : 'rgba(235,225,195,.7)';
+    ctx.lineWidth = win ? 3.5 : 2; ctx.strokeStyle = col;
+    if (win) { ctx.shadowColor = col; ctx.shadowBlur = 10; }
+    ctx.beginPath(); ctx.arc(0, 0, Math.max(R, 9), 0, 6.283); ctx.stroke();           // anillo que se cierra
     ctx.restore();
   }
 
@@ -547,9 +618,10 @@ const Combate = (function () {
     const me = units.find(u => u.side === 'ally');
     const foe = units.find(u => u.side === 'foe' && alive(u));
     if (which === 'menu') { openMenu(me); paint(0); return; }
-    if (which === 'enemy') { const e = units.find(u => u.side === 'foe'); enemyTurn(e); strikeHeld = false; stepAnim(0.60); paint(0); return; }
-    // 'attack': ataque con TEMPO PERFECTO congelado justo tras el impacto (mecenas embistiendo).
-    startAttack(me, foe); strikeHeld = true; stepAnim(0.53); paint(0);
+    if (which === 'enemy') { const e = units.find(u => u.side === 'foe'); enemyTurn(e); strikeHeld = false; stepAnim(0.55); paint(0); return; }
+    if (which === 'windup') { startAttack(me, foe); strikeHeld = false; stepAnim(0.42); paint(0); return; }
+    // 'attack': ataque con TEMPO PERFECTO congelado en el impacto (espada abajo + destello).
+    startAttack(me, foe); strikeHeld = true; stepAnim(0.55); paint(0);
   }
 
   return { init, _debug: () => ({ units, orden, phase, anim }) };
