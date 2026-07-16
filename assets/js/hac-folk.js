@@ -2113,9 +2113,22 @@ const HacFolk = (function () {
     // pintan en el overlay a resolución de pantalla; si no, van al lienzo como antes.
     const OV = ovActive(), ovPeople = [];
     const FEET = charFEET(), bannerDy = Math.round(FEET * SPRITE_DISP / SCALE) - 1;
-    // Portones: hojas animadas (overlay; el sprite no las trae). Primero, para
-    // quedar bajo los banners y bocadillos. Coste mínimo: 2 polígonos por portón.
-    if (wk && wk.gates) wk.gates.forEach(gate => overlays.push({ draw: (g) => drawGate(g, gate) }));
+    // Portones: hojas animadas (el sprite no las trae). Los interiores van como
+    // overlay (bajos, coste mínimo). El PERIMETRAL entra como ACTOR con caja de
+    // profundidad propia: si fuera overlay, el pasaje oscuro y las hojas abiertas
+    // se pintarían ENCIMA del mecenas que está saliendo (ya al sur de la cara del
+    // muro), «tragándoselo» justo al cruzar el portón de salida suroeste.
+    if (wk && wk.gates) wk.gates.forEach(gate => {
+      if (!gate.perimeter) { overlays.push({ draw: (g) => drawGate(g, gate) }); return; }
+      if (gate.open <= 0.012) return;                    // cerrado → hojas horneadas por hac-iso
+      const gx = gate.gx, gy = gate.gy;                  // (gx = columna, gy = cara del muro, ver push de _hacGates)
+      actors.push({
+        fx: gx, fy: gy + 0.05,                           // un pelo al sur de la cara: delante de los muros, detrás del que emerge
+        dbox: gate.orient === 'x' ? [gx - 1.5, gy - 0.5, gx + 1.5, gy] : [gx - 0.5, gy - 1.5, gx, gy + 1.5],
+        bound: { l: 100, up: 80, w: 200, h: 130 },       // recuadro de recomposición (pasaje + hojas abatidas)
+        draw: (g) => drawGate(g, gate)
+      });
+    });
     // Mercader(es): personajes fijos al frente de cada mercado (mismo render).
     const npcDy = bannerDy;
     if (wk && wk.merchants) wk.merchants.forEach(mk => {

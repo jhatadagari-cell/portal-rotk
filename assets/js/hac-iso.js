@@ -1094,10 +1094,28 @@ const HacIso = (function () {
     return [gx, gy];
   }
 
+  // ¿El ACTOR (punto en fx,fy, sus pies) queda DETRÁS de la caja de una estructura?
+  // Reglas por posición REAL (sin redondear a celda): al sur del frente → delante;
+  // al norte → detrás; si no, al este → delante; al oeste → detrás; y DENTRO de la
+  // huella (pasaje del portón, porche de la galería) → detrás (la estructura lo tapa).
+  // Sustituye al comparador de cajas para actor-vs-estructura: con huellas ALARGADAS
+  // (galería 1×3, portón 3×wt) el desempate por esquina delantera + el redondeo a
+  // celda hacían «saltar» al mecenas encima del tejado al pasar por detrás, o lo
+  // dejaban tapado por el portón cuando ya había emergido por delante.
+  function actorBehind(fx, fy, B) {
+    if (fy >= B[3] - 1e-6) return false;   // al SUR de la cara frontal → delante
+    if (fy <= B[1] + 1e-6) return true;    // al NORTE → detrás
+    if (fx >= B[2] - 1e-6) return false;   // al ESTE → delante
+    if (fx <= B[0] + 1e-6) return true;    // al OESTE → detrás
+    return true;                           // DENTRO de la huella → lo tapa
+  }
+
   // ── Frame de animación: repinta el fondo cacheado y reinserta a los ACTORES
   // (mecenas) en el orden de profundidad, recomponiendo SOLO las estructuras que
   // tienen delante (las que solapan su caja ampliada) → oclusión correcta sin
   // redibujar toda la finca. actors = [{ fx, fy, draw(g, lx, ly, SCALE) }].
+  // `dbox` opcional: caja de profundidad a medida (p.ej. las hojas animadas del
+  // portón perimetral, que ocupan 3 celdas y no una).
   function frame(canvas, actors, overlays) {
     const sc = canvas && canvas._hacScene;
     if (!sc || !sc.bg) return;
@@ -1112,7 +1130,8 @@ const HacIso = (function () {
     const acts = (actors || []).map(a => {
       const cx = Math.round(a.fx), cy = Math.round(a.fy);
       return {
-        box: [cx, cy, cx + 1, cy + 1],
+        box: a.dbox || [cx, cy, cx + 1, cy + 1],
+        fx: a.fx, fy: a.fy,
         fbox: [cx - 0.6, cy - 0.6, cx + 3.5, cy + 3.5],
         lx: sc.X(a.fx, a.fy), ly: sc.Y(a.fx, a.fy),
         bound: a.bound,   // caja de recomposición a medida (px disp. sobre los pies); p.ej. un jinete es más alto/ancho que el clip por defecto
@@ -1141,10 +1160,18 @@ const HacIso = (function () {
         || (d.srect && rects.some(r => ov(d.srect, [r[0], r[1], r[0] + r[2], r[1] + r[3]]))));
       const render = near.slice();
       acts.sort((p, q) => sc.before(p.box, q.box) ? -1 : (sc.before(q.box, p.box) ? 1 : 0));
+      // Inserta al actor DESPUÉS de la última estructura a la que tapa (está
+      // delante). No al revés («antes de la primera que lo tapa»): el orden
+      // global no es transitivo con cajas alargadas (un árbol al SO ordena
+      // ANTES que el muro por la regla oeste aunque esté visualmente delante),
+      // y esa variante dejaba al mecenas BORRADO bajo la muralla al salir por
+      // el portón. El error residual de esta variante es el suave (actor sobre
+      // el borde de una copa), nunca el grave (actor tragado por un muro).
       acts.forEach(a => {
-        let idx = render.length;
-        for (let i = 0; i < render.length; i++) { if (sc.before(a.box, render[i].obox || render[i].box)) { idx = i; break; } }
+        let idx = 0;
+        for (let i = 0; i < render.length; i++) { if (!actorBehind(a.fx, a.fy, render[i].obox || render[i].box)) idx = i + 1; }
         render.splice(idx, 0, a);
+        if (typeof window !== 'undefined' && window.HAC_DEBUG_OCC) window.__occ = { fx: a.fx, fy: a.fy, idx, list: render.map(d => d === a ? 'ACTOR' : (d.box || []).join(',')) };
       });
       g.save();
       g.setTransform(1, 0, 0, 1, 0, 0);
