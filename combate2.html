@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Combate (prototipo v2) · Portal ROTK</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700;900&family=Noto+Sans+SC:wght@300;400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#e8d7ac; --ink:#3a2a15; --ink2:#6b5836;
+    --wood:#2b1d10; --wood2:#4a3117; --bronze:#a9803f; --bronze-d:#6a4a24; --bronze-hi:#e6c88a;
+    --cinnabar:#a83424; --cinnabar-d:#7a2216; --jade:#537f5b;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; height:100%; background:#000; overflow:hidden;
+    font-family:'Noto Sans SC',system-ui,sans-serif; -webkit-font-smoothing:antialiased; color:var(--paper); }
+  #cb-root{ position:fixed; inset:0; }
+  .cb-scene{ position:absolute; inset:0; }
+  .cb-cv{ position:absolute; inset:0; width:100%; height:100%; display:block; image-rendering:pixelated; }
+
+  /* Orden de turnos: columna derecha, retratos ensartados. */
+  .cb-order{ position:absolute; right:16px; top:50%; transform:translateY(-50%); z-index:6;
+    display:flex; flex-direction:column; align-items:center; gap:12px; pointer-events:none; }
+  .cb-order::before{ content:''; position:absolute; top:14px; bottom:14px; left:50%; width:3px; transform:translateX(-50%);
+    background:linear-gradient(180deg,transparent,var(--bronze-d) 6%,var(--bronze) 50%,var(--bronze-d) 94%,transparent); border-radius:2px; }
+  .cb-ord{ position:relative; z-index:1; width:52px; height:52px; opacity:.9; transition:transform .2s,opacity .2s; }
+  .cb-ord.cur{ transform:scale(1.28); opacity:1; z-index:2; }
+  .cb-ord-c{ width:100%; height:100%; border-radius:50%; image-rendering:pixelated;
+    background:linear-gradient(158deg,var(--wood2),var(--wood)); border:2px solid var(--wood2);
+    box-shadow:inset 0 0 0 2px var(--bronze), 0 3px 8px rgba(0,0,0,.55); }
+  .cb-ord.cur .cb-ord-c{ border-color:var(--bronze-hi); box-shadow:inset 0 0 0 2px var(--bronze-hi), 0 0 0 3px rgba(168,52,36,.5), 0 5px 14px rgba(168,52,36,.5); }
+  .cb-ord.foe .cb-ord-c{ border-color:var(--cinnabar-d); box-shadow:inset 0 0 0 2px var(--cinnabar), 0 3px 8px rgba(0,0,0,.55); }
+
+  /* HUD inferior: registro + menú. */
+  .cb-hud{ position:absolute; left:0; right:0; bottom:0; z-index:7; padding:0 18px calc(18px + env(safe-area-inset-bottom));
+    display:flex; flex-direction:column; align-items:center; gap:10px; pointer-events:none;
+    padding-top:40px; background:linear-gradient(0deg,rgba(6,5,2,.62),rgba(6,5,2,0)); }
+  .cb-log{ max-width:min(680px,92%); text-align:center; min-height:20px;
+    font:400 13px/1.5 'Noto Serif SC',serif; color:var(--paper); text-shadow:0 1px 3px #000,0 0 10px rgba(0,0,0,.7); }
+  .cb-log b{ color:var(--bronze-hi); }
+  .cb-menu{ display:none; pointer-events:auto; width:min(460px,94%);
+    display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
+  .cb-menu-hint{ font:400 13px 'Noto Serif SC',serif; color:var(--bronze-hi); text-align:center; width:100%; }
+  .cb-act{ flex:1 1 160px; max-width:210px; cursor:pointer; text-align:left; padding:9px 12px 9px 15px; border-radius:4px;
+    background:linear-gradient(158deg,rgba(38,26,13,.9),rgba(24,16,8,.92)); color:var(--paper);
+    border:1px solid var(--bronze-d); border-left:4px solid var(--bronze);
+    box-shadow:inset 0 0 0 1px rgba(230,200,138,.1),0 8px 20px rgba(0,0,0,.5); transition:transform .1s,background .12s; }
+  .cb-act b{ font:700 14px 'Noto Serif SC',serif; display:block; }
+  .cb-act small{ font-size:11px; color:rgba(230,215,180,.72); }
+  .cb-act:hover{ transform:translateY(-1px); background:linear-gradient(158deg,rgba(52,36,18,.95),rgba(34,22,10,.96)); }
+  .cb-act.atk{ border-left-color:var(--cinnabar); } .cb-act.def{ border-left-color:var(--jade); }
+
+  /* Fin de combate. */
+  .cb-end{ display:none; position:fixed; inset:0; z-index:20; place-items:center; background:rgba(8,7,5,.74); -webkit-backdrop-filter:blur(3px); backdrop-filter:blur(3px); }
+  .cb-end-box{ text-align:center; padding:30px 40px; border-radius:5px;
+    background:linear-gradient(158deg,#e8d7ac,#d3ba82); color:var(--ink);
+    box-shadow:0 0 0 4px var(--wood),0 0 0 5px var(--bronze-d),0 14px 34px rgba(0,0,0,.6); }
+  .cb-end-t{ font:900 32px 'Noto Serif SC',serif; margin-bottom:6px; }
+  .cb-end.win .cb-end-t{ color:var(--cinnabar-d); } .cb-end.lose .cb-end-t{ color:var(--ink2); }
+  .cb-end-s{ color:var(--ink2); font:400 13px 'Noto Serif SC',serif; margin-bottom:18px; }
+  .cb-end-btn{ padding:11px 22px; border-radius:4px; cursor:pointer; font:700 14px 'Noto Serif SC',serif;
+    background:radial-gradient(circle at 40% 25%,var(--cinnabar),var(--cinnabar-d) 85%); color:#ffe9d8; border:1px solid var(--cinnabar-d); }
+</style>
+</head>
+<body>
+  <div id="cb-root"></div>
+  <script src="assets/js/hac-util.js?v=1"></script>
+  <script src="assets/js/hac-char.js?v=17"></script>
+  <script src="assets/js/combate2.js?v=1"></script>
+  <script>Combate.init(document.getElementById('cb-root'));</script>
+</body>
+</html>
