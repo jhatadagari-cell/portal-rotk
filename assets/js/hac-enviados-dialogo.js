@@ -52,6 +52,39 @@ const HacEnviadoDialogo = (function () {
     ]
   };
 
+  // ── Chen Qun 陳群 (字 長文), enviado de Wei · señor: Cao Cao 曹操 ──────────────
+  // Contrapunto de Fei Yi: nada de hermandad ni sentimiento. Frío, digno,
+  // institucional. Persuade con ORDEN y MÉRITO (él ideó los nueve rangos): en Wei
+  // el talento asciende sin importar la cuna, y cada casa halla su rango y su ley.
+  const CHEN_QUN = {
+    esperaFundador: [
+      '抱拳 Chen Qun, de la corte de Wei, a vuestro servicio; 長文, si preferís el trato llano.',
+      'No vengo con ruegos ni con espadas, sino con una propuesta de orden. Y el orden, buen señor, se trata con la debida formalidad — no a las puertas de un camino.',
+      'Si tenéis a bien recibirme, os expondré qué lugar, y qué rango, hallaría vuestra casa bajo el estandarte del norte.'
+    ],
+    esperaOtro: [
+      '抱拳 Chen Qun, de la corte de Wei. Un placer correcto.',
+      'Aguardo audiencia con vuestro señor: lo que traigo es asunto de Estado, y a él corresponde.',
+      'Entretanto, observo vuestra hacienda con interés. Una casa bien ordenada se reconoce a la primera mirada.'
+    ],
+    ofertaFundador: [
+      '抱拳 Os lo agradezco. Prescindamos de los adornos: soy hombre de asuntos claros, y claro seré con vos.',
+      'Wei no es el reino de las canciones, sino el del ORDEN. Donde otros os prometen hermandad, nosotros ofrecemos algo más duradero: una estructura en la que cada casa conoce su rango, y cada mérito, su justa recompensa.',
+      'Yo mismo dispuse el sistema de los nueve rangos. En Wei el talento asciende aunque nazca en la choza, y la incompetencia cae aunque vista seda. Vuestra hacienda sería medida con rigor… y premiada en consecuencia.',
+      'No os pediré que améis a mi señor. Os pido algo más sensato: que reconozcáis de qué lado se levanta el edificio del futuro. Cao Cao no colecciona amigos — forja un Estado, y en él hay un sitio labrado para los capaces.',
+      'La virtud alimenta el alma, buen señor; el orden alimenta al reino. Bajo Wei, vuestra casa tendrá ley que la ampare, rango que la eleve y un lugar firme cuando el caos se lleve a los tibios.',
+      '¿Qué decís? ¿Ocupará vuestra hacienda el lugar que le corresponde bajo Wei?'
+    ],
+    revisitaFundador: [
+      '抱拳 De nuevo ante vos. El orden es paciente, buen señor: ¿habéis sopesado ya la propuesta de Wei?',
+      'El lugar reservado a vuestra casa sigue vacante. Mas los buenos rangos, como los buenos momentos, no aguardan para siempre.'
+    ],
+    ofertaOtro: [
+      '抱拳 Agradezco la hospitalidad de esta casa; se advierte la mano de un señor competente.',
+      'El asunto que me trae, sin embargo, corresponde a vuestro señor: son decisiones que exceden a un solo hombre.'
+    ]
+  };
+
   // ── Fallback genérico (enviado de una facción sin guion propio) ──────────────
   function generico(facNombre, invitado, esFundador, yaEscuchado) {
     const fac = facNombre || 'tierras amigas';
@@ -77,7 +110,17 @@ const HacEnviadoDialogo = (function () {
   }
 
   function esShu(name, fac) {
-    return /fei\s*yi|費禕|费祎/i.test(String(name || '')) || /shu|蜀/i.test(String(fac || ''));
+    return /fei\s*yi|費禕|费祎|wenwei/i.test(String(name || '')) || /shu|蜀/i.test(String(fac || ''));
+  }
+  function esWei(name, fac) {
+    return /chen\s*qun|陳群|陈群|長文|长文|changwen/i.test(String(name || '')) || /\bwei\b|魏/i.test(String(fac || ''));
+  }
+
+  // Elige el guion según el CONJUNTO de un enviado (Fei Yi, Chen Qun…) y el contexto.
+  function guion(set, invitado, esFundador, yaEscuchado) {
+    if (!invitado) return (esFundador ? set.esperaFundador : set.esperaOtro).slice();
+    if (!esFundador) return set.ofertaOtro.slice();
+    return (yaEscuchado ? set.revisitaFundador : set.ofertaFundador).slice();
   }
 
   function lineas(o) {
@@ -87,11 +130,8 @@ const HacEnviadoDialogo = (function () {
     const facNombre = (facObj && (facObj.nombre || facObj.zh)) || (typeof facObj === 'string' ? facObj : '');
     const invitado = !!o.invitado, esFundador = !!o.esFundador, yaEscuchado = !!o.yaEscuchado;
 
-    if (esShu(name, facNombre)) {
-      if (!invitado) return (esFundador ? FEI_YI.esperaFundador : FEI_YI.esperaOtro).slice();
-      if (!esFundador) return FEI_YI.ofertaOtro.slice();
-      return (yaEscuchado ? FEI_YI.revisitaFundador : FEI_YI.ofertaFundador).slice();
-    }
+    if (esShu(name, facNombre)) return guion(FEI_YI, invitado, esFundador, yaEscuchado);
+    if (esWei(name, facNombre)) return guion(CHEN_QUN, invitado, esFundador, yaEscuchado);
     return generico(facNombre, invitado, esFundador, yaEscuchado);
   }
 
