@@ -558,8 +558,14 @@ const HacFolk = (function () {
       if (near && nd < 16) {                         // ~4 celdas: saluda a quien pase
         const fd = faceFromGrid(near.fx - w.fx, near.fy - w.fy); if (fd) w.dir = fd;
         w.bowing = true; w.bowTimer = rng(1.4, 2.0); w.speech = envoyGreet(); w.speechT = 2.6; w.bowCd = rng(5, 9);
-      } else if (w.idleBow <= 0) {                   // reverencia ambiental (solo)
-        w.dir = 'SE'; w.bowing = true; w.bowTimer = rng(1.2, 1.8); w.speech = null; w.bowCd = rng(4, 7); w.idleBow = rng(10, 18);
+      } else if (w.idleBow <= 0) {                   // reverencia ambiental: si hay
+        // algún residente a la vista (aunque esté al otro lado del patio), se orienta
+        // hacia él y a veces le brinda un saludo — así «interactúa» con la casa aunque
+        // nadie salga por el portón. Si no hay nadie, mira al frente.
+        const isMec = near && !near.horse;
+        const fd = isMec ? faceFromGrid(near.fx - w.fx, near.fy - w.fy) : null;
+        w.dir = fd || 'SE'; w.bowing = true; w.bowTimer = rng(1.2, 1.8); w.bowCd = rng(4, 7); w.idleBow = rng(10, 18);
+        w.speech = (isMec && rng(0, 1) < 0.4) ? envoyGreet() : null; if (w.speech) w.speechT = 2.6;
       }
     }
     // Girar la cabeza/cuerpo de tanto en tanto para dar sensación de espera atenta.
@@ -1629,6 +1635,7 @@ const HacFolk = (function () {
   // el caballo sobresalen del clip por defecto; sin esto se les recorta morro/cabeza.
   const MOUNT_BOUND = { l: 50, up: 104, w: 100, h: 124 };   // caballo + jinete montado
   const HORSE_BOUND = { l: 50, up: 78,  w: 100, h: 94 };    // caballo suelto pastando
+  const ENVOY_BOUND = { l: 40, up: 92,  w: 80,  h: 112 };   // enviado de pie (con holgura para la talla de general)
   const _hx = (c) => { c = c.replace('#', ''); return [parseInt(c.slice(0, 2), 16), parseInt(c.slice(2, 4), 16), parseInt(c.slice(4, 6), 16)]; };
   const mixc = (a, b, t) => { const A = _hx(a), B = _hx(b); return 'rgb(' + Math.round(A[0] + (B[0] - A[0]) * t) + ',' + Math.round(A[1] + (B[1] - A[1]) * t) + ',' + Math.round(A[2] + (B[2] - A[2]) * t) + ')'; };
   function horsePalette(coat) {
@@ -2306,8 +2313,11 @@ const HacFolk = (function () {
       if (w.insideId) return;                          // DENTRO de un edificio: oculto (su presencia la anuncia el banner 匾額)
       if (w.state === 'fuera') return;                 // EN EXPEDICIÓN fuera de la finca: oculto hasta volver
       // No montados → capa nítida; montados (caballo+jinete) siguen en el lienzo.
-      if (OV && !isMounted(w)) ovPeople.push(w);
-      else { const act = { fx: w.fx, fy: w.fy, draw: (g, lx, ly) => drawWalker(g, lx, ly, w, { banner: false }) }; if (isMounted(w)) act.bound = MOUNT_BOUND; actors.push(act); }
+      // EXCEPCIÓN: el enviado espera pegado al portón sur; en la capa nítida (sin
+      // oclusión) se veía flotando sobre la muralla. Va por el lienzo (oclusión real
+      // vs. muro), como los caballos/caravana que también rondan junto a la tapia.
+      if (OV && !isMounted(w) && !w.visitante) ovPeople.push(w);
+      else { const act = { fx: w.fx, fy: w.fy, draw: (g, lx, ly) => drawWalker(g, lx, ly, w, { banner: false }) }; if (isMounted(w)) act.bound = MOUNT_BOUND; else if (w.visitante) act.bound = ENVOY_BOUND; actors.push(act); }
       nameCands.push(w);
     });
     // Banners de nombre (overlay): de DELANTE hacia atrás, se CLAMPEAN en horizontal
