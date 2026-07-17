@@ -58,7 +58,7 @@ const HacEnviadoDialogo = (function () {
   // el talento asciende sin importar la cuna, y cada casa halla su rango y su ley.
   const CHEN_QUN = {
     esperaFundador: [
-      '抱拳 Chen Qun, de la corte de Wei, a vuestro servicio; 長文, si preferís el trato llano.',
+      '抱拳 Chen Qun, de la corte de Wei, a vuestro servicio; Changwen, si preferís el trato llano.',
       'No vengo con ruegos ni con espadas, sino con una propuesta de orden. Y el orden, buen señor, se trata con la debida formalidad — no a las puertas de un camino.',
       'Si tenéis a bien recibirme, os expondré qué lugar, y qué rango, hallaría vuestra casa bajo el estandarte del norte.'
     ],

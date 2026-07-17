@@ -535,7 +535,7 @@ const HacFolk = (function () {
   // portón sur y se aleja al campo (rumbo a su hacienda). Al llegar lejos, 'visita-ido'
   // (el sim lo autoquita). Waypoints a mano fuera de la rejilla (como la expedición).
   function startEnvoyLeave(w) {
-    w.bowing = false; w.speech = '抱拳'; w.speechT = 2.4; w.dodging = false; w.dodgeTX = null; w.dodgeTY = null;
+    w.bowing = false; w.speech = '抱拳 Que el Cielo os guarde, buen señor.'; w.speechT = 3; w.dodging = false; w.dodgeTX = null; w.dodgeTY = null;
     const start = [Math.round(w.fx), Math.round(w.fy)];
     const inPath = (wk.exitKey ? bfs(start, new Set([wk.exitKey])) : null) || [];
     const wps = inPath.slice();
