@@ -85,6 +85,39 @@ const HacEnviadoDialogo = (function () {
     ]
   };
 
+  // ── Zhao Zi 趙咨 (字 Dedu), enviado de Wu · señor: Sun Quan 孫權 ───────────────
+  // Tercer registro (ni corazón como Fei Yi, ni orden frío como Chen Qun): ORGULLO
+  // e INGENIO. Wu es fuerte y no mendiga aliados — los elige. Defiende la dignidad
+  // de su reino con un puntito de chulería; te vende autonomía, temple y un nombre.
+  const ZHAO_ZI = {
+    esperaFundador: [
+      '抱拳 Zhao Zi, enviado de Wu; Dedu, si gustáis. No os robaré mucho tiempo… aún.',
+      'No vengo a suplicar nada, buen señor: vengo a traeros una oportunidad que pocos reciben. Y las oportunidades no se despachan en la puerta, como a un buhonero.',
+      'Concededme audiencia dentro y sabréis por qué a Wu se le sirve con orgullo, no con resignación.'
+    ],
+    esperaOtro: [
+      '抱拳 Zhao Zi, de Wu. Un gusto — para vos, quiero decir.',
+      'Aguardo a vuestro señor; lo que traigo no es asunto para intermediarios.',
+      'Bonita hacienda. Se ve que aquí alguien sabe mandar.'
+    ],
+    ofertaFundador: [
+      '抱拳 Al fin. Seré breve y sin rodeos, que el tiempo de Wu vale caro.',
+      '¿Que por qué habríais de escuchar a Wu? Contad: cien mil lanzas, el gran río por muralla y hombres de talento a espuertas. No somos el reino que mendiga, buen señor: somos el que elige.',
+      'Y hoy os hemos elegido a vos. No es poca cosa — a Wu no se entra por lástima ni por limosna: se entra por mérito y con la frente alta.',
+      'Con nosotros conservaréis lo vuestro y ganaréis un nombre que Wei jamás os dará y que Shu jamás recordará. Sun Quan premia al audaz y no olvida a quien lo acompaña.',
+      'El norte os quiere de peón; el oeste, de mártir. Wu os quiere de igual, y os brinda el orgullo de pertenecer al único bando que a nadie teme.',
+      '¿Y bien? ¿Tendrá vuestra hacienda el temple de alzar el estandarte de Wu?'
+    ],
+    revisitaFundador: [
+      '抱拳 De vuelta. No acostumbro a repetir una oferta, así que consideraos afortunado: ¿os sumáis a Wu, o dejáis pasar el honor?',
+      'La paciencia de Wu es larga, buen señor, mas no infinita. El río sigue su curso con vos o sin vos.'
+    ],
+    ofertaOtro: [
+      '抱拳 Disfruto de vuestra hospitalidad; buena casa servís.',
+      'Pero mi recado es para vuestro señor: son palabras mayores, no para cualquier oído.'
+    ]
+  };
+
   // ── Fallback genérico (enviado de una facción sin guion propio) ──────────────
   function generico(facNombre, invitado, esFundador, yaEscuchado) {
     const fac = facNombre || 'tierras amigas';
@@ -115,6 +148,9 @@ const HacEnviadoDialogo = (function () {
   function esWei(name, fac) {
     return /chen\s*qun|陳群|陈群|長文|长文|changwen/i.test(String(name || '')) || /\bwei\b|魏/i.test(String(fac || ''));
   }
+  function esWu(name, fac) {
+    return /zhao\s*zi|趙咨|赵咨|德度|dedu/i.test(String(name || '')) || /\bwu\b|吳|吴/i.test(String(fac || ''));
+  }
 
   // Elige el guion según el CONJUNTO de un enviado (Fei Yi, Chen Qun…) y el contexto.
   function guion(set, invitado, esFundador, yaEscuchado) {
@@ -132,6 +168,7 @@ const HacEnviadoDialogo = (function () {
 
     if (esShu(name, facNombre)) return guion(FEI_YI, invitado, esFundador, yaEscuchado);
     if (esWei(name, facNombre)) return guion(CHEN_QUN, invitado, esFundador, yaEscuchado);
+    if (esWu(name, facNombre)) return guion(ZHAO_ZI, invitado, esFundador, yaEscuchado);
     return generico(facNombre, invitado, esFundador, yaEscuchado);
   }
 
