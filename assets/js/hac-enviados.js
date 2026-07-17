@@ -96,6 +96,20 @@ const HacEnviados = (function () {
     return desc;
   }
 
+  // Despacho automático (visión): pide al servidor que QUIZÁ mande un enviado a esta
+  // hacienda si procede (sin facción + reputación + cooldown; la lógica vive en la RPC
+  // enviado_quiza_despachar). reputacion = prestigio colectivo (HacCalc.prestigio). Si
+  // la RPC no existe aún o no toca, degrada a null sin ruido. Actualiza la caché si mandó.
+  async function quizaDespachar(haciendaId, reputacion) {
+    try {
+      const client = await sb();
+      const { data, error } = await client.rpc('enviado_quiza_despachar', { p_hac: haciendaId, p_reputacion: Math.round(Number(reputacion) || 0) });
+      if (error) throw error;
+      if (data) { ok = true; const desc = rowToDesc(data); cache[haciendaId] = desc; return desc; }
+      return null;
+    } catch (e) { return null; }   // RPC/tabla ausente o sin candidatos → feature en preparación
+  }
+
   // El FUNDADOR despide al enviado (→ concluido). Devuelve null (ya no activo).
   async function concluir(haciendaId, pj) {
     const client = await sb();
@@ -105,7 +119,7 @@ const HacEnviados = (function () {
     return null;
   }
 
-  return { ready, reload, activo, dbOk, seed, invitar, concluir, TABLE };
+  return { ready, reload, activo, dbOk, seed, invitar, concluir, quizaDespachar, TABLE };
 })();
 
 if (typeof window !== 'undefined') window.HacEnviados = HacEnviados;

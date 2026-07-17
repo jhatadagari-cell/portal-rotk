@@ -132,3 +132,75 @@ grant execute on function public.enviado_concluir(text, text) to authenticated;
 --   -- comprobar / retirar:
 --   select * from public.enviados;
 --   -- update public.enviados set estado = 'concluido' where hacienda_id = 'sima';  -- retirar
+
+
+-- ════════════════════════════════════════════════════════════════════════
+-- DESPACHO AUTOMÁTICO (visión): cada cierto tiempo, una hacienda SIN FACCIÓN
+-- con CIERTA REPUTACIÓN recibe un enviado de uno de los tres reinos (Wu/Shu/Wei).
+-- ────────────────────────────────────────────────────────────────────────
+-- Estado: MODELO DE DATOS + mecanismo LISTOS; las CIFRAS son provisionales
+-- (marcadas «TBD — ajustar»). No se dispara nada hasta que existan facciones de
+-- reino (`reino = true`) con personajes asignados.
+-- ════════════════════════════════════════════════════════════════════════
+
+-- ── Marca de «reino» en las facciones ───────────────────────────────────────
+-- Sólo las facciones marcadas `reino = true` despachan enviados. Así el reino de
+-- un enviado sale de SU personaje (personajes.faccion), sin acoplar por nombre/zh.
+alter table public.facciones
+  add column if not exists reino boolean not null default false;
+
+-- Sembrado de los tres reinos (idempotente por nombre; colores de la enciclopedia).
+-- Ejecuta una vez; si ya los creaste en admin, basta el UPDATE de `reino`.
+insert into public.facciones (nombre, zh, color, orden, reino)
+select v.nombre, v.zh, v.color, v.orden, true
+from (values ('Wei', '魏', '#1e5abf', 1),
+             ('Shu', '蜀', '#1e8a2e', 2),
+             ('Wu',  '吳', '#bf2020', 3)) as v(nombre, zh, color, orden)
+where not exists (select 1 from public.facciones f where f.nombre = v.nombre);
+
+update public.facciones set reino = true where nombre in ('Wei', 'Shu', 'Wu');
+
+-- ── RPC · quizá despachar un enviado a esta hacienda ────────────────────────
+-- La llama el CLIENTE al abrir la finca, pasando su reputación (prestigio
+-- colectivo, HacCalc.prestigio). SECURITY DEFINER: inserta saltándose la RLS
+-- admin, pero SOLO si se cumplen TODAS las condiciones. Idempotente y barato:
+-- el propio cooldown + el índice «1 activo por hacienda» evitan spam.
+--
+-- p_reputacion se pasa desde el cliente (provisional; cuando la reputación viva
+-- en DB se calculará aquí). Devuelve el enviado nuevo (jsonb) o NULL si no toca.
+create or replace function public.enviado_quiza_despachar(p_hac text, p_reputacion int)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare
+  MIN_REPUTACION constant int      := 100;              -- TBD — ajustar con el usuario
+  INTERVALO      constant interval := interval '3 days'; -- TBD — cada cuánto puede llegar uno
+  h record; pj_id uuid; e record;
+begin
+  select * into h from public.haciendas where id = p_hac;
+  if not found then return null; end if;
+
+  -- (1) La hacienda NO debe pertenecer a ninguna facción.
+  if coalesce(nullif(h.mapa ->> 'faccion', ''), null) is not null then return null; end if;
+  -- (2) Reputación mínima.
+  if coalesce(p_reputacion, 0) < MIN_REPUTACION then return null; end if;
+  -- (3) No debe haber ya un enviado activo.
+  if exists (select 1 from public.enviados where hacienda_id = p_hac and estado <> 'concluido') then return null; end if;
+  -- (4) Cooldown: nada de otro enviado si hubo uno hace menos de INTERVALO.
+  if exists (select 1 from public.enviados where hacienda_id = p_hac and created_at > now() - INTERVALO) then return null; end if;
+
+  -- (5) Elige un personaje de un reino que no sea ya enviado activo en otra hacienda.
+  select p.id into pj_id
+  from public.personajes p
+  join public.facciones f on f.id = p.faccion and f.reino
+  where not exists (select 1 from public.enviados en where en.personaje_id = p.id and en.estado <> 'concluido')
+  order by random() limit 1;
+  if pj_id is null then return null; end if;   -- aún no hay personajes de reino → no despacha
+
+  insert into public.enviados (hacienda_id, personaje_id, estado)
+  values (p_hac, pj_id, 'esperando')
+  on conflict do nothing;
+
+  select * into e from public.enviados where hacienda_id = p_hac and estado = 'esperando' limit 1;
+  return to_jsonb(e);
+end $$;
+
+grant execute on function public.enviado_quiza_despachar(text, int) to authenticated;

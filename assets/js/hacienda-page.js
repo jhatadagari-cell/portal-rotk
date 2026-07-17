@@ -5888,7 +5888,14 @@
       } catch (e) {} };
       const persReady = (window.HacPersonajes && HacPersonajes.ready) ? HacPersonajes.ready() : Promise.resolve();
       const facReady = (window.HacFacciones && HacFacciones.ready) ? HacFacciones.ready() : Promise.resolve();
-      Promise.all([HacEnviados.ready(h.id), persReady, facReady]).then(applyEnviado).catch(applyEnviado);
+      Promise.all([HacEnviados.ready(h.id), persReady, facReady]).then(() => {
+        // Despacho automático (visión): si no hay enviado y la hacienda no tiene facción
+        // y reúne reputación, el servidor quizá mande uno de Wu/Shu/Wei. Degrada a nada
+        // si la RPC no está aplicada aún. Reputación = prestigio colectivo.
+        if (HacEnviados.activo(h.id) || !HacEnviados.quizaDespachar) return null;
+        const rep = (window.HacCalc && HacCalc.prestigio) ? (HacCalc.prestigio(h) || 0) : 0;
+        return HacEnviados.quizaDespachar(h.id, rep);
+      }).then(applyEnviado).catch(applyEnviado);
     }
     const escPulse = () => { syncEscaramuzaOrder(); resolverEscaramuzaSiToca(); autoClaimBotinSiToca(); logEscaramuzaResultado(); procesarRelacionesSiToca(); notifyRelacionesNuevas(); syncEscaramuzaFolk(); escRefresh(); };
     if (window.HacBitacora) HacBitacora.ready();

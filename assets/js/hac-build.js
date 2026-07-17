@@ -521,6 +521,10 @@ const HacBuild = (function () {
     // Tema visual de la hacienda (arte a mano por reino, p.ej. 'wei'). Carga sprites
     // de assets/img/iso/<tema>/. Se guarda en el mapa (jsonb) — sin migración.
     if (mapa && mapa.tema) out.tema = String(mapa.tema).toLowerCase();
+    // Facción (reino) a la que PERTENECE la hacienda: id de `facciones` designado por
+    // el admin. AUSENTE/vacío = «sin facción» → elegible para recibir enviados de los
+    // tres reinos (Wu/Shu/Wei). Vive en el mapa (jsonb), sin migración de la tabla.
+    if (mapa && mapa.faccion) out.faccion = String(mapa.faccion);
     // Fundador (líder) de la casa: id de miembro designado por el admin. Se guarda
     // en el mapa (jsonb) para no requerir migración de la tabla. (Sin esto, la
     // normalización lo descartaba y el selector volvía a «sin fundador».)
