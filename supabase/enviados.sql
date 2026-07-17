@@ -202,7 +202,7 @@ returns jsonb language plpgsql security definer set search_path = public as $$
 declare
   MIN_REPUTACION constant int      := 100;              -- TBD — ajustar con el usuario
   INTERVALO      constant interval := interval '3 days'; -- TBD — cada cuánto puede llegar uno
-  h record; pj_id uuid; e record;
+  h record; pj_id uuid; e record; last_fac uuid;
 begin
   select * into h from public.haciendas where id = p_hac;
   if not found then return null; end if;
@@ -216,12 +216,28 @@ begin
   -- (4) Cooldown: nada de otro enviado si hubo uno hace menos de INTERVALO.
   if exists (select 1 from public.enviados where hacienda_id = p_hac and created_at > now() - INTERVALO) then return null; end if;
 
-  -- (5) Elige un personaje de un reino que no sea ya enviado activo en otra hacienda.
+  -- (5) Los reinos SE TURNAN: evita repetir el reino del último enviado a esta casa,
+  -- para que vayan viniendo de Wu, Shu y Wei y no dos veces seguidas el mismo.
+  select p.faccion into last_fac
+  from public.enviados en join public.personajes p on p.id = en.personaje_id
+  where en.hacienda_id = p_hac
+  order by en.created_at desc limit 1;
+
+  -- Personaje de un reino DISTINTO al último, que no sea ya enviado activo en otra casa.
   select p.id into pj_id
   from public.personajes p
   join public.facciones f on f.id = p.faccion and f.reino
-  where not exists (select 1 from public.enviados en where en.personaje_id = p.id and en.estado <> 'concluido')
+  where (last_fac is null or p.faccion <> last_fac)
+    and not exists (select 1 from public.enviados en where en.personaje_id = p.id and en.estado <> 'concluido')
   order by random() limit 1;
+  -- Si no queda otro reino disponible, permite repetir (mejor uno que ninguno).
+  if pj_id is null then
+    select p.id into pj_id
+    from public.personajes p
+    join public.facciones f on f.id = p.faccion and f.reino
+    where not exists (select 1 from public.enviados en where en.personaje_id = p.id and en.estado <> 'concluido')
+    order by random() limit 1;
+  end if;
   if pj_id is null then return null; end if;   -- aún no hay personajes de reino → no despacha
 
   insert into public.enviados (hacienda_id, personaje_id, estado)
