@@ -482,7 +482,9 @@ const HacFolk = (function () {
   function syncEnviado() {
     if (!wk) return;
     const i = walkers.findIndex(w => w.visitante);
-    if (!enviadoDesc || !enviadoDesc.id) { if (i >= 0) walkers.splice(i, 1); return; }
+    // Si ya no hay enviado activo, quita su walker — SALVO que se esté DESPIDIENDO
+    // (camina de vuelta a su hacienda): déjalo terminar la salida y ya se autoquita.
+    if (!enviadoDesc || !enviadoDesc.id) { if (i >= 0 && walkers[i].state !== 'visita-sale' && walkers[i].state !== 'visita-ido') walkers.splice(i, 1); return; }
     if (i < 0) { const v = makeVisitor(enviadoDesc); if (v) walkers.push(v); return; }
     const cur = walkers[i];
     if (cur.id !== enviadoDesc.id) { const v = makeVisitor(enviadoDesc); if (v) walkers[i] = v; return; }
@@ -529,6 +531,20 @@ const HacFolk = (function () {
     w.path = wps; w.state = 'visita-entra'; w.moving = false;
   }
 
+  // DESPEDIDA: el enviado deja la finca ANDANDO — camina hasta el vano, cruza el
+  // portón sur y se aleja al campo (rumbo a su hacienda). Al llegar lejos, 'visita-ido'
+  // (el sim lo autoquita). Waypoints a mano fuera de la rejilla (como la expedición).
+  function startEnvoyLeave(w) {
+    w.bowing = false; w.speech = '抱拳'; w.speechT = 2.4; w.dodging = false; w.dodgeTX = null; w.dodgeTY = null;
+    const start = [Math.round(w.fx), Math.round(w.fy)];
+    const inPath = (wk.exitKey ? bfs(start, new Set([wk.exitKey])) : null) || [];
+    const wps = inPath.slice();
+    if (wk.exitCell) wps.push([wk.exitCell[0], wk.exitCell[1] + 1]);   // umbral del vano
+    if (wk.outNear) wps.push(wk.outNear);
+    if (wk.outFar) wps.push(wk.outFar);                               // se pierde al sur
+    w.path = wps.length ? wps : null; w.state = wps.length ? 'visita-sale' : 'visita-ido'; w.moving = false;
+  }
+
   // Objetivo del paseo de invitado: preferentemente el jardín; si no, un camino o
   // cualquier celda del recinto. Devuelve una clave "x,y" o null.
   function envoyStrollTarget(w) {
@@ -569,6 +585,8 @@ const HacFolk = (function () {
       if (envoyMove(w, dt, SPD_ENVOY)) { w.state = 'visita-pasea'; w.moving = false; w.wait = rng(1, 2.5); w.dir = 'SE'; }
       return;
     }
+    if (w.state === 'visita-sale') { if (envoyMove(w, dt, SPD_ENVOY)) w.state = 'visita-ido'; return; }   // despedida: camina fuera; al llegar, el sim lo quita
+    if (w.state === 'visita-ido') return;
     if (w.state === 'visita-pasea') { envoyStroll(w, dt); return; }
     if (w.state !== 'esperando') return;
 
@@ -1371,6 +1389,8 @@ const HacFolk = (function () {
 
   function step(dt) {
     const SPD = 1.1;
+    // El enviado que se despidió ya llegó al campo → se retira de la finca.
+    if (walkers.some(w => w.visitante && w.state === 'visita-ido')) walkers = walkers.filter(w => !(w.visitante && w.state === 'visita-ido'));
     stepCaravan(dt);
     walkers.forEach(w => {
       if (w.visitante) { visitorStep(w, dt); return; }   // enviado: lógica propia, ajeno al sim de miembros
@@ -2766,6 +2786,16 @@ const HacFolk = (function () {
     if (!running) { paint(); pushState(); }
   }
   function esVisitante(id) { const w = walkers.find(x => x.id === id); return !!(w && w.visitante); }
+  // Despide al enviado: en vez de quitarlo de golpe, lo hace SALIR ANDANDO por el
+  // portón sur rumbo a su hacienda; al perderse de vista, el sim lo retira. Si no
+  // hay walker (o no hay ruta), degrada a quitarlo directamente.
+  function despedirEnviado() {
+    const w = walkers.find(x => x.visitante);
+    enviadoDesc = null;                       // visita concluida (estado compartido)
+    if (!w) { syncEnviado(); if (!running) paint(); return; }
+    startEnvoyLeave(w);
+    if (!running) paint();
+  }
   // Aptitud + aspecto del enviado activo (para dibujar su busto en la ventana de charla).
   function enviadoAspecto() { const w = walkers.find(x => x.visitante); return w ? { aptitud: w.aptitud || '', aspecto: w.aspecto || null, nombre: w.name || '', cortesia: w.cortesia || (w.aspecto && w.aspecto.cortesia) || '' } : null; }
   // Revela (o no) el nombre del enviado SOLO para este cliente: el pendón pasa de
@@ -2776,6 +2806,6 @@ const HacFolk = (function () {
     if (!running) paint();
   }
 
-  return { start, stop, list, select, selected, position, buildings, buildingTypes, setOrders, setEscaramuzas, setDebate, setHighlight, setCaballos, drawAvatar, goHome, consultar, consultando, dejarConsulta, mainBuildingId, repaintOverlay, refreshCargos, setCaravan, caravanHit, caravanActiva: () => !!caravan, setEnviado, esVisitante, revelarEnviado, enviadoAspecto };
+  return { start, stop, list, select, selected, position, buildings, buildingTypes, setOrders, setEscaramuzas, setDebate, setHighlight, setCaballos, drawAvatar, goHome, consultar, consultando, dejarConsulta, mainBuildingId, repaintOverlay, refreshCargos, setCaravan, caravanHit, caravanActiva: () => !!caravan, setEnviado, esVisitante, revelarEnviado, enviadoAspecto, despedirEnviado };
 })();
 if (typeof window !== 'undefined') window.HacFolk = HacFolk;

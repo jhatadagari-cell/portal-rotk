@@ -4123,8 +4123,12 @@
         efw.disabled = true;
         try {
           await HacEnviados.concluir(h.id, myId);
-          if (window.HacFolk && HacFolk.setEnviado) HacFolk.setEnviado(null);
-          toast('El enviado se ha despedido con una reverencia');
+          if (window.HacEnviadoVista) HacEnviadoVista.cerrar();
+          // Se marcha ANDANDO por el portón sur, de vuelta a su hacienda (no desaparece).
+          if (window.HacFolk && HacFolk.despedirEnviado) HacFolk.despedirEnviado();
+          else if (window.HacFolk && HacFolk.setEnviado) HacFolk.setEnviado(null);
+          const facNm = (d.it.faccion && (d.it.faccion.nombre || d.it.faccion.zh)) || 'su hacienda';
+          toast('El enviado se despide con una reverencia y parte de regreso a ' + facNm);
           deselect();
         } catch (e) { toast('No se pudo despedir: ' + (e && e.message || '')); efw.disabled = false; }
       });
