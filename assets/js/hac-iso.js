@@ -909,7 +909,10 @@ const HacIso = (function () {
     // Cada objeto lleva su caja [x0,y0,x1,y1]. A se pinta antes (detrás) si está
     // separada hacia el NO de B en algún eje; si se solapan, desempata por la
     // esquina delantera. Resuelve el caso «muro tras un edificio que tiene delante».
-    const drawList = wallSegs.slice();
+    // Los muros/portones perimetrales se marcan (`wall:true`) para que la
+    // recomposición por frame garantice su oclusión sobre los actores que tienen
+    // DETRÁS (evita que un mecenas «se cuele» por delante de la torre-puerta).
+    const drawList = wallSegs.map(s => { s.wall = true; return s; });
     lista.filter(c => !isFlat(c) && c.tipo !== 'muralla').forEach(c => {
       const f = fp(c), x0 = c.pos[0], y0 = c.pos[1];
       // srect = rectángulo de PANTALLA (device) que ocupa el sprite. Sirve para que
@@ -1170,6 +1173,12 @@ const HacIso = (function () {
       acts.forEach(a => {
         let idx = 0;
         for (let i = 0; i < render.length; i++) { if (!actorBehind(a.fx, a.fy, render[i].obox || render[i].box)) idx = i + 1; }
+        // Corrección para MUROS/PORTÓN: si el actor está genuinamente DETRÁS de un
+        // muro perimetral, debe pintarse ANTES que él (que lo oculte), aunque la
+        // no-transitividad del orden lo hubiera colado por delante. Solo afecta al
+        // que está detrás (al norte): el que SALE queda al sur (actorBehind=false),
+        // así que NO se reintroduce el «borrado bajo la muralla» al cruzar el portón.
+        for (let i = 0; i < idx; i++) { const d = render[i]; if (d.wall && actorBehind(a.fx, a.fy, d.obox || d.box)) { idx = i; break; } }
         render.splice(idx, 0, a);
         if (typeof window !== 'undefined' && window.HAC_DEBUG_OCC) window.__occ = { fx: a.fx, fy: a.fy, idx, list: render.map(d => d === a ? 'ACTOR' : (d.box || []).join(',')) };
       });
