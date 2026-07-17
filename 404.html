@@ -3,6 +3,21 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>
+  /* El 404 puede servirse en CUALQUIER ruta inexistente y bajo subruta de proyecto
+     (GitHub Pages: /portal-rotk/…). Fijamos <base> a la RAÍZ del sitio para que TODO
+     lo relativo (estilos, chrome.js, botones) resuelva bien, sin importar la
+     profundidad de la URL rota. Antes se usaban rutas '/…' absolutas → apuntaban al
+     dominio raíz y "Volver al portal" no volvía. En dominio propio en la raíz, base='/'. */
+  (function () {
+    var parts = location.pathname.split('/').filter(Boolean);
+    var base = '/';
+    if (/\.github\.io$/i.test(location.hostname) && parts.length) base = '/' + parts[0] + '/';
+    var b = document.createElement('base');
+    b.href = location.origin + base;
+    document.head.appendChild(b);
+  })();
+</script>
 <title>404 · Te has perdido en el caos del Han</title>
 <meta name="description" content="Esta página no existe en el portal de los Tres Reinos. Vuelve al índice, al mapa o consulta el listado de personajes.">
 <meta name="robots" content="noindex">
@@ -28,8 +43,8 @@
 
 
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700;900&family=Cinzel+Decorative:wght@400;700&family=IM+Fell+English:ital@0;1&family=Noto+Sans+SC:wght@300;400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/assets/css/chrome.css?v=2">
-<link rel="stylesheet" href="/assets/css/main.css">
+<link rel="stylesheet" href="assets/css/chrome.css?v=4">
+<link rel="stylesheet" href="assets/css/main.css">
 <style>
   /* Variables y body inline — garantiza el look oscuro aunque main.css no cargue (file:// o ruta rota) */
   :root{
@@ -114,14 +129,14 @@
     <p class="e404-en">Te has perdido en el caos del Han</p>
     <p class="e404-desc">Esta ruta no existe en el portal, o quizás <em>nunca existió</em>. Las dinastías caen y los caminos cambian — pero el portal sigue en pie.</p>
     <div class="e404-btns">
-      <a class="e404-btn e404-btn-pri" href="/">Volver al portal</a>
-      <a class="e404-btn e404-btn-sec" href="/assets/mapa.html">Mapa Interactivo</a>
+      <a class="e404-btn e404-btn-pri" href="index.html">Volver al portal</a>
+      <a class="e404-btn e404-btn-sec" href="assets/mapa.html">Mapa Interactivo</a>
     </div>
   </div>
 </main>
 
 <div id="chrome-footer"></div>
 
-<script src="/assets/js/chrome.js"></script>
+<script src="assets/js/chrome.js"></script>
 </body>
 </html>
