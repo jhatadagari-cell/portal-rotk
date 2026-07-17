@@ -3521,9 +3521,15 @@
     // a pasar» / «Despedir» (solo el FUNDADOR, vía RPC): cambia el estado
     // compartido de la visita. envoyTalk lleva por dónde va el diálogo abierto.
     let envoyTalk = { id: null, i: 0 };
+    // Conocidos: qué enviados te han revelado ya su nombre (LOCAL por jugador,
+    // persiste en este navegador). El pendón pasa de «Visitante» a su nombre.
+    const ENVOY_KNOWN_KEY = 'hacEnvoyKnown';
+    function envoyKnownSet() { try { return new Set(JSON.parse(localStorage.getItem(ENVOY_KNOWN_KEY) || '[]')); } catch (e) { return new Set(); } }
+    function isEnvoyKnown(id) { return !!id && envoyKnownSet().has(String(id)); }
+    function markEnvoyKnown(id) { if (!id) return; const s = envoyKnownSet(); s.add(String(id)); try { localStorage.setItem(ENVOY_KNOWN_KEY, JSON.stringify([...s])); } catch (e) {} }
     function envoyLines(d) {
       return (window.HacEnviadoDialogo && HacEnviadoDialogo.lineas)
-        ? HacEnviadoDialogo.lineas({ name: d.it.name, faccion: d.it.faccion }) : [];
+        ? HacEnviadoDialogo.lineas({ name: d.it.realName || d.it.name, faccion: d.it.faccion }) : [];
     }
     function envoyHTML(d) {
       const lines = envoyLines(d);
@@ -4054,6 +4060,8 @@
       const ent = charEl.querySelector('[data-act="envoy-talk"]');
       if (ent) ent.addEventListener('click', () => {
         const lines = envoyLines(d);
+        // Primer contacto: se presenta y te revela su nombre (solo para ti).
+        if (!isEnvoyKnown(d.it.id)) { markEnvoyKnown(d.it.id); if (window.HacFolk && HacFolk.revelarEnviado) HacFolk.revelarEnviado(true); }
         if (envoyTalk.id !== d.it.id) envoyTalk = { id: d.it.id, i: 1 };
         else if (envoyTalk.i === 0) envoyTalk.i = 1;
         else if (envoyTalk.i < lines.length) envoyTalk.i++;
@@ -5874,7 +5882,12 @@
     // COMPARTIDO en `enviados`. Necesita personajes+facciones listos para resolver
     // su modelo (aptitud/aspecto/字) y el color de facción antes de plantarlo.
     if (window.HacEnviados) {
-      const applyEnviado = () => { try { if (HacFolk.setEnviado) HacFolk.setEnviado(HacEnviados.activo(h.id)); if (charId) buildCharPanel(charId); } catch (e) {} };
+      const applyEnviado = () => { try {
+        if (HacFolk.setEnviado) HacFolk.setEnviado(HacEnviados.activo(h.id));
+        const env = (HacFolk.list ? HacFolk.list() : []).find(w => w.visitante);   // ya conocido → revela su nombre
+        if (env && isEnvoyKnown(env.id) && HacFolk.revelarEnviado) HacFolk.revelarEnviado(true);
+        if (charId) buildCharPanel(charId);
+      } catch (e) {} };
       const persReady = (window.HacPersonajes && HacPersonajes.ready) ? HacPersonajes.ready() : Promise.resolve();
       const facReady = (window.HacFacciones && HacFacciones.ready) ? HacFacciones.ready() : Promise.resolve();
       Promise.all([HacEnviados.ready(h.id), persReady, facReady]).then(applyEnviado).catch(applyEnviado);

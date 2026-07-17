@@ -34,6 +34,7 @@ const HacFolk = (function () {
 
   let raf = null, iso = null, opts = null, walkers = [], wk = null, names = {}, curTier = 1;
   let enviadoDesc = null;   // descriptor del ENVIADO activo (tabla `enviados`); null = ninguno
+  let enviadoRevelado = false;   // ¿este cliente ya conoce el nombre del enviado? (local, por jugador)
   let running = false, visible = true, onScreen = true, io = null;
   let selectedId = null, stateSig = '', hailCd = 20;
   // Capa de personajes NÍTIDA: los mecenas/mercaderes/escribanos se dibujan en un
@@ -467,7 +468,7 @@ const HacFolk = (function () {
       meetWith: null, meetLead: false, meetTimer: 0, restIntent: null, phase: R.next() * 6.28,
       order: null, onMission: false, missionTimer: 0, missionEndMs: 0, missionTask: null, missionDoneFor: null,
       // marca de enviado (facNombre/facZh: fallback del badge con seed de dev sin DB)
-      visitante: true, faccionId, facNombre: desc.facNombre || (fac && fac.nombre) || '', facZh: desc.facZh || (fac && fac.zh) || '',
+      visitante: true, reveal: enviadoRevelado, faccionId, facNombre: desc.facNombre || (fac && fac.nombre) || '', facZh: desc.facZh || (fac && fac.zh) || '',
       bowCd: rng(1, 3), spot: [spot[0], spot[1]]
     };
   }
@@ -547,14 +548,25 @@ const HacFolk = (function () {
       return;   // mientras se mueve, ni reverencia ni saludo
     }
     w.moving = false;
-    if (!w.dodging && !w.bowing) w.dir = 'SE';
 
-    // En su sitio y sin intrusos pegados: reverencia 抱拳 cortés a quien pase cerca.
-    if (!w.dodging && w.bowCd <= 0 && !w.bowing && near && nd < 9) {
-      const fd = faceFromGrid(near.fx - w.fx, near.fy - w.fy); if (fd) w.dir = fd;
-      w.bowing = true; w.bowTimer = rng(1.4, 2.0); w.speech = envoyGreet(); w.speechT = 2.6; w.bowCd = rng(5, 9);
+    // VIDA AMBIENTAL (no ser un pasmarote aunque no pase nadie): mira alrededor y,
+    // de vez en cuando, hace una reverencia 抱拳 cortés al aire. Si alguien pasa
+    // cerca (radio mayor), le dedica el saludo a él.
+    w.idleLook = (w.idleLook != null ? w.idleLook : rng(1, 3)) - dt;
+    w.idleBow = (w.idleBow != null ? w.idleBow : rng(6, 12)) - dt;
+    if (!w.dodging && !w.bowing && w.bowCd <= 0) {
+      if (near && nd < 16) {                         // ~4 celdas: saluda a quien pase
+        const fd = faceFromGrid(near.fx - w.fx, near.fy - w.fy); if (fd) w.dir = fd;
+        w.bowing = true; w.bowTimer = rng(1.4, 2.0); w.speech = envoyGreet(); w.speechT = 2.6; w.bowCd = rng(5, 9);
+      } else if (w.idleBow <= 0) {                   // reverencia ambiental (solo)
+        w.dir = 'SE'; w.bowing = true; w.bowTimer = rng(1.2, 1.8); w.speech = null; w.bowCd = rng(4, 7); w.idleBow = rng(10, 18);
+      }
     }
-    if (w.bowing) { w.bowTimer -= dt; if (w.bowTimer <= 0) { w.bowing = false; w.dir = 'SE'; } }
+    // Girar la cabeza/cuerpo de tanto en tanto para dar sensación de espera atenta.
+    if (!w.bowing && !w.dodging && w.idleLook <= 0) {
+      const dirs = ['SE', 'S', 'SW', 'E']; w.dir = dirs[rnd(dirs.length)]; w.idleLook = rng(2.2, 4.5);
+    }
+    if (w.bowing) { w.bowTimer -= dt; if (w.bowTimer <= 0) { w.bowing = false; w.idleLook = rng(1.5, 3); } }
   }
 
   // Elige un edificio a visitar, sesgado por el DOMINIO del mecenas (militar va
@@ -1995,15 +2007,18 @@ const HacFolk = (function () {
     document.fonts.ready.then(rebakeBanners).catch(function () {});
     if (document.fonts.addEventListener) document.fonts.addEventListener('loadingdone', rebakeBanners);
   }
+  // Etiqueta del pendón: un ENVIADO sin revelar aparece como «Visitante» (su
+  // nombre se descubre HABLANDO con él, y entonces se actualiza solo para ti).
+  function bannerLabel(w) { return (w.visitante && !w.reveal) ? 'Visitante' : String(w.name || ''); }
   function bannerKey(w, hot) {
     // Solo el NOMBRE: el rango se lee por el ESTILO del pendón (RANK_STYLE), no por iconos.
-    return String(w.name || '').slice(0, 16) + '|' + (Number(w.cargoTier) || 0) + '|' + (hot ? 1 : 0) + '|' + (w.npc ? 'n' : '');
+    return bannerLabel(w).slice(0, 16) + '|' + (Number(w.cargoTier) || 0) + '|' + (hot ? 1 : 0) + '|' + (w.npc ? 'n' : '');
   }
   function bannerSprite(w, hot) {
     const key = bannerKey(w, hot);
     let s = bannerCache.get(key);
     if (s) return s;
-    const label = String(w.name || '').slice(0, 16);
+    const label = bannerLabel(w).slice(0, 16);
     const lvl = Math.max(0, Math.min(6, Number(w.cargoTier) || 0));
     if (!bannerMeasure) bannerMeasure = document.createElement('canvas').getContext('2d');
     bannerMeasure.font = '700 8px "Noto Serif SC","Noto Sans SC",sans-serif';
@@ -2027,7 +2042,7 @@ const HacFolk = (function () {
   }
 
   function paintBannerInto(g, cx, topY, w, hot) {
-    const label = String(w.name || '').slice(0, 16);   // solo el nombre (sin iconos): banner limpio
+    const label = bannerLabel(w).slice(0, 16);   // solo el nombre (sin iconos): banner limpio
     const lvl = Math.max(0, Math.min(6, Number(w.cargoTier) || 0));
     const S = RANK_STYLE[lvl];
     g.font = '700 8px "Noto Serif SC","Noto Sans SC",sans-serif';
@@ -2571,9 +2586,12 @@ const HacFolk = (function () {
       const facId = (pjx && pjx.faccion) || w.faccionId || null;
       let fac = (facId && window.HacFacciones && HacFacciones.get) ? HacFacciones.get(facId) : null;
       if (!fac && w.facNombre) fac = { nombre: w.facNombre, zh: w.facZh || '', color: w.color };
-      const cortesia = w.cortesia || (pjx && pjx.aspecto && pjx.aspecto.cortesia) || '';
-      return { id: w.id, name: w.name, color: w.color, inside, activity: activityText(w),
-        onMission: !!w.onMission, misEnTarea: enTarea, fuera, cortesia, faccion: fac, visitante: !!w.visitante,
+      // Enviado sin revelar: se muestra como «Visitante» y sin 字 (se descubre al hablar).
+      const oculto = !!w.visitante && !w.reveal;
+      const cortesia = oculto ? '' : (w.cortesia || (pjx && pjx.aspecto && pjx.aspecto.cortesia) || '');
+      return { id: w.id, name: oculto ? 'Visitante' : w.name, realName: w.name, color: w.color, inside, activity: activityText(w),
+        onMission: !!w.onMission, misEnTarea: enTarea, fuera, cortesia, faccion: fac, visitante: !!w.visitante, reveal: !!w.reveal,
+        dir: w.dir, bowing: !!w.bowing,
         misRestante: enTarea ? Math.max(0, Math.ceil(w.taskTimer)) : (fuera ? Math.max(0, Math.ceil(w.outTimer)) : null) };
     });
   }
@@ -2658,7 +2676,14 @@ const HacFolk = (function () {
     if (!running) { paint(); pushState(); }
   }
   function esVisitante(id) { const w = walkers.find(x => x.id === id); return !!(w && w.visitante); }
+  // Revela (o no) el nombre del enviado SOLO para este cliente: el pendón pasa de
+  // «Visitante» a su nombre. Persiste en enviadoRevelado para re-spawns.
+  function revelarEnviado(v) {
+    enviadoRevelado = (v !== false);
+    const w = walkers.find(x => x.visitante); if (w) w.reveal = enviadoRevelado;
+    if (!running) paint();
+  }
 
-  return { start, stop, list, select, selected, position, buildings, buildingTypes, setOrders, setEscaramuzas, setDebate, setHighlight, setCaballos, drawAvatar, goHome, consultar, consultando, dejarConsulta, mainBuildingId, repaintOverlay, refreshCargos, setCaravan, caravanHit, caravanActiva: () => !!caravan, setEnviado, esVisitante };
+  return { start, stop, list, select, selected, position, buildings, buildingTypes, setOrders, setEscaramuzas, setDebate, setHighlight, setCaballos, drawAvatar, goHome, consultar, consultando, dejarConsulta, mainBuildingId, repaintOverlay, refreshCargos, setCaravan, caravanHit, caravanActiva: () => !!caravan, setEnviado, esVisitante, revelarEnviado };
 })();
 if (typeof window !== 'undefined') window.HacFolk = HacFolk;
