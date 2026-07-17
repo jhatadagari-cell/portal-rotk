@@ -3517,10 +3517,9 @@
       return { it, aptId, aptDef, cargo, e, eFull, eRegenMin, activa, enTarea, fuera, exped, escaramuza, rest, mine: id === myId, puntos: puntosTotales(id), earned, money, home, ahorro, stats, equipN, heridas, secuelas };
     }
     // ── ENVIADO: bloque de acciones en su panel ────────────────────────────
-    // «Hablar» (cualquiera): avanza su guion de flavor línea a línea. «Invitarlo
-    // a pasar» / «Despedir» (solo el FUNDADOR, vía RPC): cambia el estado
-    // compartido de la visita. envoyTalk lleva por dónde va el diálogo abierto.
-    let envoyTalk = { id: null, i: 0 };
+    // «Hablar» (cualquiera): abre la VENTANA de conversación (HacEnviadoVista).
+    // «Invitarlo a pasar» / «Despedir» (solo el FUNDADOR, vía RPC): cambia el
+    // estado compartido de la visita.
     // Conocidos: qué enviados te han revelado ya su nombre (LOCAL por jugador,
     // persiste en este navegador). El pendón pasa de «Visitante» a su nombre.
     const ENVOY_KNOWN_KEY = 'hacEnvoyKnown';
@@ -3532,16 +3531,12 @@
         ? HacEnviadoDialogo.lineas({ name: d.it.realName || d.it.name, faccion: d.it.faccion }) : [];
     }
     function envoyHTML(d) {
-      const lines = envoyLines(d);
-      const talking = envoyTalk.id === d.it.id && envoyTalk.i > 0;
-      const line = talking ? lines[Math.min(envoyTalk.i, lines.length) - 1] : '';
-      const more = talking && envoyTalk.i < lines.length;
+      // «Hablar» abre la VENTANA de conversación (retrato parlante); ya no rellena el
+      // panel línea a línea. Invitar/Despedir siguen siendo acciones del FUNDADOR.
       const est = (window.HacEnviados ? (HacEnviados.activo(h.id) || {}) : {}).estado || 'esperando';
       const fund = esFundador();
       let s = '<div class="hacp-cp-envoy">';
-      if (talking && line) s += `<div class="hacp-env-say">${esc(line)}</div>`;
-      const talkLbl = !talking ? '🗣 Hablar con el enviado' : (more ? 'Seguir ▸' : 'Terminar');
-      s += `<button type="button" class="hacp-cp-btn hacp-env-talk" data-act="envoy-talk">${talkLbl}</button>`;
+      s += `<button type="button" class="hacp-cp-btn hacp-env-talk" data-act="envoy-talk">🗣 Hablar con el enviado</button>`;
       if (fund && est === 'esperando') s += `<button type="button" class="hacp-cp-btn hacp-cp-go" data-act="envoy-invite">Invitarlo a pasar a la hacienda</button>`;
       if (fund && est === 'visita') s += `<button type="button" class="hacp-cp-btn hacp-env-farewell" data-act="envoy-farewell">Despedir al enviado</button>`;
       s += '</div>';
@@ -4059,14 +4054,17 @@
       // ── ENVIADO: hablar (flavor) / invitar / despedir ──────────────────────
       const ent = charEl.querySelector('[data-act="envoy-talk"]');
       if (ent) ent.addEventListener('click', () => {
-        const lines = envoyLines(d);
-        // Primer contacto: se presenta y te revela su nombre (solo para ti).
-        if (!isEnvoyKnown(d.it.id)) { markEnvoyKnown(d.it.id); if (window.HacFolk && HacFolk.revelarEnviado) HacFolk.revelarEnviado(true); }
-        if (envoyTalk.id !== d.it.id) envoyTalk = { id: d.it.id, i: 1 };
-        else if (envoyTalk.i === 0) envoyTalk.i = 1;
-        else if (envoyTalk.i < lines.length) envoyTalk.i++;
-        else envoyTalk = { id: null, i: 0 };   // «Terminar» → cierra el diálogo
-        buildCharPanel(charId);
+        if (!window.HacEnviadoVista) return;
+        const asp = (window.HacFolk && HacFolk.enviadoAspecto) ? (HacFolk.enviadoAspecto() || {}) : {};
+        HacEnviadoVista.abrir({
+          aptitud: asp.aptitud || '', aspecto: asp.aspecto || null,
+          faccion: d.it.faccion || null,
+          nombre: asp.nombre || d.it.realName || d.it.name, cortesia: asp.cortesia || d.it.cortesia || '',
+          lineas: envoyLines(d),
+          // Primer contacto: se presenta y te revela su nombre (solo para ti). El pendón
+          // del mundo pasa de «Visitante» a su nombre; se refresca el panel al cerrar.
+          onReveal: () => { if (!isEnvoyKnown(d.it.id)) { markEnvoyKnown(d.it.id); if (window.HacFolk && HacFolk.revelarEnviado) HacFolk.revelarEnviado(true); buildCharPanel(charId); } }
+        });
       });
       const eiv = charEl.querySelector('[data-act="envoy-invite"]');
       if (eiv) eiv.addEventListener('click', async () => {
@@ -4075,8 +4073,8 @@
         try {
           await HacEnviados.invitar(h.id, myId);
           if (window.HacFolk && HacFolk.setEnviado) HacFolk.setEnviado(HacEnviados.activo(h.id));
+          if (window.HacEnviadoVista) HacEnviadoVista.cerrar();
           toast('Has recibido al enviado en tu hacienda');
-          envoyTalk = { id: null, i: 0 };
           buildCharPanel(charId);
         } catch (e) { toast('No se pudo invitar: ' + (e && e.message || '')); eiv.disabled = false; }
       });

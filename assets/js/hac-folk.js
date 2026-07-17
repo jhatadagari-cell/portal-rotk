@@ -454,15 +454,18 @@ const HacFolk = (function () {
     const base = wk.outNear || wk.exitCell || wk.cells[0];
     const spot = [base[0] - 1.3, base[1]];
     const invitado = desc.estado === 'visita';
+    // Si YA viene invitado (carga en frío: otro jugador lo hizo pasar antes), aparece
+    // DENTRO paseando; el cruce andando del portón solo se anima en la invitación en vivo.
+    const startCell = (invitado && wk.exitCell) ? wk.exitCell : spot;
     return {
       id: desc.id, name, color, aptitud, aspecto, npc: true,
       cortesia: (aspecto && aspecto.cortesia) || desc.cortesia || '', atuendo: (aspecto && aspecto.atuendo) || '',
       talla: (aspecto && Number(aspecto.talla)) || (aspecto && aspecto.atuendo === 'general' ? 1.10 : 1),
       basePuntos: 0, cargoIcon: '', cargoNombre: '', cargoTier: 0, rankIdx: -1,
       aptIcon: aptDef ? (aptDef.icon || '') : '', dominios: aptDef ? (aptDef.dominios || []) : [],
-      fx: spot[0], fy: spot[1], tx: spot[0], ty: spot[1], moving: false, dir: 'SE',
-      state: invitado ? 'visita-guiada' : 'esperando', path: null, goalBid: null, insideId: null, task: null,
-      homeBid: null, home: null, taskTimer: 0, strollTimer: 0, wait: 0,
+      fx: startCell[0], fy: startCell[1], tx: startCell[0], ty: startCell[1], moving: false, dir: 'SE',
+      state: invitado ? 'visita-pasea' : 'esperando', path: null, goalBid: null, insideId: null, task: null,
+      homeBid: null, home: null, taskTimer: 0, strollTimer: 0, wait: null,
       idleTimer: 0, gardenCd: 0, socialCd: 0, chatWith: null, chatLead: false, chatRole: null,
       bowing: false, bowTimer: 0, convo: null, convoIdx: 0, turnTimer: 0, speech: null, speechT: 0,
       meetWith: null, meetLead: false, meetTimer: 0, restIntent: null, phase: R.next() * 6.28,
@@ -484,27 +487,90 @@ const HacFolk = (function () {
     const cur = walkers[i];
     if (cur.id !== enviadoDesc.id) { const v = makeVisitor(enviadoDesc); if (v) walkers[i] = v; return; }
     const invitado = enviadoDesc.estado === 'visita';
+    const dentro = ['visita-entra', 'visita-pasea'].indexOf(cur.state) >= 0;
     if (invitado && cur.state === 'esperando') {
-      // Invitado a pasar: entra justo tras el vano del portón. El paseo guiado
-      // con el fundador (jardines, calles) es Fase 3; por ahora aguarda dentro.
-      cur.state = 'visita-guiada'; cur.bowing = false; cur.speech = null; cur.path = null; cur.dir = 'SE';
-      const inside = wk.exitCell || cur.spot;
-      cur.fx = inside[0]; cur.fy = inside[1]; cur.tx = inside[0]; cur.ty = inside[1];
-    } else if (!invitado && cur.state === 'visita-guiada') {
+      startEnvoyEntry(cur);   // invitación EN VIVO: cruza el portón andando y se pone a pasear
+    } else if (!invitado && dentro) {
+      // Se le retira la invitación (p.ej. dev toggle): vuelve a su puesto ante el vano.
       cur.state = 'esperando'; cur.path = null; cur.bowing = false; cur.dir = 'SE';
+      cur.dodgeTX = null; cur.dodgeTY = null; cur.paceReturn = false;
       cur.fx = cur.spot[0]; cur.fy = cur.spot[1]; cur.tx = cur.spot[0]; cur.ty = cur.spot[1];
     }
   }
 
-  // Tick del enviado. 'esperando': parado; se gira y hace una reverencia con una
-  // palabra cortés cuando un mecenas pasa cerca (cooldown, para no spamear).
-  // 'visita-guiada': (Fase 3) paseará con el fundador; por ahora aguarda cortés.
+  // ── Movimiento del enviado (independiente del sim de miembros) ──────────────
+  const SPD_ENVOY = 1.0;   // ritmo tranquilo y digno
+
+  // Mover simple a lo largo de w.path SIN pasar por onPathDone (que asume mecenas
+  // con cargo/misiones). Devuelve true cuando ha consumido todo el camino.
+  function envoyMove(w, dt, SPD) {
+    if (!w.moving) {
+      if (w.path && w.path.length) { const c = w.path.shift(); w.tx = c[0]; w.ty = c[1]; w.moving = true; }
+      else return true;
+    }
+    const dx = w.tx - w.fx, dy = w.ty - w.fy, d = Math.hypot(dx, dy), adv = (SPD || SPD_ENVOY) * dt;
+    const fd = faceFromGrid(dx, dy); if (fd) w.dir = fd;
+    if (d <= adv) { w.fx = w.tx; w.fy = w.ty; w.moving = false; return !(w.path && w.path.length); }
+    w.fx += dx / d * adv; w.fy += dy / d * adv; return false;
+  }
+
+  // Cruza el portón ANDANDO (esperando → visita-entra). Como el punto de espera está
+  // FUERA de la rejilla (no en wk.set), el bfs no lo alcanza: se construye a mano un
+  // par de waypoints (acercarse al vano → umbral → dentro), igual que la expedición
+  // apila outNear/outFar. Ya dentro, 'visita-pasea' toma el relevo.
+  function startEnvoyEntry(w) {
+    w.bowing = false; w.speech = null; w.dodging = false; w.dodgeTX = null; w.dodgeTY = null;
+    const inside = wk.exitCell;
+    if (!inside) { w.state = 'visita-pasea'; w.path = null; w.moving = false; w.wait = null; return; }
+    const wps = [];
+    if (wk.outNear) wps.push(wk.outNear);          // acércate al vano desde fuera
+    wps.push([inside[0], inside[1] + 1]);          // umbral
+    wps.push([inside[0], inside[1]]);              // dentro del vano
+    w.path = wps; w.state = 'visita-entra'; w.moving = false;
+  }
+
+  // Objetivo del paseo de invitado: preferentemente el jardín; si no, un camino o
+  // cualquier celda del recinto. Devuelve una clave "x,y" o null.
+  function envoyStrollTarget(w) {
+    const g = (wk.gardenCells && wk.gardenCells.length) ? wk.gardenCells : null;
+    const pool = (g && R.next() < 0.6) ? g : (wk.camCells && wk.camCells.length ? wk.camCells : wk.cells);
+    if (!pool || !pool.length) return null;
+    const c = pool[rnd(pool.length)];
+    return c[0] + ',' + c[1];
+  }
+
+  // Paseo de invitado dentro de la finca: camina a un punto (jardín/camino), hace una
+  // pausa mirando alrededor y elige otro. No entra en edificios (dominios=[]).
+  function envoyStroll(w, dt) {
+    if (w.moving || (w.path && w.path.length)) { envoyMove(w, dt, SPD_ENVOY); return; }
+    if (w.wait == null) w.wait = rng(1.5, 3.5);
+    w.wait -= dt;
+    if (w.wait > 0) {   // pausa: observa el recinto como un huésped curioso
+      w.idleLook = (w.idleLook != null ? w.idleLook : rng(2, 4)) - dt;
+      if (w.idleLook <= 0) { const dirs = ['SE', 'S', 'SW', 'E', 'NE']; w.dir = dirs[rnd(dirs.length)]; w.idleLook = rng(2.5, 5); }
+      return;
+    }
+    w.wait = rng(1.8, 4.0);
+    const target = envoyStrollTarget(w);
+    if (target) { const p = bfs([Math.round(w.fx), Math.round(w.fy)], new Set([target])); if (p && p.length) { w.path = p; w.moving = false; } }
+  }
+
+  // Tick del enviado. 'esperando': aguarda ante el portón — se gira, hace una
+  // reverencia cortés a quien pasa, se sobresalta si le rozan y da algún paseíllo
+  // para no ser un pasmarote. 'visita-entra': cruza el portón andando. 'visita-pasea':
+  // deambula por el patio/jardín como huésped invitado.
   const ENVOY_STARTLE = ['¡Oh!', '¡Uy, disculpad!', '¡Ah, perdón!'];
   function visitorStep(w, dt) {
-    w.phase += dt * 0.3;
+    w.phase += dt * (w.moving ? 8 : 0.3);   // piernas cíclando de verdad al andar; leve mecerse al parar
     if (w.speechT > 0) { w.speechT -= dt; if (w.speechT <= 0) w.speech = null; }
     if (w.bowCd > 0) w.bowCd -= dt;
-    if (w.state !== 'esperando') return;   // 'visita-guiada' (Fase 3): quieto por ahora
+
+    if (w.state === 'visita-entra') {
+      if (envoyMove(w, dt, SPD_ENVOY)) { w.state = 'visita-pasea'; w.moving = false; w.wait = rng(1, 2.5); w.dir = 'SE'; }
+      return;
+    }
+    if (w.state === 'visita-pasea') { envoyStroll(w, dt); return; }
+    if (w.state !== 'esperando') return;
 
     const spot = w.spot || [w.fx, w.fy];
     // Intruso más cercano: cualquier mecenas (no visitante) o CABALLO. Los que
@@ -536,6 +602,17 @@ const HacFolk = (function () {
       w.dodging = false; w.dodgeTX = spot[0]; w.dodgeTY = spot[1];   // ya pasó: vuelve a su sitio
     }
 
+    // Paseíllo de espera: cada tanto da un paso al lado y vuelve, para no quedarse
+    // clavado. Reutiliza el objetivo dodgeTX/TY, pero a paso tranquilo (sin sobresalto).
+    if (!w.dodging && !w.bowing && w.dodgeTX == null) {
+      w.paceTimer = (w.paceTimer != null ? w.paceTimer : rng(12, 22)) - dt;
+      if (w.paceTimer <= 0) {
+        const side = rnd(2) ? 1 : -1;
+        w.dodgeTX = spot[0] + side * 0.9; w.dodgeTY = spot[1] + rng(0, 0.4);
+        w.paceReturn = true; w.paceTimer = rng(14, 26);
+      }
+    }
+
     // Movimiento hacia el objetivo (apartándose o volviendo). Se aparta más rápido
     // (sobresalto) de lo que regresa (con calma). Sin BFS: es un apartarse local.
     const tgtX = (w.dodgeTX != null) ? w.dodgeTX : spot[0];
@@ -548,6 +625,9 @@ const HacFolk = (function () {
       return;   // mientras se mueve, ni reverencia ni saludo
     }
     w.moving = false;
+    // Parado y sin sobresalto → suelta el objetivo puntual (paseíllo o vuelta tras el
+    // esquive) para volver al sitio y quedar listo para el próximo paso lateral.
+    if (!w.dodging) { w.dodgeTX = null; w.dodgeTY = null; w.paceReturn = false; }
 
     // VIDA AMBIENTAL (no ser un pasmarote aunque no pase nadie): mira alrededor y,
     // de vez en cuando, hace una reverencia 抱拳 cortés al aire. Si alguien pasa
@@ -2686,6 +2766,8 @@ const HacFolk = (function () {
     if (!running) { paint(); pushState(); }
   }
   function esVisitante(id) { const w = walkers.find(x => x.id === id); return !!(w && w.visitante); }
+  // Aptitud + aspecto del enviado activo (para dibujar su busto en la ventana de charla).
+  function enviadoAspecto() { const w = walkers.find(x => x.visitante); return w ? { aptitud: w.aptitud || '', aspecto: w.aspecto || null, nombre: w.name || '', cortesia: w.cortesia || (w.aspecto && w.aspecto.cortesia) || '' } : null; }
   // Revela (o no) el nombre del enviado SOLO para este cliente: el pendón pasa de
   // «Visitante» a su nombre. Persiste en enviadoRevelado para re-spawns.
   function revelarEnviado(v) {
@@ -2694,6 +2776,6 @@ const HacFolk = (function () {
     if (!running) paint();
   }
 
-  return { start, stop, list, select, selected, position, buildings, buildingTypes, setOrders, setEscaramuzas, setDebate, setHighlight, setCaballos, drawAvatar, goHome, consultar, consultando, dejarConsulta, mainBuildingId, repaintOverlay, refreshCargos, setCaravan, caravanHit, caravanActiva: () => !!caravan, setEnviado, esVisitante, revelarEnviado };
+  return { start, stop, list, select, selected, position, buildings, buildingTypes, setOrders, setEscaramuzas, setDebate, setHighlight, setCaballos, drawAvatar, goHome, consultar, consultando, dejarConsulta, mainBuildingId, repaintOverlay, refreshCargos, setCaravan, caravanHit, caravanActiva: () => !!caravan, setEnviado, esVisitante, revelarEnviado, enviadoAspecto };
 })();
 if (typeof window !== 'undefined') window.HacFolk = HacFolk;
