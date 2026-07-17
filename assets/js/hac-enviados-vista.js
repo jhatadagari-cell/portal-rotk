@@ -54,6 +54,8 @@ const HacEnviadoVista = (function () {
       .hacp-env-btn[disabled]{opacity:.5;cursor:default}
       .hacp-env-btn.seguir{flex-basis:100%;background:linear-gradient(180deg,#3a2c17,#241a10);border-color:#7a5a2c;color:#f3e6c4}
       .hacp-env-btn[data-acc]{flex-basis:100%}
+      .hacp-env-btn.ask{flex-basis:100%;text-align:left;font-weight:600;background:rgba(0,0,0,.22);border-color:rgba(201,168,76,.28);color:#e6dcc0}
+      .hacp-env-btn.ask:hover{border-color:#d8b45a;background:rgba(201,168,76,.1)}
       .hacp-env-btn.go{background:linear-gradient(180deg,#2f4a26,#1e3018);border-color:#4e7a3a;color:#e6f0dc}
       .hacp-env-btn.go:hover{border-color:#7ac05a}
       @media(max-width:640px){
@@ -76,25 +78,40 @@ const HacEnviadoVista = (function () {
     } catch (e) {}
   }
 
+  // Líneas del tramo actual: el guion (intro/oferta) o la respuesta a una pregunta.
+  function curLines() { const st = ctxState; return (st.phase === 'answer' && st.answer) ? st.answer : st.guion; }
+
   function render() {
     const st = ctxState; if (!st || !ov) return;
-    const line = st.lineas[st.i] || '';
-    const last = st.i >= st.lineas.length - 1;
     const fac = st.faccion || {};
     const facTxt = fac.nombre ? `Enviado de ${esc(fac.nombre)}` : 'Un enviado';
     const dot = fac.color ? `<span class="hacp-env-fdot" style="background:${esc(fac.color)}"></span>` : '';
     const fzh = fac.zh ? `<span class="hacp-env-fzh">${esc(fac.zh)}</span>` : '';
     const zi = st.cortesia ? `<div class="hacp-env-zi">字 ${esc(st.cortesia)}</div>` : '';
     const hasChar = !!(window.HacChar && HacChar.draw && st.aspecto);
-    // En la ÚLTIMA frase, si hay acciones (p.ej. aceptar / lo consideraré), estas
-    // SUSTITUYEN al botón «Terminar»: la decisión cierra el diálogo. Antes de la
-    // última, solo «Seguir ▸». Sin acciones, «Terminar» normal.
-    const acciones = st.acciones || [];
-    const showChoices = last && acciones.length > 0;
-    let foot = '';
-    if (!last) foot = `<button type="button" class="hacp-env-btn seguir" data-act="seguir">Seguir ▸</button>`;
-    else if (showChoices) foot = acciones.map((a, k) => `<button type="button" class="hacp-env-btn ${a.tone === 'go' ? 'go' : ''}" data-acc="${k}">${esc(a.label)}</button>`).join('');
-    else foot = `<button type="button" class="hacp-env-btn seguir" data-act="seguir">Terminar</button>`;
+    const preguntas = st.preguntas || [], acciones = st.acciones || [];
+    const hasMenu = preguntas.length > 0 || acciones.length > 0;
+
+    let bubble = '', foot = '';
+    if (st.phase === 'menu') {
+      // Hub: preguntarle (repetible) y, si procede, decidir (aceptar / lo consideraré).
+      bubble = st.menuPrompt;
+      foot = preguntas.map((p, k) => `<button type="button" class="hacp-env-btn ask" data-preg="${k}">🗨 ${esc(p.label)}</button>`).join('');
+      foot += acciones.length
+        ? acciones.map((a, k) => `<button type="button" class="hacp-env-btn ${a.tone === 'go' ? 'go' : ''}" data-acc="${k}">${esc(a.label)}</button>`).join('')
+        : `<button type="button" class="hacp-env-btn seguir" data-act="cerrar">Terminar</button>`;
+    } else {
+      const lines = curLines(), last = st.i >= lines.length - 1;
+      bubble = lines[st.i] || '';
+      if (st.phase === 'answer') {
+        foot = last ? `<button type="button" class="hacp-env-btn seguir" data-act="volver">◂ Volver</button>`
+                    : `<button type="button" class="hacp-env-btn seguir" data-act="seguir">Seguir ▸</button>`;
+      } else {   // 'intro' / oferta
+        if (!last) foot = `<button type="button" class="hacp-env-btn seguir" data-act="seguir">Seguir ▸</button>`;
+        else if (hasMenu) foot = `<button type="button" class="hacp-env-btn seguir" data-act="menu">Continuar ▸</button>`;
+        else foot = `<button type="button" class="hacp-env-btn seguir" data-act="cerrar">Terminar</button>`;
+      }
+    }
     ov.querySelector('.hacp-env-box').innerHTML = `
       <button type="button" class="hacp-env-x" data-act="cerrar" aria-label="Cerrar">✕</button>
       <div class="hacp-env-head">${dot}${facTxt} · ${fzh}</div>
@@ -102,7 +119,7 @@ const HacEnviadoVista = (function () {
         <div class="hacp-env-face">${hasChar ? '<canvas></canvas>' : '<span class="seal">使</span>'}</div>
         <div class="hacp-env-who"><div class="hacp-env-name">${esc(st.nombre || 'Visitante')}</div>${zi}</div>
       </div>
-      <div class="hacp-env-bubble">${esc(line)}</div>
+      <div class="hacp-env-bubble">${esc(bubble)}</div>
       <div class="hacp-env-foot">${foot}</div>`;
     paintFace();
   }
@@ -111,11 +128,15 @@ const HacEnviadoVista = (function () {
 
   function onClick(e) {
     const st = ctxState; if (!st) return;
-    const btn = e.target.closest('[data-act],[data-acc]'); if (!btn) return;
-    if (btn.dataset.act === 'cerrar') { cerrar(); return; }
-    if (btn.dataset.act === 'seguir') {
-      if (st.i >= st.lineas.length - 1) { cerrar(); return; }
-      st.i++; speak(); render(); return;
+    const btn = e.target.closest('[data-act],[data-acc],[data-preg]'); if (!btn) return;
+    const act = btn.dataset.act;
+    if (act === 'cerrar') { cerrar(); return; }
+    if (act === 'seguir') { st.i++; speak(); render(); return; }       // solo aparece cuando no es la última línea
+    if (act === 'menu' || act === 'volver') { st.phase = 'menu'; speak(); render(); return; }
+    if (btn.dataset.preg != null) {
+      const p = (st.preguntas || [])[+btn.dataset.preg]; if (!p) return;
+      st.answer = (p.lineas || []).slice(); if (!st.answer.length) st.answer = ['…'];
+      st.i = 0; st.phase = 'answer'; speak(); render(); return;
     }
     if (btn.dataset.acc != null) {
       const a = (st.acciones || [])[+btn.dataset.acc]; if (!a) return;
@@ -134,8 +155,11 @@ const HacEnviadoVista = (function () {
     ctxState = {
       aptitud: opts.aptitud || '', aspecto: opts.aspecto || null,
       faccion: opts.faccion || null, nombre: opts.nombre || 'Visitante', cortesia: opts.cortesia || '',
-      lineas: (Array.isArray(opts.lineas) && opts.lineas.length) ? opts.lineas.slice() : ['…'],
-      acciones: opts.acciones || [], i: 0, frame: 0, speakUntil: Date.now() + 2400
+      guion: (Array.isArray(opts.lineas) && opts.lineas.length) ? opts.lineas.slice() : ['…'],
+      preguntas: Array.isArray(opts.preguntas) ? opts.preguntas.slice() : [],
+      acciones: opts.acciones || [],
+      menuPrompt: opts.menuPrompt || 'Preguntad lo que gustéis, buen señor.',
+      phase: 'intro', answer: null, i: 0, frame: 0, speakUntil: Date.now() + 2400
     };
     ov = document.createElement('div'); ov.className = 'hacp-env-ov';
     ov.innerHTML = '<div class="hacp-env-box"></div>';

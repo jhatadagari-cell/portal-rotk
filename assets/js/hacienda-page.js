@@ -4081,6 +4081,10 @@
           faccion: d.it.faccion || null,
           nombre: asp.nombre || d.it.realName || d.it.name, cortesia: asp.cortesia || d.it.cortesia || '',
           lineas: envoyLines(d, { esFundador: fund, invitado, yaEscuchado }),
+          // Tres preguntas que puedes hacerle (valores del reino, su señor, su tierra);
+          // la respuesta va en su voz. Disponibles tras la charla, en el menú.
+          preguntas: (window.HacEnviadoDialogo && HacEnviadoDialogo.preguntas)
+            ? HacEnviadoDialogo.preguntas({ name: d.it.realName || d.it.name, faccion: d.it.faccion }) : [],
           acciones,
           // Primer contacto: se presenta y te revela su nombre (solo para ti). Si el
           // fundador ya está oyendo la propuesta (dentro), márcala como escuchada para

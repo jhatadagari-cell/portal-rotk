@@ -49,7 +49,23 @@ const HacEnviadoDialogo = (function () {
     ofertaOtro: [
       '抱拳 Agradezco la hospitalidad de vuestra casa; sois afortunados de servir a un señor tan próspero.',
       'El motivo de mi visita, sin embargo, he de tratarlo con vuestro señor: a él corresponde una decisión de tal peso.'
-    ]
+    ],
+    q: {
+      valores: [
+        'Shu se alza sobre una sola palabra: rectitud. Restaurar la casa Han, socorrer al débil y honrar siempre la palabra dada.',
+        'No medimos a un hombre por su cuna ni por su fuerza, sino por su corazón. Aquí la lealtad se paga con lealtad.'
+      ],
+      senor: [
+        'Liu Bei desciende de emperadores y, sin embargo, tejió esteras para comer. Conoce el hambre del pueblo porque la padeció.',
+        'Lloró por aldeanos que ni siquiera conocía y cruzó ríos cargando con ellos antes que abandonarlos a su suerte.',
+        'Es de esos hombres a los que uno sigue no por miedo, sino porque querría parecérsele un poco.'
+      ],
+      tierra: [
+        'Nuestra tierra es Yi, la del oeste: un vergel amurallado por montañas. Se entra por desfiladeros que un puñado de valientes guarda contra un ejército entero.',
+        'La llanura de Chengdu es fértil como pocas; sus canales riegan el arroz el año entero, y rara vez falta el cuenco lleno.',
+        'Sus gentes son cálidas y tozudas, hechas al recogimiento de las montañas: cuesta llegar hasta ellas, y cuesta aún más arrancarlas de su hogar.'
+      ]
+    }
   };
 
   // ── Chen Qun 陳群 (字 長文), enviado de Wei · señor: Cao Cao 曹操 ──────────────
@@ -82,7 +98,23 @@ const HacEnviadoDialogo = (function () {
     ofertaOtro: [
       '抱拳 Agradezco la hospitalidad de esta casa; se advierte la mano de un señor competente.',
       'El asunto que me trae, sin embargo, corresponde a vuestro señor: son decisiones que exceden a un solo hombre.'
-    ]
+    ],
+    q: {
+      valores: [
+        'Wei se sostiene sobre el orden y el mérito: donde hubo caos, ley; donde reinó el capricho, rango.',
+        'Cada hombre halla su nivel por lo que vale, no por quién fue su padre. Es el sistema que yo mismo dispuse: los nueve rangos.'
+      ],
+      senor: [
+        'Cao Cao ve talento donde otros solo ven a un don nadie, y lo eleva sin reparar en su origen.',
+        'Es implacable con la traición y generoso con la capacidad. No os pide que lo améis: os pide que rindáis, y recompensa con creces.',
+        'Bajo su mano, un reino roto recobró leyes, graneros y caminos seguros. El orden es su obra maestra.'
+      ],
+      tierra: [
+        'Wei domina las Llanuras Centrales, el corazón del mundo civilizado: la vieja capital, los campos de mijo y las rutas por donde late el comercio.',
+        'Es la tierra más poblada y más rica en hombres: de cada aldea salen escribas, herreros y soldados a millares.',
+        'Sus gentes son disciplinadas y prácticas, curtidas por inviernos duros. Saben que sin orden no hay cosecha que dure.'
+      ]
+    }
   };
 
   // ── Zhao Zi 趙咨 (字 Dedu), enviado de Wu · señor: Sun Quan 孫權 ───────────────
@@ -115,7 +147,23 @@ const HacEnviadoDialogo = (function () {
     ofertaOtro: [
       '抱拳 Disfruto de vuestra hospitalidad; buena casa servís.',
       'Pero mi recado es para vuestro señor: son palabras mayores, no para cualquier oído.'
-    ]
+    ],
+    q: {
+      valores: [
+        '¿Los valores de Wu? La independencia, para empezar: no inclinamos la cabeza ante el norte ni corremos tras los sueños del oeste.',
+        'Honramos el talento y la audacia, y pagamos la lealtad con lealtad. Quien sirve a Wu con valor, con Wu prospera.'
+      ],
+      senor: [
+        'Sun Quan heredó joven un reino y lo hizo más grande — que no es hazaña de cualquiera.',
+        'No es el guerrero más fiero ni el santo más puro, pero es el señor más listo de los tres: sabe cuándo luchar, cuándo pactar y cuándo aguardar.',
+        'Trata a sus generales como a iguales y confía en ellos hasta el final. Por eso Wu resiste donde otros ya habrían caído.'
+      ],
+      tierra: [
+        'Wu es el sur del gran río: mil lagos, arrozales sin fin y puertos que nunca duermen. El agua es a la vez nuestra muralla y nuestro camino.',
+        'Ni un ejército del norte ha sabido cruzar nuestras aguas y vivir para contarlo. Preguntad, si no, por Chibi.',
+        'Sus gentes son marinos, mercaderes y pescadores: astutos, prósperos y difíciles de asustar. Quien vive del río aprende a no temer la corriente.'
+      ]
+    }
   };
 
   // ── Fallback genérico (enviado de una facción sin guion propio) ──────────────
@@ -140,6 +188,22 @@ const HacEnviadoDialogo = (function () {
             'Mi señor de ' + fac + ' no busca siervos, sino aliados a los que tratar como a hermanos.',
             'Uníos a su causa y vuestra casa compartirá su fortuna y su amparo.',
             '¿Qué decís? ¿Uniréis vuestra hacienda a ' + fac + '?'];
+  }
+
+  // ── Las 3 PREGUNTAS que el jugador puede hacer (mismas etiquetas para todos; la
+  // respuesta cambia por enviado). El texto de la respuesta vive en `set.q`. ──────
+  const PREG_LABELS = [
+    { id: 'valores', label: '¿Qué defiende vuestro reino?' },
+    { id: 'senor',   label: 'Habladme de vuestro señor.' },
+    { id: 'tierra',  label: '¿Cómo es vuestra tierra y sus gentes?' }
+  ];
+  function genericoQ(facNombre) {
+    const fac = facNombre || 'nuestro reino';
+    return {
+      valores: ['Los valores de ' + fac + ' son el honor y la lealtad hacia nuestro señor.'],
+      senor: ['Mi señor es hombre justo y ambicioso, digno de que una buena casa lo sirva.'],
+      tierra: ['Nuestras tierras son prósperas y nuestras gentes, leales. Bajo ' + fac + ' vuestra casa hallaría amparo.']
+    };
   }
 
   function esShu(name, fac) {
@@ -172,7 +236,22 @@ const HacEnviadoDialogo = (function () {
     return generico(facNombre, invitado, esFundador, yaEscuchado);
   }
 
-  return { lineas };
+  // Las 3 preguntas + su respuesta (en la voz del enviado) para el contexto dado.
+  // → [{ id, label, lineas:[…] }]
+  function preguntas(o) {
+    o = o || {};
+    const name = String(o.name || '');
+    const facObj = o.faccion || null;
+    const facNombre = (facObj && (facObj.nombre || facObj.zh)) || (typeof facObj === 'string' ? facObj : '');
+    let q;
+    if (esShu(name, facNombre)) q = FEI_YI.q;
+    else if (esWei(name, facNombre)) q = CHEN_QUN.q;
+    else if (esWu(name, facNombre)) q = ZHAO_ZI.q;
+    else q = genericoQ(facNombre);
+    return PREG_LABELS.map(p => ({ id: p.id, label: p.label, lineas: ((q && q[p.id]) || ['…']).slice() }));
+  }
+
+  return { lineas, preguntas };
 })();
 
 if (typeof window !== 'undefined') window.HacEnviadoDialogo = HacEnviadoDialogo;
