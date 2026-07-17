@@ -33,6 +33,7 @@ const HacFolk = (function () {
   const TH = (window.HacIso && HacIso.TILE_H) || 18;
 
   let raf = null, iso = null, opts = null, walkers = [], wk = null, names = {}, curTier = 1;
+  let enviadoDesc = null;   // descriptor del ENVIADO activo (tabla `enviados`); null = ninguno
   let running = false, visible = true, onScreen = true, io = null;
   let selectedId = null, stateSig = '', hailCd = 20;
   // Capa de personajes NÍTIDA: los mecenas/mercaderes/escribanos se dibujan en un
@@ -422,6 +423,138 @@ const HacFolk = (function () {
         order: orders[m.id] || null, onMission: false, missionTimer: 0, missionEndMs: 0, missionTask: null, missionDoneFor: null
       };
     });
+  }
+
+  // ── ENVIADO (visitante de otra hacienda) ──────────────────────────────────
+  // Un enviado NO es miembro: es un walker especial que ESPERA fuera del portón
+  // sur ('esperando'), girándose y haciendo una reverencia 抱拳 con una palabra
+  // cortés cuando un mecenas pasa cerca. Si el fundador lo INVITA ('visita'),
+  // pasa dentro (el paseo guiado es Fase 3). Su modelo (aptitud/aspecto/字/color
+  // de facción) sale de su personaje registrado; con seed de dev, de `desc`.
+  const ENVOY_GREET = [
+    '抱拳 Salud, noble mecenas.', 'Larga vida a esta casa.', 'Honor a quien aquí mora.',
+    '抱拳 Un placer conoceros.', 'Prósperos vuestros campos.', 'Que el cielo os sea propicio.'
+  ];
+  function envoyGreet() { return ENVOY_GREET[rnd(ENVOY_GREET.length)]; }
+
+  function makeVisitor(desc) {
+    if (!desc || !desc.id || !wk) return null;
+    const pj = (window.HacPersonajes && HacPersonajes.get) ? HacPersonajes.get(desc.id) : null;
+    const aptitud = pj ? pj.aptitud : (desc.aptitud || '');
+    const aspecto = pj ? (pj.aspecto || {}) : (desc.aspecto || {});
+    const name = (pj && pj.nombre) || desc.name || 'Enviado';
+    const faccionId = (pj && pj.faccion) || desc.faccionId || null;
+    const fac = (faccionId && window.HacFacciones && HacFacciones.get) ? HacFacciones.get(faccionId) : null;
+    const color = (fac && fac.color) || desc.color || '#9a7b4f';
+    const aptDef = (aptitud && window.HacPersonajeDefs) ? HacPersonajeDefs.aptitud(aptitud) : null;
+    // Se planta a UN LADO del vano (suroeste), no en el eje: así no tapa la puerta
+    // ni pisa el pastizal de los caballos, pero el tránsito que sale por el portón
+    // le pasa lo bastante cerca para que se sobresalte y se aparte.
+    const base = wk.outNear || wk.exitCell || wk.cells[0];
+    const spot = [base[0] - 1.3, base[1]];
+    const invitado = desc.estado === 'visita';
+    return {
+      id: desc.id, name, color, aptitud, aspecto, npc: true,
+      cortesia: (aspecto && aspecto.cortesia) || desc.cortesia || '', atuendo: (aspecto && aspecto.atuendo) || '',
+      talla: (aspecto && Number(aspecto.talla)) || (aspecto && aspecto.atuendo === 'general' ? 1.10 : 1),
+      basePuntos: 0, cargoIcon: '', cargoNombre: '', cargoTier: 0, rankIdx: -1,
+      aptIcon: aptDef ? (aptDef.icon || '') : '', dominios: aptDef ? (aptDef.dominios || []) : [],
+      fx: spot[0], fy: spot[1], tx: spot[0], ty: spot[1], moving: false, dir: 'SE',
+      state: invitado ? 'visita-guiada' : 'esperando', path: null, goalBid: null, insideId: null, task: null,
+      homeBid: null, home: null, taskTimer: 0, strollTimer: 0, wait: 0,
+      idleTimer: 0, gardenCd: 0, socialCd: 0, chatWith: null, chatLead: false, chatRole: null,
+      bowing: false, bowTimer: 0, convo: null, convoIdx: 0, turnTimer: 0, speech: null, speechT: 0,
+      meetWith: null, meetLead: false, meetTimer: 0, restIntent: null, phase: R.next() * 6.28,
+      order: null, onMission: false, missionTimer: 0, missionEndMs: 0, missionTask: null, missionDoneFor: null,
+      // marca de enviado (facNombre/facZh: fallback del badge con seed de dev sin DB)
+      visitante: true, faccionId, facNombre: desc.facNombre || (fac && fac.nombre) || '', facZh: desc.facZh || (fac && fac.zh) || '',
+      bowCd: rng(1, 3), spot: [spot[0], spot[1]]
+    };
+  }
+
+  // Reconcilia el walker visitante con `enviadoDesc` (fuente = tabla `enviados`):
+  // lo añade si falta, lo reconstruye si cambió de persona, ajusta su estado, o
+  // lo quita si ya no hay enviado. Se llama tras (re)poblar y en setEnviado (vivo).
+  function syncEnviado() {
+    if (!wk) return;
+    const i = walkers.findIndex(w => w.visitante);
+    if (!enviadoDesc || !enviadoDesc.id) { if (i >= 0) walkers.splice(i, 1); return; }
+    if (i < 0) { const v = makeVisitor(enviadoDesc); if (v) walkers.push(v); return; }
+    const cur = walkers[i];
+    if (cur.id !== enviadoDesc.id) { const v = makeVisitor(enviadoDesc); if (v) walkers[i] = v; return; }
+    const invitado = enviadoDesc.estado === 'visita';
+    if (invitado && cur.state === 'esperando') {
+      // Invitado a pasar: entra justo tras el vano del portón. El paseo guiado
+      // con el fundador (jardines, calles) es Fase 3; por ahora aguarda dentro.
+      cur.state = 'visita-guiada'; cur.bowing = false; cur.speech = null; cur.path = null; cur.dir = 'SE';
+      const inside = wk.exitCell || cur.spot;
+      cur.fx = inside[0]; cur.fy = inside[1]; cur.tx = inside[0]; cur.ty = inside[1];
+    } else if (!invitado && cur.state === 'visita-guiada') {
+      cur.state = 'esperando'; cur.path = null; cur.bowing = false; cur.dir = 'SE';
+      cur.fx = cur.spot[0]; cur.fy = cur.spot[1]; cur.tx = cur.spot[0]; cur.ty = cur.spot[1];
+    }
+  }
+
+  // Tick del enviado. 'esperando': parado; se gira y hace una reverencia con una
+  // palabra cortés cuando un mecenas pasa cerca (cooldown, para no spamear).
+  // 'visita-guiada': (Fase 3) paseará con el fundador; por ahora aguarda cortés.
+  const ENVOY_STARTLE = ['¡Oh!', '¡Uy, disculpad!', '¡Ah, perdón!'];
+  function visitorStep(w, dt) {
+    w.phase += dt * 0.3;
+    if (w.speechT > 0) { w.speechT -= dt; if (w.speechT <= 0) w.speech = null; }
+    if (w.bowCd > 0) w.bowCd -= dt;
+    if (w.state !== 'esperando') return;   // 'visita-guiada' (Fase 3): quieto por ahora
+
+    const spot = w.spot || [w.fx, w.fy];
+    // Intruso más cercano: cualquier mecenas (no visitante) o CABALLO. Los que
+    // salen por el portón le pasan justo por encima → se sobresalta y se aparta.
+    let near = null, nd = 1e9;
+    for (let k = 0; k < walkers.length; k++) {
+      const o = walkers[k]; if (o === w || o.visitante) continue;
+      if (o.insideId) continue;   // dentro de un edificio: no cuenta
+      const dx = o.fx - w.fx, dy = o.fy - w.fy, d = dx * dx + dy * dy;
+      if (d < nd) { nd = d; near = o; }
+    }
+    for (let k = 0; k < horses.length; k++) {
+      const hh = horses[k]; if (hh.fx == null) continue;
+      const dx = hh.fx - w.fx, dy = hh.fy - w.fy, d = dx * dx + dy * dy;
+      if (d < nd) { nd = d; near = { fx: hh.fx, fy: hh.fy, horse: true }; }
+    }
+
+    const STARTLE = 2.4;   // radio² ≈ 1.55 celdas: se aparta para no superponerse
+    if (near && nd < STARTLE) {
+      if (!w.dodging) {
+        w.dodging = true; w.bowing = false;
+        w.speech = near.horse ? '¡So, caballo! 抱拳' : ENVOY_STARTLE[rnd(ENVOY_STARTLE.length)];
+        w.speechT = 1.6;
+        const side = (near.fx <= w.fx) ? 1 : -1;      // apártate al lado opuesto al intruso
+        w.dodgeTX = spot[0] + side * 1.7;
+        w.dodgeTY = spot[1] + 0.7;                    // y un pelín afuera, despejando el vano
+      }
+    } else if (w.dodging && (!near || nd > STARTLE * 2.6)) {
+      w.dodging = false; w.dodgeTX = spot[0]; w.dodgeTY = spot[1];   // ya pasó: vuelve a su sitio
+    }
+
+    // Movimiento hacia el objetivo (apartándose o volviendo). Se aparta más rápido
+    // (sobresalto) de lo que regresa (con calma). Sin BFS: es un apartarse local.
+    const tgtX = (w.dodgeTX != null) ? w.dodgeTX : spot[0];
+    const tgtY = (w.dodgeTY != null) ? w.dodgeTY : spot[1];
+    const ddx = tgtX - w.fx, ddy = tgtY - w.fy, dist = Math.sqrt(ddx * ddx + ddy * ddy);
+    if (dist > 0.05) {
+      const sp = (w.dodging ? 2.4 : 1.3) * dt, stp = Math.min(sp, dist);
+      w.fx += ddx / dist * stp; w.fy += ddy / dist * stp; w.moving = true;
+      const fd = faceFromGrid(ddx, ddy); if (fd) w.dir = fd;
+      return;   // mientras se mueve, ni reverencia ni saludo
+    }
+    w.moving = false;
+    if (!w.dodging && !w.bowing) w.dir = 'SE';
+
+    // En su sitio y sin intrusos pegados: reverencia 抱拳 cortés a quien pase cerca.
+    if (!w.dodging && w.bowCd <= 0 && !w.bowing && near && nd < 9) {
+      const fd = faceFromGrid(near.fx - w.fx, near.fy - w.fy); if (fd) w.dir = fd;
+      w.bowing = true; w.bowTimer = rng(1.4, 2.0); w.speech = envoyGreet(); w.speechT = 2.6; w.bowCd = rng(5, 9);
+    }
+    if (w.bowing) { w.bowTimer -= dt; if (w.bowTimer <= 0) { w.bowing = false; w.dir = 'SE'; } }
   }
 
   // Elige un edificio a visitar, sesgado por el DOMINIO del mecenas (militar va
@@ -1142,6 +1275,7 @@ const HacFolk = (function () {
     const SPD = 1.1;
     stepCaravan(dt);
     walkers.forEach(w => {
+      if (w.visitante) { visitorStep(w, dt); return; }   // enviado: lógica propia, ajeno al sim de miembros
       if (w.gardenCd > 0) w.gardenCd -= dt;
       if (w.socialCd > 0) w.socialCd -= dt;
       if (w.browseCd > 0) w.browseCd -= dt;
@@ -2232,6 +2366,7 @@ const HacFolk = (function () {
   function genesis(atMs) {
     R = HacRand.make(seedKey);
     walkers = spawn(opts.mapa, opts.tier, opts.miembros, opts.color || '#c9a84c');
+    syncEnviado();   // añade el enviado (visitante) si lo hay
     hailCd = rng(15, 40);
     simNowMs = atMs;
   }
@@ -2246,7 +2381,9 @@ const HacFolk = (function () {
   function serialize() {
     return {
       rng: R.state(), hailCd: hailCd,
-      walkers: walkers.map(w => { const o = { id: w.id }; SER_FIELDS.forEach(k => { o[k] = w[k]; }); return o; }),
+      // El enviado NO se serializa: su estado es autoritativo en la tabla `enviados`
+      // y se reconstruye vía setEnviado; guardarlo duplicaría/desincronizaría la foto.
+      walkers: walkers.filter(w => !w.visitante).map(w => { const o = { id: w.id }; SER_FIELDS.forEach(k => { o[k] = w[k]; }); return o; }),
     };
   }
   // Restaura sobre los walkers ya creados (por spawn) los campos dinámicos de la
@@ -2262,6 +2399,7 @@ const HacFolk = (function () {
       SER_FIELDS.forEach(k => { if (k in s) w[k] = s[k]; });
       w.order = orders[w.id] || null;
     });
+    syncEnviado();   // el enviado no está en la foto: reconcílialo con la tabla
   }
   function saveSnap() {
     if (!haciendaId || !window.HacSnap) return;
@@ -2363,6 +2501,7 @@ const HacFolk = (function () {
   // ── API para la página ────────────────────────────────────────────────────
   // Texto de lo que está haciendo un mecenas ahora mismo.
   function activityText(w) {
+    if (w.visitante) return w.state === 'visita-guiada' ? 'De visita por la finca' : 'Aguarda ante el portón, esperando ser recibido';
     const em = escMap[w.id], enEsc = !!em;
     // Peregrinaje «En busca del legendario curandero»: textos propios.
     if (em && em.pereg) {
@@ -2426,8 +2565,15 @@ const HacFolk = (function () {
       const inside = b ? (b.dueno ? memberName(b.dueno) : b.nombre) : null;
       const enTarea = !!w.onMission && w.state === 'tarea';
       const fuera = w.state === 'fuera';
+      // Facción a la que pertenece (junto al nombre en el panel). Directo del
+      // personaje registrado; para el enviado con seed de dev, campos en el walker.
+      const pjx = (window.HacPersonajes && HacPersonajes.get) ? HacPersonajes.get(w.id) : null;
+      const facId = (pjx && pjx.faccion) || w.faccionId || null;
+      let fac = (facId && window.HacFacciones && HacFacciones.get) ? HacFacciones.get(facId) : null;
+      if (!fac && w.facNombre) fac = { nombre: w.facNombre, zh: w.facZh || '', color: w.color };
+      const cortesia = w.cortesia || (pjx && pjx.aspecto && pjx.aspecto.cortesia) || '';
       return { id: w.id, name: w.name, color: w.color, inside, activity: activityText(w),
-        onMission: !!w.onMission, misEnTarea: enTarea, fuera,
+        onMission: !!w.onMission, misEnTarea: enTarea, fuera, cortesia, faccion: fac, visitante: !!w.visitante,
         misRestante: enTarea ? Math.max(0, Math.ceil(w.taskTimer)) : (fuera ? Math.max(0, Math.ceil(w.outTimer)) : null) };
     });
   }
@@ -2502,6 +2648,17 @@ const HacFolk = (function () {
   }
 
   function mainBuildingId() { return wk ? (wk.mainBid || null) : null; }
-  return { start, stop, list, select, selected, position, buildings, buildingTypes, setOrders, setEscaramuzas, setDebate, setHighlight, setCaballos, drawAvatar, goHome, consultar, consultando, dejarConsulta, mainBuildingId, repaintOverlay, refreshCargos, setCaravan, caravanHit, caravanActiva: () => !!caravan };
+
+  // ENVIADO: fija/actualiza/retira al visitante (fuente = tabla `enviados`). Se
+  // puede llamar antes o después de start(): guarda el descriptor y reconcilia en
+  // vivo. `esVisitante(id)` distingue al enviado de un miembro en la página.
+  function setEnviado(desc) {
+    enviadoDesc = (desc && desc.id) ? desc : null;
+    syncEnviado();
+    if (!running) { paint(); pushState(); }
+  }
+  function esVisitante(id) { const w = walkers.find(x => x.id === id); return !!(w && w.visitante); }
+
+  return { start, stop, list, select, selected, position, buildings, buildingTypes, setOrders, setEscaramuzas, setDebate, setHighlight, setCaballos, drawAvatar, goHome, consultar, consultando, dejarConsulta, mainBuildingId, repaintOverlay, refreshCargos, setCaravan, caravanHit, caravanActiva: () => !!caravan, setEnviado, esVisitante };
 })();
 if (typeof window !== 'undefined') window.HacFolk = HacFolk;

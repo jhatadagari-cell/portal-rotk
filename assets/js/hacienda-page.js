@@ -3516,6 +3516,31 @@
       const cargo = (window.HacCalc && HacCalc.cargoDef) ? HacCalc.cargoDef(((h.miembros || []).find(m => m.personajeId === id) || {}).cargo) : null;
       return { it, aptId, aptDef, cargo, e, eFull, eRegenMin, activa, enTarea, fuera, exped, escaramuza, rest, mine: id === myId, puntos: puntosTotales(id), earned, money, home, ahorro, stats, equipN, heridas, secuelas };
     }
+    // ── ENVIADO: bloque de acciones en su panel ────────────────────────────
+    // «Hablar» (cualquiera): avanza su guion de flavor línea a línea. «Invitarlo
+    // a pasar» / «Despedir» (solo el FUNDADOR, vía RPC): cambia el estado
+    // compartido de la visita. envoyTalk lleva por dónde va el diálogo abierto.
+    let envoyTalk = { id: null, i: 0 };
+    function envoyLines(d) {
+      return (window.HacEnviadoDialogo && HacEnviadoDialogo.lineas)
+        ? HacEnviadoDialogo.lineas({ name: d.it.name, faccion: d.it.faccion }) : [];
+    }
+    function envoyHTML(d) {
+      const lines = envoyLines(d);
+      const talking = envoyTalk.id === d.it.id && envoyTalk.i > 0;
+      const line = talking ? lines[Math.min(envoyTalk.i, lines.length) - 1] : '';
+      const more = talking && envoyTalk.i < lines.length;
+      const est = (window.HacEnviados ? (HacEnviados.activo(h.id) || {}) : {}).estado || 'esperando';
+      const fund = esFundador();
+      let s = '<div class="hacp-cp-envoy">';
+      if (talking && line) s += `<div class="hacp-env-say">${esc(line)}</div>`;
+      const talkLbl = !talking ? '🗣 Hablar con el enviado' : (more ? 'Seguir ▸' : 'Terminar');
+      s += `<button type="button" class="hacp-cp-btn hacp-env-talk" data-act="envoy-talk">${talkLbl}</button>`;
+      if (fund && est === 'esperando') s += `<button type="button" class="hacp-cp-btn hacp-cp-go" data-act="envoy-invite">Invitarlo a pasar a la hacienda</button>`;
+      if (fund && est === 'visita') s += `<button type="button" class="hacp-cp-btn hacp-env-farewell" data-act="envoy-farewell">Despedir al enviado</button>`;
+      s += '</div>';
+      return s;
+    }
     // Panel de inventario/monedero que se despliega a la derecha del panel del
     // mecenas. Scaffolding: el dinero y los objetos llegarán al jugar misiones
     // (paso 1b/3). «Guardar en casa» queda bloqueado hasta que tenga una casa.
@@ -4002,7 +4027,8 @@
           <div class="hacp-cp-id">
             <div class="hacp-cp-head">
               <span class="hacp-cp-dot" style="--c:${esc(d.it.color)}"></span>
-              <span class="hacp-cp-name">${esc(d.it.name)}${d.mine ? ' <em>(tú)</em>' : ''}</span>
+              <span class="hacp-cp-name">${esc(d.it.name)}${d.it.cortesia ? ` <span class="hacp-cp-zi">${esc(d.it.cortesia)}</span>` : ''}${d.mine ? ' <em>(tú)</em>' : ''}</span>
+              ${d.it.faccion ? `<span class="hacp-cp-fac" style="--fc:${esc(d.it.faccion.color || '#c9a84c')}">${d.it.faccion.zh ? esc(d.it.faccion.zh) + ' ' : ''}${esc(d.it.faccion.nombre)}</span>` : ''}
             </div>
             ${d.aptDef ? `<div class="hacp-cp-apt">${d.aptDef.icon || ''} ${esc(d.aptDef.nombre)}${comp ? ' · domina ' + comp : ''}</div>` : (comp ? `<div class="hacp-cp-apt">domina ${comp}</div>` : '')}
             ${d.cargo ? `<div class="hacp-cp-cargo">${d.cargo.icon} ${esc(d.cargo.zh)} ${esc(d.cargo.nombre)}</div>` : ''}
@@ -4015,6 +4041,7 @@
         ${statsHTML(d)}
         ${equipoHTML(d)}
         ${woundsHTML(d)}
+        ${d.it.visitante ? envoyHTML(d) : ''}
         ${d.mine ? toolbarHTML(d) : ''}
         ${diezmoCTA(d)}
         ${guiaHTML(d)}
@@ -4023,6 +4050,39 @@
         ${d.mine ? `<button type="button" class="hacp-cp-btn hacp-cp-leave" data-act="leave">Abandonar la hacienda</button>` : ''}`;
       lastStatsSig = JSON.stringify(d.stats || 0);   // recién pintadas: marca su firma
       charEl.querySelector('[data-act="close"]').addEventListener('click', deselect);
+      // ── ENVIADO: hablar (flavor) / invitar / despedir ──────────────────────
+      const ent = charEl.querySelector('[data-act="envoy-talk"]');
+      if (ent) ent.addEventListener('click', () => {
+        const lines = envoyLines(d);
+        if (envoyTalk.id !== d.it.id) envoyTalk = { id: d.it.id, i: 1 };
+        else if (envoyTalk.i === 0) envoyTalk.i = 1;
+        else if (envoyTalk.i < lines.length) envoyTalk.i++;
+        else envoyTalk = { id: null, i: 0 };   // «Terminar» → cierra el diálogo
+        buildCharPanel(charId);
+      });
+      const eiv = charEl.querySelector('[data-act="envoy-invite"]');
+      if (eiv) eiv.addEventListener('click', async () => {
+        if (!window.HacEnviados || !myId) return;
+        eiv.disabled = true;
+        try {
+          await HacEnviados.invitar(h.id, myId);
+          if (window.HacFolk && HacFolk.setEnviado) HacFolk.setEnviado(HacEnviados.activo(h.id));
+          toast('Has recibido al enviado en tu hacienda');
+          envoyTalk = { id: null, i: 0 };
+          buildCharPanel(charId);
+        } catch (e) { toast('No se pudo invitar: ' + (e && e.message || '')); eiv.disabled = false; }
+      });
+      const efw = charEl.querySelector('[data-act="envoy-farewell"]');
+      if (efw) efw.addEventListener('click', async () => {
+        if (!window.HacEnviados || !myId) return;
+        efw.disabled = true;
+        try {
+          await HacEnviados.concluir(h.id, myId);
+          if (window.HacFolk && HacFolk.setEnviado) HacFolk.setEnviado(null);
+          toast('El enviado se ha despedido con una reverencia');
+          deselect();
+        } catch (e) { toast('No se pudo despedir: ' + (e && e.message || '')); efw.disabled = false; }
+      });
       const db = charEl.querySelector('[data-act="dispatch"]');
       if (db) db.addEventListener('click', () => { const s = charEl.querySelector('.hacp-cp-sel'); dispatch(s ? s.value : null); });
       const dbb = charEl.querySelector('[data-act="debate"]');
@@ -5810,6 +5870,15 @@
     if (window.HacCompetencias) HacCompetencias.ready().then(refresh);
     if (window.HacPuntos) HacPuntos.ready().then(refresh);
     if (window.HacStats) HacStats.ready().then(refresh);
+    // ENVIADO de otra hacienda (Chengdu·Shu, etc.): espera ante el portón. Estado
+    // COMPARTIDO en `enviados`. Necesita personajes+facciones listos para resolver
+    // su modelo (aptitud/aspecto/字) y el color de facción antes de plantarlo.
+    if (window.HacEnviados) {
+      const applyEnviado = () => { try { if (HacFolk.setEnviado) HacFolk.setEnviado(HacEnviados.activo(h.id)); if (charId) buildCharPanel(charId); } catch (e) {} };
+      const persReady = (window.HacPersonajes && HacPersonajes.ready) ? HacPersonajes.ready() : Promise.resolve();
+      const facReady = (window.HacFacciones && HacFacciones.ready) ? HacFacciones.ready() : Promise.resolve();
+      Promise.all([HacEnviados.ready(h.id), persReady, facReady]).then(applyEnviado).catch(applyEnviado);
+    }
     const escPulse = () => { syncEscaramuzaOrder(); resolverEscaramuzaSiToca(); autoClaimBotinSiToca(); logEscaramuzaResultado(); procesarRelacionesSiToca(); notifyRelacionesNuevas(); syncEscaramuzaFolk(); escRefresh(); };
     if (window.HacBitacora) HacBitacora.ready();
     if (window.HacRelaciones) HacRelaciones.ready();

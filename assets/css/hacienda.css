@@ -219,10 +219,22 @@ html.hacp-pseudofs, html.hacp-pseudofs body{ overflow:hidden; }
 .hacp-cp-id{ flex:1; min-width:0; }
 .hacp-cp-avatar{ flex:none; width:48px; height:69px; image-rendering:auto; border-radius:5px;
   background:radial-gradient(ellipse at 50% 78%, rgba(201,168,76,.16), rgba(0,0,0,.18)); border:1px solid rgba(201,168,76,.18); }
-.hacp-cp-head{ display:flex; align-items:center; gap:7px; }
+.hacp-cp-head{ display:flex; align-items:center; gap:7px; flex-wrap:wrap; }
 .hacp-cp-dot{ flex:none; width:11px; height:11px; border-radius:50%; background:var(--c,#c9a84c); box-shadow:0 0 0 1px rgba(0,0,0,.4); }
 .hacp-cp-name{ font-family:'Noto Serif SC',serif; font-weight:700; font-size:14px; color:var(--gold); }
 .hacp-cp-name em{ font-style:normal; color:#7fc9a0; font-size:12px; }
+/* 字 nombre de cortesía, discreto tras el nombre */
+.hacp-cp-zi{ font-family:'Noto Serif SC',serif; font-weight:400; font-size:11px; color:var(--parch2); opacity:.72; margin-left:2px; }
+/* Badge de FACCIÓN a la que pertenece el mecenas (junto al nombre) */
+.hacp-cp-fac{ flex:none; font-size:10px; font-weight:700; letter-spacing:.02em; color:var(--fc,#c9a84c);
+  border:1px solid color-mix(in srgb, var(--fc,#c9a84c) 55%, transparent);
+  background:color-mix(in srgb, var(--fc,#c9a84c) 16%, transparent);
+  padding:1px 7px; border-radius:999px; white-space:nowrap; }
+/* ENVIADO: bloque de acciones (hablar / invitar / despedir) en su panel */
+.hacp-cp-envoy{ margin-top:9px; display:flex; flex-direction:column; gap:6px; }
+.hacp-env-say{ font-family:'Noto Serif SC',serif; font-size:12.5px; line-height:1.5; color:var(--parch);
+  background:rgba(57,160,106,.09); border-left:2px solid #39a06a; border-radius:4px; padding:8px 10px; font-style:italic; }
+.hacp-env-farewell{ opacity:.85; }
 .hacp-cp-apt{ font-size:11px; color:var(--parch2); opacity:.88; margin:3px 0 0; }
 .hacp-cp-act{ font-size:12px; color:var(--parch); margin:6px 0 5px; min-height:16px; }
 .hacp-cp-energy{ height:6px; border-radius:3px; background:rgba(255,255,255,.14); overflow:hidden; }
