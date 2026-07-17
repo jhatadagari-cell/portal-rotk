@@ -2606,7 +2606,7 @@ const HacFolk = (function () {
   // ── API para la página ────────────────────────────────────────────────────
   // Texto de lo que está haciendo un mecenas ahora mismo.
   function activityText(w) {
-    if (w.visitante) return w.state === 'visita-guiada' ? 'De visita por la finca' : 'Aguarda ante el portón, esperando ser recibido';
+    if (w.visitante) return (w.state === 'esperando') ? 'Aguarda ante el portón, esperando ser recibido' : 'De visita por la finca';
     const em = escMap[w.id], enEsc = !!em;
     // Peregrinaje «En busca del legendario curandero»: textos propios.
     if (em && em.pereg) {

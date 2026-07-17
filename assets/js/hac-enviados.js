@@ -119,7 +119,18 @@ const HacEnviados = (function () {
     return null;
   }
 
-  return { ready, reload, activo, dbOk, seed, invitar, concluir, quizaDespachar, TABLE };
+  // El FUNDADOR ACEPTA la oferta: la hacienda se adhiere a la facción del enviado
+  // (la RPC escribe mapa.faccion) y la visita concluye. Devuelve { faccion,
+  // faccionNombre, faccionZh } para el aviso/UI.
+  async function aceptar(haciendaId, pj) {
+    const client = await sb();
+    const { data, error } = await client.rpc('enviado_aceptar', { p_hac: haciendaId, p_pj: pj });
+    if (error) { console.error('[HacEnviados] aceptar', error); throw error; }
+    cache[haciendaId] = null;
+    return data || null;
+  }
+
+  return { ready, reload, activo, dbOk, seed, invitar, concluir, aceptar, quizaDespachar, TABLE };
 })();
 
 if (typeof window !== 'undefined') window.HacEnviados = HacEnviados;

@@ -108,6 +108,35 @@ end $$;
 grant execute on function public.enviado_invitar(text, text) to authenticated;
 grant execute on function public.enviado_concluir(text, text) to authenticated;
 
+-- ── RPC · el FUNDADOR ACEPTA la oferta (adhiere la hacienda a la facción) ────
+-- La casa se une a la facción del enviado (mapa.faccion = id de esa facción) y la
+-- visita concluye. Mismo founder-check que invitar/concluir. Devuelve la facción.
+create or replace function public.enviado_aceptar(p_hac text, p_pj text)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare h record; e record; fac record;
+begin
+  select * into h from public.haciendas where id = p_hac;
+  if not found then raise exception 'Hacienda no encontrada'; end if;
+  if coalesce(h.mapa ->> 'fundador', '') <> p_pj
+     and not exists (select 1 from jsonb_array_elements(coalesce(h.miembros, '[]'::jsonb)) m
+                     where m ->> 'id' = (h.mapa ->> 'fundador') and m ->> 'personajeId' = p_pj) then
+    raise exception 'Solo el fundador puede aceptar la oferta';
+  end if;
+  select * into e from public.enviados
+    where hacienda_id = p_hac and estado <> 'concluido' limit 1;
+  if not found then raise exception 'No hay ningún enviado que aceptar'; end if;
+  select f.* into fac from public.facciones f
+    join public.personajes p on p.id = e.personaje_id and p.faccion = f.id;
+  if not found then raise exception 'El enviado no pertenece a ninguna facción'; end if;
+  update public.haciendas
+    set mapa = jsonb_set(coalesce(mapa, '{}'::jsonb), '{faccion}', to_jsonb(fac.id::text), true), updated_at = now()
+    where id = p_hac;
+  update public.enviados set estado = 'concluido', updated_at = now() where id = e.id;
+  return jsonb_build_object('faccion', fac.id, 'faccionNombre', fac.nombre, 'faccionZh', fac.zh);
+end $$;
+
+grant execute on function public.enviado_aceptar(text, text) to authenticated;
+
 -- Nota: los miembros viven en la COLUMNA `haciendas.miembros` (jsonb), no en
 -- `mapa.miembros`. El coalesce(h.mapa->'miembros', h.miembros) cubre ambos por
 -- si algún esquema los movió; el fundador por personajeId directo es el caso normal.

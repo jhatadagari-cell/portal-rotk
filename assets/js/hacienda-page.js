@@ -3526,9 +3526,16 @@
     function envoyKnownSet() { try { return new Set(JSON.parse(localStorage.getItem(ENVOY_KNOWN_KEY) || '[]')); } catch (e) { return new Set(); } }
     function isEnvoyKnown(id) { return !!id && envoyKnownSet().has(String(id)); }
     function markEnvoyKnown(id) { if (!id) return; const s = envoyKnownSet(); s.add(String(id)); try { localStorage.setItem(ENVOY_KNOWN_KEY, JSON.stringify([...s])); } catch (e) {} }
-    function envoyLines(d) {
+    // «Escuchados»: fundadores que ya oyeron la propuesta de un enviado (LOCAL). Al
+    // volver a hablar, el enviado usa el tono de revisita («¿habéis meditado…?»).
+    const ENVOY_PITCH_KEY = 'hacEnvoyPitched';
+    function envoyPitchedSet() { try { return new Set(JSON.parse(localStorage.getItem(ENVOY_PITCH_KEY) || '[]')); } catch (e) { return new Set(); } }
+    function isEnvoyPitched(id) { return !!id && envoyPitchedSet().has(String(id)); }
+    function markEnvoyPitched(id) { if (!id) return; const s = envoyPitchedSet(); s.add(String(id)); try { localStorage.setItem(ENVOY_PITCH_KEY, JSON.stringify([...s])); } catch (e) {} }
+    function envoyLines(d, ctx) {
+      ctx = ctx || {};
       return (window.HacEnviadoDialogo && HacEnviadoDialogo.lineas)
-        ? HacEnviadoDialogo.lineas({ name: d.it.realName || d.it.name, faccion: d.it.faccion }) : [];
+        ? HacEnviadoDialogo.lineas({ name: d.it.realName || d.it.name, faccion: d.it.faccion, esFundador: !!ctx.esFundador, invitado: !!ctx.invitado, yaEscuchado: !!ctx.yaEscuchado }) : [];
     }
     function envoyHTML(d) {
       // «Hablar» abre la VENTANA de conversación (retrato parlante); ya no rellena el
@@ -4056,16 +4063,48 @@
       if (ent) ent.addEventListener('click', () => {
         if (!window.HacEnviadoVista) return;
         const asp = (window.HacFolk && HacFolk.enviadoAspecto) ? (HacFolk.enviadoAspecto() || {}) : {};
+        const est = (window.HacEnviados ? (HacEnviados.activo(h.id) || {}) : {}).estado || 'esperando';
+        const invitado = est === 'visita', fund = esFundador();
+        const yaEscuchado = isEnvoyPitched(d.it.id);
+        const facNombre = (d.it.faccion && (d.it.faccion.nombre || d.it.faccion.zh)) || 'su señor';
+        // Solo el FUNDADOR, con el enviado YA DENTRO, puede resolver la oferta: aceptar
+        // (une la hacienda a la facción) o aplazar («lo consideraré», cierra el diálogo).
+        let acciones = null;
+        if (invitado && fund) {
+          acciones = [
+            { label: '⚑ Unir la hacienda a ' + facNombre, tone: 'go', closeAfter: true, onClick: () => aceptarEnviado() },
+            { label: 'Nos halagáis, buen señor; lo consideraré', tone: 'plain', closeAfter: true, onClick: () => { markEnvoyPitched(d.it.id); } }
+          ];
+        }
         HacEnviadoVista.abrir({
           aptitud: asp.aptitud || '', aspecto: asp.aspecto || null,
           faccion: d.it.faccion || null,
           nombre: asp.nombre || d.it.realName || d.it.name, cortesia: asp.cortesia || d.it.cortesia || '',
-          lineas: envoyLines(d),
-          // Primer contacto: se presenta y te revela su nombre (solo para ti). El pendón
-          // del mundo pasa de «Visitante» a su nombre; se refresca el panel al cerrar.
-          onReveal: () => { if (!isEnvoyKnown(d.it.id)) { markEnvoyKnown(d.it.id); if (window.HacFolk && HacFolk.revelarEnviado) HacFolk.revelarEnviado(true); buildCharPanel(charId); } }
+          lineas: envoyLines(d, { esFundador: fund, invitado, yaEscuchado }),
+          acciones,
+          // Primer contacto: se presenta y te revela su nombre (solo para ti). Si el
+          // fundador ya está oyendo la propuesta (dentro), márcala como escuchada para
+          // que la próxima vez use el tono de revisita.
+          onReveal: () => {
+            if (!isEnvoyKnown(d.it.id)) { markEnvoyKnown(d.it.id); if (window.HacFolk && HacFolk.revelarEnviado) HacFolk.revelarEnviado(true); buildCharPanel(charId); }
+            if (invitado && fund) markEnvoyPitched(d.it.id);
+          }
         });
       });
+      // El FUNDADOR ACEPTA: la hacienda se adhiere a la facción del enviado (vía RPC),
+      // el enviado concluye su misión satisfecho y desaparece del portón.
+      async function aceptarEnviado() {
+        if (!window.HacEnviados || !HacEnviados.aceptar || !myId) return;
+        try {
+          const r = await HacEnviados.aceptar(h.id, myId);
+          const facId = r && r.faccion;
+          if (facId && h.mapa) h.mapa.faccion = facId;   // refleja «ya con facción» en esta sesión
+          if (window.HacFolk && HacFolk.setEnviado) HacFolk.setEnviado(null);
+          const facNm = (r && r.faccionNombre) || 'la nueva facción';
+          toast('⚑ Vuestra hacienda se une a ' + facNm);
+          deselect();
+        } catch (e) { toast('No se pudo aceptar: ' + (e && e.message || '')); }
+      }
       const eiv = charEl.querySelector('[data-act="envoy-invite"]');
       if (eiv) eiv.addEventListener('click', async () => {
         if (!window.HacEnviados || !myId) return;

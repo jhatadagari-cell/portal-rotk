@@ -53,6 +53,7 @@ const HacEnviadoVista = (function () {
       .hacp-env-btn:active{transform:translateY(1px)}
       .hacp-env-btn[disabled]{opacity:.5;cursor:default}
       .hacp-env-btn.seguir{flex-basis:100%;background:linear-gradient(180deg,#3a2c17,#241a10);border-color:#7a5a2c;color:#f3e6c4}
+      .hacp-env-btn[data-acc]{flex-basis:100%}
       .hacp-env-btn.go{background:linear-gradient(180deg,#2f4a26,#1e3018);border-color:#4e7a3a;color:#e6f0dc}
       .hacp-env-btn.go:hover{border-color:#7ac05a}
       @media(max-width:640px){
@@ -85,11 +86,15 @@ const HacEnviadoVista = (function () {
     const fzh = fac.zh ? `<span class="hacp-env-fzh">${esc(fac.zh)}</span>` : '';
     const zi = st.cortesia ? `<div class="hacp-env-zi">字 ${esc(st.cortesia)}</div>` : '';
     const hasChar = !!(window.HacChar && HacChar.draw && st.aspecto);
-    const seguirLbl = last ? 'Terminar' : 'Seguir ▸';
-    let acc = '';
-    (st.acciones || []).forEach((a, k) => {
-      acc += `<button type="button" class="hacp-env-btn ${a.tone === 'go' ? 'go' : ''}" data-acc="${k}">${esc(a.label)}</button>`;
-    });
+    // En la ÚLTIMA frase, si hay acciones (p.ej. aceptar / lo consideraré), estas
+    // SUSTITUYEN al botón «Terminar»: la decisión cierra el diálogo. Antes de la
+    // última, solo «Seguir ▸». Sin acciones, «Terminar» normal.
+    const acciones = st.acciones || [];
+    const showChoices = last && acciones.length > 0;
+    let foot = '';
+    if (!last) foot = `<button type="button" class="hacp-env-btn seguir" data-act="seguir">Seguir ▸</button>`;
+    else if (showChoices) foot = acciones.map((a, k) => `<button type="button" class="hacp-env-btn ${a.tone === 'go' ? 'go' : ''}" data-acc="${k}">${esc(a.label)}</button>`).join('');
+    else foot = `<button type="button" class="hacp-env-btn seguir" data-act="seguir">Terminar</button>`;
     ov.querySelector('.hacp-env-box').innerHTML = `
       <button type="button" class="hacp-env-x" data-act="cerrar" aria-label="Cerrar">✕</button>
       <div class="hacp-env-head">${dot}${facTxt} · ${fzh}</div>
@@ -98,10 +103,7 @@ const HacEnviadoVista = (function () {
         <div class="hacp-env-who"><div class="hacp-env-name">${esc(st.nombre || 'Visitante')}</div>${zi}</div>
       </div>
       <div class="hacp-env-bubble">${esc(line)}</div>
-      <div class="hacp-env-foot">
-        <button type="button" class="hacp-env-btn seguir" data-act="seguir">${seguirLbl}</button>
-        ${acc}
-      </div>`;
+      <div class="hacp-env-foot">${foot}</div>`;
     paintFace();
   }
 
