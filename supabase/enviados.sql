@@ -111,3 +111,24 @@ grant execute on function public.enviado_concluir(text, text) to authenticated;
 -- Nota: los miembros viven en la COLUMNA `haciendas.miembros` (jsonb), no en
 -- `mapa.miembros`. El coalesce(h.mapa->'miembros', h.miembros) cubre ambos por
 -- si algún esquema los movió; el fundador por personajeId directo es el caso normal.
+
+-- ── Despachar un enviado (ejemplo) ──────────────────────────────────────────
+-- El enviado es un PERSONAJE ya existente (créalo en admin: owner NULL, faccion
+-- = Shu). Este INSERT lo resuelve por NOMBRE, así no copias UUIDs a mano. Hay un
+-- único activo por hacienda (índice parcial), de ahí el ON CONFLICT DO NOTHING.
+--
+--   -- averiguar valores:
+--   select id, nombre from public.haciendas order by nombre;
+--   select id, nombre, faccion from public.personajes where nombre ilike '%fei%';
+--
+--   -- despachar a Fei Yi a tu hacienda:
+--   insert into public.enviados (hacienda_id, personaje_id, estado)
+--   select h.id, p.id, 'esperando'
+--   from public.haciendas h, public.personajes p
+--   where h.id = 'sima'            -- ⬅ id (texto) de TU hacienda
+--     and p.nombre = 'Fei Yi'      -- ⬅ el personaje enviado
+--   on conflict do nothing;
+--
+--   -- comprobar / retirar:
+--   select * from public.enviados;
+--   -- update public.enviados set estado = 'concluido' where hacienda_id = 'sima';  -- retirar
