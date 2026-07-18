@@ -948,13 +948,7 @@ const HacIso = (function () {
     // edificios/mecenas y se recompongan bien por frame (no van al bgFloor: si no,
     // el mecenas se dibujaría siempre por encima del árbol).
     props.forEach(p => drawList.push({ box: [p.gx, p.gy, p.gx + 1, p.gy + 1], srect: propSrect(p), draw: () => drawProp(p) }));
-    const before = (A, Z) => {
-      if (A[2] <= Z[0] + 1e-6) return true;     // A al oeste de Z → detrás
-      if (Z[2] <= A[0] + 1e-6) return false;
-      if (A[3] <= Z[1] + 1e-6) return true;     // A al norte de Z → detrás
-      if (Z[3] <= A[1] + 1e-6) return false;
-      return (A[2] + A[3]) < (Z[2] + Z[3]);     // solapan: por esquina delantera
-    };
+    // (El comparador `before` y el ordenador `depthOrder` viven a nivel de módulo.)
     // Zócalo/escalinata de los edificios que lo tienen: capa baja, sobre el
     // suelo y bajo el resto (decoración, muros, edificios, mecenas).
     lista.filter(c => !isFlat(c) && metaOf('bld-' + c.tipo + '-base-' + (((c.rot || 0) % 4 + 4) % 4)))
@@ -974,8 +968,8 @@ const HacIso = (function () {
       applyNoise(bfg, 0, 0, bgFloor.width, bgFloor.height, bgFloor.width, bgFloor.height);
     } catch (e) { bgFloor = null; }
 
-    drawList.sort((p, q) => before(p.box, q.box) ? -1 : (before(q.box, p.box) ? 1 : 0));
-    drawList.forEach(d => d.draw());
+    // Pintado atrás→delante por PROFUNDIDAD escalar (esquina delantera; ver depthOrder).
+    depthOrder(drawList, d => d.box).forEach(d => d.draw());
 
     // DEBUG: contorno de la huella (celdas ocupadas) de cada edificio. Activar con
     // window.HAC_DEBUG_FOOTPRINT = true (solo para calibrar anclajes en el harness).
@@ -1097,6 +1091,42 @@ const HacIso = (function () {
     return [gx, gy];
   }
 
+  // Comparador isométrico por caja de huella [x0,y0,x1,y1]: A se pinta ANTES
+  // (detrás) de Z si está separada al NO en algún eje; si se solapan, desempata por
+  // la esquina delantera. Es un orden PARCIAL (muchos pares son incomparables).
+  function before(A, Z) {
+    if (A[2] <= Z[0] + 1e-6) return true;   // A al oeste de Z → detrás
+    if (Z[2] <= A[0] + 1e-6) return false;
+    if (A[3] <= Z[1] + 1e-6) return true;   // A al norte de Z → detrás
+    if (Z[3] <= A[1] + 1e-6) return false;
+    return (A[2] + A[3]) < (Z[2] + Z[3]);   // solapan: por esquina delantera
+  }
+
+  // Clave de profundidad iso: la ESQUINA DELANTERA (x1+y1) de la huella. Es el punto
+  // más cercano a la cámara; a mayor clave, más «delante» (se pinta después).
+  function depthKey(box) { return box[2] + box[3]; }
+
+  // Ordena objetos {box} de ATRÁS a DELANTE por su clave de profundidad escalar
+  // (esquina delantera; desempate: más al este = más delante; luego orden de entrada).
+  //
+  // Por qué escalar y no un comparador tipo `before`: `before` es un orden PARCIAL
+  // que, mezclando separación O/N con el desempate por esquina, contiene CICLOS
+  // (A detrás de B, B de C, C de A) — ningún orden lineal puede satisfacerlo, y darlo
+  // a Array.sort (que exige orden TOTAL) producía resultados inconsistentes y
+  // dependientes del contenido → el bug «el edificio se superpone a quien tiene
+  // delante» y sus regresiones al tocar cualquier cosa. La clave escalar es un orden
+  // TOTAL y transitivo (sin ciclos), y para los pares que SE SOLAPAN en pantalla —los
+  // únicos que producen artefactos— coincide exactamente con `before`. Requiere que
+  // los objetos sean COMPACTOS (los muros ya van partidos por celda); un objeto muy
+  // alargado necesitaría trocearse (o z-buffer por píxel) — no es el caso aquí.
+  function depthOrder(items, boxOf) {
+    const box = boxOf || ((d) => d.box);
+    return items
+      .map((d, i) => { const b = box(d); return { d, s: b[2] + b[3], x: b[2], i }; })
+      .sort((p, q) => (p.s - q.s) || (p.x - q.x) || (p.i - q.i))
+      .map((o) => o.d);
+  }
+
   // ¿El ACTOR (punto en fx,fy, sus pies) queda DETRÁS de la caja de una estructura?
   // Reglas por posición REAL (sin redondear a celda): al sur del frente → delante;
   // al norte → detrás; si no, al este → delante; al oeste → detrás; y DENTRO de la
@@ -1161,27 +1191,12 @@ const HacIso = (function () {
       const near = sc.drawList.filter(d =>
         acts.some(a => ov(d.box, [a.box[0] - 3, a.box[1] - 3, a.box[2] + 3, a.box[3] + 3]))
         || (d.srect && rects.some(r => ov(d.srect, [r[0], r[1], r[0] + r[2], r[1] + r[3]]))));
-      const render = near.slice();
-      acts.sort((p, q) => sc.before(p.box, q.box) ? -1 : (sc.before(q.box, p.box) ? 1 : 0));
-      // Inserta al actor DESPUÉS de la última estructura a la que tapa (está
-      // delante). No al revés («antes de la primera que lo tapa»): el orden
-      // global no es transitivo con cajas alargadas (un árbol al SO ordena
-      // ANTES que el muro por la regla oeste aunque esté visualmente delante),
-      // y esa variante dejaba al mecenas BORRADO bajo la muralla al salir por
-      // el portón. El error residual de esta variante es el suave (actor sobre
-      // el borde de una copa), nunca el grave (actor tragado por un muro).
-      acts.forEach(a => {
-        let idx = 0;
-        for (let i = 0; i < render.length; i++) { if (!actorBehind(a.fx, a.fy, render[i].obox || render[i].box)) idx = i + 1; }
-        // Corrección para MUROS/PORTÓN: si el actor está genuinamente DETRÁS de un
-        // muro perimetral, debe pintarse ANTES que él (que lo oculte), aunque la
-        // no-transitividad del orden lo hubiera colado por delante. Solo afecta al
-        // que está detrás (al norte): el que SALE queda al sur (actorBehind=false),
-        // así que NO se reintroduce el «borrado bajo la muralla» al cruzar el portón.
-        for (let i = 0; i < idx; i++) { const d = render[i]; if (d.wall && actorBehind(a.fx, a.fy, d.obox || d.box)) { idx = i; break; } }
-        render.splice(idx, 0, a);
-        if (typeof window !== 'undefined' && window.HAC_DEBUG_OCC) window.__occ = { fx: a.fx, fy: a.fy, idx, list: render.map(d => d === a ? 'ACTOR' : (d.box || []).join(',')) };
-      });
+      // Orden de pintado (estructuras cercanas + actores) por PROFUNDIDAD escalar:
+      // un actor DELANTE de un edificio tiene mayor clave → se pinta después → jamás
+      // queda tapado; uno DETRÁS, menor clave → se oculta. Sin heurísticas ni tiritas,
+      // y transitivo (no hay reordenaciones sorpresa). Para el actor-vs-estructura
+      // usamos `obox` (huella encogida en bases anchas: terraza del salón, etc.).
+      const render = depthOrder(near.concat(acts), d => d.obox || d.box);
       g.save();
       g.setTransform(1, 0, 0, 1, 0, 0);
       g.beginPath();
@@ -1198,7 +1213,7 @@ const HacIso = (function () {
     g.setTransform(1, 0, 0, 1, 0, 0);
   }
 
-  return { draw, frame, cellAt, TILE_W, TILE_H, SCALE };
+  return { draw, frame, cellAt, TILE_W, TILE_H, SCALE, _occ: { before, depthOrder } };
 })();
 
 if (typeof window !== 'undefined') window.HacIso = HacIso;
