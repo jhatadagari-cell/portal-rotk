@@ -5378,7 +5378,7 @@
       try { const d = await pabRPC('pab_investig_prog', { p_hac: h.id, p_pj: myId, p_rol: rol, p_prog: def.target, p_ts: nowMs(), p_target: def.target, p_done_key: def.unlock }); if (d && d.mapa) { h.mapa = d.mapa; toast(`🔬 ¡Investigación completada: ${def.nombre}!`); buildPabPanel(); } } catch (e) {}
     }
     // ── RUTAS DE TRIBUTO (F3 政): caravana periódica que espera en la puerta ──
-    const PERIOD_TRIBUTO = 10 * 60 * 1000;   // una caravana cada 10 min (PRUEBAS; subir a ~3 h después)
+    const PERIOD_TRIBUTO = 2 * 60 * 1000;   // una caravana cada 2 min (PRUEBAS; subir a ~3 h después)
     function tributoPresente() {
       if (!pabDesbloqueado('tributo')) return false;
       const ts = (h.mapa && h.mapa.tributo && Number(h.mapa.tributo.ts)) || 0;
