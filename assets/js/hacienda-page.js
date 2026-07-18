@@ -131,7 +131,7 @@
       enableFullscreen(vp, document.getElementById('hacp-fs-btn'));
       // Mecenas paseando + listado lateral con cámara y banners de edificio.
       if (window.HacFolk) setupFolk(iso, vp, cam, h, tier, color);
-      setTimeout(() => { try { syncCaravan(); } catch (e) {} }, 400);   // caravana de tributo (F3 政) si toca
+      setTimeout(() => { try { syncCaravan(); startTributoTicker(); } catch (e) {} }, 400);   // caravana de tributo (F3 政) + ticker del countdown
       // Nombre del pabellón al pasar el ratón (mapa celda→pabellón en vivo).
       const pabPorCelda = {};
       if (window.HacBuild) pabellones.forEach(p => {
@@ -567,7 +567,10 @@
       if (!yo) return '';
       const pabs = (window.HacStore && HacStore.pabellones) ? HacStore.pabellones(h.id) : [];
       if (!yo.pabellon && pabs.length) return `<button type="button" class="hacp-cp-guia" data-guia="pabellon"><b>部 Únete a un pabellón →</b><span>Los pabellones son las <b>zonas de color</b> de tu finca (militar 军 · cultural 文 · administrativo 政). Únete a uno para subir escalafón y aportar a sus investigaciones. Toca aquí para abrirlo.</span></button>`;
-      if (yo.pabellon === 'administrativo' && typeof tributoPresente === 'function' && tributoPresente()) return `<button type="button" class="hacp-cp-guia" data-guia="tributo"><b>貢 Recibe el tributo →</b><span>Un carro de tributo aguarda en la <b>puerta</b> de la finca. Toca aquí para recibir su carga y llevarla a la casa.</span></button>`;
+      if (yo.pabellon === 'administrativo' && typeof pabDesbloqueado === 'function' && pabDesbloqueado('tributo')) {
+        if (tributoPresente()) return `<button type="button" class="hacp-cp-guia" data-guia="tributo"><b>貢 Recibe el tributo →</b><span>Un carro de tributo aguarda en la <b>puerta sur</b> de la finca. Toca aquí (o el propio carro) para recibir su carga y llevarla a la casa.</span></button>`;
+        return `<div class="hacp-cp-guia hacp-cp-guia-wait"><b>貢 Rutas de tributo activas</b><span>La próxima caravana llega en <b data-tributo-count>${fmtTributo(tributoRestanteMs())}</b> y esperará en el portón sur de tu finca.</span></div>`;
+      }
       return '';
     }
     // Fracción de XP extra para UNA misión: el bono cultural (政→文… 文) aplica a
@@ -5380,6 +5383,34 @@
       if (!pabDesbloqueado('tributo')) return false;
       const ts = (h.mapa && h.mapa.tributo && Number(h.mapa.tributo.ts)) || 0;
       return (nowMs() - ts) >= PERIOD_TRIBUTO;
+    }
+    // Tiempo que falta para la próxima caravana (0 = ya está en la puerta).
+    function tributoRestanteMs() {
+      if (!pabDesbloqueado('tributo')) return Infinity;
+      const ts = (h.mapa && h.mapa.tributo && Number(h.mapa.tributo.ts)) || 0;
+      return Math.max(0, PERIOD_TRIBUTO - (nowMs() - ts));
+    }
+    function fmtTributo(ms) {
+      if (!isFinite(ms)) return '—';
+      const s = Math.max(0, Math.round(ms / 1000));
+      const hh = Math.floor(s / 3600), mm = Math.floor((s % 3600) / 60), ss = s % 60;
+      if (hh > 0) return `${hh} h ${mm} min`;
+      if (mm > 0) return `${mm} min ${ss} s`;
+      return `${ss} s`;
+    }
+    // Ticker: mantiene el countdown vivo y hace APARECER la caravana en cuanto
+    // toca (sin recargar). Solo re-renderiza el panel al CRUZAR de estado.
+    let _tributoTick = null, _tributoPrev = null;
+    function startTributoTicker() {
+      if (_tributoTick) return;
+      _tributoTick = setInterval(() => {
+        try {
+          if (!pabDesbloqueado('tributo')) return;
+          const pres = tributoPresente();
+          if (!pres) { const el = document.querySelector('[data-tributo-count]'); if (el) el.textContent = fmtTributo(tributoRestanteMs()); }
+          if (pres !== _tributoPrev) { _tributoPrev = pres; syncCaravan(); if (charId) buildCharPanel(charId); }
+        } catch (e) {}
+      }, 1000);
     }
     function tributoCargo() {   // escala modestamente con la fuerza del pabellón 政
       const s = pabSinergia('administrativo'), a = (h.miembros || []).filter(m => m.pabellon === 'administrativo').length;

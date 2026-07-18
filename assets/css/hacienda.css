@@ -383,6 +383,11 @@ html.hacp-pseudofs, html.hacp-pseudofs body{ overflow:hidden; }
 .hacp-cp-guia b{ display:block; font:700 12.5px 'Noto Sans SC',sans-serif; color:#9bc7ec; margin-bottom:2px; }
 .hacp-cp-guia span{ font-size:11px; color:var(--parch2); line-height:1.35; }
 .hacp-cp-guia span b{ display:inline; color:var(--parch); font-size:11px; }
+/* Variante "en espera": tributo desbloqueado pero la caravana aún no llega (countdown). */
+.hacp-cp-guia-wait{ cursor:default; border-color:rgba(201,168,76,.38); background:rgba(201,168,76,.08); }
+.hacp-cp-guia-wait:hover{ background:rgba(201,168,76,.08); border-color:rgba(201,168,76,.38); }
+.hacp-cp-guia-wait b{ color:var(--gold); }
+.hacp-cp-guia-wait span b[data-tributo-count]{ color:var(--gold); font-variant-numeric:tabular-nums; }
 /* Obras 營造: panel de construcción del fundador (rejilla 2D cenital) */
 /* Un SOLO scroll: la caja no scrollea (columna flex, cabecera/controles/pie fijos);
    solo la rejilla (.hacp-ob-gridwrap) toma el espacio restante y scrollea. */
