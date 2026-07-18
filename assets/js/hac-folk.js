@@ -1858,6 +1858,9 @@ const HacFolk = (function () {
   // Lienzo 180×150 con origen iso en (ORX,ORY); el ancla (ground point que cae en la
   // celda) es el centro del eje entre ruedas → (CCX,CFEET).
   const CW = 180, CH = 150, ORX = 64, ORY = 86, CCX = 78, CFEET = 106, CDRAW = 1.5;
+  // Recuadro de recomposición para HacIso.frame (px disp. sobre el ancla). SIN esto,
+  // el clip por defecto (36×44) recortaba la caravana a un cuadradito.
+  const CARAVAN_BOUND = { l: CCX * CDRAW, up: CFEET * CDRAW, w: CW * CDRAW, h: CH * CDRAW };
   let caravanCv = null;
   // Conductor (transportista) vía HacChar, pose sentada, horneado una vez.
   let caravanDriverCv = null;
@@ -2476,7 +2479,7 @@ const HacFolk = (function () {
     }
     // Caravana de tributo: actor (profundidad/oclusión como el resto) + banner 貢.
     if (caravan) {
-      actors.push({ fx: caravan.fx, fy: caravan.fy, draw: (g, lx, ly) => drawCaravan(g, lx, ly) });
+      actors.push({ fx: caravan.fx, fy: caravan.fy, bound: CARAVAN_BOUND, draw: (g, lx, ly) => drawCaravan(g, lx, ly) });
       overlays.push({ draw: (g) => { const p = logic(caravan.fx, caravan.fy); npcBanner(g, p[0], p[1] - Math.round((CFEET - 8) * CDRAW / SCALE), 'Tributo', '貢'); } });
     }
     // Mecenas visibles: el sprite va como actor (con oclusión); el NOMBRE va aparte.
