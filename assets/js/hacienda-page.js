@@ -5407,7 +5407,11 @@
         try {
           if (!pabDesbloqueado('tributo')) return;
           const pres = tributoPresente();
-          if (!pres) { const el = document.querySelector('[data-tributo-count]'); if (el) el.textContent = fmtTributo(tributoRestanteMs()); }
+          const activa = !!(window.HacFolk && HacFolk.caravanActiva && HacFolk.caravanActiva());
+          // Si DEBE haber caravana y aún no la hay, (re)sincroniza: cubre la carrera con
+          // la construcción de la finca (wk) al cargar y la llegada tras el enfriamiento.
+          if (pres) { if (!activa) syncCaravan(); }
+          else { const el = document.querySelector('[data-tributo-count]'); if (el) el.textContent = fmtTributo(tributoRestanteMs()); }
           if (pres !== _tributoPrev) { _tributoPrev = pres; syncCaravan(); if (charId) buildCharPanel(charId); }
         } catch (e) {}
       }, 1000);

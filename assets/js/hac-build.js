@@ -536,6 +536,12 @@ const HacBuild = (function () {
     // progreso hasta un ida/vuelta de RPC.
     if (mapa && mapa.responsables && typeof mapa.responsables === 'object') out.responsables = mapa.responsables;
     if (mapa && mapa.investig && typeof mapa.investig === 'object') out.investig = mapa.investig;
+    // Desbloqueos de investigación { clave: true } y temporizador de la caravana de
+    // tributo { ts }. Los escriben las RPC (pab_investig_prog / casa_tributo). Sin
+    // conservarlos aquí, al RECARGAR la finca se perdía el desbloqueo (caballo blanco,
+    // talentos, tributo) y el enfriamiento de la caravana → nada de F3 tras un reload.
+    if (mapa && mapa.desbloqueos && typeof mapa.desbloqueos === 'object') out.desbloqueos = mapa.desbloqueos;
+    if (mapa && mapa.tributo && typeof mapa.tributo === 'object') out.tributo = mapa.tributo;
     // Terreno exterior comprado (tier 3..6) y puntos de tesorería ya gastados.
     const eT = Math.floor(Number(mapa && mapa.exteriorTier) || 0);
     if (eT >= 3) out.exteriorTier = clampTier(eT);
