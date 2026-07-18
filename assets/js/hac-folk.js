@@ -1859,15 +1859,18 @@ const HacFolk = (function () {
   // celda) es el centro del eje entre ruedas → (CCX,CFEET).
   const CW = 180, CH = 150, ORX = 64, ORY = 86, CCX = 78, CFEET = 106, CDRAW = 1.5;
   // Recuadro de recomposición para HacIso.frame (px disp. sobre el ancla). SIN esto,
-  // el clip por defecto (36×44) recortaba la caravana a un cuadradito.
-  const CARAVAN_BOUND = { l: CCX * CDRAW, up: CFEET * CDRAW, w: CW * CDRAW, h: CH * CDRAW };
+  // el clip por defecto (36×44) recortaba la caravana a un cuadradito; PERO si es más
+  // grande que el CONTENIDO real (no el lienzo entero con sus márgenes transparentes),
+  // el recompuesto borra el decorado de alrededor que el carro ni siquiera tapa.
+  // Ajustado a la caja OPACA del sprite (canvas x[24,158] y[16,134]).
+  const CARAVAN_BOUND = { l: Math.round((CCX - 24) * CDRAW), up: Math.round((CFEET - 16) * CDRAW), w: Math.round(134 * CDRAW), h: Math.round(118 * CDRAW) };
   let caravanCv = null;
   // Conductor (transportista) vía HacChar, pose sentada, horneado una vez.
   let caravanDriverCv = null;
   function caravanDriver() {
     if (caravanDriverCv) return caravanDriverCv;
     const c = document.createElement('canvas');
-    if (window.HacChar && HacChar.draw) { try { HacChar.draw(c, { aptitud: 'administrador', aspecto: { robe: '#8a5a2e', accent: '#e6c15a', piel: 1, pelo: 2 }, dir: 'SE', frame: 0, scale: 1, pose: 'sit' }); } catch (e) { c.width = 0; } }
+    if (window.HacChar && HacChar.draw) { try { HacChar.draw(c, { aptitud: 'administrador', aspecto: { robe: '#8a5a2e', accent: '#e6c15a', piel: 1, pelo: 2 }, dir: 'SE', frame: 0, scale: 2, pose: 'sit' }); } catch (e) { c.width = 0; } }
     caravanDriverCv = c; return c;
   }
   function caravanBaked() {
@@ -1927,7 +1930,15 @@ const HacFolk = (function () {
     // Conductor en el pescante.
     const seat = P(cbx1 + 0.35, ymid, zt);
     quad([P(cbx1 + 0.05, y0 + 0.2, zt - 1), P(cbx1 + 0.7, y0 + 0.2, zt - 1), P(cbx1 + 0.7, y1 - 0.2, zt - 1), P(cbx1 + 0.05, y1 - 0.2, zt - 1)], woodMid);
-    const dcv = caravanDriver(); if (dcv && dcv.width) { g.imageSmoothingEnabled = false; g.drawImage(dcv, seat[0] - dcv.width / 2, seat[1] - dcv.height + 7); }
+    const dcv = caravanDriver();
+    if (dcv && dcv.width) {
+      // Iguala el tamaño del conductor al de un mecenas: alto = charH()*SPRITE_DISP,
+      // dividido por CDRAW (el lienzo entero se dibuja luego ×CDRAW).
+      const Ht = (window.HacChar ? charH() : 56) * SPRITE_DISP / CDRAW, Wt = dcv.width * (Ht / dcv.height);
+      g.imageSmoothingEnabled = true;
+      g.drawImage(dcv, seat[0] - Wt / 2, seat[1] - Ht + 4, Wt, Ht);
+      g.imageSmoothingEnabled = false;
+    }
     wheel(axN[0], axN[1] - 16, 17);                                     // rueda cercana
     // Buey.
     (function () {
@@ -1968,7 +1979,9 @@ const HacFolk = (function () {
   function setCaravan(on) {
     if (on) {
       if (caravan && caravan.phase !== 'out') return;                             // ya está
-      const to = wk && wk.outNear, from = (wk && wk.outFar) || to; if (!to) { caravan = null; return; }
+      // Espera un pelín MÁS AL SUR que outNear (no pegada a la puerta) y en el eje.
+      const to = wk && wk.outNear ? [wk.outNear[0], wk.outNear[1] + 0.9] : null;
+      const from = (wk && wk.outFar) || to; if (!to) { caravan = null; return; }
       caravan = { phase: 'in', p: 0, from: from, to: to, fx: from[0], fy: from[1] };
     } else if (caravan && caravan.phase !== 'out') {
       caravan = { phase: 'out', p: 0, from: [caravan.fx, caravan.fy], to: (wk && wk.outFar) || [caravan.fx, caravan.fy], fx: caravan.fx, fy: caravan.fy };
@@ -2479,7 +2492,10 @@ const HacFolk = (function () {
     }
     // Caravana de tributo: actor (profundidad/oclusión como el resto) + banner 貢.
     if (caravan) {
-      actors.push({ fx: caravan.fx, fy: caravan.fy, bound: CARAVAN_BOUND, draw: (g, lx, ly) => drawCaravan(g, lx, ly) });
+      // dbox alargado hacia el NORTE (portón/muralla): así esas estructuras entran en
+      // la recomposición «cercana» y NO se borran bajo el recuadro alto del carro.
+      const ccx = Math.round(caravan.fx), ccy = Math.round(caravan.fy);
+      actors.push({ fx: caravan.fx, fy: caravan.fy, bound: CARAVAN_BOUND, dbox: [ccx - 1, ccy - 4, ccx + 2, ccy + 1], draw: (g, lx, ly) => drawCaravan(g, lx, ly) });
       overlays.push({ draw: (g) => { const p = logic(caravan.fx, caravan.fy); npcBanner(g, p[0], p[1] - Math.round((CFEET - 8) * CDRAW / SCALE), 'Tributo', '貢'); } });
     }
     // Mecenas visibles: el sprite va como actor (con oclusión); el NOMBRE va aparte.
