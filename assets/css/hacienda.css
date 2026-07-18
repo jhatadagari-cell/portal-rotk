@@ -1383,3 +1383,136 @@ button.hacp-slot.comida:hover{ background:rgba(127,201,160,.24); }
 @media(prefers-reduced-motion:reduce){
   .hacp-back{transition:none}
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Recepción interactiva del cargamento de tributo (hac-albaran.js)
+   Escena del portón + carruaje + transportista + rollo de bambú (albarán).
+   ═══════════════════════════════════════════════════════════════════════ */
+.hacp-alb-ov{
+  position:fixed; inset:0; z-index:10000; display:flex; align-items:center; justify-content:center;
+  padding:18px; background:rgba(6,4,2,.72); backdrop-filter:blur(3px);
+  opacity:0; transition:opacity .26s ease;
+}
+.hacp-alb-ov.on{ opacity:1; }
+.hacp-alb-box{
+  position:relative; width:min(620px,96vw); max-height:94dvh; overflow:hidden; box-sizing:border-box;
+  background:linear-gradient(180deg,#17110a,#241a10); border:1px solid var(--acc,var(--gold));
+  border-radius:16px; box-shadow:0 24px 70px rgba(0,0,0,.66), 0 0 0 1px rgba(0,0,0,.5) inset;
+  transform:translateY(14px) scale(.98); transition:transform .3s cubic-bezier(.2,.9,.3,1.1);
+  display:flex; flex-direction:column;
+}
+.hacp-alb-ov.on .hacp-alb-box{ transform:translateY(0) scale(1); }
+.hacp-alb-x{
+  position:absolute; top:9px; right:11px; z-index:6; width:28px; height:28px; padding:0; line-height:1;
+  background:rgba(0,0,0,.4); border:1px solid rgba(201,168,76,.35); border-radius:50%;
+  color:var(--gold); font-size:14px; cursor:pointer; opacity:.8; transition:.15s;
+}
+.hacp-alb-x:hover{ opacity:1; color:#fff; background:rgba(0,0,0,.6); }
+.hacp-alb-head{ display:flex; align-items:center; gap:12px; padding:14px 46px 12px 18px; }
+.hacp-alb-zh{ font:900 30px 'Noto Serif SC',serif; color:var(--acc,var(--gold)); line-height:1;
+  text-shadow:0 0 22px color-mix(in srgb,var(--acc,var(--gold)) 40%,transparent); flex-shrink:0; }
+.hacp-alb-t{ font:900 17px 'Noto Serif SC',serif; color:var(--parch); }
+.hacp-alb-s{ font:400 11.5px 'Noto Sans SC',sans-serif; color:var(--parch2); opacity:.85; margin-top:2px; }
+
+/* ── Escenario (canvas + burbuja + rollo) ── */
+.hacp-alb-stage{ position:relative; margin:0 14px; border-radius:12px; overflow:hidden;
+  box-shadow:0 0 0 1px rgba(0,0,0,.5), 0 10px 24px rgba(0,0,0,.4); background:#241a2e; }
+.hacp-alb-cv{ display:block; width:100%; height:auto; }
+.hacp-alb-bubble{
+  position:absolute; left:16px; right:16px; bottom:12px; z-index:4;
+  background:rgba(244,231,196,.96); color:#2a1d0e; border-radius:12px; border:1px solid #b79a56;
+  padding:11px 14px; font:400 13px/1.5 'Noto Sans SC',sans-serif;
+  box-shadow:0 8px 22px rgba(0,0,0,.4); animation:albBubble .38s ease both;
+}
+.hacp-alb-bubble b{ color:#7a531e; }
+.hacp-alb-bubble::after{ content:''; position:absolute; top:-9px; right:34%;
+  border:9px solid transparent; border-top:0; border-bottom:9px solid rgba(244,231,196,.96); }
+@keyframes albBubble{ from{ opacity:0; transform:translateY(10px); } to{ opacity:1; transform:none; } }
+
+/* ── Rollo de bambú (albarán) — sustituye al escenario en el beat 2 ── */
+.hacp-alb-scrollwrap{
+  z-index:5; display:flex; align-items:flex-start; justify-content:center;
+  margin:2px 14px 0; padding:16px 8px 24px; overflow:auto; min-height:0;
+  background:radial-gradient(ellipse at 50% 20%, rgba(60,42,24,.55), rgba(8,5,2,.2));
+  border-radius:12px;
+}
+.hacp-alb-scrollwrap[hidden]{ display:none; }
+.hacp-alb-scroll{ position:relative; width:min(392px,94%); display:flex; flex-direction:column; align-items:stretch; }
+.hacp-alb-roller{ height:16px; border-radius:9px; z-index:3; flex-shrink:0;
+  background:linear-gradient(180deg,#8a6636,#5a3d1c 55%,#3d2810);
+  box-shadow:0 3px 8px rgba(0,0,0,.5), inset 0 2px 0 rgba(255,220,150,.35);
+  border:1px solid #2e1e0d; }
+.hacp-alb-roller::before, .hacp-alb-roller::after{ content:''; position:absolute; top:-3px; width:12px; height:22px;
+  border-radius:4px; background:linear-gradient(180deg,#c9a24a,#7a531e); border:1px solid #3d2810; }
+.hacp-alb-roller::before{ left:-7px; } .hacp-alb-roller::after{ right:-7px; }
+.hacp-alb-sheet{
+  overflow:hidden; max-height:0; opacity:0;
+  background:
+    repeating-linear-gradient(90deg, rgba(90,64,26,.16) 0 1px, transparent 1px 15px),
+    linear-gradient(180deg,#e7cf94,#d9bd7a);
+  border-left:1px solid #b79a56; border-right:1px solid #b79a56;
+  box-shadow:inset 0 0 22px rgba(120,84,30,.28);
+  transition:max-height .62s cubic-bezier(.22,.9,.28,1), opacity .3s ease;
+}
+.hacp-alb-scrollwrap.open .hacp-alb-sheet{ max-height:640px; opacity:1; }
+.hacp-alb-manifest{ padding:14px 16px 16px; color:#3a2812; }
+.hacp-alb-mh{ text-align:center; border-bottom:2px double #a9853f; padding-bottom:8px; margin-bottom:8px; }
+.hacp-alb-mh-zh{ font:900 24px 'Noto Serif SC',serif; letter-spacing:.28em; color:#5a3d18; }
+.hacp-alb-mh-sub{ font:400 10.5px 'Noto Sans SC',sans-serif; color:#6b5228; opacity:.9; margin-top:2px; }
+.hacp-alb-mh-casa{ font:400 12px 'Noto Sans SC',sans-serif; color:#3a2812; margin-top:5px; }
+.hacp-alb-mh-casa b{ color:#7a2318; }
+.hacp-alb-mh-seal-zh{ font-family:'Noto Serif SC',serif; font-weight:900; color:#7a2318; }
+.hacp-alb-rows{ display:flex; flex-direction:column; gap:2px; }
+.hacp-alb-row{ display:flex; align-items:center; gap:9px; padding:6px 4px;
+  border-bottom:1px dotted rgba(122,83,30,.4);
+  opacity:0; transform:translateX(-8px);
+  animation:albRow .34s ease forwards; animation-delay:calc(.32s + var(--d,0)*.09s); }
+.hacp-alb-em{ font-size:16px; width:20px; text-align:center; }
+.hacp-alb-zhb{ font:900 15px 'Noto Serif SC',serif; color:#7a531e; width:20px; text-align:center; }
+.hacp-alb-nm{ flex:1; font:600 13px 'Noto Sans SC',sans-serif; color:#3a2812; }
+.hacp-alb-qty{ font:700 14px 'Noto Sans SC',sans-serif; color:#7a2318; font-variant-numeric:tabular-nums; }
+.hacp-alb-empty{ text-align:center; color:#6b5228; font:400 12px 'Noto Sans SC',sans-serif; padding:10px; }
+.hacp-alb-mf{ display:flex; justify-content:space-between; align-items:center; margin-top:9px; padding-top:7px; padding-right:48px;
+  border-top:2px double #a9853f; font:400 11px 'Noto Sans SC',sans-serif; color:#5a3d18; }
+.hacp-alb-mf b{ color:#3a2812; }
+.hacp-alb-date{ font-variant-numeric:tabular-nums; opacity:.85; }
+.hacp-alb-seal{ position:absolute; right:14px; bottom:-6px; z-index:4;
+  width:44px; height:44px; display:grid; place-items:center; border-radius:8px;
+  border:2.5px solid #a11f14; color:#a11f14; font:900 22px 'Noto Serif SC',serif;
+  background:rgba(200,60,45,.08); transform:rotate(-11deg); box-shadow:0 2px 6px rgba(0,0,0,.25);
+  opacity:0; animation:albSeal .4s ease .95s forwards; }
+.hacp-alb-scrollwrap.open .hacp-alb-seal{ animation:albSeal .4s ease calc(.4s + var(--n,4)*.09s) forwards; }
+.hacp-alb-seal.stamped{ animation:albStamp .5s ease forwards; }
+@keyframes albRow{ to{ opacity:1; transform:none; } }
+@keyframes albSeal{ from{ opacity:0; transform:rotate(-11deg) scale(1.6); } to{ opacity:1; transform:rotate(-11deg) scale(1); } }
+@keyframes albStamp{ 0%{ transform:rotate(-11deg) scale(1); } 40%{ transform:rotate(-6deg) scale(1.35); color:#d62c1a; } 100%{ transform:rotate(-9deg) scale(1.12); color:#a11f14; box-shadow:0 0 16px rgba(214,44,26,.6); } }
+
+/* ── Pie con acciones ── */
+.hacp-alb-foot{ display:flex; align-items:center; gap:10px; padding:14px 18px 16px; flex-wrap:wrap; }
+.hacp-alb-btn{ font:700 13px 'Noto Sans SC',sans-serif; padding:11px 18px; border-radius:10px; cursor:pointer;
+  border:1px solid transparent; transition:.16s; }
+.hacp-alb-btn b{ font-family:'Noto Serif SC',serif; }
+.hacp-alb-btn.primary{ margin-left:auto; background:var(--acc,var(--gold)); color:#1a1206; border-color:var(--acc,var(--gold));
+  box-shadow:0 6px 18px color-mix(in srgb,var(--acc,var(--gold)) 34%,transparent); }
+.hacp-alb-btn.primary:hover{ filter:brightness(1.08); transform:translateY(-1px); }
+.hacp-alb-btn.primary:disabled{ opacity:.6; cursor:default; transform:none; filter:none; }
+.hacp-alb-btn.ghost{ background:transparent; color:var(--parch2); border-color:rgba(201,168,76,.4); }
+.hacp-alb-btn.ghost:hover{ color:var(--parch); border-color:var(--gold); }
+.hacp-alb-note{ margin-left:auto; max-width:340px; text-align:right; font:400 11.5px 'Noto Sans SC',sans-serif; color:var(--parch2); }
+.hacp-alb-note b{ color:var(--gold); }
+.hacp-alb-done{ width:100%; text-align:center; font:700 13px 'Noto Sans SC',sans-serif; color:#7bc47f;
+  padding:6px; animation:albBubble .4s ease both; }
+.hacp-alb-err{ width:100%; text-align:center; font:600 12px 'Noto Sans SC',sans-serif; color:#e08a7a; }
+
+@media(prefers-reduced-motion:reduce){
+  .hacp-alb-ov, .hacp-alb-box, .hacp-alb-bubble, .hacp-alb-sheet, .hacp-alb-row, .hacp-alb-seal{ transition:none; animation:none; }
+  .hacp-alb-scrollwrap.open .hacp-alb-sheet{ max-height:640px; opacity:1; }
+  .hacp-alb-row, .hacp-alb-seal{ opacity:1; transform:none; }
+}
+@media (max-width:560px){
+  .hacp-alb-head{ padding:12px 42px 10px 14px; }
+  .hacp-alb-zh{ font-size:24px; }
+  .hacp-alb-foot{ padding:12px 14px 14px; }
+  .hacp-alb-btn{ flex:1; text-align:center; }
+  .hacp-alb-note, .hacp-alb-btn.primary{ margin-left:0; }
+}

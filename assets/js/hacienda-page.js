@@ -5386,18 +5386,36 @@
       return { dinero: 40 + 6 * s + 4 * a, grano: 8 + s, hierro: 4, tinta: 4 };
     }
     function syncCaravan() { if (window.HacFolk && HacFolk.setCaravan) HacFolk.setCaravan(tributoPresente()); }
-    async function recibirTributo() {
-      const yo = (h.miembros || []).find(m => String(m.personajeId) === String(myId));
-      if (!yo || yo.pabellon !== 'administrativo') { toast('🐂 Un carro de tributo aguarda en la puerta · lo recibe un mecenas del pabellón 政 (administrativo).'); return; }
-      const cg = tributoCargo();
-      try {
-        const d = await pabRPC('casa_tributo', { p_hac: h.id, p_pj: myId, p_dinero: cg.dinero, p_lote: { hierro: cg.hierro, tinta: cg.tinta, grano: cg.grano }, p_ts: nowMs() });
-        if (d && d.mapa) h.mapa = d.mapa;
-      } catch (e) { toast(String(e && e.message || e)); return; }
+    // Entrega REAL del cargamento a la casa (la firma el albarán o el fallback).
+    async function entregarTributo(cg) {
+      const d = await pabRPC('casa_tributo', { p_hac: h.id, p_pj: myId, p_dinero: cg.dinero, p_lote: { hierro: cg.hierro, tinta: cg.tinta, grano: cg.grano }, p_ts: nowMs() });
+      if (d && d.mapa) h.mapa = d.mapa;
       toast(`貢 Tributo recibido para la casa · +${cg.dinero}🏛 +${cg.grano}🌾`);
       if (window.HacBitacora) HacBitacora.log(myId, 'progreso', `貢 Recibiste la caravana de tributo (+${cg.dinero}🏛) para la casa`);
       if (window.HacFolk && HacFolk.setCaravan) HacFolk.setCaravan(false);   // la caravana se marcha
       if (window.HacProdCasa && HacProdCasa.reload) HacProdCasa.reload();
+    }
+    // Al recibir el tributo se ABRE la escena interactiva del portón: sales, ves el
+    // carruaje, hablas con el transportista y desenrollas el albarán (竹簡). Solo un
+    // mecenas del pabellón 政 puede firmarlo; el resto puede mirar la escena.
+    function recibirTributo() {
+      const yo = (h.miembros || []).find(m => String(m.personajeId) === String(myId));
+      const puede = !!(yo && yo.pabellon === 'administrativo');
+      const cg = tributoCargo();
+      if (window.HacAlbaran && HacAlbaran.recepcion) {
+        HacAlbaran.recepcion({
+          casa: { nombre: h.nombre, color: color, zh: h.zh },
+          cargo: { dinero: cg.dinero, grano: cg.grano, hierro: cg.hierro, tinta: cg.tinta },
+          puedeRecibir: puede,
+          transportista: 'El intendente de la ruta',
+          ruta: '貢賦 · ruta del sur',
+          onConfirm: () => entregarTributo(cg),
+        });
+        return;
+      }
+      // Fallback si el módulo no cargó.
+      if (!puede) { toast('🐂 Un carro de tributo aguarda en la puerta · lo recibe un mecenas del pabellón 政 (administrativo).'); return; }
+      entregarTributo(cg).catch(e => toast(String(e && e.message || e)));
     }
     // ── ATRAER TALENTOS (F3 文): al volver de expedición con éxito, prob. baja de
     //    reclutar un NPC (por ahora solo se une y ronda; sin función aún). ──

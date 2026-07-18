@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sim · Recepción de tributo</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700;900&family=Noto+Sans+SC:wght@300;400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/main.css">
+<link rel="stylesheet" href="assets/css/hacienda.css?v=106">
+<style>
+  body{ background:#0e0b07; color:#f0ddb0; font-family:'Noto Sans SC',sans-serif; margin:0; padding:40px; text-align:center; }
+  h1{ font-family:'Noto Serif SC',serif; color:#c9a84c; }
+  button{ font:700 14px 'Noto Sans SC',sans-serif; margin:8px; padding:12px 20px; border-radius:10px;
+    border:1px solid #c9a84c; background:#1a1206; color:#c9a84c; cursor:pointer; }
+  button:hover{ background:#c9a84c; color:#1a1206; }
+  .row{ margin:20px 0; }
+</style>
+</head>
+<body>
+<h1>Simulación · Recepción interactiva del tributo</h1>
+<p>Banco de pruebas de <code>HacAlbaran.recepcion</code> (portón → carruaje → transportista → rollo de bambú).</p>
+<div class="row">
+  <button id="b1">Recepción · MIEMBRO 政 (puede firmar)</button>
+  <button id="b2">Recepción · NO miembro (solo mirar)</button>
+  <button id="b3">Recepción · casa verde jade</button>
+</div>
+<div id="log" style="opacity:.7;font-size:12px"></div>
+
+<script src="assets/js/hac-util.js?v=1"></script>
+<script src="assets/js/hac-char.js?v=19"></script>
+<script src="assets/js/hac-albaran.js?v=2"></script>
+<script>
+  const log = (m) => { document.getElementById('log').textContent = m; };
+  document.getElementById('b1').onclick = () => HacAlbaran.recepcion({
+    casa: { nombre: 'Sima', color: '#c9a84c', zh: '司馬' },
+    cargo: { dinero: 82, grano: 14, hierro: 4, tinta: 4 },
+    puedeRecibir: true,
+    transportista: 'El intendente de la ruta',
+    ruta: '貢賦 · ruta del sur',
+    onConfirm: () => new Promise(r => { log('onConfirm() → entregando…'); setTimeout(() => { log('Entrega confirmada.'); r(); }, 700); }),
+  });
+  document.getElementById('b2').onclick = () => HacAlbaran.recepcion({
+    casa: { nombre: 'Cao', color: '#7a3b8a', zh: '曹' },
+    cargo: { dinero: 60, grano: 9, hierro: 4, tinta: 4 },
+    puedeRecibir: false,
+    onConfirm: () => Promise.resolve(),
+  });
+  document.getElementById('b3').onclick = () => HacAlbaran.recepcion({
+    casa: { nombre: 'Zhuge', color: '#3a8a5a', zh: '諸葛' },
+    cargo: { dinero: 120, grano: 22, hierro: 8, tinta: 6, seda: 3, sal: 5 },
+    puedeRecibir: true,
+    onConfirm: () => Promise.resolve(),
+  });
+</script>
+</body>
+</html>
