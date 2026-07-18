@@ -1929,8 +1929,12 @@ const HacFolk = (function () {
     const e = wk && wk.exitCell; if (!e) return null;
     let seed = 2166136261; for (let i = 0; i < id.length; i++) seed = (seed ^ id.charCodeAt(i)) * 16777619 >>> 0;
     const r0 = (seed % 997) / 997;                         // 0..1 estable por dueño
-    const homeX = e[0] + (r0 * 2 - 1) * 1.8;               // desplazamiento lateral estable
-    const homeY = e[1] + 2.8 + r0 * 1.2;                   // al sur, fuera de la muralla (entre outNear y outFar)
+    // Pastizal LATERAL (un lado estable por caballo): se aparta del corredor CENTRAL
+    // del portón (columna gateC), que es por donde LLEGA y ESPERA la caravana de
+    // tributo. Antes pastaban en el eje (e[0]±1.8) y se pisaban con el carro.
+    const side = (seed & 1) ? 1 : -1;
+    const homeX = e[0] + side * (3.5 + r0 * 1.5);          // a un lado del portón, fuera del paso de la caravana
+    const homeY = e[1] + 3.2 + r0 * 1.1;                   // al sur, fuera de la muralla
     return { id, nombre: (info && info.nombre) || 'Corcel', variante: (info && info.variante) || 'caballo',
       _r: seed || 1, homeX, homeY, fx: homeX, fy: homeY, tx: homeX, ty: homeY, dir: 'SE', phase: 0, moving: false, pauseT: 1 + r0 * 3 };
   }

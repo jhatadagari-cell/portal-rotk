@@ -131,7 +131,9 @@
       enableFullscreen(vp, document.getElementById('hacp-fs-btn'));
       // Mecenas paseando + listado lateral con cámara y banners de edificio.
       if (window.HacFolk) setupFolk(iso, vp, cam, h, tier, color);
-      setTimeout(() => { try { syncCaravan(); startTributoTicker(); } catch (e) {} }, 400);   // caravana de tributo (F3 政) + ticker del countdown
+      // La caravana de tributo (F3 政) y su ticker se arrancan DENTRO de setupFolk,
+      // donde viven syncCaravan/startTributoTicker. Llamarlas desde aquí (render())
+      // lanzaba «syncCaravan is not defined» (otro ámbito) y el catch lo tragaba.
       // Nombre del pabellón al pasar el ratón (mapa celda→pabellón en vivo).
       const pabPorCelda = {};
       if (window.HacBuild) pabellones.forEach(p => {
@@ -5950,6 +5952,12 @@
     HacFolk.start(iso, { mapa: h.mapa, tier, color, miembros: h.miembros, onState: applyOrders, seedKey: h.id, haciendaId: h.id, ordenes: {}, getTransform: (cam && cam.getT) || null });
     if (cam && cam.setOnApply) cam.setOnApply(() => { if (window.HacFolk && HacFolk.repaintOverlay) HacFolk.repaintOverlay(); });
     renderList();
+
+    // Caravana de tributo (F3 政): con la finca ya montada (wk construido por
+    // HacFolk.start), sincroniza la caravana y arranca el ticker del countdown.
+    // Va AQUÍ, en setupFolk, porque syncCaravan/startTributoTicker viven en este
+    // ámbito (desde render() daban ReferenceError y no arrancaba nada).
+    setTimeout(() => { try { syncCaravan(); startTributoTicker(); } catch (e) {} }, 300);
 
     // ── Realtime: Supabase empuja los cambios de ESTA hacienda y sus pabellones
     // (responsable, investigación, altas/bajas de pabellón, aporte…). La caché se
