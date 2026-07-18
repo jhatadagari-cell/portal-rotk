@@ -1854,40 +1854,109 @@ const HacFolk = (function () {
   // ── CARAVANA de tributo (F3 政) ───────────────────────────────────────────
   // Un carro cargado que LLEGA por el camino y ESPERA en la puerta (outNear) a que
   // un mecenas administrativo lo reciba. Sprite horneado una vez (sin coste/frame).
-  const CW = 54, CH = 44, CFEET = 37, CCX = 27, CDRAW = 2;
+  // Carruaje cubierto ISOMÉTRICO (輜車) con buey y transportista, horneado una vez.
+  // Lienzo 180×150 con origen iso en (ORX,ORY); el ancla (ground point que cae en la
+  // celda) es el centro del eje entre ruedas → (CCX,CFEET).
+  const CW = 180, CH = 150, ORX = 64, ORY = 86, CCX = 78, CFEET = 106, CDRAW = 1.5;
   let caravanCv = null;
+  // Conductor (transportista) vía HacChar, pose sentada, horneado una vez.
+  let caravanDriverCv = null;
+  function caravanDriver() {
+    if (caravanDriverCv) return caravanDriverCv;
+    const c = document.createElement('canvas');
+    if (window.HacChar && HacChar.draw) { try { HacChar.draw(c, { aptitud: 'administrador', aspecto: { robe: '#8a5a2e', accent: '#e6c15a', piel: 1, pelo: 2 }, dir: 'SE', frame: 0, scale: 1, pose: 'sit' }); } catch (e) { c.width = 0; } }
+    caravanDriverCv = c; return c;
+  }
   function caravanBaked() {
     if (caravanCv) return caravanCv;
     const cv = document.createElement('canvas'); cv.width = CW; cv.height = CH;
     const g = cv.getContext('2d'); g.imageSmoothingEnabled = false;
-    const wood = '#6b4a2a', woodHi = '#8a6636', woodDk = '#463016', iron = '#33373d';
-    const crate = '#a9812f', crateHi = '#c99a3a', crateDk = '#7a5a1f', cloth = '#b23b2e', clothHi = '#d35845';
-    const jar = '#3f6b5c', sack = '#cbb892';
-    const R = (x, y, w, h, c) => { g.fillStyle = c; g.fillRect(x, y, w, h); };
-    const gy = CFEET;
-    function wheel(cx) {
-      g.fillStyle = woodDk; g.beginPath(); g.arc(cx, gy, 6.5, 0, 6.2832); g.fill();
-      g.fillStyle = wood; g.beginPath(); g.arc(cx, gy, 5, 0, 6.2832); g.fill();
-      g.strokeStyle = woodDk; g.lineWidth = 1;
-      for (let k = 0; k < 4; k++) { const a = k * Math.PI / 4; g.beginPath(); g.moveTo(cx, gy); g.lineTo(cx + Math.cos(a) * 5, gy + Math.sin(a) * 5); g.stroke(); }
-      g.fillStyle = iron; g.beginPath(); g.arc(cx, gy, 1.6, 0, 6.2832); g.fill();
+    g.save(); g.translate(ORX, ORY);
+    const HWc = 16, HHc = 8;
+    const P = (gx, gy, gz) => [(gx - gy) * HWc, (gx + gy) * HHc - gz];
+    const quad = (pts, col) => { g.fillStyle = col; g.beginPath(); g.moveTo(pts[0][0], pts[0][1]); for (let i = 1; i < pts.length; i++) g.lineTo(pts[i][0], pts[i][1]); g.closePath(); g.fill(); };
+    const line = (a, b, col, w) => { g.strokeStyle = col; g.lineWidth = w || 1; g.lineCap = 'round'; g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke(); };
+    const wood = '#6e4a28', woodHi = '#9a7038', woodDk = '#3a240f', woodMid = '#7f5830';
+    const iron = '#33373d', ironHi = '#565b63';
+    const cloth = '#b23b2e', clothHi = '#d9614e';
+    const canopy = '#d8c290', canopyHi = '#efe0b6', canopyDk = '#a88f5c', canopyIn = '#241a10';
+    const crate = '#a9812f', crateHi = '#caa043', crateDk = '#7a5a1f';
+    const oxBase = '#7c5636', oxHi = '#9c744a', horn = '#e6dcc2', muzzle = '#3a2a1e', oxDk2 = '#553520', oxSh = '#3d2614';
+    const x0 = 0.3, x1 = 3.0, y0 = 0.1, y1 = 1.6, zf = 20, zt = 36, ymid = (y0 + y1) / 2;
+    const axF = P(1.7, y0, 0), axN = P(1.7, y1, 0);
+    g.fillStyle = 'rgba(0,0,0,.30)'; g.beginPath(); g.ellipse(6, 6, 70, 18, 0, 0, 6.2832); g.fill();
+    function wheel(hx, hy, r) {
+      g.fillStyle = '#241a10'; g.beginPath(); g.ellipse(hx, hy, r * 0.60, r, 0, 0, 6.2832); g.fill();
+      g.fillStyle = wood; g.beginPath(); g.ellipse(hx, hy, r * 0.60 - 2.4, r - 2.4, 0, 0, 6.2832); g.fill();
+      g.fillStyle = woodDk; g.beginPath(); g.ellipse(hx, hy, r * 0.36, r - 7, 0, 0, 6.2832); g.fill();
+      for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4; line([hx, hy], [hx + Math.cos(a) * (r * 0.52), hy + Math.sin(a) * (r - 3)], woodMid, 1.6); }
+      g.fillStyle = iron; g.beginPath(); g.ellipse(hx, hy, 3, 4, 0, 0, 6.2832); g.fill();
+      g.fillStyle = ironHi; g.beginPath(); g.ellipse(hx - 0.6, hy - 1, 1.2, 1.6, 0, 0, 6.2832); g.fill();
     }
-    wheel(CCX - 9); wheel(CCX + 11);
-    R(CCX - 22, gy - 7, 9, 2, woodDk);                                           // timón (tira un buey, fuera de cuadro)
-    R(CCX - 17, gy - 9, 35, 5, wood); R(CCX - 17, gy - 9, 35, 1, woodHi); R(CCX - 17, gy - 5, 35, 1, woodDk);   // plataforma
-    R(CCX - 15, gy - 19, 9, 10, crate); R(CCX - 15, gy - 19, 9, 1, crateHi); R(CCX - 7, gy - 19, 1, 10, crateDk);   // caja alta
-    R(CCX - 5, gy - 16, 8, 7, crate); R(CCX - 5, gy - 16, 8, 1, crateHi);        // caja baja
-    g.fillStyle = jar; g.beginPath(); g.ellipse(CCX + 10, gy - 13, 4, 5, 0, 0, 6.2832); g.fill(); R(CCX + 8, gy - 16, 4, 2, jar);   // tinaja
-    g.fillStyle = sack; g.beginPath(); g.ellipse(CCX - 10, gy - 20, 4, 3, 0, 0, 6.2832); g.fill();               // saco
-    R(CCX - 16, gy - 13, 12, 4, cloth); R(CCX - 16, gy - 13, 12, 1, clothHi);    // tela roja sobre la carga
-    R(CCX + 14, gy - 31, 1, 22, woodDk);                                          // asta
-    R(CCX + 15, gy - 31, 8, 6, cloth); R(CCX + 15, gy - 31, 8, 1, clothHi);       // banderín 貢
+    wheel(axF[0], axF[1] - 16, 17);                                     // rueda lejana
+    quad([P(x0, y1, zf), P(x1, y1, zf), P(x1, y1, zt), P(x0, y1, zt)], wood);
+    for (let i = 1; i < 7; i++) { const t = x0 + (x1 - x0) * i / 7; line(P(t, y1, zf), P(t, y1, zt), woodDk, 1); }
+    line(P(x0, y1, zt), P(x1, y1, zt), woodHi, 1.6); line(P(x0, y1, zf), P(x1, y1, zf), woodDk, 1.4);
+    quad([P(x1, y0, zf), P(x1, y1, zf), P(x1, y1, zt), P(x1, y0, zt)], woodMid);
+    line(P(x1, y0, zt), P(x1, y1, zt), woodHi, 1.4);
+    quad([P(x0, y0, zt), P(x1, y0, zt), P(x1, y1, zt), P(x0, y1, zt)], woodHi);
+    quad([P(x0 + 0.1, y0 + 0.1, zt), P(x1 - 0.1, y0 + 0.1, zt), P(x1 - 0.1, y1 - 0.1, zt), P(x0 + 0.1, y1 - 0.1, zt)], '#5a3d1e');
+    [1.05, 2.05].forEach(t => { line(P(t, y1, zf), P(t, y1, zt), iron, 2); line(P(t, y1, zf), P(t, y1, zt - 0.5), ironHi, 0.6); });
+    const boxIso = (cx, cy, cz, w, d, hh, c, ch, cd) => {
+      quad([P(cx, cy + d, cz), P(cx + w, cy + d, cz), P(cx + w, cy + d, cz + hh), P(cx, cy + d, cz + hh)], c);
+      quad([P(cx + w, cy, cz), P(cx + w, cy + d, cz), P(cx + w, cy + d, cz + hh), P(cx + w, cy, cz + hh)], cd);
+      quad([P(cx, cy, cz + hh), P(cx + w, cy, cz + hh), P(cx + w, cy + d, cz + hh), P(cx, cy + d, cz + hh)], ch);
+    };
+    boxIso(2.3, 0.35, zt - 3, 0.55, 0.6, 12, crate, crateHi, crateDk);
+    boxIso(2.25, 1.0, zt - 3, 0.5, 0.5, 8, crate, crateHi, crateDk);
+    // Toldo cubierto (semicilindro).
+    const cbx0 = x0 + 0.05, cbx1 = 2.15, A = 26;
+    const zc = (t) => zt + 2 + A * Math.sin(Math.PI * t), gyAt = (t) => y0 + (y1 - y0) * t;
+    let back = []; for (let s = 0; s <= 14; s++) { const t = s / 14; back.push(P(cbx0, gyAt(t), zc(t))); } back.push(P(cbx0, y1, zt)); back.push(P(cbx0, y0, zt)); quad(back, canopyDk);
+    quad([P(cbx0, gyAt(.5), zc(.5)), P(cbx1, gyAt(.5), zc(.5)), P(cbx1, gyAt(.74), zc(.74)), P(cbx0, gyAt(.74), zc(.74))], canopy);
+    quad([P(cbx0, gyAt(.74), zc(.74)), P(cbx1, gyAt(.74), zc(.74)), P(cbx1, y1, zt), P(cbx0, y1, zt)], canopyDk);
+    quad([P(cbx0, gyAt(.42), zc(.42)), P(cbx1, gyAt(.42), zc(.42)), P(cbx1, gyAt(.52), zc(.52)), P(cbx0, gyAt(.52), zc(.52))], canopyHi);
+    for (let r = 0; r <= 5; r++) { const gx = cbx0 + (cbx1 - cbx0) * r / 5; line(P(gx, ymid, zc(0.5)), P(gx, y1, zt), canopyDk, 1.1); }
+    let fr = []; for (let s = 0; s <= 14; s++) { const t = s / 14; fr.push(P(cbx1, gyAt(t), zc(t))); } fr.push(P(cbx1, y1, zt)); fr.push(P(cbx1, y0, zt)); quad(fr, canopyIn);
+    let ar = []; for (let s = 0; s <= 14; s++) { const t = s / 14; ar.push(P(cbx1, gyAt(t), zc(t))); } g.strokeStyle = canopyDk; g.lineWidth = 1.4; g.beginPath(); ar.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.stroke();
+    line(P(x1, y0 + 0.35, zf + 3), P(4.5, y0 + 0.5, zf - 4), woodDk, 2.4);
+    line(P(x1, y1 - 0.35, zf + 3), P(4.5, y1 - 0.5, zf - 4), woodDk, 2.4);
+    // Conductor en el pescante.
+    const seat = P(cbx1 + 0.35, ymid, zt);
+    quad([P(cbx1 + 0.05, y0 + 0.2, zt - 1), P(cbx1 + 0.7, y0 + 0.2, zt - 1), P(cbx1 + 0.7, y1 - 0.2, zt - 1), P(cbx1 + 0.05, y1 - 0.2, zt - 1)], woodMid);
+    const dcv = caravanDriver(); if (dcv && dcv.width) { g.imageSmoothingEnabled = false; g.drawImage(dcv, seat[0] - dcv.width / 2, seat[1] - dcv.height + 7); }
+    wheel(axN[0], axN[1] - 16, 17);                                     // rueda cercana
+    // Buey.
+    (function () {
+      const b = P(4.7, ymid, 0), bx = Math.round(b[0]), by = Math.round(b[1]);
+      const px = (x, y, w, h, c) => { g.fillStyle = c; g.fillRect(bx + x, by + y, w, h); };
+      const el = (x, y, rx, ry, c) => { g.fillStyle = c; g.beginPath(); g.ellipse(bx + x, by + y, rx, ry, 0, 0, 6.2832); g.fill(); };
+      px(-13, -18, 4, 18, oxSh); px(6, -18, 4, 18, oxSh); px(-7, -17, 4, 17, oxDk2); px(11, -17, 4, 17, oxDk2);
+      px(-13, -2, 4, 2, '#181009'); px(6, -2, 4, 2, '#181009'); px(-7, -2, 4, 2, '#181009'); px(11, -2, 4, 2, '#181009');
+      px(-17, -31, 2, 17, oxDk2); px(-18, -16, 3, 4, '#241a10');
+      el(-1, -27, 16, 10, oxBase); el(-3, -32, 12, 4, oxHi); el(2, -20, 12, 3, oxSh);
+      el(-9, -35, 6, 6, oxBase); el(-9, -36, 5, 4, oxHi);
+      px(9, -34, 9, 14, oxBase); el(21, -25, 8, 7, oxBase); el(19, -28, 4, 3, oxHi); el(27, -20, 5, 4, muzzle);
+      px(24, -22, 2, 2, '#0d0906'); px(30, -19, 1, 1, '#0d0906'); px(22, -26, 2, 2, '#110b07'); el(14, -30, 3, 2, oxDk2);
+      g.fillStyle = horn;
+      g.beginPath(); g.moveTo(bx + 15, by - 32); g.quadraticCurveTo(bx + 11, by - 41, bx + 17, by - 43); g.lineTo(bx + 18, by - 41); g.quadraticCurveTo(bx + 15, by - 38, bx + 18, by - 32); g.fill();
+      g.beginPath(); g.moveTo(bx + 25, by - 31); g.quadraticCurveTo(bx + 30, by - 40, bx + 25, by - 44); g.lineTo(bx + 23, by - 42); g.quadraticCurveTo(bx + 26, by - 37, bx + 22, by - 31); g.fill();
+      g.fillStyle = woodDk; px(4, -37, 15, 3); g.fillStyle = '#2a1a0d'; px(4, -37, 15, 1);
+    })();
+    // Asta + banderín 貢.
+    const pole = P(x0, y0, 0);
+    g.fillStyle = woodDk; g.fillRect(pole[0] - 1.2, pole[1] - 70, 2.4, 70);
+    g.fillStyle = '#d8b65a'; g.beginPath(); g.arc(pole[0], pole[1] - 70, 2.2, 0, 6.2832); g.fill();
+    quad([[pole[0] + 1, pole[1] - 68], [pole[0] + 18, pole[1] - 64], [pole[0] + 18, pole[1] - 50], [pole[0] + 1, pole[1] - 53]], cloth);
+    quad([[pole[0] + 1, pole[1] - 68], [pole[0] + 18, pole[1] - 64], [pole[0] + 18, pole[1] - 62], [pole[0] + 1, pole[1] - 66]], clothHi);
+    g.fillStyle = '#fff4d8'; g.font = '11px "Noto Serif SC",serif'; g.textBaseline = 'middle'; g.textAlign = 'center';
+    try { g.fillText('貢', pole[0] + 9, pole[1] - 59); } catch (e) {}
+    g.restore();
     caravanCv = cv; return cv;
   }
   function drawCaravan(g, lx, ly) {
     const cv = caravanBaked(), fx = lx * SCALE, fy = ly * SCALE;
     g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.imageSmoothingEnabled = false;
-    g.fillStyle = 'rgba(0,0,0,.20)'; g.beginPath(); g.ellipse(fx, fy, 22 * CDRAW * 0.5, 5, 0, 0, 6.2832); g.fill();
     g.translate(fx, fy); g.drawImage(cv, -CCX * CDRAW, -CFEET * CDRAW, CW * CDRAW, CH * CDRAW); g.restore();
   }
   // Estado de la caravana: llega (from→to), espera (idle), se va (to→from) y desaparece.
@@ -2408,7 +2477,7 @@ const HacFolk = (function () {
     // Caravana de tributo: actor (profundidad/oclusión como el resto) + banner 貢.
     if (caravan) {
       actors.push({ fx: caravan.fx, fy: caravan.fy, draw: (g, lx, ly) => drawCaravan(g, lx, ly) });
-      overlays.push({ draw: (g) => { const p = logic(caravan.fx, caravan.fy); npcBanner(g, p[0], p[1] - Math.round(CH * CDRAW / SCALE) - 2, 'Tributo', '貢'); } });
+      overlays.push({ draw: (g) => { const p = logic(caravan.fx, caravan.fy); npcBanner(g, p[0], p[1] - Math.round((CFEET - 8) * CDRAW / SCALE), 'Tributo', '貢'); } });
     }
     // Mecenas visibles: el sprite va como actor (con oclusión); el NOMBRE va aparte.
     const nameCands = [];

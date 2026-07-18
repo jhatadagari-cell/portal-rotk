@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Caravana iso · test</title>
+<style>
+  body{ background:#12100c; margin:0; padding:20px; font-family:sans-serif; color:#f0ddb0; text-align:center; }
+  canvas{ image-rendering:pixelated; background:#2f3d24; border:1px solid #444; margin:10px; }
+  .grid{ display:flex; flex-wrap:wrap; justify-content:center; gap:16px; }
+  h1{ color:#c9a84c; font-weight:400; }
+  small{ opacity:.6 }
+</style></head>
+<body>
+<h1>Caravana isométrica · banco de pruebas</h1>
+<div class="grid">
+  <div><canvas id="c1" width="440" height="380"></canvas><br><small>×2 sobre hierba</small></div>
+  <div><canvas id="c2" width="220" height="190"></canvas><br><small>×1 (lógico)</small></div>
+  <div><canvas id="c3" width="300" height="260" style="background:#2f3d24"></canvas><br><small>PORT exacto (bake ×1.5) + ancla</small></div>
+</div>
+
+<script src="assets/js/hac-util.js?v=1"></script>
+<script src="assets/js/hac-char.js?v=19"></script>
+<script>
+// ── Conductor (transportista) vía HacChar, pose sentada (pequeño, escala 1) ──
+let driverCv = null;
+function driver(){
+  if (driverCv) return driverCv;
+  const c = document.createElement('canvas');
+  try { HacChar.draw(c, { aptitud:'administrador', aspecto:{ robe:'#8a5a2e', accent:'#e6c15a', piel:1, pelo:2 }, dir:'SE', frame:0, scale:1, pose:'sit' }); } catch(e){ console.warn(e); }
+  driverCv = c; return c;
+}
+
+// ── Carruaje isométrico grande, carreta cubierta (輜車) + buey + conductor ──
+// Proyección iso: gx = largo (0 atrás → + delante/buey), gy = ancho, gz = altura px.
+// Cerca del observador = max(gx+gy) (abajo-derecha).
+function drawOxCart(g, OX, OY, S){
+  g.save(); g.imageSmoothingEnabled=false; g.translate(OX,OY); g.scale(S,S);
+  const HW=16, HH=8;
+  const P=(gx,gy,gz)=>[ (gx-gy)*HW, (gx+gy)*HH - gz ];
+  const quad=(pts,col)=>{ g.fillStyle=col; g.beginPath(); g.moveTo(pts[0][0],pts[0][1]); for(let i=1;i<pts.length;i++) g.lineTo(pts[i][0],pts[i][1]); g.closePath(); g.fill(); };
+  const line=(a,b,col,w)=>{ g.strokeStyle=col; g.lineWidth=w||1; g.lineCap='round'; g.beginPath(); g.moveTo(a[0],a[1]); g.lineTo(b[0],b[1]); g.stroke(); };
+
+  const wood='#6e4a28', woodHi='#9a7038', woodDk='#3a240f', woodMid='#7f5830';
+  const iron='#33373d', ironHi='#565b63';
+  const cloth='#b23b2e', clothHi='#d9614e';
+  const canopy='#d8c290', canopyHi='#efe0b6', canopyDk='#a88f5c', canopyIn='#241a10';
+  const crate='#a9812f', crateHi='#caa043', crateDk='#7a5a1f';
+  const oxBase='#7c5636', oxHi='#9c744a', horn='#e6dcc2', muzzle='#3a2a1e';
+  const oxDk2='#553520', oxSh='#3d2614';
+
+  // sombra
+  g.fillStyle='rgba(0,0,0,.30)'; g.beginPath(); g.ellipse(6,6, 74, 19, 0, 0, 6.2832); g.fill();
+
+  // ── geometría base ──
+  const x0=0.3, x1=3.0, y0=0.1, y1=1.6;        // caja
+  const zf=20, zt=36;                          // suelo elevado / borde superior de la caja
+  const ymid=(y0+y1)/2;
+  const axF=P(1.7,y0,0), axN=P(1.7,y1,0);      // ejes de rueda
+
+  function wheel(hx,hy,r,near){
+    g.fillStyle='#241a10'; g.beginPath(); g.ellipse(hx,hy, r*0.60, r, 0,0,6.2832); g.fill();     // neumático madera oscura
+    g.fillStyle=wood;      g.beginPath(); g.ellipse(hx,hy, r*0.60-2.4, r-2.4, 0,0,6.2832); g.fill();
+    g.fillStyle=woodDk;    g.beginPath(); g.ellipse(hx,hy, r*0.36, r-7, 0,0,6.2832); g.fill();
+    for(let k=0;k<8;k++){ const a=k*Math.PI/4; line([hx,hy],[hx+Math.cos(a)*(r*0.52), hy+Math.sin(a)*(r-3)], woodMid, 1.6); } // radios
+    g.fillStyle=iron;  g.beginPath(); g.ellipse(hx,hy, 3, 4, 0,0,6.2832); g.fill();               // cubo hierro
+    g.fillStyle=ironHi;g.beginPath(); g.ellipse(hx-0.6,hy-1, 1.2, 1.6, 0,0,6.2832); g.fill();
+  }
+
+  // 1) rueda LEJANA (detrás de la caja)
+  wheel(axF[0], axF[1]-16, 17, false);
+
+  // 2) CAJA (box) — cara near (SE), cara frontal, borde superior
+  quad([P(x0,y1,zf),P(x1,y1,zf),P(x1,y1,zt),P(x0,y1,zt)], wood);                    // flanco near
+  for(let i=1;i<7;i++){ const t=x0+(x1-x0)*i/7; line(P(t,y1,zf),P(t,y1,zt), woodDk,1); }
+  line(P(x0,y1,zt),P(x1,y1,zt), woodHi,1.6); line(P(x0,y1,zf),P(x1,y1,zf), woodDk,1.4);
+  quad([P(x1,y0,zf),P(x1,y1,zf),P(x1,y1,zt),P(x1,y0,zt)], woodMid);                 // cara frontal (hacia el buey)
+  line(P(x1,y0,zt),P(x1,y1,zt), woodHi,1.4);
+  quad([P(x0,y0,zt),P(x1,y0,zt),P(x1,y1,zt),P(x0,y1,zt)], woodHi);                  // borde superior
+  quad([P(x0+0.1,y0+0.1,zt),P(x1-0.1,y0+0.1,zt),P(x1-0.1,y1-0.1,zt),P(x0+0.1,y1-0.1,zt)], '#5a3d1e');
+  [1.05,2.05].forEach(t=>{ line(P(t,y1,zf),P(t,y1,zt), iron,2); line(P(t,y1,zf),P(t,y1,zt-0.5), ironHi,0.6); }); // bandas hierro
+
+  // 3) CARGA que asoma al frente (delante del toldo)
+  const boxIso=(cx,cy,cz,w,d,hh,c,ch,cd)=>{
+    quad([P(cx,cy+d,cz),P(cx+w,cy+d,cz),P(cx+w,cy+d,cz+hh),P(cx,cy+d,cz+hh)], c);
+    quad([P(cx+w,cy,cz),P(cx+w,cy+d,cz),P(cx+w,cy+d,cz+hh),P(cx+w,cy,cz+hh)], cd);
+    quad([P(cx,cy,cz+hh),P(cx+w,cy,cz+hh),P(cx+w,cy+d,cz+hh),P(cx,cy+d,cz+hh)], ch);
+  };
+  boxIso(2.3,0.35,zt-3,0.55,0.6,12, crate,crateHi,crateDk);
+  boxIso(2.25,1.0,zt-3,0.5,0.5,8, crate,crateHi,crateDk);
+
+  // 4) TOLDO cubierto (semicilindro) sobre gx [cbx0, cbx1]
+  const cbx0=x0+0.05, cbx1=2.15, A=26;
+  const zc=(t)=>zt+2+A*Math.sin(Math.PI*t);                   // altura de la lona según t (0..1 a lo ancho)
+  // 4a) pared TRASERA (dome) en gx=cbx0
+  let back=[]; for(let s=0;s<=14;s++){const t=s/14; back.push(P(cbx0, y0+(y1-y0)*t, zc(t)));}
+  back.push(P(cbx0,y1,zt)); back.push(P(cbx0,y0,zt)); quad(back, canopyDk);
+  // 4b) superficie superior: dos bandas (clara arriba, sombra abajo) + brillo del crest → volumen curvo
+  const gyAt=(t)=>y0+(y1-y0)*t;
+  quad([P(cbx0,gyAt(.5),zc(.5)),P(cbx1,gyAt(.5),zc(.5)),P(cbx1,gyAt(.74),zc(.74)),P(cbx0,gyAt(.74),zc(.74))], canopy);
+  quad([P(cbx0,gyAt(.74),zc(.74)),P(cbx1,gyAt(.74),zc(.74)),P(cbx1,y1,zt),P(cbx0,y1,zt)], canopyDk);
+  quad([P(cbx0,gyAt(.42),zc(.42)),P(cbx1,gyAt(.42),zc(.42)),P(cbx1,gyAt(.52),zc(.52)),P(cbx0,gyAt(.52),zc(.52))], canopyHi);
+  // 4c) costillas (arcos) sobre el flanco
+  for(let r=0;r<=5;r++){ const gx=cbx0+(cbx1-cbx0)*r/5; line(P(gx,ymid,zc(0.5)),P(gx,y1,zt), canopyDk,1.1); }
+  // 4d) boca DELANTERA (interior oscuro) en gx=cbx1
+  let fr=[]; for(let s=0;s<=14;s++){const t=s/14; fr.push(P(cbx1, y0+(y1-y0)*t, zc(t)));}
+  fr.push(P(cbx1,y1,zt)); fr.push(P(cbx1,y0,zt)); quad(fr, canopyIn);
+  // aro de la boca
+  let ar=[]; for(let s=0;s<=14;s++){const t=s/14; ar.push(P(cbx1, y0+(y1-y0)*t, zc(t)));}
+  g.strokeStyle=canopyDk; g.lineWidth=1.4; g.beginPath(); ar.forEach((p,i)=> i?g.lineTo(p[0],p[1]):g.moveTo(p[0],p[1])); g.stroke();
+
+  // 5) VARAS hacia el buey (desde el frente de la caja)
+  line(P(x1,y0+0.35,zf+3), P(4.5,y0+0.5,zf-4), woodDk, 2.4);
+  line(P(x1,y1-0.35,zf+3), P(4.5,y1-0.5,zf-4), woodDk, 2.4);
+
+  // 6) CONDUCTOR sentado en el pescante (delante de la boca del toldo)
+  const seat=P(cbx1+0.35, ymid, zt);
+  quad([P(cbx1+0.05,y0+0.2,zt-1),P(cbx1+0.7,y0+0.2,zt-1),P(cbx1+0.7,y1-0.2,zt-1),P(cbx1+0.05,y1-0.2,zt-1)], woodMid); // banco
+  const dcv=driver();
+  if (dcv && dcv.width){ g.imageSmoothingEnabled=false; g.drawImage(dcv, seat[0]-dcv.width/2, seat[1]-dcv.height+7); }
+
+  // 7) rueda CERCANA (delante de la caja)
+  wheel(axN[0], axN[1]-16, 17, true);
+
+  // 8) BUEY grande (gx~4.7, mirando SE / hacia el observador), de pie
+  (function(){
+    const b=P(4.7,ymid,0), bx=Math.round(b[0]), by=Math.round(b[1]);
+    const px=(x,y,w,h,c)=>{ g.fillStyle=c; g.fillRect(bx+x,by+y,w,h); };
+    const el=(x,y,rx,ry,c)=>{ g.fillStyle=c; g.beginPath(); g.ellipse(bx+x,by+y,rx,ry,0,0,6.2832); g.fill(); };
+    // 4 patas de pie (pies al suelo by), lejanas oscuras / cercanas medias
+    px(-13,-18,4,18, oxSh); px(6,-18,4,18, oxSh);
+    px(-7,-17,4,17, oxDk2); px(11,-17,4,17, oxDk2);
+    px(-13,-2,4,2,'#181009'); px(6,-2,4,2,'#181009'); px(-7,-2,4,2,'#181009'); px(11,-2,4,2,'#181009'); // pezuñas
+    // cola
+    px(-17,-31,2,17, oxDk2); px(-18,-16,3,4,'#241a10');
+    // cuerpo barril (elevado)
+    el(-1,-27,16,10, oxBase);
+    el(-3,-32,12,4, oxHi);      // lomo iluminado
+    el(2,-20,12,3, oxSh);       // vientre en sombra
+    // giba/cruz de cebú
+    el(-9,-35,6,6, oxBase); el(-9,-36,5,4, oxHi);
+    // cuello + cabeza baja hacia SE
+    px(9,-34,9,14, oxBase);
+    el(21,-25,8,7, oxBase);     // cabeza
+    el(19,-28,4,3, oxHi);       // frente clara
+    el(27,-20,5,4, muzzle);     // morro
+    px(24,-22,2,2,'#0d0906'); px(30,-19,1,1,'#0d0906');   // ollares
+    px(22,-26,2,2,'#110b07');   // ojo
+    el(14,-30,3,2, oxDk2);      // oreja
+    // cuernos claros, curvos
+    g.fillStyle=horn;
+    g.beginPath(); g.moveTo(bx+15,by-32); g.quadraticCurveTo(bx+11,by-41,bx+17,by-43); g.lineTo(bx+18,by-41); g.quadraticCurveTo(bx+15,by-38,bx+18,by-32); g.fill();
+    g.beginPath(); g.moveTo(bx+25,by-31); g.quadraticCurveTo(bx+30,by-40,bx+25,by-44); g.lineTo(bx+23,by-42); g.quadraticCurveTo(bx+26,by-37,bx+22,by-31); g.fill();
+    // yugo sobre la cruz
+    g.fillStyle=woodDk; px(4,-37,15,3); g.fillStyle='#2a1a0d'; px(4,-37,15,1);
+  })();
+
+  // 9) ASTA + banderín 貢 (atrás, alto)
+  const pole=P(x0,y0,0);
+  g.fillStyle=woodDk; g.fillRect(pole[0]-1.2, pole[1]-70, 2.4, 70);
+  g.fillStyle='#d8b65a'; g.beginPath(); g.arc(pole[0], pole[1]-70, 2.2,0,6.2832); g.fill();  // remate dorado
+  quad([[pole[0]+1,pole[1]-68],[pole[0]+18,pole[1]-64],[pole[0]+18,pole[1]-50],[pole[0]+1,pole[1]-53]], cloth);
+  quad([[pole[0]+1,pole[1]-68],[pole[0]+18,pole[1]-64],[pole[0]+18,pole[1]-62],[pole[0]+1,pole[1]-66]], clothHi);
+  g.fillStyle='#fff4d8'; g.font='11px "Noto Serif SC",serif'; g.textBaseline='middle'; g.textAlign='center';
+  try{ g.fillText('貢', pole[0]+9, pole[1]-59); }catch(e){}
+  g.textAlign='left';
+
+  g.restore();
+}
+
+function render(){
+  const g1=document.getElementById('c1').getContext('2d');
+  g1.clearRect(0,0,440,380); drawOxCart(g1, 210, 250, 2);
+  const g2=document.getElementById('c2').getContext('2d');
+  g2.clearRect(0,0,220,190); drawOxCart(g2, 110, 130, 1);
+  // c3: PREVIEW EXACTO del port (bake 180×150 en origen 64,86, luego ×1.5), con ancla
+  const bake=document.createElement('canvas'); bake.width=180; bake.height=150;
+  drawOxCart(bake.getContext('2d'), 64, 86, 1);
+  const g3=document.getElementById('c3').getContext('2d');
+  g3.imageSmoothingEnabled=false; g3.clearRect(0,0,300,260);
+  g3.drawImage(bake, 0,0, 180*1.5, 150*1.5);
+  // cruz en el ancla (78,106)*1.5
+  g3.strokeStyle='#ff3b3b'; g3.lineWidth=1; g3.beginPath();
+  g3.moveTo(78*1.5-6,106*1.5); g3.lineTo(78*1.5+6,106*1.5); g3.moveTo(78*1.5,106*1.5-6); g3.lineTo(78*1.5,106*1.5+6); g3.stroke();
+}
+if (window.HacChar) render(); else window.addEventListener('load', render);
+setTimeout(render, 300);
+</script>
+</body></html>
