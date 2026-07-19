@@ -378,7 +378,11 @@ const HacFolk = (function () {
     wk = build(mapa, tier);
     names = {}; (miembros || []).forEach(m => { names[m.id] = m.nombre || ''; });
     if (!wk.cells.length) return [];
-    return (miembros || []).slice(0, 24).map(m => {
+    // NO saturar la finca: TODOS los jugadores + solo unos pocos NPC (talentos/客).
+    // El resto de NPC existen en los datos (roster) pero no deambulan por el mapa.
+    const players = (miembros || []).filter(m => !m.npc);
+    const npcs = (miembros || []).filter(m => m.npc).slice(0, 6);
+    return players.concat(npcs).slice(0, 24).map(m => {
       // Edificio propio (si administra alguno): se usa como "hogar" al que gravita
       // y que visita más a menudo.
       let homeBid = null, home = null, start = null;
@@ -388,10 +392,11 @@ const HacFolk = (function () {
       // Modelo del mecenas: aptitud/aspecto de su personaje registrado. Si no
       // tiene personaje vinculado, modelo por defecto con el color de la casa.
       const pj = (m.personajeId && window.HacPersonajes && HacPersonajes.get) ? HacPersonajes.get(m.personajeId) : null;
-      const aptitud = pj ? pj.aptitud : '';
+      const aptitud = pj ? pj.aptitud : (m.aptitud || '');
       // Aspecto BASE del personaje. La ROPA DE TORSO equipada se fusiona EN VIVO en
       // spriteFor() (como las secuelas), para que equipar/quitar se vea sin re-spawn.
-      const aspecto = pj ? (pj.aspecto || {}) : { robe: color };
+      // NPC reclutados (talentos) llevan su propio `aspecto` para verse como su retrato.
+      const aspecto = pj ? (pj.aspecto || {}) : (m.aspecto || { robe: color });
       // Prestigio TOTAL = base (admin) + ganado en misiones/escaramuzas, para que el
       // cargo del mecenas que camina por la finca refleje lo jugado, no solo la base.
       const ganado = (window.HacPuntos && HacPuntos.deMiembro && m.personajeId && haciendaId) ? (Number(HacPuntos.deMiembro(haciendaId, m.personajeId)) || 0) : 0;

@@ -5555,6 +5555,7 @@
       { id: 't-beilan',   nombre: 'Bei Lan',    cortesia: '子烈', apt: 'militar',        star: 2, tier: 1, atuendo: 'guerrero',     asp: { robe: '#8a2f25', accent: '#d8b65a', piel: 2, pelo: 0 }, cond: { tipo: 'proximamente', sub: 'escaramuza', texto: 'Lo hallarás en una escaramuza fronteriza: vence su encuentro especial (difícil) para ganarte su respeto.' }, bio: 'Jinete fronterizo curtido en mil correrías.' },
       { id: 't-huqing',   nombre: 'Hu Qing',    cortesia: '德華', apt: 'cultural',       star: 3, tier: 2, atuendo: 'estratega',    asp: { robe: '#6a6f86', accent: '#eae4d2', piel: 0, pelo: 3 }, cond: { tipo: 'proximamente', sub: 'debate', texto: 'Visítalo en su retiro y véncelo en un debate.' }, bio: 'Estratega retirado que solo respeta a quien piensa mejor que él.' },
       { id: 't-meiyu',    nombre: 'Mei Yu',     cortesia: '雅之', apt: 'administrativo', star: 3, tier: 2, atuendo: 'administrador', asp: { robe: '#3a4b6e', accent: '#d8b65a', piel: 1, pelo: 4 }, cond: { tipo: 'donacion', val: 400 }, bio: 'Vive con sus ancianos padres; llévales oro y honra a la familia.' },
+      { id: 't-fengji',   nombre: 'Feng Ji',    cortesia: '元圖', apt: 'cultural',       star: 3, tier: 2, atuendo: 'estratega',    asp: { robe: '#5a4a6e', accent: '#eae4d2', piel: 1, pelo: 3 }, cond: { tipo: 'banquete', vianda: 2, oro: 200 }, bio: 'Gusta de la buena mesa; solo un banquete a su altura lo persuadirá.' },
       { id: 't-zhaokun',  nombre: 'Zhao Kun',   cortesia: '伯武', apt: 'militar',        star: 4, tier: 3, atuendo: 'caudillo',     asp: { robe: '#5a1f1f', accent: '#d8b65a', piel: 2, pelo: 0 }, cond: { tipo: 'recomendacion', ref: 't-beilan' }, bio: 'Caudillo que no abandona a sus hermanos de armas.' },
       { id: 't-linwan',   nombre: 'Lin Wan',    cortesia: '淑', apt: 'cultural',       star: 4, tier: 3, atuendo: 'estratega',    asp: { robe: '#7a5a86', accent: '#eae4d2', piel: 0, pelo: 5 }, cond: { tipo: 'prestigio', val: 600 }, bio: 'Dama estratega; su talento exige una casa de gran fama.' },
       { id: 't-sikong',   nombre: 'Sikong Ye',  cortesia: '公達', apt: 'administrativo', star: 4, tier: 4, atuendo: 'canciller',     asp: { robe: '#5b2c83', accent: '#d8b65a', piel: 1, pelo: 2 }, cond: { tipo: 'proximamente', sub: 'tresvisitas', texto: 'Como en la cabaña de paja: visítalo tres veces hasta que crea en tu constancia.' }, bio: 'Canciller esquivo; premia la perseverancia.' },
@@ -5579,6 +5580,7 @@
       if (c.tipo === 'prestigio') { const p = casaPrestigio(), ok = p >= c.val; return { estado: ok ? 'cumplida' : 'progreso', texto: `Renombre de la casa <b>${Math.round(p)}/${c.val}</b>.`, puede: ok }; }
       if (c.tipo === 'donacion') { const oro = (window.HacStats ? HacStats.dinero(myId) : 0), ok = oro >= c.val; return { estado: 'donar', texto: `Dona <b>${c.val}💰</b> a su familia (llevas ${oro}).`, puede: ok, val: c.val }; }
       if (c.tipo === 'recomendacion') { const ref = TALENTOS.find(x => x.id === c.ref), ok = talentosReclutadosIds().has(c.ref); return { estado: ok ? 'cumplida' : 'bloqueado', texto: `Solo acudirá si <b>${esc(ref ? ref.nombre : c.ref)}</b> ya sirve a tu casa.`, puede: ok }; }
+      if (c.tipo === 'banquete') { const inv = window.HacStats ? HacStats.inventario(myId) : []; const vn = inv.filter(x => x.id === 'vianda').reduce((s, x) => s + (x.n || 1), 0); const oro = window.HacStats ? HacStats.dinero(myId) : 0; const ok = vn >= c.vianda && oro >= c.oro; return { estado: 'banquete', texto: `Ofrécele un banquete: <b>${c.vianda}×酒肉</b> + <b>${c.oro}💰</b> <span style="opacity:.7">(llevas ${vn}×酒肉, ${oro}💰)</span>.`, puede: ok, vianda: c.vianda, oro: c.oro }; }
       return { estado: 'proximamente', texto: c.texto || 'Condición especial (próximamente).' };
     }
     function talentoFace(cv, t) {
@@ -5591,7 +5593,9 @@
       if (semanaUsada()) { toast('La casa ya acogió a un talento esta semana'); return; }
       const est = talentoEstado(t); if (!est.puede) { toast(est.estado === 'proximamente' ? 'Aún no puedes cumplir esa condición (próximamente)' : 'Aún no cumples su condición'); return; }
       if (t.cond.tipo === 'donacion') { if (!window.HacStats || HacStats.dinero(myId) < t.cond.val) { toast('No tienes suficiente oro'); return; } await HacStats.award(myId, { dinero: -t.cond.val }); }
-      const npc = { id: 'npc-' + Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36), talentoId: t.id, nombre: t.nombre, cortesia: t.cortesia, npc: true, aptitud: t.apt, aspecto: t.asp, atuendo: t.atuendo, estrellas: t.star, puntos: 0, desde: prodDia(), desdeMs: nowMs() };
+      if (t.cond.tipo === 'banquete') { for (let i = 0; i < t.cond.vianda; i++) HacStats.quitarItem(myId, 'vianda'); await HacStats.award(myId, { dinero: -t.cond.oro }); }
+      const asp = Object.assign({ atuendo: t.atuendo }, t.asp);   // el atuendo va DENTRO del aspecto para que el sprite lo use
+      const npc = { id: 'npc-' + Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36), talentoId: t.id, nombre: t.nombre, cortesia: t.cortesia, npc: true, aptitud: t.apt, aspecto: asp, atuendo: t.atuendo, estrellas: t.star, puntos: 0, desde: prodDia(), desdeMs: nowMs(), porId: myId, porNombre: myName };
       try { const d = await pabRPC('casa_reclutar', { p_hac: h.id, p_pj: myId, p_npc: npc }); if (d && d.miembros) h.miembros = d.miembros; }
       catch (e) { toast('No se pudo reclutar: ' + (e && e.message || '')); return; }
       toast(`招賢 ${t.nombre} se une a tu casa`);
@@ -5610,17 +5614,19 @@
     function buildTalentos() {
       const el = ensureTalentosEl();
       const ids = talentosReclutadosIds(), usada = semanaUsada(), nv = nivelCultural();
+      const recMap = {}; (h.miembros || []).forEach(m => { if (m.talentoId) recMap[m.talentoId] = m; });   // talentoId → miembro (para acreditar quién lo trajo)
       const cupo = usada ? `<span class="hacp-tal-cd">Cupo semanal usado · vuelve en ${fmtClock(Math.ceil(semanaRestanteMs() / 1000))}</span>` : `<span class="hacp-tal-ok">Cupo semanal disponible</span>`;
       const cards = TALENTOS.map(t => {
         const st = talentoEstado(t);
         const stars = '★'.repeat(t.star) + '☆'.repeat(5 - t.star);
         const glyph = DOM_GLYPH[t.apt] || '', col = DOM_COLOR[t.apt] || 'var(--gold)';
         let accion = '';
-        if (st.estado === 'reclutado') accion = '<div class="hacp-tal-badge ok">✔ En tu casa</div>';
+        if (st.estado === 'reclutado') { const mm = recMap[t.id]; accion = `<div class="hacp-tal-badge ok">✔ En tu casa${mm && mm.porNombre ? ` · lo trajo <b>${esc(mm.porNombre)}</b>` : ''}</div>`; }
         else if (st.estado === 'bloqueado') accion = `<div class="hacp-tal-badge lock">🔒 ${st.texto}</div>`;
         else if (st.estado === 'proximamente') accion = `<div class="hacp-tal-badge soon">⏳ ${esc(st.texto)}</div>`;
         else if (st.estado === 'cumplida') accion = `<button type="button" class="hacp-cp-btn hacp-suc-ok" data-tal-recruit="${t.id}"${usada ? ' disabled' : ''}>Reclutar</button><div class="hacp-tal-cond ok">✔ ${st.texto}</div>`;
         else if (st.estado === 'donar') accion = `<button type="button" class="hacp-cp-btn hacp-suc-ok" data-tal-recruit="${t.id}"${(usada || !st.puede) ? ' disabled' : ''}>Donar ${st.val}💰 y reclutar</button><div class="hacp-tal-cond">${st.texto}</div>`;
+        else if (st.estado === 'banquete') accion = `<button type="button" class="hacp-cp-btn hacp-suc-ok" data-tal-recruit="${t.id}"${(usada || !st.puede) ? ' disabled' : ''}>Ofrecer banquete 🍖</button><div class="hacp-tal-cond">${st.texto}</div>`;
         else accion = `<div class="hacp-tal-cond">${st.texto}</div>`;
         const oculto = st.estado === 'bloqueado';
         return `<div class="hacp-tal-card${oculto ? ' locked' : ''}${st.estado === 'reclutado' ? ' got' : ''}">
