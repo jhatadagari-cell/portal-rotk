@@ -1689,7 +1689,7 @@ const HacFolk = (function () {
     const frame = moving ? (Math.floor(w.phase * 1.1) % HORSE_FRAMES) : 0;
     const coat = (caballos[w.id] && caballos[w.id].tono) || '#8a5630';
     const tier = (caballos[w.id] && caballos[w.id].tier) || 0;
-    const cv = horseBaked(back, frame, coat, tier);
+    const cv = horseBaked(back, frame, coat, tier, moving);
     const fx = lx * SCALE, fy = ly * SCALE;
     g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.imageSmoothingEnabled = false;
     g.fillStyle = 'rgba(0,0,0,.22)'; g.beginPath(); g.ellipse(fx, fy, 15 * HDRAW * 0.75, 6, 0, 0, 6.2832); g.fill();   // sombra
@@ -1729,7 +1729,7 @@ const HacFolk = (function () {
   // Se dibuja en un lienzo lógico HW×HH y se HORNEA una vez por (vista, frame, capa),
   // con un pase de contorno para separarlo del campo. 4 vistas iso (SE/SW frontales,
   // NE/NW traseras) por espejo + variante trasera; ciclo de trote de 6 fotogramas.
-  const HORSE_FRAMES = 6;
+  const HORSE_FRAMES = 8;
   const HW = 44, HH = 38, HFEET = 34, HCX = 22;   // lienzo lógico, pies (y) y eje (x)
   const HDRAW = 2;                                 // factor de dibujo (px enteros, nítido): caballo grande, montable
   // Cajas de recomposición (px DISP. sobre los pies) para HacIso.frame: el jinete y
@@ -1753,10 +1753,12 @@ const HacFolk = (function () {
   function horsePalette(coat, tier) {
     const cap = CAPARISON[Math.max(0, Math.min(5, tier | 0))] || CAPARISON[0];
     return {
-      base: coat, hi: mixc(coat, '#ffffff', 0.22), dk: mixc(coat, '#000000', 0.24), sh: mixc(coat, '#000000', 0.46),
-      mane: mixc(coat, '#1a0f07', 0.72), muzzle: mixc(coat, '#000000', 0.52), hoof: '#20160f', eye: '#0d0906', socks: mixc(coat, '#ffffff', 0.42),
-      blanket: cap.blanket, blanketTrim: cap.trim, leather: '#4a2f18', leatherHi: '#6a4526', stirrup: '#9299a0',
-      studs: cap.studs ? mixc(cap.trim, '#ffffff', 0.25) : null, tassel: cap.tassel ? cap.trim : null, plume: cap.plume,
+      base: coat, hi: mixc(coat, '#ffffff', 0.26), edge: mixc(coat, '#ffffff', 0.5),
+      dk: mixc(coat, '#000000', 0.22), sh: mixc(coat, '#000000', 0.42), belly: mixc(coat, '#000000', 0.55),
+      mane: mixc(coat, '#160d06', 0.75), maneHi: mixc(coat, '#160d06', 0.55),
+      muzzle: mixc(coat, '#000000', 0.5), hoof: '#241a12', eye: '#0c0805',
+      blanket: cap.blanket, trim: cap.trim, leather: '#4a2f18', leatherHi: '#6a4526', stirrup: '#aab0b6',
+      studs: cap.studs ? mixc(cap.trim, '#ffffff', 0.3) : null, tassel: cap.tassel ? cap.trim : null, plume: cap.plume,
     };
   }
   // Contorno 1px oscuro (vecindad-4) para que el caballo destaque sobre la hierba.
@@ -1769,89 +1771,116 @@ const HacFolk = (function () {
     }
     c.putImageData(new ImageData(out, HW, HH), 0, 0);
   }
-  // Pinta un caballo mirando a la DERECHA (para izquierda se dibuja en espejo).
-  function paintHorse(c, back, frame, coat, tier) {
-    const P = horsePalette(coat, tier), px = (x, y, w, h, col) => { c.fillStyle = col; c.fillRect(x, y, w, h); };
-    const a = frame / HORSE_FRAMES * 6.2832;
-    const oxA = Math.round(Math.cos(a) * 3), liftA = Math.max(0, Math.round(Math.sin(a) * 2));
-    const oxB = Math.round(Math.cos(a + 3.1416) * 3), liftB = Math.max(0, Math.round(Math.sin(a + 3.1416) * 2));
-    const leg = (x, ox, lift, col) => {   // pata: muslo fijo + caña desplazada + casco
-      px(x, 24, 3, 6, col);
-      const footY = HFEET - lift;
-      px(x + ox, 29, 3, footY - 29, col);
-      px(x + ox, footY - 2, 3, 2, P.hoof);
-    };
-    // 1) cola (detrás del cuerpo, lado trasero = izquierda)
-    const tailF = back ? 1 : 0;
-    px(6 - tailF, 15, 3 + tailF, 5, P.mane); px(5 - tailF, 19, 3 + tailF, 5, P.mane);
-    px(5 - tailF, 23, 3, 5, P.mane); px(6 - tailF, 16, 1, 9, mixc(P.mane, '#ffffff', 0.12));
-    // 2) patas lejanas (más oscuras, detrás del cuerpo)
-    leg(12, oxA, liftA, P.sh);   // trasera lejana
-    leg(25, oxB, liftB, P.sh);   // delantera lejana
-    // 3) cuerpo (barril) + grupa + pecho
-    px(11, 15, 20, 10, P.base);
-    px(9, 16, 3, 8, P.base); px(30, 16, 3, 8, P.base);           // grupa (izq) y pecho (der)
-    px(12, 15, 18, 2, P.hi);                                     // lomo iluminado
-    px(11, 23, 20, 2, P.dk); px(13, 24, 15, 1, P.sh);            // vientre en sombra
-    px(9, 16, 3, 2, P.hi); px(9, 22, 3, 2, P.sh);                // volumen de la grupa
-    px(30, 15, 1, 1, P.dk);                                      // sombra de esquina delantera
-    // 3b) SILLA DE MONTAR (manta + asiento de cuero + cincha + estribo)
-    if (!back) {
-      px(12, 16, 15, 3, P.blanket); px(12, 18, 15, 1, P.blanketTrim);      // manta con ribete
-      px(13, 19, 2, 2, P.blanket); px(24, 19, 2, 2, P.blanket);            // picos de la manta
-      if (P.studs) { px(14, 17, 1, 1, P.studs); px(18, 17, 1, 1, P.studs); px(22, 17, 1, 1, P.studs); px(26, 17, 1, 1, P.studs); }  // tachones de jaez
-      if (P.tassel) { px(13, 20, 1, 3, P.tassel); px(25, 20, 1, 3, P.tassel); }   // borlas colgantes de la gualdrapa
-      px(14, 13, 11, 4, P.leather); px(14, 13, 11, 1, P.leatherHi);        // asiento
-      px(13, 11, 3, 4, P.leather); px(13, 11, 3, 1, P.leatherHi);          // borrén trasero (cantle)
-      px(23, 12, 3, 3, P.leather);                                        // perilla (pommel)
-      px(19, 18, 2, 6, P.leather);                                        // cincha por el vientre
-      px(19, 21, 3, 2, P.stirrup); px(20, 19, 1, 2, P.leather);           // estribo + ación
-    } else {
-      px(12, 15, 14, 3, P.blanket); px(12, 17, 14, 1, P.blanketTrim);      // manta asomando
-      if (P.studs) { px(14, 16, 1, 1, P.studs); px(18, 16, 1, 1, P.studs); px(22, 16, 1, 1, P.studs); }
-      px(13, 12, 12, 4, P.leather); px(13, 12, 12, 1, P.leatherHi);        // asiento visto de atrás
-      px(13, 11, 3, 2, P.leather); px(22, 11, 3, 2, P.leather);            // borrenes
-    }
-    if (!back) {
-      // 4F) cuello + crin + cabeza (vista frontal: se ve la cara)
-      px(27, 10, 6, 8, P.base); px(29, 8, 5, 5, P.base);         // cuello
-      px(31, 9, 2, 9, P.hi);                                     // borde delantero iluminado
-      px(27, 8, 2, 11, P.mane); px(28, 7, 2, 3, P.mane);         // crin (borde trasero)
-      px(32, 7, 6, 6, P.base);                                   // cráneo
-      px(33, 12, 4, 4, P.base); px(36, 11, 5, 5, P.base);        // carrillo + morro
-      px(38, 13, 3, 3, P.muzzle); px(40, 14, 1, 1, P.hoof);      // hocico + ollar
-      px(32, 6, 4, 2, P.base);                                   // testuz
-      px(32, 3, 2, 4, P.base); px(35, 3, 2, 4, P.base);          // orejas
-      px(32, 3, 2, 1, P.dk); px(35, 3, 2, 1, P.dk);
-      px(33, 4, 2, 3, P.mane);                                   // tupé
-      px(35, 10, 1, 1, P.eye); px(35, 9, 1, 1, mixc(P.hi, '#ffffff', 0.5));   // ojo + brillo
-      px(38, 16, 3, 1, P.dk);                                    // boca
-      if (P.plume) { px(33, 0, 2, 4, P.plume); px(34, 1, 1, 2, mixc(P.plume, '#ffffff', 0.4)); px(32, 1, 1, 1, P.plume); px(35, 1, 1, 1, P.plume); }   // penacho de guerra (testera)
-    } else {
-      // 4B) vista trasera: grupa hacia el observador, cuello más bajo y cabeza girada
-      px(28, 13, 6, 6, P.base); px(30, 11, 5, 4, P.base);        // cuello (arqueado, más bajo)
-      px(28, 13, 2, 6, P.mane); px(29, 11, 2, 2, P.mane);        // crin por el dorso del cuello
-      px(31, 8, 6, 5, P.base); px(35, 10, 3, 3, P.base);         // cabeza girada (se intuye el morro)
-      px(36, 11, 2, 2, P.muzzle);                                // hocico de refilón
-      px(31, 5, 2, 4, P.base); px(34, 5, 2, 4, P.base);          // orejas
-      px(31, 5, 2, 1, P.dk); px(34, 5, 2, 1, P.dk);
-      px(32, 6, 2, 2, P.mane);                                   // tupé
-      if (P.plume) { px(32, 1, 2, 4, P.plume); px(33, 2, 1, 2, mixc(P.plume, '#ffffff', 0.4)); }   // penacho (visto de atrás)
-      px(9, 15, 4, 3, P.hi); px(10, 18, 3, 4, P.hi);             // grupa bien iluminada de frente
-    }
-    // 5) patas cercanas (color base, delante del cuerpo)
-    leg(15, oxB, liftB, P.base);   // trasera cercana
-    leg(28, oxA, liftA, P.base);   // delantera cercana
+  // ── Caballo PROCEDURAL rediseñado: anatomía con volumen (barril/grupa/pecho),
+  // cuello arqueado, crin y cola con vuelo, y un TROTE articulado (rodilla/corvejón,
+  // balanceo del cuerpo y cabeceo). Se hornea por (vista,frame,coat,tier,movimiento).
+  function hEllip(c, cx, cy, rx, ry, col) { c.fillStyle = col; for (let y = -ry; y <= ry; y++) { const w = Math.floor(rx * Math.sqrt(Math.max(0, 1 - (y * y) / (ry * ry)))); c.fillRect(Math.round(cx - w), Math.round(cy + y), 2 * w + 1, 1); } }
+  function hDisc(c, cx, cy, r, col) { hEllip(c, cx, cy, r, r, col); }
+  function hSeg(c, x0, y0, x1, y1, w, col) { x0 = Math.round(x0); y0 = Math.round(y0); x1 = Math.round(x1); y1 = Math.round(y1); const dx = x1 - x0, dy = y1 - y0, n = Math.max(Math.abs(dx), Math.abs(dy), 1); c.fillStyle = col; for (let i = 0; i <= n; i++) { const x = Math.round(x0 + dx * i / n), y = Math.round(y0 + dy * i / n); c.fillRect(x - ((w - 1) >> 1), y, w, 1); } }
+  // pie de una pata según fase (0..1): apoyo (retrocede) + vuelo (arco hacia delante).
+  function hFoot(phase, stride, lift) { phase = ((phase % 1) + 1) % 1; let x, y; if (phase < 0.5) { const u = phase / 0.5; x = stride * (0.5 - u); y = 0; } else { const u = (phase - 0.5) / 0.5; x = stride * (u - 0.5); y = -lift * Math.sin(u * Math.PI); } return [x, y]; }
+  function hLimb(c, hx, hy, phase, stride, lift, col, hoof) { const f = hFoot(phase, stride, lift), footX = Math.round(hx + f[0]), footY = HFEET + f[1], ky = Math.round(hy + (footY - hy) * 0.55); hSeg(c, hx, hy, footX, ky, 3, col); c.fillStyle = col; c.fillRect(footX - 1, ky, 2, Math.max(1, Math.round(footY) - ky)); c.fillRect(footX - 1, ky - 1, 3, 2); c.fillStyle = hoof; c.fillRect(footX - 1, Math.round(footY) - 2, 3, 2); }
+  function hLimbBack(c, hx, hy, phase, stride, lift, col, hoof) { const f = hFoot(phase, stride, lift), footY = HFEET + f[1], x = Math.round(hx); hSeg(c, x, Math.round(hy), x, Math.round(footY), 3, col); c.fillStyle = hoof; c.fillRect(x - 1, Math.round(footY) - 2, 3, 2); }
+  // Vista TRASERA 3/4 (el caballo se aleja): grupa hacia el observador, cabeza girada.
+  function paintBack(c, frame, coat, tier, moving) {
+    const P = horsePalette(coat, tier), px = (x, y, w, h, col) => { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), w, h); };
+    const p = moving ? frame / HORSE_FRAMES : 0, pA = p, pB = (p + 0.5) % 1;
+    const stride = moving ? 3 : 0, lift = moving ? 4 : 0;
+    const by = moving ? -(0.5 - 0.5 * Math.cos(p * 4 * Math.PI)) * 1.2 : 0, B = v => v + by;
+    hLimbBack(c, 26, B(22), pB, stride, lift, P.sh, P.dk);
+    hEllip(c, 28, B(15), 5, 3.5, P.sh);
+    hSeg(c, 29, B(14), 34, B(7), 5, P.sh);
+    hDisc(c, 35, B(6.5), 2.2, P.base);
+    px(36, B(7), 2, 2, P.muzzle);
+    px(34, B(3.5), 2, 3, P.base); px(36, B(3.5), 2, 3, P.base); px(34, B(3.5), 1, 1, P.dk); px(36, B(3.5), 1, 1, P.dk);
+    px(36, B(6), 1, 1, P.eye);
+    if (P.plume) { px(35, B(0.5), 2, 4, P.plume); px(36, B(1.5), 1, 2, mixc(P.plume, '#ffffff', 0.4)); }
+    hEllip(c, 20, B(22), 8.5, 7, P.base);
+    hEllip(c, 20, B(17), 7, 2.2, P.hi);
+    px(20, B(17), 1, 12, P.dk);
+    px(12.5, B(23), 2, 3, P.sh); px(27, B(23), 2, 3, P.sh);
+    const gyB = B(14);
+    px(13, gyB, 15, 4, P.blanket); px(13, gyB + 4, 15, 1, P.trim);
+    px(12, gyB + 2, 2, 4, P.blanket); px(28, gyB + 2, 2, 4, P.blanket);
+    if (P.studs) { for (let i = 0; i < 3; i++) px(16 + i * 4, gyB + 1, 1, 1, P.studs); }
+    px(17, gyB - 2, 6, 3, P.leather); px(17, gyB - 2, 6, 1, P.leatherHi);
+    hLimbBack(c, 15, B(22), pA, stride, lift, P.base, P.hoof);
+    const tswB = moving ? Math.sin(p * 2 * Math.PI) * 1.2 : 0;
+    c.fillStyle = P.mane; for (let i = 0; i < 12; i++) { const t = i / 11; px(20 + tswB * t - 1.5, B(13) + t * 17, 4, 2); }
+    c.fillStyle = P.maneHi; for (let i = 0; i < 10; i++) { const t = i / 9; px(20 + tswB * t - 0.5, B(13) + t * 17, 1, 2); }
+    horseOutline(c);
+  }
+  // Vista de PERFIL (mirando a la DERECHA; a la izquierda se dibuja en espejo).
+  function paintHorse(c, back, frame, coat, tier, moving) {
+    if (back) return paintBack(c, frame, coat, tier, moving);
+    const P = horsePalette(coat, tier), px = (x, y, w, h, col) => { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), w, h); };
+    const p = moving ? frame / HORSE_FRAMES : 0, pA = p, pB = (p + 0.5) % 1;
+    const stride = moving ? 4 : 0, lift = moving ? 4 : 0;
+    const by = moving ? -(0.5 - 0.5 * Math.cos(p * 4 * Math.PI)) * 1.4 : 0;
+    const nod = moving ? Math.sin(p * 4 * Math.PI) * 1.0 : 0;
+    const B = v => v + by;
+    const foreHx = 29, foreHy = B(18), hindHx = 13, hindHy = B(18);
+    // cola con vuelo
+    const tsw = moving ? Math.sin(p * 2 * Math.PI) * 1.2 : 0;
+    c.fillStyle = P.mane;
+    for (let i = 0; i < 12; i++) { const t = i / 11; const x = 6 - t * 4 + (i % 2 ? 0 : -1), y = B(15) + 2 + t * 13, sw = tsw * t; c.fillRect(Math.round(x + sw), Math.round(y), 3, 2); }
+    c.fillStyle = P.maneHi; for (let i = 0; i < 10; i++) { const t = i / 9; c.fillRect(Math.round(6 - t * 3 + tsw * t), Math.round(B(15) + 2 + t * 13), 1, 2); }
+    // patas lejanas (diagonal contraria, en sombra)
+    hLimb(c, foreHx - 2, foreHy, pB, stride, lift, P.sh, P.dk);
+    hLimb(c, hindHx + 2, hindHy, pA, stride, lift, P.sh, P.dk);
+    // cuerpo: grupa + barril + pecho con volumen
+    hDisc(c, hindHx - 0.5, B(20), 6, P.base);
+    hEllip(c, 21, B(20), 10, 6.2, P.base);
+    hDisc(c, foreHx + 0.5, B(20), 5, P.base);
+    hEllip(c, 21, B(23.5), 9, 2.4, P.belly);   // vientre en sombra
+    hEllip(c, 21, B(15.5), 9, 1.8, P.hi);       // lomo iluminado
+    px(hindHx - 5, B(18), 2, 2, P.hi);
+    px(foreHx + 3, B(21), 1, 3, P.dk);
+    // cuello arqueado + cabeza
+    const nx = foreHx, nbase = B(16), ntop = B(7) + nod;
+    hSeg(c, nx, nbase, nx + 5, ntop, 7, P.base);
+    hSeg(c, nx + 5.5, ntop, nx + 6, ntop + 1, 5, P.base);
+    px(nx + 1, nbase - 1, 4, 2, P.hi);
+    const jx = nx + 5, jy = ntop + 1;
+    hDisc(c, jx + 1, jy + 1, 2.4, P.base);
+    hSeg(c, jx + 1, jy + 1, jx + 6, jy + 5, 4, P.base);
+    hSeg(c, jx + 3, jy + 2, jx + 7, jy + 5, 3, P.base);
+    px(jx + 6, jy + 5, 2, 2, P.muzzle);
+    px(jx + 7, jy + 6, 1, 1, P.eye);
+    px(jx + 2, jy + 5, 4, 1, P.dk);
+    px(jx - 1, jy - 3, 2, 3, P.base); px(jx - 1, jy - 3, 1, 3, P.dk);
+    px(jx + 2, jy - 3, 2, 3, P.base); px(jx + 3, jy - 3, 1, 3, P.dk);
+    px(jx + 3, jy + 1, 1, 1, P.eye); px(jx + 3, jy, 1, 1, P.edge);
+    const msw = moving ? Math.sin(p * 2 * Math.PI + 1) * 0.7 : 0;
+    c.fillStyle = P.mane;
+    for (let i = 0; i < 9; i++) { const t = i / 8; const x = nx - 1 + t * 5.5, y = nbase - 1 - t * 9 + nod * t; c.fillRect(Math.round(x - 1 + msw * t), Math.round(y), 2, 3); }
+    c.fillStyle = P.maneHi; for (let i = 0; i < 7; i++) { const t = i / 6; c.fillRect(Math.round(nx - 1 + t * 5.5 + msw * t), Math.round(nbase - 1 - t * 9 + nod * t), 1, 2); }
+    px(jx, jy - 2, 2, 3, P.mane);   // tupé
+    // gualdrapa / silla (tier); asiento ~y13 para alinear al jinete (RIDER_UP)
+    const gy = B(15);
+    px(13, gy, 15, 4, P.blanket);
+    px(13, gy + 4, 15, 1, P.trim);
+    px(13, gy + 5, 2, 2, P.blanket); px(26, gy + 5, 2, 2, P.blanket);
+    if (P.studs) { for (let i = 0; i < 4; i++) px(15 + i * 4, gy + 1, 1, 1, P.studs); }
+    if (P.tassel) { px(13, gy + 6, 1, 3, P.tassel); px(27, gy + 6, 1, 3, P.tassel); }
+    px(16, gy - 2, 9, 3, P.leather); px(16, gy - 2, 9, 1, P.leatherHi);
+    px(15, gy - 3, 3, 3, P.leather); px(23, gy - 2, 3, 2, P.leather);
+    px(20, gy + 4, 2, 5, P.leather); px(20, gy + 7, 3, 2, P.stirrup);
+    // patas cercanas (color base)
+    hLimb(c, foreHx, foreHy, pA, stride, lift, P.base, P.hoof);
+    hLimb(c, hindHx, hindHy, pB, stride, lift, P.base, P.hoof);
+    // penacho (tier)
+    if (P.plume) { px(jx, jy - 6, 2, 4, P.plume); px(jx + 1, jy - 5, 1, 2, mixc(P.plume, '#ffffff', 0.4)); px(jx - 1, jy - 4, 1, 1, P.plume); px(jx + 2, jy - 4, 1, 1, P.plume); }
     horseOutline(c);
   }
   const horseCache = new Map();
-  function horseBaked(back, frame, coat, tier) {
-    const key = (back ? 'B' : 'F') + frame + '|' + coat + '|' + (tier | 0);
+  function horseBaked(back, frame, coat, tier, moving) {
+    const key = (back ? 'B' : 'F') + frame + '|' + coat + '|' + (tier | 0) + '|' + (moving ? 'm' : 's');
     let cv = horseCache.get(key);
     if (cv) return cv;
     cv = document.createElement('canvas'); cv.width = HW; cv.height = HH;
     const c = cv.getContext('2d'); c.imageSmoothingEnabled = false;
-    paintHorse(c, back, frame, coat, tier);
+    paintHorse(c, back, frame, coat, tier, moving);
     horseCache.set(key, cv);
     return cv;
   }
@@ -1862,7 +1891,7 @@ const HacFolk = (function () {
     const frame = h.moving ? (Math.floor(h.phase * 1.1) % HORSE_FRAMES) : 0;
     const coat = (caballos[h.id] && caballos[h.id].tono) || '#8a5630';
     const tier = (caballos[h.id] && caballos[h.id].tier) || 0;
-    const cv = horseBaked(back, frame, coat, tier);
+    const cv = horseBaked(back, frame, coat, tier, h.moving);
     const fx = lx * SCALE, fy = ly * SCALE;
     g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.imageSmoothingEnabled = false;
     g.fillStyle = 'rgba(0,0,0,.22)'; g.beginPath(); g.ellipse(fx, fy, 15 * HDRAW * 0.75, 6, 0, 0, 6.2832); g.fill();   // sombra
