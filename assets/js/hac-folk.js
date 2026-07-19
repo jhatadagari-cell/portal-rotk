@@ -1855,22 +1855,30 @@ const HacFolk = (function () {
     const nx = foreHx, nbase = B(16), ntop = B(7) + nod;
     hSeg(c, nx, nbase, nx + 5, ntop, 7, P.base);
     hSeg(c, nx + 5.5, ntop, nx + 6, ntop + 1, 5, P.base);
-    px(nx + 1, nbase - 1, 4, 2, P.hi);
-    const jx = nx + 5, jy = ntop + 1;
-    hDisc(c, jx + 1, jy + 1, 2.4, P.base);
-    hSeg(c, jx + 1, jy + 1, jx + 6, jy + 5, 4, P.base);
-    hSeg(c, jx + 3, jy + 2, jx + 7, jy + 5, 3, P.base);
-    px(jx + 6, jy + 5, 2, 2, P.muzzle);
-    px(jx + 7, jy + 6, 1, 1, P.eye);
-    px(jx + 2, jy + 5, 4, 1, P.dk);
-    px(jx - 1, jy - 3, 2, 3, P.base); px(jx - 1, jy - 3, 1, 3, P.dk);
-    px(jx + 2, jy - 3, 2, 3, P.base); px(jx + 3, jy - 3, 1, 3, P.dk);
-    px(jx + 3, jy + 1, 1, 1, P.eye); px(jx + 3, jy, 1, 1, P.edge);
+    px(nx + 1, nbase, 3, 1, P.hi);   // borde delantero del cuello iluminado (sutil)
+    const jx = nx + 5, jy = ntop + 1, hx = jx, hy = jy;
+    // CABEZA en perfil por FILAS contiguas (sin huecos): frente arriba-izq, morro
+    // abajo-dcha, quijada redonda atrás. Cabeza equina limpia, no una cuña.
+    px(hx, hy - 2, 4, 1, P.base);
+    px(hx - 1, hy - 1, 6, 1, P.base);
+    px(hx - 1, hy, 7, 1, P.base);
+    px(hx - 1, hy + 1, 8, 1, P.base);   // carrillo + caña (lo más ancho)
+    px(hx, hy + 2, 8, 1, P.base);
+    px(hx + 2, hy + 3, 6, 1, P.base);
+    px(hx + 4, hy + 4, 4, 1, P.base);
+    px(hx + 5, hy + 3, 3, 1, P.muzzle); px(hx + 4, hy + 4, 4, 1, P.muzzle);   // morro
+    px(hx + 7, hy + 3, 1, 1, P.dk);     // ollar
+    px(hx + 5, hy + 4, 1, 1, P.dk);     // boca
+    px(hx - 1, hy + 1, 2, 1, P.dk);     // quijada en sombra
+    px(hx + 1, hy - 1, 3, 1, P.hi);     // pómulo iluminado (sutil)
+    px(hx + 1, hy, 1, 1, P.eye);        // ojo
+    px(hx - 1, hy - 5, 2, 3, P.base); px(hx - 1, hy - 5, 1, 2, P.dk);   // oreja
+    px(hx + 1, hy - 5, 2, 3, P.base); px(hx + 1, hy - 5, 1, 2, P.dk);   // oreja
     const msw = moving ? Math.sin(p * 2 * Math.PI + 1) * 0.7 : 0;
     c.fillStyle = P.mane;
     for (let i = 0; i < 9; i++) { const t = i / 8; const x = nx - 1 + t * 5.5, y = nbase - 1 - t * 9 + nod * t; c.fillRect(Math.round(x - 1 + msw * t), Math.round(y), 2, 3); }
     c.fillStyle = P.maneHi; for (let i = 0; i < 7; i++) { const t = i / 6; c.fillRect(Math.round(nx - 1 + t * 5.5 + msw * t), Math.round(nbase - 1 - t * 9 + nod * t), 1, 2); }
-    px(jx, jy - 2, 2, 3, P.mane);   // tupé
+    px(hx, hy - 3, 2, 2, P.mane);   // tupé entre las orejas
     // gualdrapa / silla (tier); asiento ~y13 para alinear al jinete (RIDER_UP)
     const gy = B(15);
     px(13, gy, 15, 4, P.blanket);
