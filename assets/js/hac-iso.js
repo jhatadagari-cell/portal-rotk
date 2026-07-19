@@ -316,6 +316,11 @@ const HacIso = (function () {
     const pathFromGy = GH - 1 + M + 1;                           // 1ª fila FUERA del muro delantero
     const onPath = (gx, gy) => pathC0 != null && soilTiles.length && gx >= pathC0 && gx <= pathC1 && gy >= pathFromGy;
     const pathClear = (gx, gy) => pathC0 != null && soilTiles.length && gx >= pathC0 - 1 && gx <= pathC1 + 1 && gy >= pathFromGy;
+    // EXPLANADA SUR del portón: la caravana de tributo aparca a un lado del vano y los
+    // ÁRBOLES altos de ahí la tapaban («molestan»). En una banda ancha y poco profunda
+    // frente a la puerta se prohíben SOLO los árboles (las matas/rocas/flores bajas
+    // siguen dando vida sin ocluir). pathCol es la columna del vano.
+    const aproSurArbol = (gx, gy) => pathCol != null && gy >= pathFromGy && gy <= pathFromGy + 6 && gx >= pathC0 - 4 && gx <= pathC1 + 4;
 
     // Río que discurre por fuera del borde OESTE, con un leve meandro (ancho 2).
     function isRiver(gx, gy) {
@@ -413,7 +418,7 @@ const HacIso = (function () {
       // ÁRBOLES a mano (verano): reemplazan a los procedurales. Menos frecuentes que
       // antes (son grandes → que no sature) — el resto son matas/rocas bajas.
       if (hasImgTrees && pick < 0.20) return { img: pickTree(gx, gy), sh: 12, scale: 0.46, tree: true };
-      if (FLORA && !hasImgTrees && pick < 0.5) { const sp = HacFlora.SPECIES[(hash(gx * 5.1 + 3, gy * 4.7 + 6) * HacFlora.SPECIES.length) | 0]; return { cv: FLORA.tree(sp, seasonKey, vv), sh: 13 }; }
+      if (FLORA && !hasImgTrees && pick < 0.5) { const sp = HacFlora.SPECIES[(hash(gx * 5.1 + 3, gy * 4.7 + 6) * HacFlora.SPECIES.length) | 0]; return { cv: FLORA.tree(sp, seasonKey, vv), sh: 13, tree: true }; }
       if (imgPlants.length) { const k = imgPlants[(hash(gx * 4.9 + 6, gy * 3.7 + 2) * imgPlants.length) | 0]; return { img: PLANTS[k], sh: k === 'rock' || k === 'bushrock' ? 8 : 6 }; }
       if (!FLORA) return { blob: true, sh: 9 };
       if (pick < 0.78) return { cv: FLORA.bush(seasonKey, vv), sh: 9 };
@@ -467,6 +472,7 @@ const HacIso = (function () {
       const riverNear = hasWater && (isRiver(gx - 1, gy) || isRiver(gx + 1, gy) || isRiver(gx, gy - 1) || isRiver(gx, gy + 1));
       const spec = propAt(gx, gy, riverNear);
       if (!spec) continue;
+      if ((spec.tree || spec.blob) && aproSurArbol(gx, gy)) continue;   // sin árboles altos frente al portón (tapaban la caravana)
       const jx = (hash(gx + 1, gy + 5) - 0.5) * TILE_W * 0.4, jy = (hash(gx + 7, gy + 2) - 0.5) * TILE_H * 0.4;
       props.push({ gx, gy, sum: gx + gy, lx: X(gx, gy) + jx, ly: Y(gx, gy) + jy, spec });
     }

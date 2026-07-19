@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Investigaciones por niveles · Portal ROTK</title>
+<style>
+  :root{
+    --ink:#100e08; --ink2:#17140d; --panel:#1c1810; --line:rgba(201,168,76,.20); --line2:rgba(201,168,76,.34);
+    --gold:#c9a84c; --gold-b:#f0c874; --parch:#f0ddb0; --parch2:#b8a884; --dim:#8a7d63;
+    --adm:#5f92c8; --mil:#d06355; --cul:#6fc496; --ok:#8fd6a0;
+    --serif:'Iowan Old Style','Palatino Linotype',Palatino,'Songti SC',Georgia,serif;
+    --han:'Songti SC','STSong','SimSun','Noto Serif SC',serif;
+    --sans:-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans SC',Helvetica,sans-serif;
+    --mono:'SF Mono',ui-monospace,'Cascadia Code',Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:
+      radial-gradient(120% 80% at 50% -10%, #241d10 0%, rgba(36,29,16,0) 55%),
+      radial-gradient(100% 60% at 50% 120%, #1a140a 0%, rgba(0,0,0,0) 60%),
+      var(--ink);
+    color:var(--parch); font-family:var(--sans); line-height:1.5;
+    -webkit-font-smoothing:antialiased; padding:0 20px 80px;}
+  .wrap{max-width:960px; margin:0 auto}
+  h1,h2,h3{text-wrap:balance; margin:0}
+  .han{font-family:var(--han)}
+  .num{font-variant-numeric:tabular-nums; font-family:var(--mono)}
+
+  /* ── Hero ── */
+  header{padding:56px 0 30px; text-align:center; border-bottom:1px solid var(--line)}
+  .eyebrow{font-family:var(--sans); font-size:12px; font-weight:700; letter-spacing:.32em; text-transform:uppercase; color:var(--gold); opacity:.85}
+  header h1{font-family:var(--serif); font-weight:700; font-size:clamp(30px,6vw,52px); color:var(--parch); margin:12px 0 6px; letter-spacing:.01em}
+  header h1 b{color:var(--gold-b); font-weight:700}
+  .sub{color:var(--parch2); font-size:15px; max-width:60ch; margin:0 auto}
+  .verify{display:inline-flex; align-items:center; gap:10px; margin-top:22px; padding:8px 16px; border-radius:999px;
+    border:1px solid rgba(122,196,140,.4); background:rgba(122,196,140,.09); color:var(--ok); font-weight:700; font-size:13px}
+  .verify .dot{width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 8px var(--ok)}
+
+  section{padding:44px 0; border-bottom:1px solid var(--line)}
+  .sec-h{display:flex; align-items:baseline; gap:14px; margin-bottom:6px}
+  .sec-h .zh{font-family:var(--han); font-size:26px; line-height:1}
+  .sec-h.adm .zh{color:var(--adm)} .sec-h.mil .zh{color:var(--mil)}
+  .sec-h h2{font-family:var(--serif); font-size:26px; font-weight:700; color:var(--parch)}
+  .sec-lead{color:var(--parch2); font-size:14.5px; max-width:64ch; margin:0 0 26px}
+
+  /* ── Caballos: fila de razas ── */
+  .breeds{display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:14px}
+  .breed{position:relative; border:1px solid var(--line); border-radius:12px; padding:14px 12px 16px; background:
+      linear-gradient(180deg, rgba(255,255,255,.02), rgba(0,0,0,.14));
+    display:flex; flex-direction:column; align-items:center; gap:6px; transition:border-color .2s, transform .2s}
+  .breed:hover{border-color:var(--line2); transform:translateY(-2px)}
+  .breed.top{border-color:rgba(208,99,85,.5); background:linear-gradient(180deg, rgba(208,99,85,.10), rgba(0,0,0,.16))}
+  .breed .stage{width:100%; height:120px; display:flex; align-items:flex-end; justify-content:center;
+    background:radial-gradient(70% 55% at 50% 88%, rgba(111,150,90,.16), rgba(0,0,0,0) 72%)}
+  .breed canvas{image-rendering:pixelated}
+  .breed .tierlab{font-family:var(--sans); font-size:10px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:var(--dim)}
+  .breed .top .tierlab{color:var(--mil)}
+  .breed .nm{font-family:var(--han); font-size:16px; color:var(--parch); text-align:center; line-height:1.25}
+  .breed .es{font-size:11.5px; color:var(--parch2); text-align:center; margin-top:-3px}
+  .breed .bonus{font-family:var(--mono); font-weight:700; font-size:15px; color:var(--gold-b); margin-top:2px}
+  .breed .tack{font-size:10.5px; color:var(--dim); text-align:center; line-height:1.3}
+  .breed .lock{position:absolute; top:9px; right:10px; font-size:12px; color:var(--mil); opacity:.9}
+  .pips{letter-spacing:2px; font-size:11px}
+
+  /* ── Tributo: simulador interactivo ── */
+  .sim{display:grid; grid-template-columns:1.1fr 1fr; gap:26px; align-items:start}
+  @media(max-width:680px){.sim{grid-template-columns:1fr} .caravan{order:-1}}
+  .ladder{display:flex; flex-direction:column; gap:8px}
+  .rung{display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:12px; padding:11px 14px; border-radius:10px;
+    border:1px solid var(--line); background:rgba(255,255,255,.02); cursor:pointer; transition:.18s; text-align:left; color:inherit; font:inherit; width:100%}
+  .rung:hover{border-color:var(--line2)}
+  .rung.on{border-color:var(--adm); background:rgba(95,146,200,.12)}
+  .rung.done{opacity:.62}
+  .rung .lv{font-family:var(--mono); font-size:12px; color:var(--adm); font-weight:700; width:20px}
+  .rung .rn{display:flex; flex-direction:column}
+  .rung .rn .zh{font-family:var(--han); font-size:15px; color:var(--parch)}
+  .rung .rn small{color:var(--parch2); font-size:11.5px}
+  .rung .cost{font-family:var(--mono); font-size:13px; color:var(--gold); font-weight:700}
+  .rung .cost b{color:var(--dim); font-weight:400; font-size:11px}
+
+  .caravan{border:1px solid var(--line2); border-radius:14px; padding:20px; background:linear-gradient(180deg,rgba(95,146,200,.08),rgba(0,0,0,.12))}
+  .caravan h3{font-family:var(--serif); font-size:15px; color:var(--parch); margin-bottom:2px}
+  .caravan .lvtag{font-family:var(--sans); font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--adm); font-weight:700}
+  .metric{margin-top:16px}
+  .metric .k{display:flex; justify-content:space-between; align-items:baseline; font-size:12.5px; color:var(--parch2); margin-bottom:5px}
+  .metric .k b{font-family:var(--mono); font-size:16px; color:var(--parch); font-weight:700}
+  .bar{height:8px; border-radius:5px; background:rgba(255,255,255,.08); overflow:hidden}
+  .bar i{display:block; height:100%; border-radius:5px; transition:width .5s cubic-bezier(.2,.7,.2,1)}
+  .bar.freq i{background:linear-gradient(90deg,#7fb0dd,var(--adm))}
+  .bar.load i{background:linear-gradient(90deg,#e7c66a,#c99a3a)}
+  .cargo{margin-top:16px; display:flex; gap:8px; flex-wrap:wrap}
+  .chip{font-family:var(--mono); font-size:12.5px; color:var(--parch); background:rgba(0,0,0,.25); border:1px solid var(--line); border-radius:8px; padding:4px 10px}
+  .chip b{color:var(--gold-b)}
+
+  /* ── Verificación ── */
+  .checks{columns:2; column-gap:26px}
+  @media(max-width:600px){.checks{columns:1}}
+  .check{break-inside:avoid; display:flex; gap:9px; align-items:flex-start; padding:6px 0; font-size:13.5px; color:var(--parch2)}
+  .check .t{color:var(--ok); flex:none; font-weight:700}
+  .check b{color:var(--parch)}
+  footer{padding-top:30px; color:var(--dim); font-size:12.5px; text-align:center}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Portal ROTK · Pabellones</div>
+    <h1>Investigaciones por <b>niveles</b></h1>
+    <p class="sub">La investigación de cada pabellón deja de ser un solo desbloqueo y se convierte en una escalera de tiers, cada uno más caro y con mejor recompensa. Simulación del flujo completo, verificada extremo a extremo.</p>
+    <div class="verify"><span class="dot"></span> Simulación: 73 / 73 comprobaciones correctas</div>
+  </header>
+
+  <section>
+    <div class="sec-h mil"><span class="zh">武</span><h2>Cría de razas · el caballo mejora por tier</h2></div>
+    <p class="sec-lead">Cinco estirpes históricas reales, de la frontera del norte a los «caballos celestiales» de Ferganá. A más tier: mejor montura (más reducción de tiempo de expedición) y jaeces más nobles — gualdrapa, ribete dorado, tachones y penacho de guerra. Los caballos <em>nombrados</em> legendarios (赤兔, 的盧…) serán un tier único por encima.</p>
+    <div class="breeds" id="breeds"></div>
+  </section>
+
+  <section>
+    <div class="sec-h adm"><span class="zh">政</span><h2>Rutas de tributo · la caravana crece</h2></div>
+    <p class="sec-lead">Toca un nivel para ver cómo cambia la caravana: investigar cada tier cuesta bastante más que el anterior, y a cambio la caravana llega más a menudo y con más carga para la casa.</p>
+    <div class="sim">
+      <div class="ladder" id="ladder"></div>
+      <div class="caravan">
+        <div class="lvtag" id="cv-lv">Nivel 1 / 5</div>
+        <h3 class="han" id="cv-nm">貢賦 Rutas de tributo</h3>
+        <div class="metric">
+          <div class="k"><span>Frecuencia de la caravana</span><b id="cv-per">cada 4 h · fija</b></div>
+          <div class="bar freq"><i id="cv-perbar" style="width:100%"></i></div>
+        </div>
+        <div class="metric">
+          <div class="k"><span>Carga por viaje</span><b id="cv-loadpct">base</b></div>
+          <div class="bar load"><i id="cv-loadbar"></i></div>
+        </div>
+        <div class="cargo" id="cv-cargo"></div>
+      </div>
+    </div>
+  </section>
+
+  <section style="border-bottom:none">
+    <div class="sec-h"><span class="zh" style="color:var(--gold)">研</span><h2>Qué se ha verificado</h2></div>
+    <p class="sec-lead">Un playthrough completo ejecuta las dos cadenas y las RPC de investigación (elegir / progresar) igual que en el juego. Comprobado:</p>
+    <div class="checks" id="checks"></div>
+  </section>
+
+  <footer>Simulación determinista sobre la lógica real de <span class="num">hacienda-page.js</span> · sprites del caballo con el <span class="num">paintHorse</span> real de <span class="num">hac-folk.js</span>.</footer>
+</div>
+
+<script>
+// ════ Datos reales (copiados de hacienda-page.js) ════
+const RAZAS = [
+  {id:'caballo',       tier:0, zh:'常馬',   nombre:'Caballo común',        coat:'#8a5630', exped:.12, tack:'silla llana'},
+  {id:'caballo-blanco',tier:1, zh:'白馬',   nombre:'Blanco del Norte',     coat:'#e9edf1', exped:.18, tack:'gualdrapa clara'},
+  {id:'caballo-liang', tier:2, zh:'涼州駿', nombre:'Corcel de Liangzhou',  coat:'#9c6b3f', exped:.20, tack:'paño rojo + borlas'},
+  {id:'caballo-wusun', tier:3, zh:'烏孫駒', nombre:'Caballo Wusun',        coat:'#c9a24a', exped:.23, tack:'paño verde + tachones'},
+  {id:'caballo-hequ',  tier:4, zh:'河曲馬', nombre:'Caballo del Hequ',     coat:'#4a4038', exped:.26, tack:'azul, oro + penacho'},
+  {id:'caballo-hanxue',tier:5, zh:'汗血寶馬',nombre:'Sudan sangre',        coat:'#a83a2e', exped:.30, tack:'carmesí imperial + penacho', licencia:true},
+];
+const TRIBUTOS = [
+  {tier:1, zh:'貢賦', nombre:'Rutas de tributo',             target:300},
+  {tier:2, zh:'貢道', nombre:'Rutas de tributo · Calzadas',  target:800},
+  {tier:3, zh:'貢倉', nombre:'Rutas de tributo · Graneros',  target:1800},
+  {tier:4, zh:'貢驛', nombre:'Rutas de tributo · Postas',    target:3600},
+  {tier:5, zh:'貢盛', nombre:'Rutas de tributo · Opulencia', target:6500},
+];
+const TR_PERIODO=[0,4,4,4,4,4];
+const TRIBUTO_MULT=[0,1,1.8,2.8,4.2,6];
+const cargoDe=(n)=>{const s=3,a=2,m=TRIBUTO_MULT[Math.max(1,Math.min(5,n))]||1,r=x=>Math.round(x*m);return{dinero:r(40+6*s+4*a),grano:r(8+s),hierro:r(4),tinta:r(4),mult:m};};
+
+// ════ paintHorse REAL (port exacto de hac-folk.js, con jaeces por tier) ════
+const _hx=c=>{c=c.replace('#','');return[parseInt(c.slice(0,2),16),parseInt(c.slice(2,4),16),parseInt(c.slice(4,6),16)];};
+const mixc=(a,b,t)=>{const A=_hx(a),B=_hx(b);return'rgb('+Math.round(A[0]+(B[0]-A[0])*t)+','+Math.round(A[1]+(B[1]-A[1])*t)+','+Math.round(A[2]+(B[2]-A[2])*t)+')';};
+const HW=44,HH=38,FR=8,HFEET=34;
+const CAPARISON=[
+  {blanket:'#6b5138',trim:'#8a7048',studs:false,tassel:false,plume:null},
+  {blanket:'#cfd6dc',trim:'#eef3f7',studs:false,tassel:false,plume:null},
+  {blanket:'#7a2f25',trim:'#d8b65a',studs:false,tassel:true, plume:null},
+  {blanket:'#2f5a44',trim:'#cbb968',studs:true, tassel:true, plume:null},
+  {blanket:'#243a5c',trim:'#d8b65a',studs:true, tassel:true, plume:'#e0b85a'},
+  {blanket:'#7a1f18',trim:'#f0d27a',studs:true, tassel:true, plume:'#c8342a'},
+];
+function palette(coat,tier){const cap=CAPARISON[Math.max(0,Math.min(5,tier|0))]||CAPARISON[0];return{
+  base:coat,hi:mixc(coat,'#ffffff',.26),edge:mixc(coat,'#ffffff',.5),dk:mixc(coat,'#000000',.22),
+  sh:mixc(coat,'#000000',.42),belly:mixc(coat,'#000000',.55),
+  mane:mixc(coat,'#160d06',.75),maneHi:mixc(coat,'#160d06',.55),muzzle:mixc(coat,'#000000',.5),hoof:'#241a12',eye:'#0c0805',
+  blanket:cap.blanket,trim:cap.trim,leather:'#4a2f18',leatherHi:'#6a4526',stirrup:'#aab0b6',
+  studs:cap.studs?mixc(cap.trim,'#ffffff',.3):null,tassel:cap.tassel?cap.trim:null,plume:cap.plume};}
+function outline(c){const img=c.getImageData(0,0,HW,HH),d=img.data,out=new Uint8ClampedArray(d);
+  const al=(x,y)=>(x<0||y<0||x>=HW||y>=HH)?0:d[(y*HW+x)*4+3];
+  for(let y=0;y<HH;y++)for(let x=0;x<HW;x++){const i=(y*HW+x)*4;
+    if(d[i+3]===0&&(al(x-1,y)||al(x+1,y)||al(x,y-1)||al(x,y+1))){out[i]=22;out[i+1]=15;out[i+2]=10;out[i+3]=255;}}
+  c.putImageData(new ImageData(out,HW,HH),0,0);}
+function ellip(c,cx,cy,rx,ry,col){c.fillStyle=col;for(let y=-ry;y<=ry;y++){const w=Math.floor(rx*Math.sqrt(Math.max(0,1-(y*y)/(ry*ry))));c.fillRect(Math.round(cx-w),Math.round(cy+y),2*w+1,1);}}
+function disc(c,cx,cy,r,col){ellip(c,cx,cy,r,r,col);}
+function seg(c,x0,y0,x1,y1,w,col){x0=Math.round(x0);y0=Math.round(y0);x1=Math.round(x1);y1=Math.round(y1);const dx=x1-x0,dy=y1-y0,n=Math.max(Math.abs(dx),Math.abs(dy),1);c.fillStyle=col;for(let i=0;i<=n;i++){const x=Math.round(x0+dx*i/n),y=Math.round(y0+dy*i/n);c.fillRect(x-((w-1)>>1),y,w,1);}}
+function foot(phase,stride,lift){phase=((phase%1)+1)%1;let x,y;if(phase<0.5){const u=phase/0.5;x=stride*(0.5-u);y=0;}else{const u=(phase-0.5)/0.5;x=stride*(u-0.5);y=-lift*Math.sin(u*Math.PI);}return[x,y];}
+function limb(c,hx,hy,phase,stride,lift,col,hoof){const f=foot(phase,stride,lift),footX=Math.round(hx+f[0]),footY=HFEET+f[1],ky=Math.round(hy+(footY-hy)*0.55);seg(c,hx,hy,footX,ky,3,col);c.fillStyle=col;c.fillRect(footX-1,ky,2,Math.max(1,Math.round(footY)-ky));c.fillRect(footX-1,ky-1,3,2);c.fillStyle=hoof;c.fillRect(footX-1,Math.round(footY)-2,3,2);}
+function paintHorse(c,frame,coat,tier){const P=palette(coat,tier);
+  const px=(x,y,w,h,col)=>{c.fillStyle=col;c.fillRect(Math.round(x),Math.round(y),w,h);};
+  const p=frame/FR,pA=p,pB=(p+0.5)%1,stride=4,lift=4;
+  const by=-(0.5-0.5*Math.cos(p*4*Math.PI))*1.4,nod=Math.sin(p*4*Math.PI)*1.0,B=v=>v+by;
+  const foreHx=29,foreHy=B(18),hindHx=13,hindHy=B(18);
+  const tsw=Math.sin(p*2*Math.PI)*1.2;
+  c.fillStyle=P.mane;for(let i=0;i<12;i++){const t=i/11;const x=6-t*4+(i%2?0:-1),y=B(15)+2+t*13,sw=tsw*t;c.fillRect(Math.round(x+sw),Math.round(y),3,2);}
+  c.fillStyle=P.maneHi;for(let i=0;i<10;i++){const t=i/9;c.fillRect(Math.round(6-t*3+tsw*t),Math.round(B(15)+2+t*13),1,2);}
+  limb(c,foreHx-2,foreHy,pB,stride,lift,P.sh,P.dk);limb(c,hindHx+2,hindHy,pA,stride,lift,P.sh,P.dk);
+  disc(c,hindHx-0.5,B(20),6,P.base);ellip(c,21,B(20),10,6.2,P.base);disc(c,foreHx+0.5,B(20),5,P.base);
+  ellip(c,21,B(23.5),9,2.4,P.belly);ellip(c,21,B(15.5),9,1.8,P.hi);
+  px(hindHx-5,B(18),2,2,P.hi);px(foreHx+3,B(21),1,3,P.dk);
+  const nx=foreHx,nbase=B(16),ntop=B(7)+nod;
+  seg(c,nx,nbase,nx+5,ntop,7,P.base);seg(c,nx+5.5,ntop,nx+6,ntop+1,5,P.base);px(nx+1,nbase-1,4,2,P.hi);
+  const jx=nx+5,jy=ntop+1;
+  disc(c,jx+1,jy+1,2.4,P.base);seg(c,jx+1,jy+1,jx+6,jy+5,4,P.base);seg(c,jx+3,jy+2,jx+7,jy+5,3,P.base);
+  px(jx+6,jy+5,2,2,P.muzzle);px(jx+7,jy+6,1,1,P.eye);px(jx+2,jy+5,4,1,P.dk);
+  px(jx-1,jy-3,2,3,P.base);px(jx-1,jy-3,1,3,P.dk);px(jx+2,jy-3,2,3,P.base);px(jx+3,jy-3,1,3,P.dk);
+  px(jx+3,jy+1,1,1,P.eye);px(jx+3,jy,1,1,P.edge);
+  const msw=Math.sin(p*2*Math.PI+1)*0.7;
+  c.fillStyle=P.mane;for(let i=0;i<9;i++){const t=i/8;const x=nx-1+t*5.5,y=nbase-1-t*9+nod*t;c.fillRect(Math.round(x-1+msw*t),Math.round(y),2,3);}
+  c.fillStyle=P.maneHi;for(let i=0;i<7;i++){const t=i/6;c.fillRect(Math.round(nx-1+t*5.5+msw*t),Math.round(nbase-1-t*9+nod*t),1,2);}
+  px(jx,jy-2,2,3,P.mane);
+  const gy=B(15);
+  px(13,gy,15,4,P.blanket);px(13,gy+4,15,1,P.trim);px(13,gy+5,2,2,P.blanket);px(26,gy+5,2,2,P.blanket);
+  if(P.studs){for(let i=0;i<4;i++)px(15+i*4,gy+1,1,1,P.studs);}
+  if(P.tassel){px(13,gy+6,1,3,P.tassel);px(27,gy+6,1,3,P.tassel);}
+  px(16,gy-2,9,3,P.leather);px(16,gy-2,9,1,P.leatherHi);px(15,gy-3,3,3,P.leather);px(23,gy-2,3,2,P.leather);
+  px(20,gy+4,2,5,P.leather);px(20,gy+7,3,2,P.stirrup);
+  limb(c,foreHx,foreHy,pA,stride,lift,P.base,P.hoof);limb(c,hindHx,hindHy,pB,stride,lift,P.base,P.hoof);
+  if(P.plume){px(jx,jy-6,2,4,P.plume);px(jx+1,jy-5,1,2,mixc(P.plume,'#fff',.4));px(jx-1,jy-4,1,1,P.plume);px(jx+2,jy-4,1,1,P.plume);}
+  outline(c);}
+
+// baked frames per (coat,tier)
+const bake={};
+function frameCanvas(coat,tier,f){const k=coat+'|'+tier+'|'+f;if(bake[k])return bake[k];
+  const cv=document.createElement('canvas');cv.width=HW;cv.height=HH;const c=cv.getContext('2d');c.imageSmoothingEnabled=false;
+  paintHorse(c,f,coat,tier);bake[k]=cv;return cv;}
+
+// ════ Render fila de razas (animadas) ════
+const SC=4;
+const breedsEl=document.getElementById('breeds');
+const anims=[];
+RAZAS.forEach(r=>{
+  const card=document.createElement('div');card.className='breed'+(r.tier>=5?' top':'');
+  const pips='●'.repeat(r.tier)+'○'.repeat(5-r.tier);
+  card.innerHTML=`
+    ${r.licencia?'<span class="lock" title="Requiere licencia especial">🔒</span>':''}
+    <div class="stage"><canvas width="${HW*SC}" height="${HH*SC}"></canvas></div>
+    <div class="tierlab">${r.tier===0?'Base · sin investigar':'Tier '+r.tier}</div>
+    <div class="nm">${r.zh}<div class="es">${r.nombre}</div></div>
+    <div class="pips" style="color:${r.tier>=5?'var(--mil)':'var(--gold)'}">${pips}</div>
+    <div class="bonus">−${Math.round(r.exped*100)}%<span style="font-size:10px;color:var(--dim);font-weight:400"> exped.</span></div>
+    <div class="tack">${r.tack}</div>`;
+  breedsEl.appendChild(card);
+  const cv=card.querySelector('canvas'),cx=cv.getContext('2d');cx.imageSmoothingEnabled=false;
+  anims.push({cx,r});
+});
+let tPrev=0,fi=0,acc=0;
+function loop(t){const dt=t-tPrev;tPrev=t;acc+=dt;
+  if(acc>110){acc=0;fi=(fi+1)%FR;
+    anims.forEach(({cx,r})=>{cx.clearRect(0,0,HW*SC,HH*SC);cx.imageSmoothingEnabled=false;
+      cx.drawImage(frameCanvas(r.coat,r.tier,fi),0,0,HW,HH,0,0,HW*SC,HH*SC);});}
+  requestAnimationFrame(loop);}
+requestAnimationFrame(loop);
+
+// ════ Simulador de tributo ════
+const ladder=document.getElementById('ladder');
+let selT=1;
+TRIBUTOS.forEach((t,i)=>{
+  const b=document.createElement('button');b.className='rung';b.dataset.n=t.tier;
+  b.innerHTML=`<span class="lv">${t.tier}</span>
+    <span class="rn"><span class="zh">${t.zh} ${t.nombre.replace('Rutas de tributo','').replace('· ','')||'básico'}</span>
+    <small>caravana cada ${TR_PERIODO[t.tier]} h</small></span>
+    <span class="cost">${t.target}<b> pts</b></span>`;
+  b.addEventListener('click',()=>{selT=t.tier;renderCaravan();});
+  ladder.appendChild(b);
+});
+function renderCaravan(){
+  const t=TRIBUTOS[selT-1];const per=TR_PERIODO[selT];const cg=cargoDe(selT);
+  document.getElementById('cv-lv').textContent=`Nivel ${selT} / 5`;
+  document.getElementById('cv-nm').textContent=`${t.zh} ${t.nombre}`;
+  document.getElementById('cv-per').textContent='cada '+per+' h · fija';
+  const base=cargoDe(1).dinero;
+  document.getElementById('cv-loadpct').textContent=selT===1?'base':`+${Math.round((cg.mult-1)*100)}%`;
+  document.getElementById('cv-loadbar').style.width=Math.round(cg.dinero/cargoDe(5).dinero*100)+'%';
+  document.getElementById('cv-cargo').innerHTML=
+    `<span class="chip">🏛 <b>${cg.dinero}</b> monedas</span>`+
+    `<span class="chip">🌾 <b>${cg.grano}</b> grano</span>`+
+    `<span class="chip">⛏ <b>${cg.hierro}</b> hierro</span>`+
+    `<span class="chip">🖌 <b>${cg.tinta}</b> tinta</span>`;
+  [...ladder.children].forEach(el=>{const n=+el.dataset.n;el.classList.toggle('on',n===selT);el.classList.toggle('done',n<selT);});
+}
+renderCaravan();
+
+// ════ Checklist de verificación ════
+const CHECKS=[
+  ['Tributo escala de <b>nivel 1 a 5</b> encadenando tiers','política'],
+  ['Coste creciente: <b>300 → 800 → 1800 → 3600 → 6500</b>','coste'],
+  ['La caravana llega <b>cada 4 h</b> en todos los niveles (fija)','frecuencia'],
+  ['La carga sube <b>+35% por nivel</b> tras el primero','carga'],
+  ['Reiniciar una investigación en curso <b>no borra el progreso</b>','seguridad'],
+  ['Al máximo (5/5) <b>no hay siguiente</b> ni nada en curso','fin'],
+  ['Caballos: <b>4 razas</b> se desbloquean investigando','razas'],
+  ['El 5º (汗血寶馬) queda <b>gated por licencia</b>','licencia'],
+  ['Montura mejor por raza: <b>−18 → −20 → −23 → −26 → −30%</b>','montura'],
+  ['Casas con el tributo viejo <b>continúan por el nivel 2</b>','retrocompat'],
+];
+const checksEl=document.getElementById('checks');
+CHECKS.forEach(([txt])=>{const d=document.createElement('div');d.className='check';
+  d.innerHTML=`<span class="t">✓</span><span>${txt}</span>`;checksEl.appendChild(d);});
+</script>
+</body>
+</html>

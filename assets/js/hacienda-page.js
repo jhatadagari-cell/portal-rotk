@@ -1113,7 +1113,13 @@
     const ocupadoAhora = (id) => {
       if (window.HacOrdenes && HacOrdenes.mine(h.id, id)) return true;
       const b = window.HacEscaramuzas && HacEscaramuzas.miBanda(h.id, id);
-      return !!(b && (b.estado === 'abierta' || b.estado === 'en_curso' || b.estado === 'abortando'));
+      if (!b) return false;
+      if (b.estado === 'abierta') return true;                     // montándose: comprometido aunque no haya salido
+      // 'en_curso'/'abortando' solo ocupan MIENTRAS el mecenas está FUERA. En cuanto la
+      // banda VUELVE (clock ≥ finMs) queda «reparto pendiente» pero el mecenas ya está en
+      // casa → puede hacer misiones/tareas sin esperar a que se liquide el botín.
+      if (b.estado === 'en_curso' || b.estado === 'abortando') return clock() < b.finMs;
+      return false;
     };
     function dispatch(taskId) {
       if (!myId || !taskId || !window.HacOrdenes) return;
@@ -2541,20 +2547,22 @@
         .then(() => { if (window.HacStats) HacStats.reload().then(() => { if (charId) buildCharPanel(charId); }); })
         .catch(e => console.warn('[peregrinaje] resolver', e));
     }
-    function resolverEscaramuzaSiToca() {
+    function resolverEscaramuzaSiToca(force) {
       if (!myId || !window.HacEscaramuzas) return;
       const band = HacEscaramuzas.miBanda(h.id, myId);
       if (!band || band.estado !== 'en_curso' || clock() < band.finMs) return;
       if (esPereg(band)) { resolverPeregrinajeSiToca(band); return; }             // peregrinaje: cura, no botín
       // ANTI-SECUESTRO: al llegar el tiempo, cierra el cooldown de todos YA (idempotente).
       if (!band.cdHecho) { HacEscaramuzas.cerrarCd(band.id, clock()).catch(() => {}); }
-      // LIQUIDACIÓN: al volver, se da un MARGEN CORTO para que cada uno resuelva su
-      // encuentro; pasado ese margen se reparte igual (los no resueltos cuentan como sin
-      // bonus). Antes el margen era 12 h → si un compañero no jugaba, la recompensa se
-      // quedaba colgada media jornada. Ahora 5 min: nadie secuestra el reparto.
+      // LIQUIDACIÓN. Nadie debe quedar SECUESTRADO por un compañero que no juega su
+      // encuentro: en cuanto la banda ha vuelto (finMs) y YO he resuelto el mío, se
+      // reparte YA (los no resueltos de otros cuentan sin bonus). Como red, si ni yo lo
+      // he resuelto, un margen de 3 min tras volver lo cierra igual. (Antes esperaba a
+      // TODOS o 12 h → escaramuza colgada + mecenas «ocupado» sin poder hacer nada.)
       const nTot = band.plazas || (band.miembros || []).length;
-      const graciaPasada = clock() >= band.finMs + 5 * 60 * 1000;
-      if (escNResueltos(band) < nTot && !graciaPasada) return;
+      const yoResuelto = !!(band.resultados && Object.prototype.hasOwnProperty.call(band.resultados, myId));
+      const graciaPasada = clock() >= band.finMs + 3 * 60 * 1000;
+      if (!force && escNResueltos(band) < nTot && !yoResuelto && !graciaPasada) return;
       // Los ENCUENTROS resueltos ajustan prob. de éxito, botín y reparto de la banda.
       const rb = relBonos(band), et = escEncTot(band);
       const R = window.HacRand ? HacRand.make('escres#' + band.id) : null;   // determinista → todos coinciden
@@ -2624,6 +2632,7 @@
         const ab = body.querySelector('[data-abort]'); if (ab) ab.addEventListener('click', abortarEscaramuza);
         body.querySelectorAll('[data-resv]').forEach(b => b.addEventListener('click', () => reservarEncuentro(mine.id, +b.dataset.resv)));
         const rv = body.querySelector('[data-esc-resolver]'); if (rv) rv.addEventListener('click', () => escEncAbrir());
+        const fz = body.querySelector('[data-esc-force]'); if (fz) fz.addEventListener('click', () => { fz.disabled = true; resolverEscaramuzaSiToca(true); });
         body.querySelectorAll('[data-enc-anim]').forEach(b => b.addEventListener('click', () => escEncPlayReport(mine, +b.dataset.encAnim)));
         body.querySelectorAll('[data-loot]').forEach(b => b.addEventListener('click', () => reclamarBotin(mine.id, +b.dataset.loot)));
         const march = body.querySelector('[data-esc-march]'); if (march) startMarch(march, mine);
@@ -2744,15 +2753,18 @@
       } else if (b.estado === 'en_curso') {
         const nTot = b.plazas || (b.miembros || []).length, nRes = escNResueltos(b);
         const miSlot = escMiSlot(b), miPend = miSlot != null && !(b.resultados || {})[miSlot];
+        const haVuelto = clock() >= b.finMs;   // ya en casa, solo falta liquidar el reparto
         // La marcha va SOLA; debajo: progreso de encuentros + éxito + recompensas. Para TODA la banda.
         accion = `<canvas class="hacp-esc-march" data-esc-march></canvas>
-          <div class="hacp-esc-timer" data-esc-timer="${b.finMs}">En la expedición…</div>
+          <div class="hacp-esc-timer" data-esc-timer="${b.finMs}">${haVuelto ? 'De vuelta · repartiendo…' : 'En la expedición…'}</div>
           <div class="hacp-enc-progress">Encuentros resueltos · <b>${nRes}/${nTot}</b></div>
           ${probHTML}${desgloseHTML}${rewardHTML}
           ${miPend ? `<button type="button" class="hacp-cp-btn hacp-esc-resolver" data-esc-resolver>⚔ Resolver mi encuentro</button>`
-                   : (miSlot != null ? `<div class="hacp-esc-note">Ya resolviste tu encuentro. Esperando al resto.</div>` : '')}
-          <div class="hacp-esc-note">Cada mecenas resuelve su encuentro (ahora o al volver). Al terminar todos —o unos 5 min tras regresar— se reparten recompensas y botín.</div>
-          ${esHost ? `<button type="button" class="hacp-cp-btn hacp-esc-abort" data-abort>Abortar expedición</button>` : ''}`;
+                   : (miSlot != null ? `<div class="hacp-esc-note">Ya resolviste tu encuentro${haVuelto ? '' : '. Esperando al resto.'}</div>` : '')}
+          ${haVuelto ? `<button type="button" class="hacp-cp-btn hacp-suc-ok" data-esc-force>✔ Repartir el botín ya</button>
+          <div class="hacp-esc-note">La banda ya está en casa: tu mecenas puede volver a hacer misiones mientras se reparte. Pulsa para liquidar recompensas y botín ahora.</div>`
+                   : `<div class="hacp-esc-note">Cada mecenas resuelve su encuentro (ahora o al volver). Al terminar todos —o unos 3 min tras regresar— se reparten recompensas y botín.</div>`}
+          ${esHost && !haVuelto ? `<button type="button" class="hacp-cp-btn hacp-esc-abort" data-abort>Abortar expedición</button>` : ''}`;
       } else if (b.estado === 'abortando') {
         accion = `<canvas class="hacp-esc-march" data-esc-march data-back></canvas>
           <div class="hacp-esc-timer" data-esc-timer="${b.finMs}">Abortada · regresando…</div>
