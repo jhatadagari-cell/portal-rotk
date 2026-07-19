@@ -462,8 +462,22 @@
     // ¿mi mecenas tiene un talento de senda? (efectos personales, C1)
     const tieneT = (id) => !!(window.HacStats && HacStats.tieneTalento && HacStats.tieneTalento(myId, id));
     // CABALLO: montura propia → −% tiempo de expedición mientras lo tengas.
-    const CABALLO_EXPED = 0.12, CABALLO_EXPED_BLANCO = 0.18;   // el blanco del norte (research 武) es superior
-    const caballoExpedDe = (c) => c ? (c.id === 'caballo-blanco' ? CABALLO_EXPED_BLANCO : CABALLO_EXPED) : 0;
+    // ── RAZAS de caballo (investigación militar 武 por tiers) ──────────────────
+    // Cada raza es una ESTIRPE histórica real; a mayor tier, mejor montura (más
+    // reducción de tiempo de expedición) y pelaje propio. La cría de cada raza se
+    // DESBLOQUEA investigando su tier en el pabellón militar (misma mecánica que el
+    // tributo). El tier 0 (común) no necesita investigación. Los caballos NOMBRADOS
+    // y legendarios (赤兔 Liebre Roja, 的盧 Dilu…) serán un tier ÚNICO por encima, aparte.
+    const CABALLO_RAZAS = [
+      { id: 'caballo',        tier: 0, zh: '常馬',   nombre: 'Caballo común',        coat: '#8a5630', exped: 0.12, desc: 'Un caballo de labor y camino, sin pedigrí. Cumple.' },
+      { id: 'caballo-blanco', tier: 1, zh: '白馬',   nombre: 'Blanco del Norte',      coat: '#e9edf1', exped: 0.18, unlock: 'caballo-blanco', target: 300,  desc: 'La caballería ligera del norte (幽州·代): monturas blancas, veloces y resistentes. Los 白馬義從 de la frontera.' },
+      { id: 'caballo-liang',  tier: 2, zh: '涼州駿', nombre: 'Corcel de Liangzhou',   coat: '#9c6b3f', exped: 0.20, unlock: 'caballo-liang',  target: 800,  desc: 'Los recios caballos de guerra del noroeste 西涼, montura de los jinetes de Liang.' },
+      { id: 'caballo-wusun',  tier: 3, zh: '烏孫駒', nombre: 'Caballo Wusun',         coat: '#c9a24a', exped: 0.23, unlock: 'caballo-wusun',  target: 1800, desc: 'La estirpe de las estepas de Asia Central (烏孫) que la corte Han apreció antes que ninguna otra.' },
+      { id: 'caballo-hequ',   tier: 4, zh: '河曲馬', nombre: 'Caballo del Hequ',      coat: '#4a4038', exped: 0.26, unlock: 'caballo-hequ',   target: 3600, desc: 'Los grandes caballos del recodo del Río Amarillo (河曲): fuertes y de gran alzada.' },
+      { id: 'caballo-hanxue', tier: 5, zh: '汗血寶馬', nombre: 'Sudan sangre',        coat: '#a83a2e', exped: 0.30, unlock: 'caballo-hanxue', target: 6500, licencia: true, desc: '大宛: los «caballos celestiales» de Ferganá, la estirpe de la Liebre Roja. Sudan como sangre al galopar. Requiere una licencia especial.' },
+    ];
+    const razaDe = (id) => CABALLO_RAZAS.find(r => r.id === id) || CABALLO_RAZAS[0];
+    const caballoExpedDe = (c) => c ? razaDe(c.id).exped : 0;
     const caballoExped = () => caballoExpedDe((window.HacStats && HacStats.caballo) ? HacStats.caballo(myId) : null);
     // ── BUFOS/DEBUFOS (modificadores %): registro EXTENSIBLE de todo lo que te afecta.
     // tipo → cómo se muestra (etiqueta, signo, si es reductor bueno o un debuf). Añadir
@@ -515,7 +529,7 @@
       SENDA_FX.forEach(s => { if (tieneT(s.id)) add(s.tipo, s.label, s.val); });
       if (window.HacStats && HacStats.tieneCaballo && HacStats.tieneCaballo(myId)) {
         const c = HacStats.caballo(myId);
-        add('exped', (c && c.id === 'caballo-blanco' ? '🐎 白馬 ' : '🐎 ') + ((c && c.nombre) || 'Caballo'), caballoExpedDe(c));
+        add('exped', `🐎 ${c ? razaDe(c.id).zh + ' ' : ''}` + ((c && c.nombre) || 'Caballo'), caballoExpedDe(c));
       }
       add('heridas', 'Heridas', (window.HacStats && HacStats.penHerida) ? HacStats.penHerida(myId) : 0);
       // 🏯 Bono de hacienda por un libro de conclusiones DONADO al fundador (7 días).
@@ -3962,16 +3976,16 @@
     function caballoInfoHTML() {
       const c = (window.HacStats && HacStats.caballo) ? HacStats.caballo(myId) : null;
       if (!c) return `<div class="hacp-inv-note">Aún no tienes caballo. Cómpralo en el <b>市 Mercado</b> (requiere 武 5): lo bautizas, rondará libre por los campos de la finca y saldrás <b>montado</b> en tus expediciones y escaramuzas.</div>`;
-      const blanco = c.id === 'caballo-blanco';
+      const raza = razaDe(c.id), esRaza = raza.tier >= 1;
       return `<div class="hacp-caballo-card">
           <div class="hacp-caballo-ic">🐎</div>
           <div class="hacp-caballo-nm">${esc(c.nombre)}</div>
-          <div class="hacp-caballo-sub">${blanco ? '白馬義從 · Caballo Blanco del Norte' : 'Caballo de raza · 寶馬'}</div>
+          <div class="hacp-caballo-sub">${esRaza ? `${esc(raza.zh)} · ${esc(raza.nombre)}${raza.tier >= 4 ? ' 寶馬' : ''}` : 'Caballo de raza · 寶馬'}</div>
         </div>
         <div class="hacp-caballo-fx">
           <div>道 Ronda libre por los campos, fuera de la finca.</div>
           <div>⚔ Sales <b>montado</b> en expediciones y escaramuzas.</div>
-          <div>⏱ <b>−${Math.round(caballoExpedDe(c) * 100)}%</b> de tiempo de expedición.${blanco ? ' <span style="color:#8fb6c9">(élite del norte)</span>' : ''}</div>
+          <div>⏱ <b>−${Math.round(caballoExpedDe(c) * 100)}%</b> de tiempo de expedición.${esRaza ? ` <span style="color:#8fb6c9">(estirpe ${esc(raza.nombre)})</span>` : ''}</div>
         </div>`;
     }
     function openCaballo() {
@@ -4590,15 +4604,18 @@
       const el = ensureCaballoEl();
       const sug = CABALLO_NOMBRES[Math.floor(Math.random() * CABALLO_NOMBRES.length)];
       const precio = precioMercado(item);
-      // 白馬義從: si la casa investigó el caballo blanco, se ofrece como pelaje PREMIUM
-      // (montura superior: −18% de expedición en vez de −12%). Reusa la variante.
-      const desbBlanco = (typeof pabDesbloqueado === 'function') && pabDesbloqueado('caballo-blanco') && item.id === 'caballo';
+      // RAZAS: además de los pelajes comunes (raza «caballo»), se ofrecen como opción
+      // PREMIUM todas las estirpes que la casa haya DESBLOQUEADO investigando (mejor
+      // montura: más −% de expedición). El pelaje propio de cada raza es su `coat`.
+      const razasDesb = (typeof pabDesbloqueado === 'function' && item.id === 'caballo')
+        ? CABALLO_RAZAS.filter(r => r.tier >= 1 && pabDesbloqueado(r.unlock)) : [];
       const pelajes = CABALLO_PELAJES.map(p => ({ nombre: p.nombre, tono: p.tono, variante: 'caballo' }));
-      if (desbBlanco) pelajes.push({ nombre: '白馬 Blanco del Norte', tono: '#e9edf1', variante: 'caballo-blanco', premium: true });
+      razasDesb.forEach(r => pelajes.push({ nombre: `${r.zh} ${r.nombre}`, tono: r.coat, variante: r.id, premium: true }));
+      const mejor = razasDesb.length ? razasDesb[razasDesb.length - 1] : null;
       el.innerHTML = `<div class="hacp-suc-box hacp-horse-box">
         <div class="hacp-suc-eyebrow">🐎 ${esc(item.zh || '')} · Caballo de raza</div>
         <div class="hacp-suc-ttl">Bautiza a tu corcel</div>
-        <div class="hacp-suc-desc">Vivirá suelto por los campos de la finca. Solo tendrás uno · cuesta 💰 ${precio}.${desbBlanco ? ' <b style="color:#cfe0e6">El 白馬 del Norte es superior (−18% de expedición).</b>' : ''}</div>
+        <div class="hacp-suc-desc">Vivirá suelto por los campos de la finca. Solo tendrás uno · cuesta 💰 ${precio}.${mejor ? ` <b style="color:#cfe0e6">Tu casa cría razas superiores: hasta el ${esc(mejor.zh)} ${esc(mejor.nombre)} (−${Math.round(mejor.exped * 100)}% de expedición).</b>` : ''}</div>
         <div class="hacp-horse-coats">${pelajes.map((p, i) => `<button type="button" class="hacp-horse-coat${i === 0 ? ' sel' : ''}${p.premium ? ' premium' : ''}" data-coat="${p.tono}" data-var="${p.variante}" title="${esc(p.nombre)}" aria-label="Pelaje ${esc(p.nombre)}"><span class="hacp-horse-coat-sw" style="background:${p.tono}"></span><span class="hacp-horse-coat-nm">${esc(p.nombre)}</span></button>`).join('')}</div>
         <input type="text" class="hacp-horse-in" maxlength="24" value="${esc(sug)}" placeholder="Nombre del caballo" />
         <div class="hacp-horse-sug">${CABALLO_NOMBRES.map(n => `<button type="button" class="hacp-horse-chip" data-nom="${esc(n)}">${esc(n)}</button>`).join('')}</div>
@@ -4621,7 +4638,7 @@
         const res = HacStats.comprarCaballo(myId, varSel, nombre, precio, coatSel);
         if (!res.ok) { toast(res.motivo || 'No se pudo comprar'); return; }
         cerrarBautizo();
-        toast(`🐎 ${esc(res.caballo.nombre)} · ¡tu ${varSel === 'caballo-blanco' ? '白馬 del Norte' : 'corcel'} ronda ya por los campos!`);
+        toast(`🐎 ${esc(res.caballo.nombre)} · ¡tu ${esc(razaDe(varSel).nombre)} ronda ya por los campos!`);
         if (window.HacBitacora) HacBitacora.log(myId, 'compra', `🐎 Compraste un caballo y lo llamaste ${res.caballo.nombre}`);
         syncCaballosFolk();          // que aparezca al instante
         buildShop();                 // refresca dinero y marca «ya lo tienes»
@@ -5350,9 +5367,12 @@
     // administrativo (tributo): 5 tiers, cada vez más caros y con caravana más frecuente
     // y cargada. militar/cultural siguen a 1 tier por ahora (se ampliarán aparte).
     const INVESTIG_TIERS = {
-      militar: [
-        { id: 'caballo-blanco', tier: 1, zh: '白馬義從', nombre: 'Jinetes del Caballo Blanco', target: 300, unlock: 'caballo-blanco', desc: 'Adiestra la caballería ligera del norte. Al completarla, la casa podrá criar caballos blancos.' },
-      ],
+      // Militar = CRÍA DE RAZAS: un tier por estirpe (de CABALLO_RAZAS, tier ≥ 1).
+      // Completar un tier desbloquea criar/domar esa raza. El último (汗血寶馬) exige
+      // además una licencia especial (la trae el mercader; se define en la fase de doma).
+      militar: CABALLO_RAZAS.filter(r => r.tier >= 1).map(r => ({
+        id: r.id, tier: r.tier, zh: r.zh, nombre: `Cría · ${r.nombre}`, target: r.target, unlock: r.unlock, desc: r.desc, licencia: !!r.licencia,
+      })),
       cultural: [
         { id: 'talentos', tier: 1, zh: '招賢', nombre: 'Atraer talentos', target: 300, unlock: 'talentos', desc: 'La fama de la casa se extiende. Al completarla, en expediciones podrás toparte con talentos que quieran unirse.' },
       ],
@@ -5587,13 +5607,14 @@
       // el siguiente listo para iniciarse (con su coste creciente), o «al máximo».
       const chain = invChain(rol), total = chain.length, nivel = invNivel(rol);
       const enCurso = invEnCurso(rol), siguiente = invSiguiente(rol);
-      const tierPips = total > 1 ? `<span class="hacp-pab-inv-tier" title="Nivel ${nivel} de ${total}" style="color:${R.color}">${'●'.repeat(nivel)}${'○'.repeat(total - nivel)}</span>` : '';
-      const lvTag = (t) => total > 1 ? ` <span class="hacp-pab-inv-lv">nivel ${t.tier}/${total}</span>` : '';
+      // Línea meta (bajo el título): «nivel N/total» a la izq. y pips ●●○○○ a la der.
+      const metaRow = (t) => total <= 1 ? '' : `<div class="hacp-pab-inv-meta"><span class="hacp-pab-inv-lv">nivel ${t}/${total}</span><span class="hacp-pab-inv-tier" style="color:${R.color}" title="Nivel ${nivel} de ${total}">${'●'.repeat(nivel)}${'○'.repeat(total - nivel)}</span></div>`;
       let invHtml;
       if (enCurso) {
         const live = pabLiveProg(rol), pctp = Math.round(live / enCurso.target * 100), rate = pabPassiveRate(rol);
         invHtml = `<div class="hacp-pab-inv">
-          <div class="hacp-pab-inv-h">🔬 ${enCurso.zh} ${esc(enCurso.nombre)}${lvTag(enCurso)} ${tierPips}</div>
+          <div class="hacp-pab-inv-h">🔬 ${enCurso.zh} ${esc(enCurso.nombre)}</div>
+          ${metaRow(enCurso.tier)}
           <div class="hacp-pab-inv-d">${esc(enCurso.desc)}</div>
           <div class="hacp-pab-bar"><i style="width:${Math.min(100, pctp)}%;background:${R.color}"></i></div>
           <div class="hacp-pab-inv-s">${Math.round(live)}/${enCurso.target} · avanza <b>+${rate}/h</b> sola (miembros y edificios ${R.zh} dentro del patio)</div>
@@ -5601,17 +5622,24 @@
         </div>`;
       } else if (siguiente) {
         const yaHay = nivel > 0;   // hay tiers previos completados → esto es una MEJORA
+        // Tier con licencia (p.ej. 汗血寶馬): aún no investigable hasta la fase de doma/licencia.
+        const bloqueadoLic = !!siguiente.licencia;
+        const accion = bloqueadoLic
+          ? '<div class="hacp-inv-note">🔒 Requiere una <b>licencia especial</b> que traerá el mercader · <i>próximamente</i>.</div>'
+          : (soyResp || soyFund) ? `<button type="button" class="hacp-cp-btn hacp-suc-ok" data-inv-start>${yaHay ? `Investigar nivel ${siguiente.tier}` : 'Iniciar investigación'}</button>` : '<div class="hacp-inv-note">El responsable ha de iniciarla.</div>';
         invHtml = `<div class="hacp-pab-inv${yaHay ? ' done' : ''}">
-          <div class="hacp-pab-inv-h">🔬 ${siguiente.zh} ${esc(siguiente.nombre)}${lvTag(siguiente)} ${tierPips}</div>
+          <div class="hacp-pab-inv-h">🔬 ${siguiente.zh} ${esc(siguiente.nombre)}</div>
+          ${metaRow(siguiente.tier)}
           ${yaHay ? `<div class="hacp-pab-inv-s ok">✔ Nivel ${nivel}/${total} activo · beneficio para la casa.</div>` : ''}
           <div class="hacp-pab-inv-d">${esc(siguiente.desc)}</div>
           <div class="hacp-pab-inv-s">Coste de investigación: <b>${siguiente.target}</b> pts${yaHay ? ' <span style="opacity:.7">— más que el nivel anterior</span>' : ''}.</div>
-          ${(soyResp || soyFund) ? `<button type="button" class="hacp-cp-btn hacp-suc-ok" data-inv-start>${yaHay ? `Investigar nivel ${siguiente.tier}` : 'Iniciar investigación'}</button>` : '<div class="hacp-inv-note">El responsable ha de iniciarla.</div>'}
+          ${accion}
         </div>`;
       } else {
         const last = chain[total - 1] || {};
         invHtml = `<div class="hacp-pab-inv done">
-          <div class="hacp-pab-inv-h">🔬 ${last.zh || ''} ${esc(last.nombre || 'Investigación')} <span class="ok">✔ al máximo</span> ${tierPips}</div>
+          <div class="hacp-pab-inv-h">🔬 ${last.zh || ''} ${esc(last.nombre || 'Investigación')} <span class="ok">✔ al máximo</span></div>
+          ${metaRow(total)}
           <div class="hacp-pab-inv-s">Investigación completa · <b>nivel ${total}/${total}</b>. Beneficio máximo para la casa.</div>
         </div>`;
       }
@@ -5642,7 +5670,7 @@
       try {
         if (kind === 'unir') { const d = await pabRPC('pab_unirse', { p_hac: h.id, p_pj: myId, p_rol: a }); if (d && d.miembros) h.miembros = d.miembros; toast(a ? '部 Te uniste al pabellón' : 'Saliste del pabellón'); }
         else if (kind === 'resp') { const d = await pabRPC('pab_responsable', { p_hac: h.id, p_pj: myId, p_rol: a, p_target: b || '' }); if (d && d.mapa) h.mapa = d.mapa; toast('責 Responsable actualizado'); }
-        else if (kind === 'inv-start') { const def = invSiguiente(a); if (!def) { toast('🔬 Ya está todo investigado'); return; } const yaEnCurso = !!(pabInvestig(a) && !pabInvestig(a).done); const d = await pabRPC('pab_investig_elegir', { p_hac: h.id, p_pj: myId, p_rol: a, p_id: def.id, p_ts: nowMs() }); if (d && d.mapa) h.mapa = d.mapa; toast(yaEnCurso ? '🔬 Esa investigación ya estaba en curso' : `🔬 Investigación iniciada: ${def.nombre}`); }
+        else if (kind === 'inv-start') { const def = invSiguiente(a); if (!def) { toast('🔬 Ya está todo investigado'); return; } if (def.licencia) { toast('🔒 Necesita una licencia especial (próximamente)'); return; } const yaEnCurso = !!(pabInvestig(a) && !pabInvestig(a).done); const d = await pabRPC('pab_investig_elegir', { p_hac: h.id, p_pj: myId, p_rol: a, p_id: def.id, p_ts: nowMs() }); if (d && d.mapa) h.mapa = d.mapa; toast(yaEnCurso ? '🔬 Esa investigación ya estaba en curso' : `🔬 Investigación iniciada: ${def.nombre}`); }
       } catch (e) { toast(String(e && e.message || e)); return; }
       buildPabPanel();
       if (charId) buildCharPanel(charId);

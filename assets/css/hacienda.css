@@ -504,9 +504,10 @@ html.hacp-pseudofs, html.hacp-pseudofs body{ overflow:hidden; }
 .hacp-pab-inv.done{ border-color:rgba(122,196,140,.5); background:rgba(122,196,140,.07); }
 .hacp-pab-inv-h{ font:700 13px 'Noto Sans SC',sans-serif; color:var(--parch); margin-bottom:5px; }
 .hacp-pab-inv-h .ok{ color:#8fd6a0; font-size:11px; }
-/* Etiqueta «nivel N/total» y pips de progresión de tiers de la investigación. */
+/* Línea meta de la investigación: «nivel N/total» + pips de progresión ●●○○○. */
+.hacp-pab-inv-meta{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin:-2px 0 7px; }
 .hacp-pab-inv-lv{ font:700 9.5px 'Cinzel Decorative',serif; letter-spacing:.04em; text-transform:uppercase; color:var(--parch2); opacity:.85; }
-.hacp-pab-inv-tier{ float:right; font-size:11px; letter-spacing:1px; opacity:.9; }
+.hacp-pab-inv-tier{ font-size:11px; letter-spacing:1px; opacity:.9; flex:none; }
 .hacp-pab-inv-s.ok{ color:#8fd6a0; margin-bottom:6px; }
 .hacp-pab-inv-d{ font-size:11px; color:var(--parch2); line-height:1.35; margin-bottom:8px; }
 .hacp-pab-bar{ height:10px; border-radius:6px; background:rgba(0,0,0,.32); border:1px solid rgba(201,168,76,.25); overflow:hidden; margin:2px 0 5px; }
