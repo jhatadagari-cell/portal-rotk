@@ -2075,10 +2075,11 @@ const HacFolk = (function () {
     const nv = Math.max(1, Math.min(5, tier | 0)) || 1;
     if (on) {
       if (caravan && caravan.phase !== 'out') { caravan.tier = nv; return; }       // ya está (refresca nivel)
-      // APARCA A UN LADO (al este del portón), fuera del eje de tránsito: así el
-      // mecenas que sale/entra y el caballo que acude (ambos por el eje) NO se pisan
-      // con el carro. Nada de dejarlo pegado a la puerta ni en medio del carril.
-      const to = wk && wk.outNear ? [wk.outNear[0] + 3.2, wk.outNear[1] - 0.5] : null;
+      // ESPERA CLARAMENTE FUERA del portón (en el campo, al sur de la muralla) y a un
+      // lado del eje de tránsito. Antes usaba outNear[1]-0.5 (tirando HACIA la muralla)
+      // + un desvío grande en x → en fincas con edificios junto al portón el carro se
+      // metía entre las casas. Ahora va MÁS al sur (fuera) y con desvío lateral moderado.
+      const to = wk && wk.outNear ? [wk.outNear[0] + 2.2, wk.outNear[1] + 1.4] : null;
       const from = (wk && wk.outFar) || to; if (!to) { caravan = null; return; }
       caravan = { phase: 'in', p: 0, from: from, to: to, fx: from[0], fy: from[1], tier: nv };
     } else if (caravan && caravan.phase !== 'out') {
