@@ -457,21 +457,52 @@ const HacStats = (function () {
     } catch (e) { console.error('[HacStats] liberarCasa', e); }
   }
 
-  // ── CABALLO (mascota única con nombre; ronda por fuera de la finca) ───────
-  function caballo(mid) { const r = row(mid); return (r && r.caballo) ? r.caballo : null; }
+  // ── CABALLOS · CUADRA (varias monturas; una ACTIVA que ronda/montas) ──────
+  // Modelo compacto sin cambiar la BD: r.caballo = montura ACTIVA (objeto plano
+  // {id,nombre,tono,ms,precio}) que además lleva `_establo` = array con el RESTO
+  // de la cuadra. `caballo(mid)` devuelve la activa (retrocompat: el resto del
+  // código lee .id/.nombre/.tono/.ms sin enterarse del establo).
+  function flatH(h) { if (!h) return h; const o = {}; for (const k in h) if (k !== '_establo') o[k] = h[k]; return o; }
+  function caballo(mid) { const r = row(mid); return (r && r.caballo) ? r.caballo : null; }   // ACTIVA
   function tieneCaballo(mid) { return !!caballo(mid); }
-  // Compra ÚNICA (uno por mecenas, sea la variante que sea): descuenta el precio,
-  // guarda QUÉ caballo (variante) y su nombre. Devuelve {ok, motivo}.
+  // Cuadra completa: [activa, ...establo]. La activa es la primera.
+  function cuadra(mid) { const a = caballo(mid); if (!a) return []; const est = Array.isArray(a._establo) ? a._establo : []; return [flatH(a)].concat(est.map(flatH)); }
+  function tieneVariante(mid, variante) { return cuadra(mid).some(h => (h.id || 'caballo') === (variante || 'caballo')); }
+  // Adopta una montura: entra como ACTIVA; la anterior activa pasa a la cuadra.
+  // No permite duplicar RAZA (variante). Guarda el precio para el reembolso.
   function comprarCaballo(mid, variante, nombre, precio, tono) {
     if (!mid) return { ok: false, motivo: 'Sin mecenas' };
     const r = ensure(mid);
-    if (r.caballo) return { ok: false, motivo: 'Ya tienes un caballo' };
+    const va = variante || 'caballo';
+    if (tieneVariante(mid, va)) return { ok: false, motivo: 'Ya tienes esa raza en tu cuadra' };
     const p = Math.max(0, precio | 0);
     if (r.dinero < p) return { ok: false, motivo: 'No tienes suficiente dinero' };
     const nom = String(nombre || '').trim().slice(0, 24) || 'Corcel';
     const col = (typeof tono === 'string' && /^#[0-9a-fA-F]{6}$/.test(tono)) ? tono : null;   // pelaje elegido (hex) o null→marrón por defecto
-    r.dinero -= p; r.caballo = { id: variante || 'caballo', nombre: nom, tono: col, ms: Date.now() };
+    r.dinero -= p;
+    const cur = r.caballo;
+    const est = cur ? [flatH(cur)].concat(Array.isArray(cur._establo) ? cur._establo.map(flatH) : []) : [];
+    r.caballo = { id: va, nombre: nom, tono: col, ms: Date.now(), precio: p, _establo: est };
     persist(r); return { ok: true, caballo: r.caballo };
+  }
+  // Cambia la montura ACTIVA a la de `ms`; la anterior activa pasa a la cuadra. {ok}.
+  function montarCaballo(mid, ms) {
+    const r = ensure(mid), a = r.caballo; if (!a) return { ok: false };
+    if (a.ms === ms) return { ok: true };
+    const est = Array.isArray(a._establo) ? a._establo.slice() : [];
+    const i = est.findIndex(h => h.ms === ms); if (i < 0) return { ok: false };
+    const na = flatH(est[i]); est.splice(i, 1); est.unshift(flatH(a));
+    r.caballo = Object.assign({}, na, { _establo: est });
+    persist(r); return { ok: true };
+  }
+  // VENDE una montura (activa o de la cuadra) por ~50% de su precio. {ok, refund}.
+  function venderCaballo(mid, ms) {
+    const r = ensure(mid), a = r.caballo; if (!a) return { ok: false };
+    let horse = null, est = Array.isArray(a._establo) ? a._establo.slice() : [];
+    if (a.ms === ms) { horse = a; if (est.length) { const na = flatH(est.shift()); r.caballo = Object.assign({}, na, { _establo: est }); } else r.caballo = null; }
+    else { const i = est.findIndex(h => h.ms === ms); if (i < 0) return { ok: false }; horse = est[i]; est.splice(i, 1); r.caballo = Object.assign({}, flatH(a), { _establo: est }); }
+    const refund = Math.max(0, Math.round((Number(horse.precio) || 0) * 0.5));
+    r.dinero += refund; persist(r); return { ok: true, refund };
   }
   // VENDER un objeto de la mochila por `precio` (lo negocia la página con el regateo).
   function venderItem(mid, id, precio) {
@@ -518,6 +549,6 @@ const HacStats = (function () {
   function encargosHechos(mid, dia) { const p = prodObj(mid); if (p.encargos.dia !== dia) { p.encargos.dia = dia; p.encargos.hechos = []; } return p.encargos.hechos.slice(); }
   function marcarEncargo(mid, dia, id) { const p = prodObj(mid); if (p.encargos.dia !== dia) { p.encargos.dia = dia; p.encargos.hechos = []; } if (p.encargos.hechos.indexOf(id) < 0) { p.encargos.hechos.push(id); persist(ensure(mid)); } }
 
-  return { ready, reload, dinero, ahorro, casaPos, casasReclamadas, duenoDeCasa, comprarCasa, liberarCasa, abandonar, heridas, penHerida, malherido, herir, curar, secuelas, tieneSecuela, escaramuzaCd, bonusDinero, bonusExped, bonusPrestigio, bonusAntirrobo, usarManual, comerItem, usarAmpliacion, abrirRecompensaSemanal, xp, nivel, progresoNivel, bonus, nivelTotal, nivelPersonaje, setNiveles, puntosTalento, talentos, puntosGastados, puntosLibres, tieneTalento, aprenderTalento, equipados, equipar, desequipar, slotDe, MAX_EQUIP, bonusPct, bonusPctNiveles, torsoViste, vestir, otorgarArmaInicial, award, comprar, guardar, sacar, darItem, quitarItem, meterEnCasa, sacarDeCasa, inventario, casaInventario, capInventario, ocupadas, recompensaExped, caballo, tieneCaballo, comprarCaballo, venderItem, ventaCd, ventaEnfriada, ventaCdRestanteMs, enfriarVenta, bonusRegateo, recursos, recursoTotal, recursoDesdeCal, addLote, quitaRecurso, quitaCal, oficioNivel, subirOficio, recolectarRenta, rentaPendiente, encargosHechos, marcarEncargo, DOMS, dbOk: () => ok, TABLE };
+  return { ready, reload, dinero, ahorro, casaPos, casasReclamadas, duenoDeCasa, comprarCasa, liberarCasa, abandonar, heridas, penHerida, malherido, herir, curar, secuelas, tieneSecuela, escaramuzaCd, bonusDinero, bonusExped, bonusPrestigio, bonusAntirrobo, usarManual, comerItem, usarAmpliacion, abrirRecompensaSemanal, xp, nivel, progresoNivel, bonus, nivelTotal, nivelPersonaje, setNiveles, puntosTalento, talentos, puntosGastados, puntosLibres, tieneTalento, aprenderTalento, equipados, equipar, desequipar, slotDe, MAX_EQUIP, bonusPct, bonusPctNiveles, torsoViste, vestir, otorgarArmaInicial, award, comprar, guardar, sacar, darItem, quitarItem, meterEnCasa, sacarDeCasa, inventario, casaInventario, capInventario, ocupadas, recompensaExped, caballo, tieneCaballo, cuadra, tieneVariante, comprarCaballo, montarCaballo, venderCaballo, venderItem, ventaCd, ventaEnfriada, ventaCdRestanteMs, enfriarVenta, bonusRegateo, recursos, recursoTotal, recursoDesdeCal, addLote, quitaRecurso, quitaCal, oficioNivel, subirOficio, recolectarRenta, rentaPendiente, encargosHechos, marcarEncargo, DOMS, dbOk: () => ok, TABLE };
 })();
 if (typeof window !== 'undefined') window.HacStats = HacStats;

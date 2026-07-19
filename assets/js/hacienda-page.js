@@ -478,6 +478,15 @@
     ];
     const razaDe = (id) => CABALLO_RAZAS.find(r => r.id === id) || CABALLO_RAZAS[0];
     const caballoExpedDe = (c) => c ? razaDe(c.id).exped : 0;
+    // Razas que AÚN puedes adoptar para tu cuadra: la común (si no la tienes) + las
+    // estirpes desbloqueadas por investigación que no tengas ya. Vacío = cuadra completa.
+    function razasComprables() {
+      if (!window.HacStats || !HacStats.tieneVariante) return [razaDe('caballo')];
+      const out = [];
+      if (!HacStats.tieneVariante(myId, 'caballo')) out.push(razaDe('caballo'));
+      CABALLO_RAZAS.filter(r => r.tier >= 1 && (typeof pabDesbloqueado === 'function') && pabDesbloqueado(r.unlock)).forEach(r => { if (!HacStats.tieneVariante(myId, r.id)) out.push(r); });
+      return out;
+    }
     const caballoExped = () => caballoExpedDe((window.HacStats && HacStats.caballo) ? HacStats.caballo(myId) : null);
     // ── BUFOS/DEBUFOS (modificadores %): registro EXTENSIBLE de todo lo que te afecta.
     // tipo → cómo se muestra (etiqueta, signo, si es reductor bueno o un debuf). Añadir
@@ -3972,12 +3981,14 @@
       casaEl.addEventListener('click', (e) => { if (e.target === casaEl) casaEl.hidden = true; });
       return casaEl;
     }
-    // TU CABALLO (antes "La casa"): estado del corcel y qué te aporta.
+    // TU CUADRA: montura ACTIVA (la que ronda/montas) + el resto de la cuadra, con
+    // opción de cambiar de montura o vender por reembolso.
     function caballoInfoHTML() {
       const c = (window.HacStats && HacStats.caballo) ? HacStats.caballo(myId) : null;
-      if (!c) return `<div class="hacp-inv-note">Aún no tienes caballo. Cómpralo en el <b>市 Mercado</b> (requiere 武 5): lo bautizas, rondará libre por los campos de la finca y saldrás <b>montado</b> en tus expediciones y escaramuzas.</div>`;
+      if (!c) return `<div class="hacp-inv-note">Tu cuadra está vacía. Adopta un caballo en el <b>市 Mercado</b> (requiere 武 5): lo bautizas, rondará libre por los campos y saldrás <b>montado</b> en expediciones y escaramuzas. Al investigar el pabellón 军 podrás criar razas mejores.</div>`;
       const raza = razaDe(c.id), esRaza = raza.tier >= 1;
-      return `<div class="hacp-caballo-card">
+      const lista = HacStats.cuadra ? HacStats.cuadra(myId) : [c];
+      let html = `<div class="hacp-caballo-card">
           <div class="hacp-caballo-ic">🐎</div>
           <div class="hacp-caballo-nm">${esc(c.nombre)}</div>
           <div class="hacp-caballo-sub">${esRaza ? `${esc(raza.zh)} · ${esc(raza.nombre)}${raza.tier >= 4 ? ' 寶馬' : ''}` : 'Caballo de raza · 寶馬'}</div>
@@ -3987,16 +3998,35 @@
           <div>⚔ Sales <b>montado</b> en expediciones y escaramuzas.</div>
           <div>⏱ <b>−${Math.round(caballoExpedDe(c) * 100)}%</b> de tiempo de expedición.${esRaza ? ` <span style="color:#8fb6c9">(estirpe ${esc(raza.nombre)})</span>` : ''}</div>
         </div>`;
+      html += `<div class="hacp-prod-seclbl" style="margin-top:12px">Tu cuadra · ${lista.length} montura${lista.length !== 1 ? 's' : ''}</div>
+        <div class="hacp-cuadra">` + lista.map(hc => {
+          const rz = razaDe(hc.id), act = hc.ms === c.ms;
+          return `<div class="hacp-cuadra-row${act ? ' act' : ''}">
+            <span class="hacp-cuadra-sw" style="background:${hc.tono || rz.coat}"></span>
+            <span class="hacp-cuadra-nm">${esc(hc.nombre)} <span class="zi">${esc(rz.zh)} ${esc(rz.nombre)}</span> <i>−${Math.round(rz.exped * 100)}%</i></span>
+            ${act ? '<span class="hacp-cuadra-badge">montando</span>' : `<button type="button" class="hacp-cp-btn hacp-cuadra-btn" data-mont="${hc.ms}">Montar</button>`}
+            <button type="button" class="hacp-cp-btn hacp-cuadra-btn sell" data-vend="${hc.ms}" title="Vender por ~50% de su valor">Vender</button>
+          </div>`;
+        }).join('') + `</div>
+        <div class="hacp-inv-note" style="margin-top:6px">Adopta más razas en el <b>市 Mercado</b>; solo la montura activa ronda la finca.</div>`;
+      return html;
     }
-    function openCaballo() {
-      if (!myId) return;
+    function buildCaballoOv() {
       const el = ensureCasaEl();
       el.innerHTML = `<div class="hacp-shop-box"><button type="button" class="hacp-shop-x" data-casa-x aria-label="Cerrar">✕</button>
-        <div class="hacp-shop-h"><span class="hacp-shop-zh">🐎</span> Tu Caballo</div>
+        <div class="hacp-shop-h"><span class="hacp-shop-zh">🐎</span> Tu cuadra</div>
         ${caballoInfoHTML()}</div>`;
       el.querySelector('[data-casa-x]').addEventListener('click', () => { el.hidden = true; });
-      el.hidden = false;
+      el.querySelectorAll('[data-mont]').forEach(b => b.addEventListener('click', () => {
+        const r = HacStats.montarCaballo(myId, Number(b.dataset.mont));
+        if (r && r.ok) { toast('🐎 Cambiaste de montura'); syncCaballosFolk(); if (charId) buildCharPanel(charId); buildCaballoOv(); }
+      }));
+      el.querySelectorAll('[data-vend]').forEach(b => b.addEventListener('click', () => {
+        const r = HacStats.venderCaballo(myId, Number(b.dataset.vend));
+        if (r && r.ok) { toast(`🐎 Montura vendida · +${r.refund}💰`); syncCaballosFolk(); if (charId) buildCharPanel(charId); buildCaballoOv(); }
+      }));
     }
+    function openCaballo() { if (!myId) return; buildCaballoOv(); ensureCasaEl().hidden = false; }
     // BUFOS/DEBUFOS: total por tipo arriba + desglose por fuente. Incluye, de paso, el
     // panel de cargos de la casa y las relaciones (fuentes de futuros bufos).
     function bufosHTML() {
@@ -4309,14 +4339,14 @@
       const money = window.HacStats ? HacStats.dinero(myId) : 0;
       const precio = precioMercado(item), rebaja = bonos.mercado > 0 && precio < item.precio;
       const noMoney = money < precio;
-      const owned = item.tipo === 'caballo' && window.HacStats && HacStats.tieneCaballo && HacStats.tieneCaballo(myId);
+      const owned = item.tipo === 'caballo' && window.HacStats && HacStats.cuadra && razasComprables().length === 0;
       const reqFail = reqNoCumplido(item);   // dominio cuyo nivel no llega (o null)
       const disabled = locked || !myId || noMoney || owned || !!reqFail;
       const precioHTML = rebaja ? `<s>${item.precio}</s> ${precio}` : `${item.precio}`;
       const btn = locked
         ? `<span class="hacp-item-lock">🔒 Nivel ${item.tier}</span>`
         : owned
-          ? `<span class="hacp-item-owned">✔ ${esc((HacStats.caballo(myId) || {}).nombre || 'Tuyo')}</span>`
+          ? `<span class="hacp-item-owned">✔ Cuadra completa</span>`
           : reqFail
             ? `<span class="hacp-item-lock" title="Requiere ${DOM_GLYPH[reqFail]} ${item.req[reqFail]}">🔒 ${DOM_GLYPH[reqFail]} ${item.req[reqFail]}</span>`
             : `<button type="button" class="hacp-item-buy" data-buy="${esc(item.id)}"${disabled ? ' disabled' : ''}>💰 ${precioHTML}</button>`;
@@ -4394,9 +4424,10 @@
       if (item.tier > tier) { toast('🔒 Necesita una finca de nivel ' + item.tier); return; }
       const rf = reqNoCumplido(item);
       if (rf) { toast(`Necesitas ${DOM_GLYPH[rf]} ${item.req[rf]} para comprarlo`); return; }
-      // CABALLO: compra única con nombre → abre el bautizo (no va a la mochila).
+      // CABALLO: adoptas una montura con nombre → abre el bautizo. Ya no es única:
+      // entra en tu CUADRA (solo se veta repetir la misma raza).
       if (item.tipo === 'caballo') {
-        if (HacStats.tieneCaballo(myId)) { toast('Ya tienes un caballo'); return; }
+        if (!razasComprables().length) { toast('Ya tienes todas las razas disponibles en tu cuadra'); return; }
         if (HacStats.dinero(myId) < precioMercado(item)) { toast('No tienes suficiente dinero'); return; }
         abrirBautizoCaballo(item); return;
       }
@@ -4607,15 +4638,20 @@
       // RAZAS: además de los pelajes comunes (raza «caballo»), se ofrecen como opción
       // PREMIUM todas las estirpes que la casa haya DESBLOQUEADO investigando (mejor
       // montura: más −% de expedición). El pelaje propio de cada raza es su `coat`.
+      // Solo se ofrecen razas que NO tengas ya en la cuadra (la común como pelajes).
+      const ownComun = window.HacStats && HacStats.tieneVariante && HacStats.tieneVariante(myId, 'caballo');
       const razasDesb = (typeof pabDesbloqueado === 'function' && item.id === 'caballo')
-        ? CABALLO_RAZAS.filter(r => r.tier >= 1 && pabDesbloqueado(r.unlock)) : [];
-      const pelajes = CABALLO_PELAJES.map(p => ({ nombre: p.nombre, tono: p.tono, variante: 'caballo' }));
+        ? CABALLO_RAZAS.filter(r => r.tier >= 1 && pabDesbloqueado(r.unlock) && !(HacStats.tieneVariante && HacStats.tieneVariante(myId, r.id))) : [];
+      const pelajes = [];
+      if (!ownComun) CABALLO_PELAJES.forEach(p => pelajes.push({ nombre: p.nombre, tono: p.tono, variante: 'caballo' }));
       razasDesb.forEach(r => pelajes.push({ nombre: `${r.zh} ${r.nombre}`, tono: r.coat, variante: r.id, premium: true }));
+      if (!pelajes.length) { toast('Ya tienes todas las razas disponibles en tu cuadra'); return; }
       const mejor = razasDesb.length ? razasDesb[razasDesb.length - 1] : null;
+      const tieneAlguno = window.HacStats && HacStats.tieneCaballo && HacStats.tieneCaballo(myId);
       el.innerHTML = `<div class="hacp-suc-box hacp-horse-box">
         <div class="hacp-suc-eyebrow">🐎 ${esc(item.zh || '')} · Caballo de raza</div>
         <div class="hacp-suc-ttl">Bautiza a tu corcel</div>
-        <div class="hacp-suc-desc">Vivirá suelto por los campos de la finca. Solo tendrás uno · cuesta 💰 ${precio}.${mejor ? ` <b style="color:#cfe0e6">Tu casa cría razas superiores: hasta el ${esc(mejor.zh)} ${esc(mejor.nombre)} (−${Math.round(mejor.exped * 100)}% de expedición).</b>` : ''}</div>
+        <div class="hacp-suc-desc">Entrará en tu <b>cuadra</b> como montura activa${tieneAlguno ? ' (tu anterior montura se queda en la cuadra)' : ''} · cuesta 💰 ${precio}.${mejor ? ` <b style="color:#cfe0e6">Tu casa cría razas superiores: hasta el ${esc(mejor.zh)} ${esc(mejor.nombre)} (−${Math.round(mejor.exped * 100)}% de expedición).</b>` : ''}</div>
         <div class="hacp-horse-coats">${pelajes.map((p, i) => `<button type="button" class="hacp-horse-coat${i === 0 ? ' sel' : ''}${p.premium ? ' premium' : ''}" data-coat="${p.tono}" data-var="${p.variante}" title="${esc(p.nombre)}" aria-label="Pelaje ${esc(p.nombre)}"><span class="hacp-horse-coat-sw" style="background:${p.tono}"></span><span class="hacp-horse-coat-nm">${esc(p.nombre)}</span></button>`).join('')}</div>
         <input type="text" class="hacp-horse-in" maxlength="24" value="${esc(sug)}" placeholder="Nombre del caballo" />
         <div class="hacp-horse-sug">${CABALLO_NOMBRES.map(n => `<button type="button" class="hacp-horse-chip" data-nom="${esc(n)}">${esc(n)}</button>`).join('')}</div>
