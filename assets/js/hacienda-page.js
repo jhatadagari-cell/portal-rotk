@@ -5479,9 +5479,12 @@
         } catch (e) {}
       }, 1000);
     }
-    function tributoCargo() {   // escala con la fuerza del pabellón 政 Y con el nivel de investigación
+    // Multiplicador de CARGA por nivel del tributo. Como el periodo es FIJO (4 h), la
+    // única recompensa por investigar más es la carga → saltos GRANDES entre tiers.
+    const TRIBUTO_MULT = [0, 1, 1.8, 2.8, 4.2, 6];   // nv1..5 (×1 … ×6)
+    function tributoCargo() {   // escala con la fuerza del pabellón 政 Y (sobre todo) con el nivel
       const s = pabSinergia('administrativo'), a = (h.miembros || []).filter(m => m.pabellon === 'administrativo').length;
-      const mult = 1 + 0.35 * Math.max(0, tributoNivel() - 1);   // +35% de carga por cada tier tras el primero
+      const mult = TRIBUTO_MULT[Math.max(1, Math.min(5, tributoNivel()))] || 1;
       const r = (n) => Math.round(n * mult);
       return { dinero: r(40 + 6 * s + 4 * a), grano: r(8 + s), hierro: r(4), tinta: r(4) };
     }
