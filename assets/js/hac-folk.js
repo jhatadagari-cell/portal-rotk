@@ -1792,14 +1792,22 @@ const HacFolk = (function () {
     const p = moving ? frame / HORSE_FRAMES : 0, pA = p, pB = (p + 0.5) % 1;
     const stride = moving ? 3 : 0, lift = moving ? 4 : 0;
     const by = moving ? -(0.5 - 0.5 * Math.cos(p * 4 * Math.PI)) * 1.2 : 0, B = v => v + by;
+    // pata trasera LEJANA
     hLimbBack(c, 26, B(22), pB, stride, lift, P.sh, P.dk);
-    hEllip(c, 28, B(15), 5, 3.5, P.sh);
-    hSeg(c, 29, B(14), 34, B(7), 5, P.sh);
-    hDisc(c, 35, B(6.5), 2.2, P.base);
-    px(36, B(7), 2, 2, P.muzzle);
-    px(34, B(3.5), 2, 3, P.base); px(36, B(3.5), 2, 3, P.base); px(34, B(3.5), 1, 1, P.dk); px(36, B(3.5), 1, 1, P.dk);
-    px(36, B(6), 1, 1, P.eye);
-    if (P.plume) { px(35, B(0.5), 2, 4, P.plume); px(36, B(1.5), 1, 2, mixc(P.plume, '#ffffff', 0.4)); }
+    // CUELLO corto tras la grupa + CABEZA mirando atrás sobre el hombro (perfil claro).
+    const nbx = 24;
+    hSeg(c, nbx, B(15), nbx + 1, B(8), 6, P.base);
+    c.fillStyle = P.mane; for (let i = 0; i < 6; i++) { const t = i / 5; px(nbx + 2.2 - t * 0.4, B(8.5) + t * 6, 2, 2); }   // crin del cuello
+    hDisc(c, nbx + 1, B(6.5), 2.6, P.base);
+    hSeg(c, nbx, B(7), nbx - 4, B(8.6), 3, P.base);   // cara hacia el morro (mira a la izquierda)
+    px(nbx - 5, B(8.6), 2, 2, P.muzzle);
+    px(nbx - 5, B(9.6), 1, 1, P.eye);
+    px(nbx - 1, B(6.4), 1, 1, P.eye); px(nbx - 1, B(5.8), 1, 1, P.edge);
+    px(nbx - 0.5, B(2.6), 2, 3, P.base); px(nbx - 0.5, B(2.6), 1, 3, P.dk);
+    px(nbx + 2, B(2.6), 2, 3, P.base); px(nbx + 2, B(2.6), 1, 3, P.dk);
+    px(nbx + 0.5, B(3.7), 2, 2, P.mane);
+    if (P.plume) { px(nbx + 0.5, B(-0.4), 2, 4, P.plume); px(nbx + 1.5, B(0.6), 1, 2, mixc(P.plume, '#ffffff', 0.4)); }
+    // grupa hacia el observador (tapa la base del cuello)
     hEllip(c, 20, B(22), 8.5, 7, P.base);
     hEllip(c, 20, B(17), 7, 2.2, P.hi);
     px(20, B(17), 1, 12, P.dk);
@@ -1810,9 +1818,11 @@ const HacFolk = (function () {
     if (P.studs) { for (let i = 0; i < 3; i++) px(16 + i * 4, gyB + 1, 1, 1, P.studs); }
     px(17, gyB - 2, 6, 3, P.leather); px(17, gyB - 2, 6, 1, P.leatherHi);
     hLimbBack(c, 15, B(22), pA, stride, lift, P.base, P.hoof);
-    const tswB = moving ? Math.sin(p * 2 * Math.PI) * 1.2 : 0;
-    c.fillStyle = P.mane; for (let i = 0; i < 12; i++) { const t = i / 11; px(20 + tswB * t - 1.5, B(13) + t * 17, 4, 2); }
-    c.fillStyle = P.maneHi; for (let i = 0; i < 10; i++) { const t = i / 9; px(20 + tswB * t - 0.5, B(13) + t * 17, 1, 2); }
+    // COLA: nace arriba y cae hacia un lado (se recorta contra el fondo → visible).
+    const tswB = moving ? Math.sin(p * 2 * Math.PI) * 1.3 : 0;
+    c.fillStyle = P.mane; for (let i = 0; i < 13; i++) { const t = i / 12; px(20 - t * 2.5 + tswB * t - 1.5, B(15) + t * 15, 4, 2); }
+    c.fillStyle = P.maneHi; for (let i = 0; i < 11; i++) { const t = i / 10; px(20 - t * 2.5 + tswB * t, B(15) + t * 15, 1, 2); }
+    px(Math.round(20 - 2.5 + tswB - 2), Math.round(B(30)), 5, 3, P.mane);   // borla del extremo
     horseOutline(c);
   }
   // Vista de PERFIL (mirando a la DERECHA; a la izquierda se dibuja en espejo).
