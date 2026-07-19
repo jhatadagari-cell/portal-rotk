@@ -1986,10 +1986,13 @@
     debStyleOnce();
     // Botín común: ≥1 objeto por participante (de la tienda del tier, preferiendo
     // equipables/guardables). El reparto/elección será la sub-fase 4d.
-    function generarBotin(band, extra) {
+    function generarBotin(band, extra, rtg) {
       const n = ((band.miembros || []).length || 1) + (extra || 0);
+      // La RAREZA del botín escala con el rating de la escaramuza (no solo con el nivel de
+      // la finca): una escaramuza dura suelta objetos mejores aunque tu finca sea humilde.
+      const lot = Math.max(tier || 1, rtg || 1);
       const out = [];
-      for (let i = 0; i < Math.max(0, n); i++) { const id = (window.HacTienda && HacTienda.botinAleatorio) ? HacTienda.botinAleatorio(tier) : null; if (id) out.push(id); }
+      for (let i = 0; i < Math.max(0, n); i++) { const id = (window.HacTienda && HacTienda.botinAleatorio) ? HacTienda.botinAleatorio(lot) : null; if (id) out.push(id); }
       return out;
     }
 
@@ -2543,7 +2546,7 @@
       const exito = R ? (R.next() < pFinal) : (Math.random() < pFinal);
       const rtg = bandRating(band);
       const share = Math.max(0, shareRating(rtg) + et.share);
-      const hostBonus = Math.round((band.coste || 0) * 0.5) + rtg * 15;
+      const hostBonus = Math.round((band.coste || 0) * 0.5) + rtg * 22;   // el capitán organiza; escala con el rating
       // +% dinero: EQUIPO (sellos) + efectos de relaciones → mapa {id: fracción}.
       const bonosPct = {};
       (band.miembros || []).forEach(mm => {
@@ -2551,7 +2554,7 @@
         const p = eq + (rb.per[mm.id] || 0); if (p) bonosPct[mm.id] = p;
       });
       const wounds = bandTiene(band, 'tigre') ? 0 : null;   // 虎將: ignora la 1ª herida al fracasar
-      HacEscaramuzas.resolver(band.id, clock(), exito, exito ? generarBotin(band, et.loot + lootRating(rtg) + (bonos.escBotin || 0) + rb.loot) : [], share, hostBonus, ESC_FAST ? 30000 : 0, bonosPct, wounds)
+      HacEscaramuzas.resolver(band.id, clock(), exito, exito ? generarBotin(band, et.loot + lootRating(rtg) + (bonos.escBotin || 0) + rb.loot, rtg) : [], share, hostBonus, ESC_FAST ? 30000 : 0, bonosPct, wounds)
         .then(() => { if (window.HacStats) HacStats.reload().then(() => { if (charId) buildCharPanel(charId); }); })
         .catch(e => console.warn('[escaramuza] resolver', e));
     }
@@ -2564,10 +2567,16 @@
     // rating); al fracasar lo pierde. Reparto/botín escalan fuerte con el rating.
     const COSTE_BANDA = (plazas) => plazas * 20;           // 2→40, 3→60, 4→80 (base)
     const costeRating = (plazas, rating) => COSTE_BANDA(plazas) + (rating || 1) * 30;   // r1..r5: +30..+150
-    // Reparto de dinero por mecenas al vencer (antes de mods de sucesos).
-    const shareRating = (rating) => 20 + (rating || 1) * 24;      // r1=44 … r5=140
+    // DURACIÓN por rating (min): fácil 20 · … · última 60. Como escala el riesgo/tiempo,
+    // la recompensa escala AÚN más (curva cuadrática) → los tiers altos rinden más por
+    // minuto Y en total, y valen el riesgo extra.
+    const ESC_DUR_MIN = [0, 20, 30, 40, 50, 60];                  // por rating 1..5
+    const escDurMs = (rating) => ESC_DUR_MIN[Math.max(1, Math.min(5, rating || 1))] * 60000;
+    // Reparto de DINERO por mecenas al vencer (antes de mods de sucesos). Curva creciente
+    // en €/min: r1≈2.3/min … r5≈4.2/min.
+    const shareRating = (rating) => { const r = Math.max(1, Math.min(5, rating || 1)); return 24 + r * 16 + r * r * 6; };   // r1=46 · r2=80 · r3=126 · r4=184 · r5=254
     // Objetos de botín EXTRA (además de 1 garantizado por mecenas) según rating.
-    const lootRating = (rating) => (rating >= 4 ? rating - 3 : 0); // r4:+1, r5:+2
+    const lootRating = (rating) => (rating >= 3 ? rating - 2 : 0); // r3:+1 · r4:+2 · r5:+3
     const COSTE_CURA = 45 + (tier || 1) * 10;        // curar 1 herida (enfermería), escala con el tier
     const SUC_WINDOW = (/[?&]escfast=1/.test(location.search || '')) ? 12000 : 22000;   // ventana para decidir un suceso
     const myName = ((h.miembros || []).find(m => m.personajeId === myId) || {}).nombre || 'Tú';
@@ -2636,6 +2645,7 @@
             ${difBadgeHTML(scn.rating)}
           </div>
           <div class="hacp-esc-scn-en">contra ${esc(scn.enemigo)}</div>
+          <div class="hacp-esc-scn-meta"><span class="hacp-esc-req-lbl">⏱ ${ESC_DUR_MIN[Math.max(1, Math.min(5, scn.rating))]} min</span> · botín <b style="color:#e7c66a">~${shareRating(scn.rating)}💰</b>/mecenas${scn.rating >= 3 ? ` · +${lootRating(scn.rating)} botín${scn.rating >= 4 ? ' (mejor)' : ''}` : ''}</div>
           <div class="hacp-esc-scn-meta"><span class="hacp-esc-req-lbl">Requiere</span> ${reqChipsHTML(scn, null)}</div>
           <button class="hacp-cp-btn hacp-esc-crear" data-crear-scn="${esc(scn.id)}"${(falta || bloqueado) ? ' disabled' : ''}>Montar · 💰 ${cst}${falta ? ' (te falta)' : ''}</button>
         </div>`;
@@ -2689,7 +2699,8 @@
       const riskPct = Math.max(0, 100 - probPct);
       const probHTML = `<div class="hacp-esc-prob ${probCls}"><span>Éxito estimado</span><span class="hacp-esc-prob-v"><b>${probPct}%</b><i class="hacp-esc-prob-risk">riesgo ${riskPct}%</i></span></div>`;
       const desgloseHTML = probDesgloseHTML(b);
-      const rewardHTML = `<div class="hacp-esc-reward">Botín si vencéis: <b>~${sharePrev}💰</b>/mecenas · <b>1 objeto</b> c/u${lootBonus ? ` · <b>+${lootBonus}</b> de botín común` : ''}</div>`;
+      const durMin = ESC_DUR_MIN[Math.max(1, Math.min(5, rating))];
+      const rewardHTML = `<div class="hacp-esc-reward">Dura <b>~${durMin} min</b> · si vencéis: <b>~${sharePrev}💰</b>/mecenas · <b>1 objeto</b> c/u${lootBonus ? ` · <b>+${lootBonus}</b> de botín${rating >= 4 ? ' (mejor)' : ''}` : ''}</div>`;
       const reqHTML = (scn && rq.partes.length) ? `<div class="hacp-esc-scn-meta"><span class="hacp-esc-req-lbl">Requisito</span> ${reqChipsHTML(scn, b)}</div>` : '';
       let accion = '';
       if (b.estado === 'abierta') {
@@ -2920,7 +2931,7 @@
       if (band && !escTodosReservados(band)) { toast('Cada mecenas debe reservar su encuentro antes de lanzar'); return; }
       escBusy = true;
       try {
-        await HacEscaramuzas.lanzar(id, myId, clock(), ESC_FAST ? 60000 : 0, '');
+        await HacEscaramuzas.lanzar(id, myId, clock(), ESC_FAST ? 60000 : escDurMs(bandRating(band)), '');
         toast(ESC_FAST ? '⚔ ¡Parten! (modo test · ~1 min)' : '⚔ ¡La banda parte a la expedición!');
         if (window.HacBitacora) HacBitacora.log(myId, 'escaramuza', `⚔ Tu banda partió a la expedición`);
         syncEscaramuzaOrder(); syncEscaramuzaFolk();
