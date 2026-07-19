@@ -5342,12 +5342,36 @@
       }
       return null;
     }
-    // ── Investigaciones (F2): 1 por aptitud. `unlock` = clave de desbloqueo (efectos en F3). ──
-    const INVESTIG = {
-      militar:        { id: 'caballo-blanco', zh: '白馬義從', nombre: 'Jinetes del Caballo Blanco', target: 300, unlock: 'caballo-blanco', desc: 'Adiestra la caballería ligera del norte. Al completarla, la casa podrá criar caballos blancos.' },
-      cultural:       { id: 'talentos',       zh: '招賢',     nombre: 'Atraer talentos',            target: 300, unlock: 'talentos',       desc: 'La fama de la casa se extiende. Al completarla, en expediciones podrás toparte con talentos que quieran unirse.' },
-      administrativo: { id: 'tributo',        zh: '貢賦',     nombre: 'Rutas de tributo',           target: 300, unlock: 'tributo',        desc: 'Abre rutas de tributo. Al completarla, una caravana llegará cada cierto tiempo con monedas y materiales para la casa.' },
+    // ── Investigaciones (F2): CADENA de niveles (tiers) por aptitud. Cada tier tiene
+    // su `unlock` (clave de desbloqueo) y un `target` (coste) creciente. El backend es
+    // genérico: al completar un tier marca su unlock y `done`; para el siguiente el
+    // responsable «inicia» el tier n+1 (pab_investig_elegir permite reiniciar si el
+    // actual está done). El NIVEL alcanzado se deriva de qué unlocks hay en desbloqueos.
+    // administrativo (tributo): 5 tiers, cada vez más caros y con caravana más frecuente
+    // y cargada. militar/cultural siguen a 1 tier por ahora (se ampliarán aparte).
+    const INVESTIG_TIERS = {
+      militar: [
+        { id: 'caballo-blanco', tier: 1, zh: '白馬義從', nombre: 'Jinetes del Caballo Blanco', target: 300, unlock: 'caballo-blanco', desc: 'Adiestra la caballería ligera del norte. Al completarla, la casa podrá criar caballos blancos.' },
+      ],
+      cultural: [
+        { id: 'talentos', tier: 1, zh: '招賢', nombre: 'Atraer talentos', target: 300, unlock: 'talentos', desc: 'La fama de la casa se extiende. Al completarla, en expediciones podrás toparte con talentos que quieran unirse.' },
+      ],
+      administrativo: [
+        { id: 'tributo',  tier: 1, zh: '貢賦', nombre: 'Rutas de tributo',              target: 300,  unlock: 'tributo',  desc: 'Abre las rutas de tributo: una caravana llegará cada ~4 h con monedas y materiales para la casa.' },
+        { id: 'tributo2', tier: 2, zh: '貢道', nombre: 'Rutas de tributo · Calzadas',   target: 800,  unlock: 'tributo2', desc: 'Empiedra las calzadas: la caravana llega más a menudo (~3½ h) y con más carga.' },
+        { id: 'tributo3', tier: 3, zh: '貢倉', nombre: 'Rutas de tributo · Graneros',   target: 1800, unlock: 'tributo3', desc: 'Graneros de posta a lo largo de la ruta: cargamentos mayores y más grano (~3 h).' },
+        { id: 'tributo4', tier: 4, zh: '貢驛', nombre: 'Rutas de tributo · Postas',     target: 3600, unlock: 'tributo4', desc: 'Red de postas y relevos: la caravana apenas descansa entre viajes (~2½ h).' },
+        { id: 'tributo5', tier: 5, zh: '貢盛', nombre: 'Rutas de tributo · Opulencia',  target: 6500, unlock: 'tributo5', desc: 'La ruta imperial en su apogeo: caravanas frecuentes (~2 h) y colmadas de riquezas.' },
+      ],
     };
+    const invChain = (rol) => INVESTIG_TIERS[rol] || [];
+    // Nivel alcanzado (0..N) = tiers cuyo unlock ya está en desbloqueos.
+    const invNivel = (rol) => invChain(rol).filter(t => pabDesbloqueado(t.unlock)).length;
+    const invDefById = (rol, id) => invChain(rol).find(t => t.id === id) || null;
+    // Siguiente tier a INICIAR (o null si ya está todo investigado).
+    const invSiguiente = (rol) => invChain(rol)[invNivel(rol)] || null;
+    // Tier EN CURSO (iniciado y sin terminar), o null.
+    const invEnCurso = (rol) => { const inv = pabInvestig(rol); return (inv && !inv.done) ? invDefById(rol, inv.id) : null; };
     const nowMs = () => (window.HacClock && HacClock.now) ? HacClock.now() : Date.now();
     function pabSinergia(rol) {
       const pabs = (window.HacStore && HacStore.pabellones) ? HacStore.pabellones(h.id) : [];
@@ -5371,7 +5395,7 @@
     }
     const pabInvestig = (rol) => (h.mapa && h.mapa.investig && h.mapa.investig[rol]) || null;
     function pabLiveProg(rol) {
-      const inv = pabInvestig(rol), def = INVESTIG[rol]; if (!inv || !def) return 0;
+      const inv = pabInvestig(rol), def = inv ? invDefById(rol, inv.id) : null; if (!inv || !def) return 0;
       if (inv.done) return def.target;
       const hrs = Math.max(0, (nowMs() - (Number(inv.ts) || nowMs())) / 3600000);
       return Math.min(def.target, (Number(inv.prog) || 0) + pabPassiveRate(rol) * hrs);
@@ -5379,7 +5403,7 @@
     const pabDesbloqueado = (key) => !!(h.mapa && h.mapa.desbloqueos && h.mapa.desbloqueos[key]);
     // Aportación ACTIVA: al hacer una tarea de TU pabellón, sumas a su investigación.
     async function aportarInvestig(dom, base) {
-      const inv = pabInvestig(dom), def = INVESTIG[dom]; if (!inv || inv.done || !def || !myId) return;
+      const inv = pabInvestig(dom), def = inv ? invDefById(dom, inv.id) : null; if (!inv || inv.done || !def || !myId) return;
       const yo = (h.miembros || []).find(m => String(m.personajeId) === String(myId));
       if (!yo || yo.pabellon !== dom) return;                              // solo contribuyes a TU pabellón
       const chunk = Math.round((base || 0) * (1 + escDeMiembro(yo) * 0.25));   // el rango acelera la investigación (perk)
@@ -5388,21 +5412,25 @@
       if (np >= def.target) toast(`🔬 ¡Investigación completada: ${def.nombre}!`);
     }
     async function pabCompletar(rol) {   // completar por acumulación pasiva (al abrir el panel)
-      const def = INVESTIG[rol]; if (!def) return;
+      const inv = pabInvestig(rol), def = inv ? invDefById(rol, inv.id) : null; if (!def) return;
       try { const d = await pabRPC('pab_investig_prog', { p_hac: h.id, p_pj: myId, p_rol: rol, p_prog: def.target, p_ts: nowMs(), p_target: def.target, p_done_key: def.unlock }); if (d && d.mapa) { h.mapa = d.mapa; toast(`🔬 ¡Investigación completada: ${def.nombre}!`); buildPabPanel(); } } catch (e) {}
     }
     // ── RUTAS DE TRIBUTO (F3 政): caravana periódica que espera en la puerta ──
-    const PERIOD_TRIBUTO = 4 * 60 * 60 * 1000;   // una caravana de tributo cada 4 horas
+    // Nivel de investigación del tributo (1..5) alcanzado; 0 = aún sin desbloquear.
+    const tributoNivel = () => invNivel('administrativo');
+    // Periodo entre caravanas por nivel: baja de 4 h (nv1) a 2 h (nv5) → más frecuente.
+    const TRIBUTO_PERIODO = [0, 4, 3.5, 3, 2.5, 2].map(hh => hh * 60 * 60 * 1000);
+    const tributoPeriodMs = () => TRIBUTO_PERIODO[Math.max(1, Math.min(5, tributoNivel()))];
     function tributoPresente() {
       if (!pabDesbloqueado('tributo')) return false;
       const ts = (h.mapa && h.mapa.tributo && Number(h.mapa.tributo.ts)) || 0;
-      return (nowMs() - ts) >= PERIOD_TRIBUTO;
+      return (nowMs() - ts) >= tributoPeriodMs();
     }
     // Tiempo que falta para la próxima caravana (0 = ya está en la puerta).
     function tributoRestanteMs() {
       if (!pabDesbloqueado('tributo')) return Infinity;
       const ts = (h.mapa && h.mapa.tributo && Number(h.mapa.tributo.ts)) || 0;
-      return Math.max(0, PERIOD_TRIBUTO - (nowMs() - ts));
+      return Math.max(0, tributoPeriodMs() - (nowMs() - ts));
     }
     function fmtTributo(ms) {
       if (!isFinite(ms)) return '—';
@@ -5430,9 +5458,11 @@
         } catch (e) {}
       }, 1000);
     }
-    function tributoCargo() {   // escala modestamente con la fuerza del pabellón 政
+    function tributoCargo() {   // escala con la fuerza del pabellón 政 Y con el nivel de investigación
       const s = pabSinergia('administrativo'), a = (h.miembros || []).filter(m => m.pabellon === 'administrativo').length;
-      return { dinero: 40 + 6 * s + 4 * a, grano: 8 + s, hierro: 4, tinta: 4 };
+      const mult = 1 + 0.35 * Math.max(0, tributoNivel() - 1);   // +35% de carga por cada tier tras el primero
+      const r = (n) => Math.round(n * mult);
+      return { dinero: r(40 + 6 * s + 4 * a), grano: r(8 + s), hierro: r(4), tinta: r(4) };
     }
     function syncCaravan() { if (window.HacFolk && HacFolk.setCaravan) HacFolk.setCaravan(tributoPresente()); }
     // Entrega REAL del cargamento a la casa (la firma el manifiesto o el fallback).
@@ -5511,7 +5541,7 @@
     }
     function openPabPanel(p) {
       pabAbierto = p;
-      const def = INVESTIG[p.rol], inv = pabInvestig(p.rol);
+      const inv = pabInvestig(p.rol), def = inv ? invDefById(p.rol, inv.id) : null;
       if (inv && !inv.done && def && pabLiveProg(p.rol) >= def.target) pabCompletar(p.rol);
       buildPabPanel(); ensurePabEl().hidden = false;
     }
@@ -5553,22 +5583,36 @@
         ? `<button type="button" class="hacp-cp-btn" data-pab-salir>Salir del pabellón</button>`
         : `<button type="button" class="hacp-cp-btn hacp-suc-ok" data-pab-unir="${rol}">Unirme a este pabellón${yoM.pabellon ? ' (dejo el otro)' : ''}</button>`)
         : '<div class="hacp-inv-note">Solo los miembros de la hacienda pueden unirse.</div>';
-      // Investigación del pabellón.
-      const idef = INVESTIG[rol], inv = pabInvestig(rol);
+      // Investigación del pabellón, POR NIVELES (tiers). Muestra el tier en curso, o
+      // el siguiente listo para iniciarse (con su coste creciente), o «al máximo».
+      const chain = invChain(rol), total = chain.length, nivel = invNivel(rol);
+      const enCurso = invEnCurso(rol), siguiente = invSiguiente(rol);
+      const tierPips = total > 1 ? `<span class="hacp-pab-inv-tier" title="Nivel ${nivel} de ${total}" style="color:${R.color}">${'●'.repeat(nivel)}${'○'.repeat(total - nivel)}</span>` : '';
+      const lvTag = (t) => total > 1 ? ` <span class="hacp-pab-inv-lv">nivel ${t.tier}/${total}</span>` : '';
       let invHtml;
-      if (!inv) {
+      if (enCurso) {
+        const live = pabLiveProg(rol), pctp = Math.round(live / enCurso.target * 100), rate = pabPassiveRate(rol);
         invHtml = `<div class="hacp-pab-inv">
-          <div class="hacp-pab-inv-h">🔬 ${idef.zh} ${esc(idef.nombre)}</div>
-          <div class="hacp-pab-inv-d">${esc(idef.desc)}</div>
-          ${(soyResp || soyFund) ? '<button type="button" class="hacp-cp-btn hacp-suc-ok" data-inv-start>Iniciar investigación</button>' : '<div class="hacp-inv-note">El responsable ha de iniciarla.</div>'}
+          <div class="hacp-pab-inv-h">🔬 ${enCurso.zh} ${esc(enCurso.nombre)}${lvTag(enCurso)} ${tierPips}</div>
+          <div class="hacp-pab-inv-d">${esc(enCurso.desc)}</div>
+          <div class="hacp-pab-bar"><i style="width:${Math.min(100, pctp)}%;background:${R.color}"></i></div>
+          <div class="hacp-pab-inv-s">${Math.round(live)}/${enCurso.target} · avanza <b>+${rate}/h</b> sola (miembros y edificios ${R.zh} dentro del patio)</div>
+          <div class="hacp-pab-inv-t">Acelérala tú: ${tareasDe(rol)}.</div>
+        </div>`;
+      } else if (siguiente) {
+        const yaHay = nivel > 0;   // hay tiers previos completados → esto es una MEJORA
+        invHtml = `<div class="hacp-pab-inv${yaHay ? ' done' : ''}">
+          <div class="hacp-pab-inv-h">🔬 ${siguiente.zh} ${esc(siguiente.nombre)}${lvTag(siguiente)} ${tierPips}</div>
+          ${yaHay ? `<div class="hacp-pab-inv-s ok">✔ Nivel ${nivel}/${total} activo · beneficio para la casa.</div>` : ''}
+          <div class="hacp-pab-inv-d">${esc(siguiente.desc)}</div>
+          <div class="hacp-pab-inv-s">Coste de investigación: <b>${siguiente.target}</b> pts${yaHay ? ' <span style="opacity:.7">— más que el nivel anterior</span>' : ''}.</div>
+          ${(soyResp || soyFund) ? `<button type="button" class="hacp-cp-btn hacp-suc-ok" data-inv-start>${yaHay ? `Investigar nivel ${siguiente.tier}` : 'Iniciar investigación'}</button>` : '<div class="hacp-inv-note">El responsable ha de iniciarla.</div>'}
         </div>`;
       } else {
-        const live = pabLiveProg(rol), pctp = Math.round(live / idef.target * 100), rate = pabPassiveRate(rol);
-        invHtml = `<div class="hacp-pab-inv${inv.done ? ' done' : ''}">
-          <div class="hacp-pab-inv-h">🔬 ${idef.zh} ${esc(idef.nombre)}${inv.done ? ' <span class="ok">✔ desbloqueada</span>' : ''}</div>
-          <div class="hacp-pab-bar"><i style="width:${Math.min(100, pctp)}%;background:${R.color}"></i></div>
-          <div class="hacp-pab-inv-s">${inv.done ? 'Completada · beneficio activo para la casa.' : `${Math.round(live)}/${idef.target} · avanza <b>+${rate}/h</b> sola (miembros y edificios ${R.zh} dentro del patio)`}</div>
-          ${inv.done ? '' : `<div class="hacp-pab-inv-t">Acelérala tú: ${tareasDe(rol)}.</div>`}
+        const last = chain[total - 1] || {};
+        invHtml = `<div class="hacp-pab-inv done">
+          <div class="hacp-pab-inv-h">🔬 ${last.zh || ''} ${esc(last.nombre || 'Investigación')} <span class="ok">✔ al máximo</span> ${tierPips}</div>
+          <div class="hacp-pab-inv-s">Investigación completa · <b>nivel ${total}/${total}</b>. Beneficio máximo para la casa.</div>
         </div>`;
       }
       el.innerHTML = `<div class="hacp-shop-box hacp-pab-box">
@@ -5598,7 +5642,7 @@
       try {
         if (kind === 'unir') { const d = await pabRPC('pab_unirse', { p_hac: h.id, p_pj: myId, p_rol: a }); if (d && d.miembros) h.miembros = d.miembros; toast(a ? '部 Te uniste al pabellón' : 'Saliste del pabellón'); }
         else if (kind === 'resp') { const d = await pabRPC('pab_responsable', { p_hac: h.id, p_pj: myId, p_rol: a, p_target: b || '' }); if (d && d.mapa) h.mapa = d.mapa; toast('責 Responsable actualizado'); }
-        else if (kind === 'inv-start') { const def = INVESTIG[a]; const yaEnCurso = !!(pabInvestig(a) && !pabInvestig(a).done); const d = await pabRPC('pab_investig_elegir', { p_hac: h.id, p_pj: myId, p_rol: a, p_id: def.id, p_ts: nowMs() }); if (d && d.mapa) h.mapa = d.mapa; toast(yaEnCurso ? '🔬 Esa investigación ya estaba en curso' : `🔬 Investigación iniciada: ${def.nombre}`); }
+        else if (kind === 'inv-start') { const def = invSiguiente(a); if (!def) { toast('🔬 Ya está todo investigado'); return; } const yaEnCurso = !!(pabInvestig(a) && !pabInvestig(a).done); const d = await pabRPC('pab_investig_elegir', { p_hac: h.id, p_pj: myId, p_rol: a, p_id: def.id, p_ts: nowMs() }); if (d && d.mapa) h.mapa = d.mapa; toast(yaEnCurso ? '🔬 Esa investigación ya estaba en curso' : `🔬 Investigación iniciada: ${def.nombre}`); }
       } catch (e) { toast(String(e && e.message || e)); return; }
       buildPabPanel();
       if (charId) buildCharPanel(charId);
