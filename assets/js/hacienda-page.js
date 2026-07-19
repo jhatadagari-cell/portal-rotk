@@ -5373,8 +5373,14 @@
       militar: CABALLO_RAZAS.filter(r => r.tier >= 1).map(r => ({
         id: r.id, tier: r.tier, zh: r.zh, nombre: `Cría · ${r.nombre}`, target: r.target, unlock: r.unlock, desc: r.desc, licencia: !!r.licencia,
       })),
+      // Cultural = ATRAER TALENTOS por tiers: cada nivel abre MÁS talentos (y mejores)
+      // en el Tablón de Talentos. El unlock del tier 1 sigue siendo 'talentos' (retrocompat).
       cultural: [
-        { id: 'talentos', tier: 1, zh: '招賢', nombre: 'Atraer talentos', target: 300, unlock: 'talentos', desc: 'La fama de la casa se extiende. Al completarla, en expediciones podrás toparte con talentos que quieran unirse.' },
+        { id: 'talentos',  tier: 1, zh: '招賢', nombre: 'Atraer talentos',            target: 300,  unlock: 'talentos',  desc: 'Corre la voz de que tu casa acoge a los capaces. Abre el Tablón de Talentos: podrás cortejar a los primeros aspirantes.' },
+        { id: 'talentos2', tier: 2, zh: '訪賢', nombre: 'Atraer talentos · Buscar',    target: 800,  unlock: 'talentos2', desc: 'Envías emisarios a buscar hombres de valía. Aparecen nuevos talentos en el tablón.' },
+        { id: 'talentos3', tier: 3, zh: '求賢', nombre: 'Atraer talentos · Reclamar',  target: 1800, unlock: 'talentos3', desc: 'Un edicto de reclutamiento recorre la comarca. Talentos de mayor renombre se dejan ver.' },
+        { id: 'talentos4', tier: 4, zh: '禮賢', nombre: 'Atraer talentos · Honrar',    target: 3600, unlock: 'talentos4', desc: 'Tu casa honra a los sabios: los mejores empiezan a considerarte.' },
+        { id: 'talentos5', tier: 5, zh: '天下歸心', nombre: 'Atraer talentos · El mundo acude', target: 6500, unlock: 'talentos5', desc: 'Tu fama abarca el mundo. Los talentos legendarios pueden acudir a tu llamada.' },
       ],
       administrativo: [
         { id: 'tributo',  tier: 1, zh: '貢賦', nombre: 'Rutas de tributo',              target: 300,  unlock: 'tributo',  desc: 'Abre las rutas de tributo: cada ~4 h llega una caravana con monedas y materiales para la casa.' },
@@ -5535,6 +5541,107 @@
       toast(`招賢 ¡Vuelves con un talento! ${nombre} se une a la casa.`);
       if (window.HacBitacora) HacBitacora.log(myId, 'progreso', `招賢 Atrajiste un talento a la casa: ${nombre}`);
     }
+
+    // ── TABLÓN DE TALENTOS (招賢, F1) ─────────────────────────────────────────
+    // Galería de NPC con cara, aptitud y una CONDICIÓN de reclutamiento. Se revela
+    // por tiers de la investigación cultural. Reclutar suma el NPC a la casa (sin
+    // función aún) y consume el cupo SEMANAL de la hacienda (1/semana). La comprobación
+    // de condiciones va por fases: activas hoy = prestigio, donación y recomendación;
+    // el resto (escaramuza/debate/tres visitas/objeto) se marca «próximamente» hasta
+    // que exista su sistema (viajar a haciendas NPC, encuentros especiales…).
+    const TALENTOS = [
+      { id: 't-anshi',    nombre: 'An Shi',     cortesia: '子謙', apt: 'cultural',       star: 2, tier: 1, atuendo: 'erudito',      asp: { robe: '#2f5a6e', accent: '#cfe0e6', piel: 0, pelo: 2 }, cond: { tipo: 'prestigio', val: 120 }, bio: 'Letrado errante que solo servirá a una casa de renombre.' },
+      { id: 't-gaorou',   nombre: 'Gao Rou',    cortesia: '文伯', apt: 'administrativo', star: 2, tier: 1, atuendo: 'administrador', asp: { robe: '#284b3c', accent: '#d8b65a', piel: 1, pelo: 1 }, cond: { tipo: 'donacion', val: 150 }, bio: 'Intendente frugal; probará tu generosidad antes de servir.' },
+      { id: 't-beilan',   nombre: 'Bei Lan',    cortesia: '子烈', apt: 'militar',        star: 2, tier: 1, atuendo: 'guerrero',     asp: { robe: '#8a2f25', accent: '#d8b65a', piel: 2, pelo: 0 }, cond: { tipo: 'proximamente', sub: 'escaramuza', texto: 'Lo hallarás en una escaramuza fronteriza: vence su encuentro especial (difícil) para ganarte su respeto.' }, bio: 'Jinete fronterizo curtido en mil correrías.' },
+      { id: 't-huqing',   nombre: 'Hu Qing',    cortesia: '德華', apt: 'cultural',       star: 3, tier: 2, atuendo: 'estratega',    asp: { robe: '#6a6f86', accent: '#eae4d2', piel: 0, pelo: 3 }, cond: { tipo: 'proximamente', sub: 'debate', texto: 'Visítalo en su retiro y véncelo en un debate.' }, bio: 'Estratega retirado que solo respeta a quien piensa mejor que él.' },
+      { id: 't-meiyu',    nombre: 'Mei Yu',     cortesia: '雅之', apt: 'administrativo', star: 3, tier: 2, atuendo: 'administrador', asp: { robe: '#3a4b6e', accent: '#d8b65a', piel: 1, pelo: 4 }, cond: { tipo: 'donacion', val: 400 }, bio: 'Vive con sus ancianos padres; llévales oro y honra a la familia.' },
+      { id: 't-zhaokun',  nombre: 'Zhao Kun',   cortesia: '伯武', apt: 'militar',        star: 4, tier: 3, atuendo: 'caudillo',     asp: { robe: '#5a1f1f', accent: '#d8b65a', piel: 2, pelo: 0 }, cond: { tipo: 'recomendacion', ref: 't-beilan' }, bio: 'Caudillo que no abandona a sus hermanos de armas.' },
+      { id: 't-linwan',   nombre: 'Lin Wan',    cortesia: '淑', apt: 'cultural',       star: 4, tier: 3, atuendo: 'estratega',    asp: { robe: '#7a5a86', accent: '#eae4d2', piel: 0, pelo: 5 }, cond: { tipo: 'prestigio', val: 600 }, bio: 'Dama estratega; su talento exige una casa de gran fama.' },
+      { id: 't-sikong',   nombre: 'Sikong Ye',  cortesia: '公達', apt: 'administrativo', star: 4, tier: 4, atuendo: 'canciller',     asp: { robe: '#5b2c83', accent: '#d8b65a', piel: 1, pelo: 2 }, cond: { tipo: 'proximamente', sub: 'tresvisitas', texto: 'Como en la cabaña de paja: visítalo tres veces hasta que crea en tu constancia.' }, bio: 'Canciller esquivo; premia la perseverancia.' },
+      { id: 't-tiema',    nombre: 'Tie Ma',     cortesia: '伯堅', apt: 'militar',        star: 5, tier: 4, atuendo: 'general',      asp: { robe: '#2f6a41', accent: '#e6c15a', piel: 2, pelo: 0 }, cond: { tipo: 'proximamente', sub: 'objeto', texto: 'Codicia una montura digna: preséntate ante él cabalgando una raza de tier 3 o superior.' }, bio: 'General que solo sigue a quien cabalga como un rey.' },
+      { id: 't-wolong',   nombre: 'El Dragón Durmiente', cortesia: '臥龍', apt: 'cultural', star: 5, tier: 5, atuendo: 'virtuoso',  asp: { robe: '#dcd6c4', accent: '#d8b65a', piel: 0, pelo: 2 }, cond: { tipo: 'proximamente', sub: 'tresvisitas', texto: 'Solo el señor más humilde y constante lo despierta: gran renombre y tres visitas a su retiro.' }, bio: 'Genio legendario que, dicen, vale por un ejército.' },
+    ];
+    const SEMANA_MS = 7 * 24 * 60 * 60 * 1000;
+    const talFaceCache = {};
+    const nivelCultural = () => invNivel('cultural');
+    const talentoRevelado = (t) => nivelCultural() >= t.tier;
+    const talentosReclutadosIds = () => new Set((h.miembros || []).filter(m => m.talentoId).map(m => m.talentoId));
+    // Cupo semanal de la CASA: última incorporación de un talento (desdeMs) hace < 7 días.
+    function ultimoReclutaMs() { let mx = 0; (h.miembros || []).forEach(m => { if (m.talentoId && Number(m.desdeMs) > mx) mx = Number(m.desdeMs); }); return mx; }
+    const semanaUsada = () => (nowMs() - ultimoReclutaMs()) < SEMANA_MS;
+    const semanaRestanteMs = () => Math.max(0, SEMANA_MS - (nowMs() - ultimoReclutaMs()));
+    const casaPrestigio = () => (window.HacPuntos && HacPuntos.totalHacienda) ? HacPuntos.totalHacienda(h.id) : 0;
+    // Estado de un talento: reclutado | bloqueado(tier) | cumplida | donar | progreso | proximamente.
+    function talentoEstado(t) {
+      if (talentosReclutadosIds().has(t.id)) return { estado: 'reclutado' };
+      if (!talentoRevelado(t)) return { estado: 'bloqueado', texto: `Se revela con la investigación cultural nivel ${t.tier}.` };
+      const c = t.cond;
+      if (c.tipo === 'prestigio') { const p = casaPrestigio(), ok = p >= c.val; return { estado: ok ? 'cumplida' : 'progreso', texto: `Renombre de la casa <b>${Math.round(p)}/${c.val}</b>.`, puede: ok }; }
+      if (c.tipo === 'donacion') { const oro = (window.HacStats ? HacStats.dinero(myId) : 0), ok = oro >= c.val; return { estado: 'donar', texto: `Dona <b>${c.val}💰</b> a su familia (llevas ${oro}).`, puede: ok, val: c.val }; }
+      if (c.tipo === 'recomendacion') { const ref = TALENTOS.find(x => x.id === c.ref), ok = talentosReclutadosIds().has(c.ref); return { estado: ok ? 'cumplida' : 'bloqueado', texto: `Solo acudirá si <b>${esc(ref ? ref.nombre : c.ref)}</b> ya sirve a tu casa.`, puede: ok }; }
+      return { estado: 'proximamente', texto: c.texto || 'Condición especial (próximamente).' };
+    }
+    function talentoFace(cv, t) {
+      const key = t.id; if (talFaceCache[key]) { const s = talFaceCache[key]; cv.width = s.width; cv.height = s.height; cv.getContext('2d').drawImage(s, 0, 0); return; }
+      if (!window.HacChar || !HacChar.draw) return;
+      try { HacChar.draw(cv, { aptitud: t.atuendo, aspecto: t.asp, dir: 'S', frame: 0, scale: 3 }); const c2 = document.createElement('canvas'); c2.width = cv.width; c2.height = cv.height; c2.getContext('2d').drawImage(cv, 0, 0); talFaceCache[key] = c2; } catch (e) {}
+    }
+    async function reclutarTalento(t) {
+      const ids = talentosReclutadosIds(); if (ids.has(t.id)) return;
+      if (semanaUsada()) { toast('La casa ya acogió a un talento esta semana'); return; }
+      const est = talentoEstado(t); if (!est.puede) { toast(est.estado === 'proximamente' ? 'Aún no puedes cumplir esa condición (próximamente)' : 'Aún no cumples su condición'); return; }
+      if (t.cond.tipo === 'donacion') { if (!window.HacStats || HacStats.dinero(myId) < t.cond.val) { toast('No tienes suficiente oro'); return; } await HacStats.award(myId, { dinero: -t.cond.val }); }
+      const npc = { id: 'npc-' + Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36), talentoId: t.id, nombre: t.nombre, cortesia: t.cortesia, npc: true, aptitud: t.apt, aspecto: t.asp, atuendo: t.atuendo, estrellas: t.star, puntos: 0, desde: prodDia(), desdeMs: nowMs() };
+      try { const d = await pabRPC('casa_reclutar', { p_hac: h.id, p_pj: myId, p_npc: npc }); if (d && d.miembros) h.miembros = d.miembros; }
+      catch (e) { toast('No se pudo reclutar: ' + (e && e.message || '')); return; }
+      toast(`招賢 ${t.nombre} se une a tu casa`);
+      if (window.HacBitacora) HacBitacora.log(myId, 'progreso', `招賢 Reclutaste al talento ${t.nombre}`);
+      buildTalentos();
+    }
+    let talEl = null;
+    function ensureTalentosEl() {
+      if (talEl) return talEl;
+      talEl = document.createElement('div'); talEl.className = 'hacp-shop hacp-tal-ov'; talEl.hidden = true; overlayHost().appendChild(talEl);
+      ['pointerdown', 'pointerup', 'wheel', 'click'].forEach(ev => talEl.addEventListener(ev, (e) => e.stopPropagation(), { passive: false }));
+      talEl.addEventListener('click', (e) => { if (e.target === talEl) talEl.hidden = true; });
+      return talEl;
+    }
+    function openTalentos() { buildTalentos(); ensureTalentosEl().hidden = false; }
+    function buildTalentos() {
+      const el = ensureTalentosEl();
+      const ids = talentosReclutadosIds(), usada = semanaUsada(), nv = nivelCultural();
+      const cupo = usada ? `<span class="hacp-tal-cd">Cupo semanal usado · vuelve en ${fmtClock(Math.ceil(semanaRestanteMs() / 1000))}</span>` : `<span class="hacp-tal-ok">Cupo semanal disponible</span>`;
+      const cards = TALENTOS.map(t => {
+        const st = talentoEstado(t);
+        const stars = '★'.repeat(t.star) + '☆'.repeat(5 - t.star);
+        const glyph = DOM_GLYPH[t.apt] || '', col = DOM_COLOR[t.apt] || 'var(--gold)';
+        let accion = '';
+        if (st.estado === 'reclutado') accion = '<div class="hacp-tal-badge ok">✔ En tu casa</div>';
+        else if (st.estado === 'bloqueado') accion = `<div class="hacp-tal-badge lock">🔒 ${st.texto}</div>`;
+        else if (st.estado === 'proximamente') accion = `<div class="hacp-tal-badge soon">⏳ ${esc(st.texto)}</div>`;
+        else if (st.estado === 'cumplida') accion = `<button type="button" class="hacp-cp-btn hacp-suc-ok" data-tal-recruit="${t.id}"${usada ? ' disabled' : ''}>Reclutar</button><div class="hacp-tal-cond ok">✔ ${st.texto}</div>`;
+        else if (st.estado === 'donar') accion = `<button type="button" class="hacp-cp-btn hacp-suc-ok" data-tal-recruit="${t.id}"${(usada || !st.puede) ? ' disabled' : ''}>Donar ${st.val}💰 y reclutar</button><div class="hacp-tal-cond">${st.texto}</div>`;
+        else accion = `<div class="hacp-tal-cond">${st.texto}</div>`;
+        const oculto = st.estado === 'bloqueado';
+        return `<div class="hacp-tal-card${oculto ? ' locked' : ''}${st.estado === 'reclutado' ? ' got' : ''}">
+          <div class="hacp-tal-face"><canvas data-tal-face="${t.id}" width="120" height="168"></canvas></div>
+          <div class="hacp-tal-nm">${esc(t.nombre)}${t.cortesia ? ` <span class="zi">${esc(t.cortesia)}</span>` : ''}</div>
+          <div class="hacp-tal-apt"><span style="color:${col}">${glyph}</span> <span class="stars">${stars}</span></div>
+          <div class="hacp-tal-bio">${esc(t.bio)}</div>
+          <div class="hacp-tal-act">${accion}</div>
+        </div>`;
+      }).join('');
+      el.innerHTML = `<div class="hacp-shop-box hacp-tal-box"><button type="button" class="hacp-shop-x" data-tal-x aria-label="Cerrar">✕</button>
+        <div class="hacp-shop-h"><span class="hacp-shop-zh" style="color:var(--cul,#6fc496)">招賢</span> Tablón de talentos</div>
+        <div class="hacp-shop-sub">Cortéjalos cumpliendo su condición. La casa puede acoger a <b>un talento por semana</b>. ${cupo}</div>
+        <div class="hacp-tal-lvl">Investigación cultural: <b>nivel ${nv}/5</b> · más nivel revela más talentos.</div>
+        <div class="hacp-tal-grid">${cards}</div>
+        <div class="hacp-inv-note" style="margin-top:10px">Por ahora los talentos reclutados se suman a tu casa sin función; su papel se definirá más adelante.</div>
+      </div>`;
+      el.querySelector('[data-tal-x]').addEventListener('click', () => { el.hidden = true; });
+      el.querySelectorAll('[data-tal-face]').forEach(cv => { const t = TALENTOS.find(x => x.id === cv.dataset.talFace); if (t) talentoFace(cv, t); });
+      el.querySelectorAll('[data-tal-recruit]').forEach(b => b.addEventListener('click', () => { const t = TALENTOS.find(x => x.id === b.dataset.talRecruit); if (t) reclutarTalento(t); }));
+    }
     let pabEl = null, pabAbierto = null;
     function ensurePabEl() {
       if (pabEl) return pabEl;
@@ -5660,8 +5767,10 @@
         <div class="hacp-pab-ms">${listaM}</div>
         <div class="hacp-prod-seclbl">Investigación 研究</div>
         ${invHtml}
+        ${rol === 'cultural' && nivelCultural() >= 1 ? `<button type="button" class="hacp-cp-btn hacp-suc-ok" style="width:100%;margin-top:8px" data-pab-talentos>招賢 Tablón de talentos</button>` : ''}
         <div class="hacp-pab-acts">${miAccion}</div>
       </div>`;
+      const tbt = el.querySelector('[data-pab-talentos]'); if (tbt) tbt.addEventListener('click', openTalentos);
       el.querySelector('[data-pab-x]').addEventListener('click', () => { el.hidden = true; });
       el.querySelectorAll('[data-pab-go]').forEach(b => b.addEventListener('click', () => { const pp = todos.find(x => String(x.id) === String(b.dataset.pabGo)); if (pp) openPabPanel(pp); }));
       const unir = el.querySelector('[data-pab-unir]'); if (unir) unir.addEventListener('click', () => pabAccion('unir', rol));
