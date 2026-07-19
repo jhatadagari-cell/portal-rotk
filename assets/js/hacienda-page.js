@@ -2534,11 +2534,13 @@
       if (esPereg(band)) { resolverPeregrinajeSiToca(band); return; }             // peregrinaje: cura, no botín
       // ANTI-SECUESTRO: al llegar el tiempo, cierra el cooldown de todos YA (idempotente).
       if (!band.cdHecho) { HacEscaramuzas.cerrarCd(band.id, clock()).catch(() => {}); }
-      // LIQUIDACIÓN: espera a que TODOS resuelvan su encuentro, salvo a las 12 h (ignora
-      // los no resueltos). Evita que un ausente secuestre el reparto de la banda.
+      // LIQUIDACIÓN: al volver, se da un MARGEN CORTO para que cada uno resuelva su
+      // encuentro; pasado ese margen se reparte igual (los no resueltos cuentan como sin
+      // bonus). Antes el margen era 12 h → si un compañero no jugaba, la recompensa se
+      // quedaba colgada media jornada. Ahora 5 min: nadie secuestra el reparto.
       const nTot = band.plazas || (band.miembros || []).length;
-      const doce = clock() >= band.finMs + 43200000;
-      if (escNResueltos(band) < nTot && !doce) return;
+      const graciaPasada = clock() >= band.finMs + 5 * 60 * 1000;
+      if (escNResueltos(band) < nTot && !graciaPasada) return;
       // Los ENCUENTROS resueltos ajustan prob. de éxito, botín y reparto de la banda.
       const rb = relBonos(band), et = escEncTot(band);
       const R = window.HacRand ? HacRand.make('escres#' + band.id) : null;   // determinista → todos coinciden
@@ -2735,7 +2737,7 @@
           ${probHTML}${desgloseHTML}${rewardHTML}
           ${miPend ? `<button type="button" class="hacp-cp-btn hacp-esc-resolver" data-esc-resolver>⚔ Resolver mi encuentro</button>`
                    : (miSlot != null ? `<div class="hacp-esc-note">Ya resolviste tu encuentro. Esperando al resto.</div>` : '')}
-          <div class="hacp-esc-note">Cada mecenas resuelve su encuentro (ahora o al volver). Al terminar todos —o pasadas 12 h— se reparten recompensas y botín.</div>
+          <div class="hacp-esc-note">Cada mecenas resuelve su encuentro (ahora o al volver). Al terminar todos —o unos 5 min tras regresar— se reparten recompensas y botín.</div>
           ${esHost ? `<button type="button" class="hacp-cp-btn hacp-esc-abort" data-abort>Abortar expedición</button>` : ''}`;
       } else if (b.estado === 'abortando') {
         accion = `<canvas class="hacp-esc-march" data-esc-march data-back></canvas>
@@ -3332,8 +3334,9 @@
       if (!charEl || !myId) return;
       const diezmoDue = diezmoDisponible() && !HacProdCasa.pagadoHoy(h.id, myId, prodDia());
       const prod = charEl.querySelector('.hacp-cp-prod'); if (prod) prod.classList.toggle('pulse-red', !!diezmoDue);
-      const trib = (typeof tributoPresente === 'function') && tributoPresente();
-      const pab = charEl.querySelector('[data-act="pabellon"]'); if (pab) pab.classList.toggle('pulse-red', !!trib);
+      // La caravana de tributo se recibe TOCÁNDOLA en el portón (es su propio aviso en el
+      // mundo), no desde el Pabellón: no parpadees el botón Pabellón por ella (confundía,
+      // y salía a todos los jugadores aunque no tuvieran nada que hacer allí).
       let debNag = false;
       if (DEB) {
         const dd = DEB.miDebate(h.id, myId);
