@@ -3888,34 +3888,46 @@
       const tomadas = window.HacMisTomadas ? HacMisTomadas.tomadasHoy(h.id) : new Set();
       return HacMisiones.disponibles(tier).filter(m => !tomadas.has(m.id)).length;
     }
+    // Barra de acciones REORGANIZADA en 3 grupos con cabecera, para no dejar 11
+    // botones sueltos en una sola rejilla (crecía y costaba orientarse):
+    //   ① Salir a la aventura — lo que se hace FUERA de la finca (destacado).
+    //   ② Tu mecenas          — tu persona: equipo, mochila, talentos, montura, diario.
+    //   ③ La hacienda         — economía y construcción de la casa.
+    // Se conservan clases (pulsos .hacp-cp-board/-esc/-prod) y data-act (listeners).
     function toolbarHTML(d) {
       const pts = (window.HacStats && HacStats.puntosLibres) ? HacStats.puntosLibres(myId) : 0;
       const misDisp = misDisponiblesCount();
       const prodEnc = (typeof encargosEntregables === 'function') ? encargosEntregables() : 0;
-      const tool = (act, ic, lb, extra) => `<button type="button" class="hacp-cp-tool${extra || ''}" data-act="${act}"><span class="ic">${ic}</span><span class="lb">${lb}</span></button>`;
-      const items = [
-        tool('equip', '⚔', 'Equipo' + (d.equipN ? ` ${d.equipN}/3` : '')),
-        tool('inv', '🎒', 'Inventario', invOpen ? ' on' : ''),
-        tool('sendas', '道', 'Sendas') + (pts > 0 ? '' : ''),
-        tool('caballo', '🐎', 'Tu Caballo'),
-        tool('log', '錄', 'Bitácora'),
-        prodOk() ? tool('prod', '產', 'Producción', ' hacp-cp-prod') : '',
-        esFundador() ? tool('obras', '營', 'Obras', ' hacp-cp-obras') : '',
-        (window.HacStore && HacStore.pabellones && HacStore.pabellones(h.id).length) ? tool('pabellon', '部', 'Pabellón') : '',
-        hasMarket ? tool('shop', '市', 'Mercado') : '',
-        tool('esc', '兵', 'Escaramuzas', ' hacp-cp-esc'),
-        hasTablon ? tool('board', '檄', 'Misiones', ' hacp-cp-board') : '',
-      ];
-      // Distintivos rojos: puntos de talento sin gastar (Sendas), encargos entregables
-      // (Producción) y misiones disponibles (Misiones). Sin badge = nada pendiente.
-      const sendasBadge = pts > 0 ? `<span class="hacp-cp-badge">${pts}</span>` : '';
-      const prodBadge = prodEnc > 0 ? `<span class="hacp-cp-badge">${prodEnc}</span>` : '';
-      const boardBadge = misDisp > 0 ? `<span class="hacp-cp-badge">${misDisp}</span>` : '';
-      let html = items.join('');
-      if (sendasBadge) html = html.replace('data-act="sendas"><span class="ic">道</span>', `data-act="sendas">${sendasBadge}<span class="ic">道</span>`);
-      if (prodBadge) html = html.replace('data-act="prod"><span class="ic">產</span>', `data-act="prod">${prodBadge}<span class="ic">產</span>`);
-      if (boardBadge) html = html.replace('data-act="board"><span class="ic">檄</span>', `data-act="board">${boardBadge}<span class="ic">檄</span>`);
-      return `<div class="hacp-cp-tools">${html}</div>`;
+      // Un botón-herramienta. bdg = nº del distintivo rojo (0 = ninguno). El glifo/emoji
+      // es decorativo (aria-hidden); el nombre accesible va en aria-label junto a las
+      // pendientes, para que un lector de pantalla anuncie «Misiones · 9 pendientes».
+      const tool = (act, ic, lb, bdg, extra) => {
+        const badge = bdg > 0 ? `<span class="hacp-cp-badge" aria-hidden="true">${bdg}</span>` : '';
+        const aria = lb + (bdg > 0 ? ` · ${bdg} pendiente${bdg === 1 ? '' : 's'}` : '');
+        return `<button type="button" class="hacp-cp-tool${extra || ''}" data-act="${act}" aria-label="${esc(aria)}">${badge}<span class="ic" aria-hidden="true">${ic}</span><span class="lb">${lb}</span></button>`;
+      };
+      const grupo = (lbl, arr, mod) => {
+        const a = arr.filter(Boolean);
+        return a.length ? `<div class="hacp-cp-grp${mod || ''}"><div class="hacp-cp-grplbl">${lbl}</div><div class="hacp-cp-tools" role="group" aria-label="${esc(lbl)}">${a.join('')}</div></div>` : '';
+      };
+      const salir = grupo('Salir a la aventura', [
+        hasTablon ? tool('board', '檄', 'Misiones', misDisp, ' hacp-cp-board') : '',
+        tool('esc', '兵', 'Escaramuzas', 0, ' hacp-cp-esc'),
+      ], ' primary');
+      const persona = grupo('Tu mecenas', [
+        tool('equip', '⚔', 'Equipo' + (d.equipN ? ` ${d.equipN}/3` : ''), 0),
+        tool('inv', '🎒', 'Inventario', 0, invOpen ? ' on' : ''),
+        tool('sendas', '道', 'Sendas', pts),
+        tool('caballo', '🐎', 'Caballo', 0),
+        tool('log', '錄', 'Bitácora', 0),
+      ]);
+      const casa = grupo('La hacienda', [
+        hasMarket ? tool('shop', '市', 'Mercado', 0) : '',
+        prodOk() ? tool('prod', '產', 'Producción', prodEnc, ' hacp-cp-prod') : '',
+        esFundador() ? tool('obras', '營', 'Obras', 0, ' hacp-cp-obras') : '',
+        (window.HacStore && HacStore.pabellones && HacStore.pabellones(h.id).length) ? tool('pabellon', '部', 'Pabellón', 0) : '',
+      ]);
+      return `<div class="hacp-cp-toolbar">${salir}${persona}${casa}</div>`;
     }
     // Overlay reutilizable para "Tu Caballo" y "Bufos".
     let casaEl = null;
