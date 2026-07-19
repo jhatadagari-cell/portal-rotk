@@ -166,10 +166,11 @@ const HacFolk = (function () {
   }
   // Sprite cacheado para (aptitud+aspecto, dir, frame). Evita rehacer el contorno
   // cada fotograma; muchos walkers comparten combinaciones.
-  function spriteFor(w, dir, frame, pose) {
+  function spriteFor(w, dir, frame, pose, oficio, workPhase) {
     // Rework PNG: si el sprite de calidad está horneado, se usa (todos los
-    // mecenas comparten el sprite por defecto → sin cachear por walker).
-    if (window.HacChar && HacChar.sprite) {
+    // mecenas comparten el sprite por defecto → sin cachear por walker). El trabajo
+    // (pose 'work') es procedural (no hay PNG) → cae al render de abajo.
+    if (window.HacChar && HacChar.sprite && !oficio) {
       const png = HacChar.sprite(dir, pose, frame);
       if (png) return png;
     }
@@ -180,11 +181,12 @@ const HacFolk = (function () {
     // de caché y se dibujan siempre (finca + retrato del panel), no solo en el peregrinaje.
     const sec = (window.HacStats && HacStats.secuelas) ? HacStats.secuelas(w.id) : [];
     const secKey = sec.length ? sec.slice().sort().join(',') : '';
-    const key = (w.aptitud || '_') + '|' + (a.atuendo || '') + '|' + (a.robe || '') + '|' + (a.accent || '') + '|' + (a.kind || '') + (a.torsoLujo ? 'L' : '') + (a.torsoGala ? 'G' : '') + (a.gala || '') + '|' + (a.arma || '') + '|' + (a.piel || 0) + '|' + (a.pelo || 0) + '|' + dir + '|' + frame + '|' + (pose || 's') + (secKey ? '|' + secKey : '');
+    const wpKey = oficio ? '|' + oficio + Math.floor((workPhase || 0) * 6) : '';   // labor cuantizada (6 pasos) → cacheable
+    const key = (w.aptitud || '_') + '|' + (a.atuendo || '') + '|' + (a.robe || '') + '|' + (a.accent || '') + '|' + (a.kind || '') + (a.torsoLujo ? 'L' : '') + (a.torsoGala ? 'G' : '') + (a.gala || '') + '|' + (a.arma || '') + '|' + (a.piel || 0) + '|' + (a.pelo || 0) + '|' + dir + '|' + frame + '|' + (pose || 's') + wpKey + (secKey ? '|' + secKey : '');
     let cv = spriteCache.get(key);
     if (!cv && window.HacChar) {
       cv = document.createElement('canvas');
-      HacChar.draw(cv, { aptitud: w.aptitud, aspecto: a, dir: dir, frame: frame, scale: 1, pose: pose, secuelas: sec });
+      HacChar.draw(cv, { aptitud: w.aptitud, aspecto: a, dir: dir, frame: frame, scale: 1, pose: pose, oficio: oficio || null, workPhase: workPhase || 0, secuelas: sec });
       spriteCache.set(key, cv);
     }
     return cv;
@@ -983,17 +985,42 @@ const HacFolk = (function () {
     w.tx = t[0]; w.ty = t[1]; w.moving = true;
   }
 
+  // ── SÉQUITO (部曲): los NPC de la casa hacen LABORES por su pabellón según su
+  // aptitud, en teselas VACÍAS fuera de los caminos (forja 武 · letras 文 · campo 政).
+  const LABOR_OFICIO = { militar: 'forja', cultural: 'letras', administrativo: 'campo' };
+  const oficioDe = (apt) => LABOR_OFICIO[apt] || 'campo';
+  function startLabor(w) {
+    if (!wk || !wk.cells || !wk.cells.length) return false;
+    const cx = Math.round(w.fx), cy = Math.round(w.fy);
+    // Tesela transitable, FUERA de camino (no cam), cercana y no en el vano del portón.
+    const pool = wk.cells.filter(([x, y]) => {
+      if (wk.cam.has(x + ',' + y)) return false;
+      const dd = Math.abs(x - cx) + Math.abs(y - cy);
+      return dd >= 2 && dd <= 6;
+    });
+    if (!pool.length) return false;
+    const t = pool[rnd(pool.length)];
+    w.tx = t[0]; w.ty = t[1]; w.moving = true; w._laborOficio = oficioDe(w.aptitud);
+    return true;
+  }
   function wander(w, dt, SPD) {
+    if (w.laborCd > 0) w.laborCd -= dt;
     if (w.moving) {
       const dx = w.tx - w.fx, dy = w.ty - w.fy, d = Math.sqrt(dx * dx + dy * dy), adv = SPD * dt;
       const fd = faceFromGrid(dx, dy); if (fd) w.dir = fd;
-      if (d <= adv) { w.fx = w.tx; w.fy = w.ty; w.moving = false; w.wait = rng(0.3, 1.9); maybeGarden(w); }
+      if (d <= adv) {
+        w.fx = w.tx; w.fy = w.ty; w.moving = false;
+        if (w._laborOficio) { w.state = 'laborando'; w.oficioActivo = w._laborOficio; w._laborOficio = null; w.laborTimer = rng(8, 18); w.workPhase = 0; w.dir = 'SE'; w.laborCd = rng(30, 60); w.phase = 0; return; }
+        w.wait = rng(0.3, 1.9); maybeGarden(w);
+      }
       else { w.fx += dx / d * adv; w.fy += dy / d * adv; }
       w.phase += dt * 8;
       return;
     }
     w.wait -= dt; w.strollTimer -= dt;
     if (w.wait > 0) return;
+    // Séquito: de vez en cuando se va a una tesela vacía a hacer su labor.
+    if (w.npc && w.aptitud && !(w.laborCd > 0) && Math.random() < 0.45 && startLabor(w)) return;
     if (w.strollTimer <= 0) { if (startVisit(w)) return; w.strollTimer = rng(3, 9); }
     if (maybeRest(w)) return;     // ¿pasa cerca de un jardín y decide acercarse a la hierba?
     wanderPick(w);
@@ -1496,6 +1523,10 @@ const HacFolk = (function () {
         case 'a-descansar':
           approachStep(w, dt, SPD);
           if (!w.moving && !(w.path && w.path.length)) applyRest(w);
+          break;
+        case 'laborando':
+          w.laborTimer -= dt; w.workPhase = (w.workPhase + dt * 0.7) % 1;
+          if (w.laborTimer <= 0) { w.state = 'paseando'; w.oficioActivo = null; w.strollTimer = rng(3, 8); w.wait = rng(0.3, 1); }
           break;
         case 'contemplando':
         case 'tumbado': w.idleTimer -= dt; w.phase += dt * 0.4; if (w.idleTimer <= 0) { w.state = 'paseando'; w.strollTimer = rng(2, 6); w.wait = rng(0.2, 0.8); } break;
@@ -2183,7 +2214,9 @@ const HacFolk = (function () {
     const hurt = !!(em && em.hurt);
     let pose = (w.state === 'tumbado' || w.debSit) ? 'sit' : (w.bowing ? 'bow' : (moving ? 'walk' : 'stand'));
     if (hurt) pose = moving ? 'limp' : 'stand';
-    const cv = window.HacChar ? spriteFor(w, w.dir || 'S', frame, pose) : null;
+    let laborOfi = null, laborWp = 0;
+    if (w.state === 'laborando' && w.oficioActivo) { pose = 'work'; laborOfi = w.oficioActivo; laborWp = w.workPhase || 0; }   // séquito trabajando
+    const cv = window.HacChar ? spriteFor(w, w.dir || 'S', frame, pose, laborOfi, laborWp) : null;
     const disp = SPRITE_DISP, FEET = charFEET();
     // TALLA no uniforme: Guan Yu es más ALTO sin ensancharse apenas (el alto crece con
     // `talla`; el ancho solo un 30% de esa subida). Así se ve espigado, no hinchado.
