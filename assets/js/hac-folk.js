@@ -1688,7 +1688,8 @@ const HacFolk = (function () {
     const back = (view === 'NE' || view === 'NW'), mirror = (view === 'SW' || view === 'NW');
     const frame = moving ? (Math.floor(w.phase * 1.1) % HORSE_FRAMES) : 0;
     const coat = (caballos[w.id] && caballos[w.id].tono) || '#8a5630';
-    const cv = horseBaked(back, frame, coat);
+    const tier = (caballos[w.id] && caballos[w.id].tier) || 0;
+    const cv = horseBaked(back, frame, coat, tier);
     const fx = lx * SCALE, fy = ly * SCALE;
     g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.imageSmoothingEnabled = false;
     g.fillStyle = 'rgba(0,0,0,.22)'; g.beginPath(); g.ellipse(fx, fy, 15 * HDRAW * 0.75, 6, 0, 0, 6.2832); g.fill();   // sombra
@@ -1738,11 +1739,24 @@ const HacFolk = (function () {
   const ENVOY_BOUND = { l: 40, up: 92,  w: 80,  h: 112 };   // enviado de pie (con holgura para la talla de general)
   const _hx = (c) => { c = c.replace('#', ''); return [parseInt(c.slice(0, 2), 16), parseInt(c.slice(2, 4), 16), parseInt(c.slice(4, 6), 16)]; };
   const mixc = (a, b, t) => { const A = _hx(a), B = _hx(b); return 'rgb(' + Math.round(A[0] + (B[0] - A[0]) * t) + ',' + Math.round(A[1] + (B[1] - A[1]) * t) + ',' + Math.round(A[2] + (B[2] - A[2]) * t) + ')'; };
-  function horsePalette(coat) {
+  // GUALDRAPA/JAECES por TIER de raza (0=común … 5=汗血): a más tier, paño más noble,
+  // ribete dorado y adornos (tachones, borla, penacho). Así se NOTA la mejoría además
+  // del pelaje. tier viene de la raza (razaDe(variante).tier), 0 si no hay.
+  const CAPARISON = [
+    { blanket: '#6b5138', trim: '#8a7048', studs: false, tassel: false, plume: null },   // 0 común
+    { blanket: '#cfd6dc', trim: '#eef3f7', studs: false, tassel: false, plume: null },   // 1 白馬
+    { blanket: '#7a2f25', trim: '#d8b65a', studs: false, tassel: true,  plume: null },   // 2 涼州
+    { blanket: '#2f5a44', trim: '#cbb968', studs: true,  tassel: true,  plume: null },   // 3 烏孫
+    { blanket: '#243a5c', trim: '#d8b65a', studs: true,  tassel: true,  plume: '#e0b85a' }, // 4 河曲 (penacho dorado)
+    { blanket: '#7a1f18', trim: '#f0d27a', studs: true,  tassel: true,  plume: '#c8342a' }, // 5 汗血 (penacho carmesí)
+  ];
+  function horsePalette(coat, tier) {
+    const cap = CAPARISON[Math.max(0, Math.min(5, tier | 0))] || CAPARISON[0];
     return {
       base: coat, hi: mixc(coat, '#ffffff', 0.22), dk: mixc(coat, '#000000', 0.24), sh: mixc(coat, '#000000', 0.46),
       mane: mixc(coat, '#1a0f07', 0.72), muzzle: mixc(coat, '#000000', 0.52), hoof: '#20160f', eye: '#0d0906', socks: mixc(coat, '#ffffff', 0.42),
-      blanket: '#7a2f25', blanketTrim: '#d8b65a', leather: '#4a2f18', leatherHi: '#6a4526', stirrup: '#9299a0',
+      blanket: cap.blanket, blanketTrim: cap.trim, leather: '#4a2f18', leatherHi: '#6a4526', stirrup: '#9299a0',
+      studs: cap.studs ? mixc(cap.trim, '#ffffff', 0.25) : null, tassel: cap.tassel ? cap.trim : null, plume: cap.plume,
     };
   }
   // Contorno 1px oscuro (vecindad-4) para que el caballo destaque sobre la hierba.
@@ -1756,8 +1770,8 @@ const HacFolk = (function () {
     c.putImageData(new ImageData(out, HW, HH), 0, 0);
   }
   // Pinta un caballo mirando a la DERECHA (para izquierda se dibuja en espejo).
-  function paintHorse(c, back, frame, coat) {
-    const P = horsePalette(coat), px = (x, y, w, h, col) => { c.fillStyle = col; c.fillRect(x, y, w, h); };
+  function paintHorse(c, back, frame, coat, tier) {
+    const P = horsePalette(coat, tier), px = (x, y, w, h, col) => { c.fillStyle = col; c.fillRect(x, y, w, h); };
     const a = frame / HORSE_FRAMES * 6.2832;
     const oxA = Math.round(Math.cos(a) * 3), liftA = Math.max(0, Math.round(Math.sin(a) * 2));
     const oxB = Math.round(Math.cos(a + 3.1416) * 3), liftB = Math.max(0, Math.round(Math.sin(a + 3.1416) * 2));
@@ -1783,8 +1797,10 @@ const HacFolk = (function () {
     px(30, 15, 1, 1, P.dk);                                      // sombra de esquina delantera
     // 3b) SILLA DE MONTAR (manta + asiento de cuero + cincha + estribo)
     if (!back) {
-      px(12, 16, 15, 3, P.blanket); px(12, 18, 15, 1, P.blanketTrim);      // manta con ribete dorado
+      px(12, 16, 15, 3, P.blanket); px(12, 18, 15, 1, P.blanketTrim);      // manta con ribete
       px(13, 19, 2, 2, P.blanket); px(24, 19, 2, 2, P.blanket);            // picos de la manta
+      if (P.studs) { px(14, 17, 1, 1, P.studs); px(18, 17, 1, 1, P.studs); px(22, 17, 1, 1, P.studs); px(26, 17, 1, 1, P.studs); }  // tachones de jaez
+      if (P.tassel) { px(13, 20, 1, 3, P.tassel); px(25, 20, 1, 3, P.tassel); }   // borlas colgantes de la gualdrapa
       px(14, 13, 11, 4, P.leather); px(14, 13, 11, 1, P.leatherHi);        // asiento
       px(13, 11, 3, 4, P.leather); px(13, 11, 3, 1, P.leatherHi);          // borrén trasero (cantle)
       px(23, 12, 3, 3, P.leather);                                        // perilla (pommel)
@@ -1792,6 +1808,7 @@ const HacFolk = (function () {
       px(19, 21, 3, 2, P.stirrup); px(20, 19, 1, 2, P.leather);           // estribo + ación
     } else {
       px(12, 15, 14, 3, P.blanket); px(12, 17, 14, 1, P.blanketTrim);      // manta asomando
+      if (P.studs) { px(14, 16, 1, 1, P.studs); px(18, 16, 1, 1, P.studs); px(22, 16, 1, 1, P.studs); }
       px(13, 12, 12, 4, P.leather); px(13, 12, 12, 1, P.leatherHi);        // asiento visto de atrás
       px(13, 11, 3, 2, P.leather); px(22, 11, 3, 2, P.leather);            // borrenes
     }
@@ -1809,6 +1826,7 @@ const HacFolk = (function () {
       px(33, 4, 2, 3, P.mane);                                   // tupé
       px(35, 10, 1, 1, P.eye); px(35, 9, 1, 1, mixc(P.hi, '#ffffff', 0.5));   // ojo + brillo
       px(38, 16, 3, 1, P.dk);                                    // boca
+      if (P.plume) { px(33, 0, 2, 4, P.plume); px(34, 1, 1, 2, mixc(P.plume, '#ffffff', 0.4)); px(32, 1, 1, 1, P.plume); px(35, 1, 1, 1, P.plume); }   // penacho de guerra (testera)
     } else {
       // 4B) vista trasera: grupa hacia el observador, cuello más bajo y cabeza girada
       px(28, 13, 6, 6, P.base); px(30, 11, 5, 4, P.base);        // cuello (arqueado, más bajo)
@@ -1818,6 +1836,7 @@ const HacFolk = (function () {
       px(31, 5, 2, 4, P.base); px(34, 5, 2, 4, P.base);          // orejas
       px(31, 5, 2, 1, P.dk); px(34, 5, 2, 1, P.dk);
       px(32, 6, 2, 2, P.mane);                                   // tupé
+      if (P.plume) { px(32, 1, 2, 4, P.plume); px(33, 2, 1, 2, mixc(P.plume, '#ffffff', 0.4)); }   // penacho (visto de atrás)
       px(9, 15, 4, 3, P.hi); px(10, 18, 3, 4, P.hi);             // grupa bien iluminada de frente
     }
     // 5) patas cercanas (color base, delante del cuerpo)
@@ -1826,13 +1845,13 @@ const HacFolk = (function () {
     horseOutline(c);
   }
   const horseCache = new Map();
-  function horseBaked(back, frame, coat) {
-    const key = (back ? 'B' : 'F') + frame + '|' + coat;
+  function horseBaked(back, frame, coat, tier) {
+    const key = (back ? 'B' : 'F') + frame + '|' + coat + '|' + (tier | 0);
     let cv = horseCache.get(key);
     if (cv) return cv;
     cv = document.createElement('canvas'); cv.width = HW; cv.height = HH;
     const c = cv.getContext('2d'); c.imageSmoothingEnabled = false;
-    paintHorse(c, back, frame, coat);
+    paintHorse(c, back, frame, coat, tier);
     horseCache.set(key, cv);
     return cv;
   }
@@ -1842,7 +1861,8 @@ const HacFolk = (function () {
     const back = (view === 'NE' || view === 'NW'), mirror = (view === 'SW' || view === 'NW');
     const frame = h.moving ? (Math.floor(h.phase * 1.1) % HORSE_FRAMES) : 0;
     const coat = (caballos[h.id] && caballos[h.id].tono) || '#8a5630';
-    const cv = horseBaked(back, frame, coat);
+    const tier = (caballos[h.id] && caballos[h.id].tier) || 0;
+    const cv = horseBaked(back, frame, coat, tier);
     const fx = lx * SCALE, fy = ly * SCALE;
     g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.imageSmoothingEnabled = false;
     g.fillStyle = 'rgba(0,0,0,.22)'; g.beginPath(); g.ellipse(fx, fy, 15 * HDRAW * 0.75, 6, 0, 0, 6.2832); g.fill();   // sombra

@@ -4651,7 +4651,7 @@
       const map = {};
       // OJO: HacStats y los walkers se indexan por personajeId (= myId), NO por el id
       // de la fila de miembro. Usar m.id aquí hacía que el caballo comprado no apareciera.
-      (h.miembros || []).forEach(m => { const pid = m.personajeId || m.id; const c = HacStats.caballo(pid); if (c) map[pid] = { nombre: c.nombre, variante: c.id || 'caballo', tono: c.tono || null }; });
+      (h.miembros || []).forEach(m => { const pid = m.personajeId || m.id; const c = HacStats.caballo(pid); if (c) map[pid] = { nombre: c.nombre, variante: c.id || 'caballo', tono: c.tono || null, tier: razaDe(c.id).tier }; });
       HacFolk.setCaballos(map);
     }
 
