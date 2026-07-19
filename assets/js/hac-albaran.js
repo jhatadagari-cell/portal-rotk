@@ -5,7 +5,7 @@
    caravana llega cada cierto tiempo y espera en el portón. Al recibirla, en vez
    de un mero toast, se ABRE ESTA ESCENA: sales al portón de la finca, ves el
    carruaje del transportista, hablas con él y desenrollas un ROLLO DE BAMBÚ
-   (竹簡) que hace de albarán con los materiales entregados. Al firmarlo,
+   (竹簡) que hace de manifiesto con los materiales entregados. Al firmarlo,
    descargas el cargamento (onConfirm → la RPC real).
 
    Autónomo: solo depende de HacChar (opcional, para dibujar al transportista;
@@ -16,7 +16,7 @@
        cargo:         { dinero, grano, hierro, tinta, ... },   // cualquier subconjunto
        puedeRecibir:  bool,          // ¿el que mira pertenece al pabellón 政?
        transportista: 'nombre',      // opcional
-       ruta:          '貢賦南路',     // opcional (leyenda del albarán)
+       ruta:          '貢賦南路',     // opcional (leyenda del manifiesto)
        onConfirm:     async () => {} // hace la entrega real; puede lanzar
      })
    ═══════════════════════════════════════════════════════════════════════ */
@@ -249,18 +249,18 @@ const HacAlbaran = (function () {
       swrap.hidden = true; swrap.classList.remove('open');
       bubble.hidden = false;
       bubble.innerHTML = `<b>${esc(drover)}</b> baja del pescante y te saluda con una reverencia.<br>
-        «Traigo el cargamento de <b>tributo</b> para la Casa <b>${esc(casa.nombre || '')}</b>. Aquí tenéis el albarán, mi señor.»`;
+        «Traigo el cargamento de <b>tributo</b> para la Casa <b>${esc(casa.nombre || '')}</b>. Aquí tenéis el manifiesto, mi señor.»`;
       foot.innerHTML = `
         <button type="button" class="hacp-alb-btn ghost" data-alb="later">Ahora no</button>
-        <button type="button" class="hacp-alb-btn primary" data-alb="scroll">Ver el albarán&nbsp;<b>竹簡</b> →</button>`;
+        <button type="button" class="hacp-alb-btn primary" data-alb="scroll">Ver el manifiesto&nbsp;<b>竹簡</b> →</button>`;
       foot.querySelector('[data-alb="later"]').addEventListener('click', close);
       foot.querySelector('[data-alb="scroll"]').addEventListener('click', setBeat2);
     }
 
-    // ── Beat 2: desenrollar el rollo de bambú (albarán) ──
+    // ── Beat 2: desenrollar el rollo de bambú (manifiesto) ──
     function setBeat2() {
       beat = 2;
-      box.querySelector('.hacp-alb-t').textContent = 'Albarán de cargamento';
+      box.querySelector('.hacp-alb-t').textContent = 'Manifiesto de cargamento';
       box.querySelector('.hacp-alb-s').textContent = '竹簡 · rollo de bambú sellado por el intendente de la ruta';
       bubble.hidden = true; stage.hidden = true;
       const hoy = new Date();

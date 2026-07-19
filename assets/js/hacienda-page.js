@@ -5423,7 +5423,7 @@
       return { dinero: 40 + 6 * s + 4 * a, grano: 8 + s, hierro: 4, tinta: 4 };
     }
     function syncCaravan() { if (window.HacFolk && HacFolk.setCaravan) HacFolk.setCaravan(tributoPresente()); }
-    // Entrega REAL del cargamento a la casa (la firma el albarán o el fallback).
+    // Entrega REAL del cargamento a la casa (la firma el manifiesto o el fallback).
     async function entregarTributo(cg) {
       const d = await pabRPC('casa_tributo', { p_hac: h.id, p_pj: myId, p_dinero: cg.dinero, p_lote: { hierro: cg.hierro, tinta: cg.tinta, grano: cg.grano }, p_ts: nowMs() });
       if (d && d.mapa) h.mapa = d.mapa;
@@ -5433,7 +5433,7 @@
       if (window.HacProdCasa && HacProdCasa.reload) HacProdCasa.reload();
     }
     // Al recibir el tributo se ABRE la escena interactiva del portón: sales, ves el
-    // carruaje, hablas con el transportista y desenrollas el albarán (竹簡). Solo un
+    // carruaje, hablas con el transportista y desenrollas el manifiesto (竹簡). Solo un
     // mecenas del pabellón 政 puede firmarlo; el resto puede mirar la escena.
     function recibirTributo() {
       const yo = (h.miembros || []).find(m => String(m.personajeId) === String(myId));

@@ -1991,12 +1991,12 @@ const HacFolk = (function () {
     if (!caravan) return;
     const lerp = (a, b, t) => a + (b - a) * t;
     if (caravan.phase === 'in') {
-      caravan.p = Math.min(1, caravan.p + dt / CAR_IN_MS);
+      caravan.p = Math.min(1, caravan.p + dt * 1000 / CAR_IN_MS);                  // dt en SEGUNDOS; CAR_*_MS en ms
       const e = 1 - Math.pow(1 - caravan.p, 2);                                    // ease-out
       caravan.fx = lerp(caravan.from[0], caravan.to[0], e); caravan.fy = lerp(caravan.from[1], caravan.to[1], e);
       if (caravan.p >= 1) { caravan.phase = 'idle'; caravan.fx = caravan.to[0]; caravan.fy = caravan.to[1]; }
     } else if (caravan.phase === 'out') {
-      caravan.p = Math.min(1, caravan.p + dt / CAR_OUT_MS);
+      caravan.p = Math.min(1, caravan.p + dt * 1000 / CAR_OUT_MS);                 // dt en SEGUNDOS; CAR_*_MS en ms
       caravan.fx = lerp(caravan.from[0], caravan.to[0], caravan.p); caravan.fy = lerp(caravan.from[1], caravan.to[1], caravan.p);
       if (caravan.p >= 1) caravan = null;
     }
