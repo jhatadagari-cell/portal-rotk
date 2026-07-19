@@ -569,10 +569,8 @@
       if (!yo) return '';
       const pabs = (window.HacStore && HacStore.pabellones) ? HacStore.pabellones(h.id) : [];
       if (!yo.pabellon && pabs.length) return `<button type="button" class="hacp-cp-guia" data-guia="pabellon"><b>部 Únete a un pabellón →</b><span>Los pabellones son las <b>zonas de color</b> de tu finca (militar 军 · cultural 文 · administrativo 政). Únete a uno para subir escalafón y aportar a sus investigaciones. Toca aquí para abrirlo.</span></button>`;
-      if (yo.pabellon === 'administrativo' && typeof pabDesbloqueado === 'function' && pabDesbloqueado('tributo')) {
-        if (tributoPresente()) return `<button type="button" class="hacp-cp-guia" data-guia="tributo"><b>貢 Recibe el tributo →</b><span>Un carro de tributo aguarda en la <b>puerta sur</b> de la finca. Toca aquí (o el propio carro) para recibir su carga y llevarla a la casa.</span></button>`;
-        return `<div class="hacp-cp-guia hacp-cp-guia-wait"><b>貢 Rutas de tributo activas</b><span>La próxima caravana llega en <b data-tributo-count>${fmtTributo(tributoRestanteMs())}</b> y esperará en el portón sur de tu finca.</span></div>`;
-      }
+      // El TRIBUTO ya no ocupa tarjeta: la caravana se recibe tocándola en el portón
+      // sur; cuando está presente, el botón «Pabellón» parpadea como aviso.
       return '';
     }
     // Fracción de XP extra para UNA misión: el bono cultural (政→文… 文) aplica a
@@ -3289,6 +3287,27 @@
       const p = HacRetos.progreso(h.id), avisa = HacRetos.completos(h.id) && p.estado !== 'reclamado';
       pulseRetos(avisa); pulseBitacora(avisa);
     }
+    // Recordatorios que ANTES eran tarjetas fijas (diezmo/tributo/debate) y ahora son
+    // un parpadeo sobre su botón, para no ocupar espacio hasta que hay algo que hacer:
+    //   · diezmo pendiente  → 產 Producción (donde se paga)
+    //   · caravana presente → 部 Pabellón   (feature administrativa del tributo)
+    //   · te retan / tu turno → 論 Debate
+    // Se llama al construir el panel y en cada latido (refreshCharPanel), así se mantiene
+    // vivo sin reconstruir. Barato: solo alterna clases sobre botones ya pintados.
+    function refreshCasaPulses() {
+      if (!charEl || !myId) return;
+      const diezmoDue = diezmoDisponible() && !HacProdCasa.pagadoHoy(h.id, myId, prodDia());
+      const prod = charEl.querySelector('.hacp-cp-prod'); if (prod) prod.classList.toggle('pulse-red', !!diezmoDue);
+      const trib = (typeof tributoPresente === 'function') && tributoPresente();
+      const pab = charEl.querySelector('[data-act="pabellon"]'); if (pab) pab.classList.toggle('pulse-red', !!trib);
+      let debNag = false;
+      if (DEB) {
+        const dd = DEB.miDebate(h.id, myId);
+        const myTurn = dd && !DEB.juegoCompleto(dd) && DEB.turnActorId(dd, DEB.turnoActual(dd)) === myId;
+        debNag = !!(DEB.miInvitacionPendiente(h.id, myId, clock()) || myTurn);
+      }
+      const deb = charEl.querySelector('.hacp-cp-debate'); if (deb) deb.classList.toggle('pulse-red', debNag);
+    }
     // Suma a un reto semanal y comprueba si el señor debe convocarte (idempotente).
     function retoAdd(campo, n) {
       if (!window.HacRetos || !myId) return;
@@ -3913,6 +3932,7 @@
       const salir = grupo('Salir a la aventura', [
         hasTablon ? tool('board', '檄', 'Misiones', misDisp, ' hacp-cp-board') : '',
         tool('esc', '兵', 'Escaramuzas', 0, ' hacp-cp-esc'),
+        DEB ? tool('debate', '論', 'Debate', 0, ' hacp-cp-debate') : '',
       ], ' primary');
       const persona = grupo('Tu mecenas', [
         tool('equip', '⚔', 'Equipo' + (d.equipN ? ` ${d.equipN}/3` : ''), 0),
@@ -4018,32 +4038,10 @@
           // Comprometido en algo sin orden aún (p.ej. banda de escaramuza/peregrinaje
           // 'abierta', esperando a partir): tampoco puede coger una tarea interna.
           mision = `<div class="hacp-cp-mis"><span class="hacp-cp-flag" style="opacity:.8">Ocupado en otra actividad</span></div>`;
-        } else {
-          // Las tareas internas de prestigio se han sustituido por INVITAR A DEBATIR.
-          const invPend = DEB && DEB.miInvitacionPendiente(h.id, myId, clock());
-          const enDeb = DEB && DEB.miDebate(h.id, myId);
-          const invSent = DEB && DEB.miInvitacionEnviada(h.id, myId);
-          const debLbl = '<label class="hacp-cp-lbl">🗣 Debate</label>';   // cabecera para cohesionar la sección
-          if (invPend) {
-            const tt = debTema(invPend.tema);
-            mision = `<div class="hacp-cp-mis hacp-deb-invite">${debLbl}<span class="hacp-cp-flag"><b>${esc(invPend.hostNombre || 'Alguien')}</b> te reta a un debate de <b>${esc(tt ? tt.nombre : invPend.tema)}</b></span><div class="r"><button type="button" class="hacp-cp-btn hacp-cp-go" data-act="deb-yes" data-id="${esc(invPend.id)}">Aceptar</button><button type="button" class="hacp-cp-btn" data-act="deb-no" data-id="${esc(invPend.id)}">Rechazar</button></div></div>`;
-          } else if (enDeb) {
-            const tt = debTema(enDeb.tema);
-            const remD = Math.max(0, Math.ceil((enDeb.finMs - clock()) / 1000));
-            const miTurno = DEB && !DEB.juegoCompleto(enDeb) && DEB.turnActorId(enDeb, DEB.turnoActual(enDeb)) === myId;
-            const argLbl = DEB && DEB.juegoCompleto(enDeb) ? 'Ver debate' : (miTurno ? '¡Tu turno! Argumentar →' : 'Argumentar →');
-            mision = `<div class="hacp-cp-mis hacp-cp-mis-on hacp-deb-invite">${debLbl}<span class="hacp-cp-flag">Debatiendo de <b>${esc(tt ? tt.nombre : enDeb.tema)}</b> · queda <b class="hacp-deb-countdown" id="hacp-cp-debrest">${fmtClock(remD)}</b></span><div class="r"><button type="button" class="hacp-cp-btn hacp-cp-go${miTurno ? ' hacp-mo-mis' : ''}" data-act="debj">${argLbl}</button></div></div>`;
-          } else if (invSent) {
-            const tt = debTema(invSent.tema);
-            mision = `<div class="hacp-cp-mis hacp-deb-invite">${debLbl}<span class="hacp-cp-flag">Reto enviado a <b>${esc(invSent.invitadoNombre || '…')}</b> <span style="opacity:.7">(${esc(tt ? tt.nombre : invSent.tema)})</span> · esperando respuesta…</span><div class="r"><button type="button" class="hacp-cp-btn" data-act="deb-cancel" data-id="${esc(invSent.id)}">Cancelar invitación</button></div></div>`;
-          } else {
-            const cd = DEB ? DEB.cooldownRestanteMs(h.id, myId, clock()) : 0;
-            const hayJard = gardensFinca().length > 0;
-            const dis = (cd > 0 || !hayJard || !DEB) ? ' disabled' : '';
-            const sub = cd > 0 ? `Reposa tras el último debate · ${fmtClock(Math.ceil(cd / 1000))}` : (!hayJard ? 'Necesitas un Jardín (≥4 de área)' : 'Reta a otro mecenas a un debate de 5 min');
-            mision = `<div class="hacp-cp-mis hacp-deb-invite">${debLbl}<button type="button" class="hacp-cp-btn hacp-cp-go" style="width:100%" data-act="debate"${dis}>Invitar a debatir</button><span class="hacp-cp-lbl" style="opacity:.6;margin-top:6px;text-transform:none;letter-spacing:0">${sub}</span></div>`;
-          }
         }
+        // El DEBATE ya no ocupa una tarjeta fija: se lanza desde el botón «Debate»
+        // (grupo «Salir a la aventura») y los avisos accionables —te retan / tu turno—
+        // flotan sobre el mapa (renderDebAlert). Aquí solo queda el estado de misión.
       }
       charEl.innerHTML = `
         <button type="button" class="hacp-cp-x" data-act="close" aria-label="Cerrar">✕</button>
@@ -4068,9 +4066,8 @@
         ${woundsHTML(d)}
         ${d.it.visitante ? envoyHTML(d) : ''}
         ${d.mine ? toolbarHTML(d) : ''}
-        ${diezmoCTA(d)}
-        ${guiaHTML(d)}
         ${mision}
+        ${guiaHTML(d)}
         ${(d.mine && invOpen) ? invPanelHTML(d) : ''}
         ${d.mine ? `<button type="button" class="hacp-cp-btn hacp-cp-leave" data-act="leave">Abandonar la hacienda</button>` : ''}`;
       lastStatsSig = JSON.stringify(d.stats || 0);   // recién pintadas: marca su firma
@@ -4156,7 +4153,11 @@
       const db = charEl.querySelector('[data-act="dispatch"]');
       if (db) db.addEventListener('click', () => { const s = charEl.querySelector('.hacp-cp-sel'); dispatch(s ? s.value : null); });
       const dbb = charEl.querySelector('[data-act="debate"]');
-      if (dbb) dbb.addEventListener('click', abrirInvitarDebate);
+      if (dbb) dbb.addEventListener('click', () => {
+        // Si ya estás en un debate, ábrelo (ver/argumentar); si no, lanza la invitación.
+        const enDeb = DEB && DEB.miDebate(h.id, myId);
+        if (enDeb) abrirDebateJuego(); else abrirInvitarDebate();
+      });
       const dbj = charEl.querySelector('[data-act="debj"]');
       if (dbj) dbj.addEventListener('click', abrirDebateJuego);
       const dby = charEl.querySelector('[data-act="deb-yes"]');
@@ -4197,6 +4198,7 @@
       const logb = charEl.querySelector('[data-act="log"]');
       if (logb) logb.addEventListener('click', openBitacora);
       refreshRetoPulses();   // reaplica el aviso de «tu señor te espera» tras re-render
+      refreshCasaPulses();   // recordatorios sin tarjeta: diezmo/tributo/debate como parpadeo
       const sdb = charEl.querySelector('[data-act="sendas"]');
       if (sdb) sdb.addEventListener('click', openSendas);
       const csb = charEl.querySelector('[data-act="caballo"]');
@@ -4265,9 +4267,7 @@
       const st = charEl.querySelector('#hacp-cp-stats'); const sig = JSON.stringify(d.stats || 0);
       if (st && sig !== lastStatsSig) { lastStatsSig = sig; st.outerHTML = statsHTML(d); }
       const rt = charEl.querySelector('#hacp-cp-rest'); if (rt && d.activa) rt.textContent = fmtClock(d.rest);
-      // Cuenta atrás del debate en curso (si no, se quedaba congelada hasta el siguiente rebuild).
-      const dr = charEl.querySelector('#hacp-cp-debrest');
-      if (dr && DEB && myId) { const dd = DEB.miDebate(h.id, myId); if (dd) dr.textContent = fmtClock(Math.max(0, Math.ceil((dd.finMs - clock()) / 1000))); }
+      refreshCasaPulses();   // mantiene vivos los parpadeos de diezmo/tributo/debate
     }
 
     // ── Tienda del mercado (overlay) ─────────────────────────────────────────

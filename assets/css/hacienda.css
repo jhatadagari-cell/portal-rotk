@@ -521,26 +521,27 @@ html.hacp-pseudofs, html.hacp-pseudofs body{ overflow:hidden; }
 .hacp-cp-btn:hover{ background:rgba(201,168,76,.32); color:#fff; }
 .hacp-cp-btn:disabled{ opacity:.45; cursor:not-allowed; }
 .hacp-cp-btn:disabled:hover{ background:rgba(201,168,76,.16); color:var(--gold); }
-/* Barra de acciones del panel del personaje, en 3 grupos con cabecera. */
-.hacp-cp-toolbar{ display:flex; flex-direction:column; gap:12px; margin-top:12px; }
-.hacp-cp-grp{ display:flex; flex-direction:column; gap:6px; }
-.hacp-cp-grplbl{ font:700 10px 'Cinzel Decorative',serif; letter-spacing:.06em; text-transform:uppercase;
-  color:var(--hac,var(--gold)); opacity:.72; }
-/* Rejilla que ESTIRA para llenar la fila (pocos ítems → más anchos; muchos → envuelven). */
-.hacp-cp-tools{ display:grid; grid-template-columns:repeat(auto-fit,minmax(62px,1fr)); gap:6px; }
-/* Grupo destacado (Salir a la aventura): botones mayores y en 2 columnas. */
-.hacp-cp-grp.primary .hacp-cp-tools{ grid-template-columns:repeat(auto-fit,minmax(110px,1fr)); }
-.hacp-cp-grp.primary .hacp-cp-tool{ height:66px; background:rgba(201,168,76,.15); border-color:rgba(201,168,76,.48); }
+/* Barra de acciones del panel del personaje, en 3 grupos con cabecera (compacta). */
+.hacp-cp-toolbar{ display:flex; flex-direction:column; gap:8px; margin-top:9px; }
+.hacp-cp-grp{ display:flex; flex-direction:column; gap:4px; }
+.hacp-cp-grplbl{ font:700 9px 'Cinzel Decorative',serif; letter-spacing:.05em; text-transform:uppercase;
+  color:var(--hac,var(--gold)); opacity:.68; }
+/* Rejilla que ESTIRA para llenar la fila (pocos ítems → más anchos; muchos → envuelven).
+   A 50px caben los 5 de «Tu mecenas» en una sola línea en el panel de 300px. */
+.hacp-cp-tools{ display:grid; grid-template-columns:repeat(auto-fit,minmax(50px,1fr)); gap:5px; }
+/* Grupo destacado (Salir a la aventura): botones algo mayores, 3 en fila. */
+.hacp-cp-grp.primary .hacp-cp-tools{ grid-template-columns:repeat(auto-fit,minmax(80px,1fr)); }
+.hacp-cp-grp.primary .hacp-cp-tool{ height:52px; background:rgba(201,168,76,.15); border-color:rgba(201,168,76,.48); }
 .hacp-cp-grp.primary .hacp-cp-tool:hover{ background:rgba(201,168,76,.26); }
-.hacp-cp-grp.primary .hacp-cp-tool .ic{ height:26px; font-size:23px; }
-.hacp-cp-grp.primary .hacp-cp-tool .lb{ font-size:11px; }
-.hacp-cp-tool{ position:relative; box-sizing:border-box; height:60px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; padding:6px 4px; cursor:pointer;
-  background:rgba(201,168,76,.1); border:1px solid rgba(201,168,76,.28); border-radius:9px; color:var(--gold); transition:background .12s, color .12s; }
+.hacp-cp-grp.primary .hacp-cp-tool .ic{ height:21px; font-size:20px; }
+.hacp-cp-grp.primary .hacp-cp-tool .lb{ font-size:10px; }
+.hacp-cp-tool{ position:relative; box-sizing:border-box; height:50px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; padding:5px 3px; cursor:pointer;
+  background:rgba(201,168,76,.1); border:1px solid rgba(201,168,76,.28); border-radius:8px; color:var(--gold); transition:background .12s, color .12s; }
 .hacp-cp-tool:hover{ background:rgba(201,168,76,.22); color:#fff; }
 .hacp-cp-tool:focus-visible{ outline:2px solid #f0c874; outline-offset:2px; background:rgba(201,168,76,.22); color:#fff; }
 .hacp-cp-tool.on{ background:rgba(201,168,76,.3); color:#fff; }
-.hacp-cp-tool .ic{ display:flex; align-items:center; justify-content:center; height:24px; font:400 20px 'Noto Serif SC',serif; line-height:1; }
-.hacp-cp-tool .lb{ font-size:9.5px; color:var(--parch2); text-align:center; line-height:1.1; }
+.hacp-cp-tool .ic{ display:flex; align-items:center; justify-content:center; height:20px; font:400 18px 'Noto Serif SC',serif; line-height:1; }
+.hacp-cp-tool .lb{ font-size:9px; color:var(--parch2); text-align:center; line-height:1.1; }
 .hacp-cp-tool:hover .lb, .hacp-cp-tool.on .lb{ color:var(--parch); }
 /* Aviso en el tool «Escaramuzas» (escritorio): rojo = peregrinaje disponible; dorado = maniobra. */
 .hacp-cp-tool.pulse{ color:var(--gold); animation:hacpToolPulse 1s ease-in-out infinite; }
