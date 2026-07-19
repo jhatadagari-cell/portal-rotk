@@ -5377,11 +5377,11 @@
         { id: 'talentos', tier: 1, zh: '招賢', nombre: 'Atraer talentos', target: 300, unlock: 'talentos', desc: 'La fama de la casa se extiende. Al completarla, en expediciones podrás toparte con talentos que quieran unirse.' },
       ],
       administrativo: [
-        { id: 'tributo',  tier: 1, zh: '貢賦', nombre: 'Rutas de tributo',              target: 300,  unlock: 'tributo',  desc: 'Abre las rutas de tributo: una caravana llegará cada ~4 h con monedas y materiales para la casa.' },
-        { id: 'tributo2', tier: 2, zh: '貢道', nombre: 'Rutas de tributo · Calzadas',   target: 800,  unlock: 'tributo2', desc: 'Empiedra las calzadas: la caravana llega más a menudo (~3½ h) y con más carga.' },
-        { id: 'tributo3', tier: 3, zh: '貢倉', nombre: 'Rutas de tributo · Graneros',   target: 1800, unlock: 'tributo3', desc: 'Graneros de posta a lo largo de la ruta: cargamentos mayores y más grano (~3 h).' },
-        { id: 'tributo4', tier: 4, zh: '貢驛', nombre: 'Rutas de tributo · Postas',     target: 3600, unlock: 'tributo4', desc: 'Red de postas y relevos: la caravana apenas descansa entre viajes (~2½ h).' },
-        { id: 'tributo5', tier: 5, zh: '貢盛', nombre: 'Rutas de tributo · Opulencia',  target: 6500, unlock: 'tributo5', desc: 'La ruta imperial en su apogeo: caravanas frecuentes (~2 h) y colmadas de riquezas.' },
+        { id: 'tributo',  tier: 1, zh: '貢賦', nombre: 'Rutas de tributo',              target: 300,  unlock: 'tributo',  desc: 'Abre las rutas de tributo: cada ~4 h llega una caravana con monedas y materiales para la casa.' },
+        { id: 'tributo2', tier: 2, zh: '貢道', nombre: 'Rutas de tributo · Calzadas',   target: 800,  unlock: 'tributo2', desc: 'Empiedra las calzadas: la misma caravana (cada ~4 h) llega con bastante más carga.' },
+        { id: 'tributo3', tier: 3, zh: '貢倉', nombre: 'Rutas de tributo · Graneros',   target: 1800, unlock: 'tributo3', desc: 'Graneros de posta a lo largo de la ruta: cargamentos aún mayores y más grano.' },
+        { id: 'tributo4', tier: 4, zh: '貢驛', nombre: 'Rutas de tributo · Postas',     target: 3600, unlock: 'tributo4', desc: 'Red de postas y relevos: cada caravana llega repleta de monedas y materiales.' },
+        { id: 'tributo5', tier: 5, zh: '貢盛', nombre: 'Rutas de tributo · Opulencia',  target: 6500, unlock: 'tributo5', desc: 'La ruta imperial en su apogeo: caravanas colmadas de riquezas para la casa.' },
       ],
     };
     const invChain = (rol) => INVESTIG_TIERS[rol] || [];
@@ -5438,9 +5438,10 @@
     // ── RUTAS DE TRIBUTO (F3 政): caravana periódica que espera en la puerta ──
     // Nivel de investigación del tributo (1..5) alcanzado; 0 = aún sin desbloquear.
     const tributoNivel = () => invNivel('administrativo');
-    // Periodo entre caravanas por nivel: baja de 4 h (nv1) a 2 h (nv5) → más frecuente.
-    const TRIBUTO_PERIODO = [0, 4, 3.5, 3, 2.5, 2].map(hh => hh * 60 * 60 * 1000);
-    const tributoPeriodMs = () => TRIBUTO_PERIODO[Math.max(1, Math.min(5, tributoNivel()))];
+    // Periodo entre caravanas: FIJO en 4 h para todos los niveles (lo que escala con el
+    // nivel es la CARGA, no la frecuencia).
+    const PERIOD_TRIBUTO = 4 * 60 * 60 * 1000;
+    const tributoPeriodMs = () => PERIOD_TRIBUTO;
     function tributoPresente() {
       if (!pabDesbloqueado('tributo')) return false;
       const ts = (h.mapa && h.mapa.tributo && Number(h.mapa.tributo.ts)) || 0;
