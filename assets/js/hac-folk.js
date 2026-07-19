@@ -931,7 +931,7 @@ const HacFolk = (function () {
       // Justo fuera del vano: se para de cara al campo, SILBA y llama a su caballo.
       w.state = 'silbando'; w.moving = false; w.path = null; w.dir = 'S';
       w.speech = '♪ ♫'; w.speechT = 99; w.whistleT = 1.3; w._mountWait = 0;
-      summonHorse(w.id, w.fx + 1.0, w.fy + 0.1);
+      summonHorse(w.id, w.fx, w.fy + 1.0);   // el caballo acude por el eje del portón (al sur), no al lado (donde aparca el carro)
     } else if (w.state === 'esc-form') {
       // Llegó a su sitio de formación. Los de a pie esperan; los de caballo silban y llaman.
       w.state = 'esc-cheer'; w.moving = false; w.path = null; w.dir = 'S';
@@ -1857,7 +1857,7 @@ const HacFolk = (function () {
   // Carruaje cubierto ISOMÉTRICO (輜車) con buey y transportista, horneado una vez.
   // Lienzo 180×150 con origen iso en (ORX,ORY); el ancla (ground point que cae en la
   // celda) es el centro del eje entre ruedas → (CCX,CFEET).
-  const CW = 180, CH = 150, ORX = 64, ORY = 86, CCX = 78, CFEET = 106, CDRAW = 1.5;
+  const CW = 180, CH = 150, ORX = 64, ORY = 86, CCX = 78, CFEET = 106, CDRAW = 1.15;   // algo más pequeño para caber a un lado del portón sin pisar a nadie
   // Recuadro de recomposición para HacIso.frame (px disp. sobre el ancla). SIN esto,
   // el clip por defecto (36×44) recortaba la caravana a un cuadradito; PERO si es más
   // grande que el CONTENIDO real (no el lienzo entero con sus márgenes transparentes),
@@ -1979,8 +1979,10 @@ const HacFolk = (function () {
   function setCaravan(on) {
     if (on) {
       if (caravan && caravan.phase !== 'out') return;                             // ya está
-      // Espera un pelín MÁS AL SUR que outNear (no pegada a la puerta) y en el eje.
-      const to = wk && wk.outNear ? [wk.outNear[0], wk.outNear[1] + 0.9] : null;
+      // APARCA A UN LADO (al este del portón), fuera del eje de tránsito: así el
+      // mecenas que sale/entra y el caballo que acude (ambos por el eje) NO se pisan
+      // con el carro. Nada de dejarlo pegado a la puerta ni en medio del carril.
+      const to = wk && wk.outNear ? [wk.outNear[0] + 3.2, wk.outNear[1] - 0.5] : null;
       const from = (wk && wk.outFar) || to; if (!to) { caravan = null; return; }
       caravan = { phase: 'in', p: 0, from: from, to: to, fx: from[0], fy: from[1] };
     } else if (caravan && caravan.phase !== 'out') {
