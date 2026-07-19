@@ -445,6 +445,12 @@
     // finca). El resto del dinero vive a salvo en la casa (宅). Sin casa, solo
     // conservas hasta este tope si te marchas.
     const BOLSILLO_MAX = 200;
+    // SÉQUITO (部曲): los SERVIDORES reclutados (NPC con estrellas) rinden en pasivo:
+    // sus ★ por aptitud dan (a) CONSEJERO —aceleran la investigación de ese pabellón— y
+    // (b) un bono modesto de casa (+1% por estrella): 武→dinero de escaramuza · 文→XP ·
+    // 政→descuento de mercado. Los NPC de relleno (客, sin estrellas) no cuentan.
+    const servidorEstrellas = (rol) => (h.miembros || []).reduce((s, m) => s + ((m.npc && m.aptitud === rol) ? (Number(m.estrellas) || 0) : 0), 0);
+    const servidorPct = (rol) => servidorEstrellas(rol) * 0.01;
     // SINERGIA DE PABELLÓN: bonos pasivos de la finca derivados del mapa (pabellones
     // temáticos + edificios de su dominio dentro). 文 → +XP misiones; 政 → +dinero
     // de misiones y −precios de mercado. Se calcula una vez (el mapa es estático aquí).
@@ -458,6 +464,10 @@
     bonos.xp += cargoHac.xpExped || 0;
     bonos.mercado += cargoHac.mercado || 0;
     bonos.escBotin = cargoHac.escBotin || 0;
+    // Séquito (pasa a los bonos de casa; se recalcula al recargar, como los cargos):
+    bonos.xp += servidorPct('cultural');             // 文
+    bonos.mercado += servidorPct('administrativo');  // 政
+    bonos.escDinero = servidorPct('militar');        // 武 (dinero de escaramuza)
     const miCargo = (window.HacCalc && HacCalc.cargoDef) ? HacCalc.cargoDef(((h.miembros || []).find(m => m.personajeId === myId) || {}).cargo) : null;
     // ¿mi mecenas tiene un talento de senda? (efectos personales, C1)
     const tieneT = (id) => !!(window.HacStats && HacStats.tieneTalento && HacStats.tieneTalento(myId, id));
@@ -505,6 +515,7 @@
       diezmo:    { label: 'Prestigio · diezmo al día',    signo: '+', color: '#3a8a5a', good: true },
       diezmoPend:{ label: 'Prestigio · diezmo pendiente', signo: '−', color: '#b23b2e', good: false },
       botin:     { label: 'Botín de escaramuza',   signo: '+', color: '#c98a3a', good: true, num: true },
+      escDinero: { label: 'Dinero de escaramuza',  signo: '+', color: '#c98a3a', good: true },
       heridas:   { label: 'Merma por heridas',     signo: '−', color: '#b23b2e', good: false },
     };
     // Talentos de senda con efecto porcentual (para listarlos como bufos).
@@ -527,6 +538,9 @@
       add('xpMision', 'Cargos de la casa',       cargoHac.xpExped || 0);
       add('mercado',  'Cargos de la casa',       cargoHac.mercado || 0);
       add('botin',    'Cargos de la casa',       cargoHac.escBotin || 0);
+      add('xpMision', 'Séquito 文 (consejeros)', servidorPct('cultural'));
+      add('mercado',  'Séquito 政 (consejeros)', servidorPct('administrativo'));
+      add('escDinero','Séquito 武 (consejeros)', servidorPct('militar'));
       if (miCargo && miCargo.perk) {
         if (miCargo.perk.dinero) add('dinero', 'Tu cargo · ' + miCargo.nombre, miCargo.perk.dinero);
         if (miCargo.perk.xpDom)  add('xpMision', 'Tu cargo · ' + miCargo.nombre + ' (' + (DOM_GLYPH[miCargo.dom] || '') + ')', miCargo.perk.xpDom);
@@ -2547,7 +2561,7 @@
       const pFinal = Math.max(0.05, Math.min(0.95, escProb(band) + et.pMod));
       const exito = R ? (R.next() < pFinal) : (Math.random() < pFinal);
       const rtg = bandRating(band);
-      const share = Math.max(0, shareRating(rtg) + et.share);
+      const share = Math.round(Math.max(0, shareRating(rtg) + et.share) * (1 + (bonos.escDinero || 0)));   // 武 séquito: +dinero de escaramuza
       const hostBonus = Math.round((band.coste || 0) * 0.5) + rtg * 22;   // el capitán organiza; escala con el rating
       // +% dinero: EQUIPO (sellos) + efectos de relaciones → mapa {id: fracción}.
       const bonosPct = {};
@@ -5465,9 +5479,9 @@
     const tareasDe = (rol) => rol === 'militar' ? 'gana <b>misiones militares</b>, <b>escaramuzas</b> o trabaja un <b>oficio 军</b> en la jornada'
       : rol === 'cultural' ? 'completa <b>misiones culturales</b> o trabaja un <b>oficio 文</b> en la jornada'
       : 'completa <b>misiones administrativas</b> o trabaja un <b>oficio 政</b> en la jornada';
-    function pabPassiveRate(rol) {   // pts/hora = gente ×2 + suma de escalafones (mérito) + edificios del patio
+    function pabPassiveRate(rol) {   // pts/hora = gente ×2 + escalafones + edificios del patio + ★ de servidores (consejeros)
       const ms = (h.miembros || []).filter(m => m.pabellon === rol);
-      return ms.length * 2 + ms.reduce((a, m) => a + escDeMiembro(m), 0) + pabSinergia(rol);
+      return ms.length * 2 + ms.reduce((a, m) => a + escDeMiembro(m), 0) + pabSinergia(rol) + servidorEstrellas(rol);
     }
     const pabInvestig = (rol) => (h.mapa && h.mapa.investig && h.mapa.investig[rol]) || null;
     function pabLiveProg(rol) {
