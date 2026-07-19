@@ -5484,7 +5484,7 @@
       const r = (n) => Math.round(n * mult);
       return { dinero: r(40 + 6 * s + 4 * a), grano: r(8 + s), hierro: r(4), tinta: r(4) };
     }
-    function syncCaravan() { if (window.HacFolk && HacFolk.setCaravan) HacFolk.setCaravan(tributoPresente()); }
+    function syncCaravan() { if (window.HacFolk && HacFolk.setCaravan) HacFolk.setCaravan(tributoPresente(), tributoNivel()); }
     // Entrega REAL del cargamento a la casa (la firma el manifiesto o el fallback).
     async function entregarTributo(cg) {
       const d = await pabRPC('casa_tributo', { p_hac: h.id, p_pj: myId, p_dinero: cg.dinero, p_lote: { hierro: cg.hierro, tinta: cg.tinta, grano: cg.grano }, p_ts: nowMs() });

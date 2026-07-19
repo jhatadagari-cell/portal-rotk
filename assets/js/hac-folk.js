@@ -1913,7 +1913,17 @@ const HacFolk = (function () {
   // el recompuesto borra el decorado de alrededor que el carro ni siquiera tapa.
   // Ajustado a la caja OPACA del sprite (canvas x[24,158] y[16,134]).
   const CARAVAN_BOUND = { l: Math.round((CCX - 24) * CDRAW), up: Math.round((CFEET - 16) * CDRAW), w: Math.round(134 * CDRAW), h: Math.round(118 * CDRAW) };
-  let caravanCv = null;
+  let caravanCache = {};
+  // Jaeces/estandartes de la caravana por NIVEL de investigación del tributo (1..5): a
+  // más nivel, caravana más rica (valance de color, tachones dorados, más banderines
+  // 貢, testera del buey). Refleja la escalera de «Rutas de tributo».
+  const CARAVAN_TIER = [null,
+    { trim: null,      flags: 1, finial: '#d8b65a', studs: false, imperial: false },
+    { trim: '#7a2f25', flags: 1, finial: '#d8b65a', studs: false, imperial: false },
+    { trim: '#2f5a44', flags: 2, finial: '#d8b65a', studs: false, imperial: false },
+    { trim: '#243a5c', flags: 2, finial: '#f0d27a', studs: true,  imperial: false },
+    { trim: '#7a1f18', flags: 3, finial: '#f0d27a', studs: true,  imperial: true },
+  ];
   // Conductor (transportista) vía HacChar, pose sentada, horneado una vez.
   let caravanDriverCv = null;
   function caravanDriver() {
@@ -1922,8 +1932,10 @@ const HacFolk = (function () {
     if (window.HacChar && HacChar.draw) { try { HacChar.draw(c, { aptitud: 'administrador', aspecto: { robe: '#8a5a2e', accent: '#e6c15a', piel: 1, pelo: 2 }, dir: 'SE', frame: 0, scale: 2, pose: 'sit' }); } catch (e) { c.width = 0; } }
     caravanDriverCv = c; return c;
   }
-  function caravanBaked() {
-    if (caravanCv) return caravanCv;
+  function caravanBaked(tier) {
+    const cfg = CARAVAN_TIER[Math.max(1, Math.min(5, tier | 0)) || 1];
+    const ck = 't' + (tier | 0);
+    if (caravanCache[ck]) return caravanCache[ck];
     const cv = document.createElement('canvas'); cv.width = CW; cv.height = CH;
     const g = cv.getContext('2d'); g.imageSmoothingEnabled = false;
     g.save(); g.translate(ORX, ORY);
@@ -1957,6 +1969,7 @@ const HacFolk = (function () {
     quad([P(x0, y0, zt), P(x1, y0, zt), P(x1, y1, zt), P(x0, y1, zt)], woodHi);
     quad([P(x0 + 0.1, y0 + 0.1, zt), P(x1 - 0.1, y0 + 0.1, zt), P(x1 - 0.1, y1 - 0.1, zt), P(x0 + 0.1, y1 - 0.1, zt)], '#5a3d1e');
     [1.05, 2.05].forEach(t => { line(P(t, y1, zf), P(t, y1, zt), iron, 2); line(P(t, y1, zf), P(t, y1, zt - 0.5), ironHi, 0.6); });
+    if (cfg.studs) { g.fillStyle = cfg.finial; [0.7, 1.4, 2.1, 2.7].forEach(t => { const q = P(t, y1, zt - 6); g.beginPath(); g.arc(q[0], q[1], 1.3, 0, 6.3); g.fill(); }); }   // tachones dorados en el lateral
     const boxIso = (cx, cy, cz, w, d, hh, c, ch, cd) => {
       quad([P(cx, cy + d, cz), P(cx + w, cy + d, cz), P(cx + w, cy + d, cz + hh), P(cx, cy + d, cz + hh)], c);
       quad([P(cx + w, cy, cz), P(cx + w, cy + d, cz), P(cx + w, cy + d, cz + hh), P(cx + w, cy, cz + hh)], cd);
@@ -1972,6 +1985,12 @@ const HacFolk = (function () {
     quad([P(cbx0, gyAt(.74), zc(.74)), P(cbx1, gyAt(.74), zc(.74)), P(cbx1, y1, zt), P(cbx0, y1, zt)], canopyDk);
     quad([P(cbx0, gyAt(.42), zc(.42)), P(cbx1, gyAt(.42), zc(.42)), P(cbx1, gyAt(.52), zc(.52)), P(cbx0, gyAt(.52), zc(.52))], canopyHi);
     for (let r = 0; r <= 5; r++) { const gx = cbx0 + (cbx1 - cbx0) * r / 5; line(P(gx, ymid, zc(0.5)), P(gx, y1, zt), canopyDk, 1.1); }
+    // VALANCE (faldón) del color del tier + tachones/ribete dorado en niveles altos.
+    if (cfg.trim) {
+      quad([P(cbx0, y1, zt), P(cbx1, y1, zt), P(cbx1, y1, zt - 6), P(cbx0, y1, zt - 6)], cfg.trim);
+      if (cfg.imperial) quad([P(cbx0, y1, zt - 6), P(cbx1, y1, zt - 6), P(cbx1, y1, zt - 7), P(cbx0, y1, zt - 7)], cfg.finial);
+      if (cfg.studs) { for (let r = 0; r <= 5; r++) { const gx = cbx0 + (cbx1 - cbx0) * r / 5; const q = P(gx, y1, zt - 3); g.fillStyle = cfg.finial; g.beginPath(); g.arc(q[0], q[1], 1, 0, 6.3); g.fill(); } }
+    }
     let fr = []; for (let s = 0; s <= 14; s++) { const t = s / 14; fr.push(P(cbx1, gyAt(t), zc(t))); } fr.push(P(cbx1, y1, zt)); fr.push(P(cbx1, y0, zt)); quad(fr, canopyIn);
     let ar = []; for (let s = 0; s <= 14; s++) { const t = s / 14; ar.push(P(cbx1, gyAt(t), zc(t))); } g.strokeStyle = canopyDk; g.lineWidth = 1.4; g.beginPath(); ar.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.stroke();
     line(P(x1, y0 + 0.35, zf + 3), P(4.5, y0 + 0.5, zf - 4), woodDk, 2.4);
@@ -2005,35 +2024,40 @@ const HacFolk = (function () {
       g.beginPath(); g.moveTo(bx + 15, by - 32); g.quadraticCurveTo(bx + 11, by - 41, bx + 17, by - 43); g.lineTo(bx + 18, by - 41); g.quadraticCurveTo(bx + 15, by - 38, bx + 18, by - 32); g.fill();
       g.beginPath(); g.moveTo(bx + 25, by - 31); g.quadraticCurveTo(bx + 30, by - 40, bx + 25, by - 44); g.lineTo(bx + 23, by - 42); g.quadraticCurveTo(bx + 26, by - 37, bx + 22, by - 31); g.fill();
       g.fillStyle = woodDk; px(4, -37, 15, 3); g.fillStyle = '#2a1a0d'; px(4, -37, 15, 1);
+      if (cfg.trim) { g.fillStyle = cfg.trim; px(4, -38, 15, 2); if (cfg.studs) { g.fillStyle = cfg.finial; px(4, -39, 15, 1); } }   // testera del buey con el color del tier
     })();
-    // Asta + banderín 貢.
+    // Asta + BANDERINES 貢 (nº y color según tier) + finial.
     const pole = P(x0, y0, 0);
     g.fillStyle = woodDk; g.fillRect(pole[0] - 1.2, pole[1] - 70, 2.4, 70);
-    g.fillStyle = '#d8b65a'; g.beginPath(); g.arc(pole[0], pole[1] - 70, 2.2, 0, 6.2832); g.fill();
-    quad([[pole[0] + 1, pole[1] - 68], [pole[0] + 18, pole[1] - 64], [pole[0] + 18, pole[1] - 50], [pole[0] + 1, pole[1] - 53]], cloth);
-    quad([[pole[0] + 1, pole[1] - 68], [pole[0] + 18, pole[1] - 64], [pole[0] + 18, pole[1] - 62], [pole[0] + 1, pole[1] - 66]], clothHi);
-    g.fillStyle = '#fff4d8'; g.font = '11px "Noto Serif SC",serif'; g.textBaseline = 'middle'; g.textAlign = 'center';
-    try { g.fillText('貢', pole[0] + 9, pole[1] - 59); } catch (e) {}
+    g.fillStyle = cfg.finial; g.beginPath(); g.arc(pole[0], pole[1] - 70, 2.4, 0, 6.2832); g.fill();
+    const flagY = [-68, -52, -36];
+    for (let f = 0; f < cfg.flags; f++) {
+      const fy = flagY[f], fcol = f === 0 ? cloth : (cfg.trim || cloth);
+      quad([[pole[0] + 1, pole[1] + fy], [pole[0] + 18, pole[1] + fy + 4], [pole[0] + 18, pole[1] + fy + 14], [pole[0] + 1, pole[1] + fy + 11]], fcol);
+      quad([[pole[0] + 1, pole[1] + fy], [pole[0] + 18, pole[1] + fy + 4], [pole[0] + 18, pole[1] + fy + 6], [pole[0] + 1, pole[1] + fy + 2]], clothHi);
+      if (f === 0) { g.fillStyle = '#fff4d8'; g.font = '11px "Noto Serif SC",serif'; g.textBaseline = 'middle'; g.textAlign = 'center'; try { g.fillText('貢', pole[0] + 9, pole[1] + fy + 9); } catch (e) {} }
+    }
     g.restore();
-    caravanCv = cv; return cv;
+    caravanCache[ck] = cv; return cv;
   }
   function drawCaravan(g, lx, ly) {
-    const cv = caravanBaked(), fx = lx * SCALE, fy = ly * SCALE;
+    const cv = caravanBaked(caravan && caravan.tier || 1), fx = lx * SCALE, fy = ly * SCALE;
     g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.imageSmoothingEnabled = false;
     g.translate(fx, fy); g.drawImage(cv, -CCX * CDRAW, -CFEET * CDRAW, CW * CDRAW, CH * CDRAW); g.restore();
   }
   // Estado de la caravana: llega (from→to), espera (idle), se va (to→from) y desaparece.
   let caravan = null;
   const CAR_IN_MS = 1700, CAR_OUT_MS = 1400;
-  function setCaravan(on) {
+  function setCaravan(on, tier) {
+    const nv = Math.max(1, Math.min(5, tier | 0)) || 1;
     if (on) {
-      if (caravan && caravan.phase !== 'out') return;                             // ya está
+      if (caravan && caravan.phase !== 'out') { caravan.tier = nv; return; }       // ya está (refresca nivel)
       // APARCA A UN LADO (al este del portón), fuera del eje de tránsito: así el
       // mecenas que sale/entra y el caballo que acude (ambos por el eje) NO se pisan
       // con el carro. Nada de dejarlo pegado a la puerta ni en medio del carril.
       const to = wk && wk.outNear ? [wk.outNear[0] + 3.2, wk.outNear[1] - 0.5] : null;
       const from = (wk && wk.outFar) || to; if (!to) { caravan = null; return; }
-      caravan = { phase: 'in', p: 0, from: from, to: to, fx: from[0], fy: from[1] };
+      caravan = { phase: 'in', p: 0, from: from, to: to, fx: from[0], fy: from[1], tier: nv };
     } else if (caravan && caravan.phase !== 'out') {
       caravan = { phase: 'out', p: 0, from: [caravan.fx, caravan.fy], to: (wk && wk.outFar) || [caravan.fx, caravan.fy], fx: caravan.fx, fy: caravan.fy };
     }
