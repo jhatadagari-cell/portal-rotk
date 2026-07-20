@@ -5482,6 +5482,9 @@
     function buildObras() {
       const el = obrasBody();
       if (obrasSt.modo === 'pabellon') return buildObrasPab(el);
+      // Conserva el scroll del plano entre re-renders (si no, cada clic — p. ej.
+      // seleccionar para borrar — reescribe el innerHTML y salta arriba).
+      const _pw = el.querySelector('.hacp-ob-gridwrap'); const _psc = _pw ? [_pw.scrollLeft, _pw.scrollTop] : null;
       const alm = window.HacProdCasa ? HacProdCasa.almacen(h.id) : { hierro: 0, tinta: 0, grano: 0 };
       const teso = window.HacProdCasa ? HacProdCasa.tesoreria(h.id) : 0;
       const R = HacProd.RECURSOS;
@@ -5659,6 +5662,7 @@
           </div>
         </div>
         <div class="hacp-planos-seal" aria-hidden="true">印</div>`;
+      const _nw = el.querySelector('.hacp-ob-gridwrap'); if (_nw && _psc) { _nw.scrollLeft = _psc[0]; _nw.scrollTop = _psc[1]; }
       el.querySelector('[data-act="obras-close"]').addEventListener('click', closeObras);
       const grid = el.querySelector('.hacp-ob-grid');
       el.querySelectorAll('[data-ob-zoom]').forEach(b => b.addEventListener('click', () => {   // zoom en vivo (sin re-render → conserva el scroll)
@@ -6337,6 +6341,7 @@
     }
     // ── Modo ⬚ PABELLÓN: el fundador delimita un rectángulo (≥100 tiles) por dos toques. ──
     function buildObrasPab(el) {
+      const _pw = el.querySelector('.hacp-ob-gridwrap'); const _psc = _pw ? [_pw.scrollLeft, _pw.scrollTop] : null;
       const [GW, GH] = HacBuild.gridDims(tier);
       const pabs = (window.HacStore && HacStore.pabellones) ? HacStore.pabellones(h.id) : [];
       const maxP = HacBuild.maxPabellones(tier), ROLES = HacBuild.ROLES_PABELLON || [];
@@ -6394,6 +6399,7 @@
           </div>
         </div>
         <div class="hacp-planos-seal" aria-hidden="true">印</div>`;
+      const _nw = el.querySelector('.hacp-ob-gridwrap'); if (_nw && _psc) { _nw.scrollLeft = _psc[0]; _nw.scrollTop = _psc[1]; }
       el.querySelector('[data-act="obras-close"]').addEventListener('click', closeObras);
       const grid = el.querySelector('.hacp-ob-grid');
       el.querySelectorAll('[data-ob-zoom]').forEach(b => b.addEventListener('click', () => { obrasSt.zoom = Math.max(16, Math.min(58, obrasSt.zoom + Number(b.dataset.obZoom) * 6)); if (grid) grid.style.setProperty('--ob-cell', obrasSt.zoom + 'px'); }));
