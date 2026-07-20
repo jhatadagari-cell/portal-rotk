@@ -3365,6 +3365,58 @@
       if (window.HacBitacora) HacBitacora.reload().then(() => { if (!el.hidden) renderBitacora(); });
     }
 
+    // ══════════════ ASCENSO DE LA HACIENDA (level up) ══════════════════════════
+    // El nivel de la finca (mapa.tier) es un trinquete: cuando sube (residencia→
+    // Mansión…), cada mecenas de la casa lo CELEBRA la primera vez que lo ve — un
+    // overlay dorado con la nueva insignia + un aviso parpadeante en la bitácora.
+    // Se dispara al cargar y también en vivo (rerenderShared) si otro confirma el
+    // ascenso mientras miras. Gate por localStorage: una vez por transición y mecenas.
+    const ascKey = () => 'rotk.hacTier.' + h.id + '.' + (myId || '_');
+    let ascEl = null, ascBusy = false;
+    function ensureAscEl() {
+      if (ascEl) return ascEl;
+      ascEl = document.createElement('div'); ascEl.className = 'hacp-suc-ov hacp-asc-ov'; ascEl.hidden = true; document.body.appendChild(ascEl);
+      ['pointerdown', 'pointerup', 'wheel', 'click'].forEach(ev => ascEl.addEventListener(ev, (e) => e.stopPropagation(), { passive: false }));
+      return ascEl;
+    }
+    function celebrarAscenso(fromNivel, toNivel) {
+      if (!window.HacCalc) return;
+      const from = HacCalc.tierPorNivel(fromNivel), to = HacCalc.tierPorNivel(toNivel);
+      if (!to) return;
+      const dims = window.HacBuild ? HacBuild.gridDims(toNivel) : null;
+      const maxM = to.maxMiembros && to.maxMiembros !== Infinity ? to.maxMiembros : null;
+      const perks = [];
+      if (dims) perks.push(`Finca <b>${dims[0]}×${dims[1]}</b>`);
+      if (maxM) perks.push(`Hasta <b>${maxM}</b> mecenas`);
+      const sparks = Array.from({ length: 10 }, (_, i) => `<i style="--i:${i}"></i>`).join('');
+      const el = ensureAscEl(); el.hidden = false;
+      el.innerHTML = `<div class="hacp-suc-box hacp-asc-box" style="--hac:${esc(color)}">
+        <div class="hacp-asc-rays" aria-hidden="true"></div>
+        <div class="hacp-asc-sparks" aria-hidden="true">${sparks}</div>
+        <div class="hacp-asc-eyebrow">La casa asciende</div>
+        <div class="hacp-asc-glyph">${esc(to.zh || '')}</div>
+        <div class="hacp-asc-tier">${from ? `<span class="from">${esc(from.zh || '')} ${esc(from.nombre || '')}</span> <span class="arw">→</span> ` : ''}<b>${esc(to.nombre || '')}</b></div>
+        <div class="hacp-asc-lvl">Nivel ${toNivel}</div>
+        ${to.desc ? `<div class="hacp-asc-desc">${esc(to.desc)}</div>` : ''}
+        ${perks.length ? `<div class="hacp-asc-perks">${perks.join('<span class="dot">·</span>')}</div>` : ''}
+        <button type="button" class="hacp-cp-btn hacp-suc-done" data-asc-done>Continuar</button></div>`;
+      el.querySelector('[data-asc-done]').addEventListener('click', () => { el.hidden = true; });
+    }
+    function celebrarAscensoSiToca() {
+      if (!myId || !window.HacCalc || ascBusy) return;
+      const nivel = HacCalc.nivelEfectivo(h);
+      let seen = 0; try { seen = parseInt(localStorage.getItem(ascKey()) || '0', 10) || 0; } catch (e) {}
+      if (!seen) { try { localStorage.setItem(ascKey(), String(nivel)); } catch (e) {} return; }   // primera visita → línea base, sin celebrar
+      if (nivel <= seen) return;
+      ascBusy = true;
+      try { localStorage.setItem(ascKey(), String(nivel)); } catch (e) {}
+      const to = HacCalc.tierPorNivel(nivel);
+      // Aviso PARPADEANTE en la bitácora (dedup por clave: una vez por nivel).
+      if (window.HacBitacora && to) HacBitacora.log(myId, 'ascenso', `⬆ ¡La casa asciende a ${to.zh || ''} ${to.nombre || ''}! (nivel ${nivel})`, { clave: 'ascenso:' + h.id + ':' + nivel });
+      celebrarAscenso(seen, nivel);
+      ascBusy = false;
+    }
+
     // ══════════════ RETOS SEMANALES + audiencia con el señor ═══════════════════
     // Al cumplir las 4 metas de la semana, el señor de la casa te convoca (bitácora
     // parpadea + evento resaltado); vas a hablar con él → tu mecenas camina al Salón
@@ -5622,10 +5674,13 @@
     async function entregarTributo(cg) {
       const d = await pabRPC('casa_tributo', { p_hac: h.id, p_pj: myId, p_dinero: cg.dinero, p_lote: { hierro: cg.hierro, tinta: cg.tinta, grano: cg.grano }, p_ts: nowMs() });
       if (d && d.mapa) h.mapa = d.mapa;
-      toast(`貢 Tributo recibido para la casa · +${cg.dinero}🏛 +${cg.grano}🌾`);
-      if (window.HacBitacora) HacBitacora.log(myId, 'progreso', `貢 Recibiste la caravana de tributo (+${cg.dinero}🏛) para la casa`);
       if (window.HacFolk && HacFolk.setCaravan) HacFolk.setCaravan(false);   // la caravana se marcha
       if (window.HacProdCasa && HacProdCasa.reload) HacProdCasa.reload();
+      // La RPC es idempotente: si otro mecenas (o un doble-clic) ya la recibió, NO
+      // volvemos a cantar el botín ni a registrar en la bitácora.
+      if (d && d.yaRecibido) { toast('貢 La caravana ya la recibió otro mecenas de la casa'); return; }
+      toast(`貢 Tributo recibido para la casa · +${cg.dinero}🏛 +${cg.grano}🌾`);
+      if (window.HacBitacora) HacBitacora.log(myId, 'progreso', `貢 Recibiste la caravana de tributo (+${cg.dinero}🏛) para la casa`);
     }
     // Al recibir el tributo se ABRE la escena interactiva del portón: sales, ves el
     // carruaje, hablas con el transportista y desenrollas el manifiesto (竹簡). Solo un
@@ -5715,12 +5770,16 @@
       const ids = talentosReclutadosIds(); if (ids.has(t.id)) return;
       if (semanaUsada()) { toast('La casa ya acogió a un talento esta semana'); return; }
       const est = talentoEstado(t); if (!est.puede) { toast(est.estado === 'proximamente' ? 'Aún no puedes cumplir esa condición (próximamente)' : 'Aún no cumples su condición'); return; }
-      if (t.cond.tipo === 'donacion') { if (!window.HacStats || HacStats.dinero(myId) < t.cond.val) { toast('No tienes suficiente oro'); return; } await HacStats.award(myId, { dinero: -t.cond.val }); }
-      if (t.cond.tipo === 'banquete') { for (let i = 0; i < t.cond.vianda; i++) HacStats.quitarItem(myId, 'vianda'); await HacStats.award(myId, { dinero: -t.cond.oro }); }
+      // Comprobación previa (sin descontar aún): el COSTE se paga solo si la RPC tiene
+      // éxito, para que un rechazo del cupo semanal (carrera con otro mecenas) no cueste oro.
+      if (t.cond.tipo === 'donacion' && (!window.HacStats || HacStats.dinero(myId) < t.cond.val)) { toast('No tienes suficiente oro'); return; }
       const asp = Object.assign({ atuendo: t.atuendo }, t.asp);   // el atuendo va DENTRO del aspecto para que el sprite lo use
       const npc = { id: 'npc-' + Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36), talentoId: t.id, nombre: t.nombre, cortesia: t.cortesia, npc: true, aptitud: t.apt, aspecto: asp, atuendo: t.atuendo, estrellas: t.star, puntos: 0, desde: prodDia(), desdeMs: nowMs(), porId: myId, porNombre: myName };
       try { const d = await pabRPC('casa_reclutar', { p_hac: h.id, p_pj: myId, p_npc: npc }); if (d && d.miembros) h.miembros = d.miembros; }
       catch (e) { toast('No se pudo reclutar: ' + (e && e.message || '')); return; }
+      // RPC OK → ahora sí se cobra el coste de la condición.
+      if (t.cond.tipo === 'donacion') { await HacStats.award(myId, { dinero: -t.cond.val }); }
+      if (t.cond.tipo === 'banquete') { for (let i = 0; i < t.cond.vianda; i++) HacStats.quitarItem(myId, 'vianda'); await HacStats.award(myId, { dinero: -t.cond.oro }); }
       toast(`招賢 ${t.nombre} se une a tu casa`);
       if (window.HacBitacora) HacBitacora.log(myId, 'progreso', `招賢 Reclutaste al talento ${t.nombre}`);
       buildTalentos();
@@ -6284,6 +6343,8 @@
     // Va AQUÍ, en setupFolk, porque syncCaravan/startTributoTicker viven en este
     // ámbito (desde render() daban ReferenceError y no arrancaba nada).
     setTimeout(() => { try { syncCaravan(); startTributoTicker(); } catch (e) {} }, 300);
+    // Level up de la casa: celebra si subió de nivel desde la última vez que este mecenas la vio.
+    setTimeout(() => { try { celebrarAscensoSiToca(); } catch (e) {} }, 700);
 
     // ── Realtime: Supabase empuja los cambios de ESTA hacienda y sus pabellones
     // (responsable, investigación, altas/bajas de pabellón, aporte…). La caché se
@@ -6298,6 +6359,7 @@
           if (fresh) { pabAbierto = fresh; buildPabPanel(); } else { pabEl.hidden = true; }   // lo borraron
         }
         if (charId) buildCharPanel(charId);
+        celebrarAscensoSiToca();   // ¿confirmaron el ascenso mientras mirabas? celébralo en vivo
       } catch (e) {}
     }
     function onSharedChange() { if (sharedRT) return; sharedRT = setTimeout(() => { sharedRT = null; rerenderShared(); }, 150); }   // coalesce ráfagas
