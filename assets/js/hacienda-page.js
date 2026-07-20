@@ -5301,7 +5301,7 @@
       terrenoBusy = false;
     }
     let obrasEl = null;
-    const obrasSt = { tipo: null, rot: 0, pos: null, lineA: null, zoom: 28, modo: 'construir', sel: null, movingFrom: null, pabRol: 'militar', pabName: '', pabSel: null, pickOpen: false };   // modo pabellon: pabRol/pabName + rect (lineA→pos) · pabSel (borrar) · pickOpen: selector de edificio desplegado
+    const obrasSt = { tipo: null, rot: 0, pos: null, lineA: null, zoom: 28, modo: 'construir', sel: null, movingFrom: null, pabRol: 'militar', pabName: '', pabSel: null, pickOpen: false, borrarSec: false };   // modo pabellon: pabRol/pabName + rect (lineA→pos) · pabSel (borrar) · pickOpen: selector desplegado · borrarSec: barrido de caminos/muros
     const obrasEsLinea = () => !!(obrasSt.tipo && window.HacBuild && HacBuild.esLinea && HacBuild.esLinea(obrasSt.tipo));   // camino/muro → se trazan A→B
     // Celdas de una línea recta ortogonal a→b (el eje más largo), + rotación (igual que el admin).
     function obrasLineCells(a, b) {
@@ -5367,7 +5367,7 @@
     }
     function openObras() {
       if (!esFundador()) { toast('Solo el fundador de la casa puede construir'); return; }
-      obrasSt.pos = null; obrasSt.lineA = null; obrasSt.modo = 'construir'; obrasSt.sel = null; obrasSt.movingFrom = null; obrasSt.pabSel = null; obrasSt.pickOpen = false;
+      obrasSt.pos = null; obrasSt.lineA = null; obrasSt.modo = 'construir'; obrasSt.sel = null; obrasSt.movingFrom = null; obrasSt.pabSel = null; obrasSt.pickOpen = false; obrasSt.borrarSec = false;
       if (!obrasSt.tipo) { const first = HacBuild.CONSTRUCCIONES.find(t => (t.tierMin || 1) <= tier); obrasSt.tipo = first ? first.id : null; }
       const sec = ensureObrasEl();
       buildObras();
@@ -5561,9 +5561,25 @@
           if ((side === 'e' && cx === x2) || (side === 'w' && cx === x1) || (side === 's' && cy === y2) || (side === 'n' && cy === y1)) gFace.set(cx + ',' + cy, side);
         });
       }
+      // ── BORRAR POR SECCIÓN: rectángulo de dos toques que barre caminos y muros
+      // (solo piezas de LÍNEA, para no arrasar edificios sin querer). ──
+      const borrSec = modo === 'borrar' && obrasSt.borrarSec;
+      const secSet = new Set(); let secRect = null, secCount = 0;
+      if (borrSec && obrasSt.lineA) {
+        const a = obrasSt.lineA, b = obrasSt.pos || obrasSt.lineA;
+        secRect = [Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[0], b[0]), Math.max(a[1], b[1])];
+        lista.forEach(cc => {
+          if (HacBuild.esLinea && HacBuild.esLinea(cc.tipo) && cc.pos[0] >= secRect[0] && cc.pos[0] <= secRect[2] && cc.pos[1] >= secRect[1] && cc.pos[1] <= secRect[3]) { secSet.add(cc.pos[0] + ',' + cc.pos[1]); secCount++; }
+        });
+      }
+      const inSecRect = (x, y) => secRect && x >= secRect[0] && y >= secRect[1] && x <= secRect[2] && y <= secRect[3];
       let cells = '';
       for (let y = Y0; y < GH + ringD; y++) for (let x = X0; x < GW + ringD; x++) {
         const k = x + ',' + y, o = occ.get(k), g = inG(x, y);
+        if (borrSec) {   // todas las celdas clicables (esquinas del rectángulo); marca caminos/muros a borrar
+          cells += `<button type="button" class="hacp-ob-cell ${o ? 'occ' : ('free' + (esExt(x, y) ? ' ext' : ''))}${inSecRect(x, y) ? ' secpick' : ''}${secSet.has(k) ? ' secdel' : ''}" data-gx="${x}" data-gy="${y}"${o ? ` style="background:${o.color}" title="${esc(o.nombre)}"` : ''}>${o && o.anchor && o.zh ? `<span class="hacp-ob-lbl">${esc(o.zh)}</span>` : ''}</button>`;
+          continue;
+        }
         if (o) {
           const isMov = movSet.has(k), isSel = selSet.has(k), clickable = seleccionable && !isMov;
           cells += `<button type="button" class="hacp-ob-cell occ${isSel ? ' sel' : ''}${isMov ? ' moving' : ''}"${clickable ? ` data-occ="${o.ax},${o.ay}"` : ' disabled'} style="background:${o.color}" title="${esc(o.nombre)}">${o.anchor && o.zh ? `<span class="hacp-ob-lbl">${esc(o.zh)}</span>` : ''}</button>`;
@@ -5576,8 +5592,17 @@
       // Acción principal + aviso, según el modo.
       let puede = false, aviso = '', mainLbl = '', secLbl = '';
       if (modo === 'borrar') {
-        puede = !!selCc; mainLbl = selCc ? `🗑 Derribar` : 'Derribar';
-        aviso = selCc ? `Vas a derribar <b>${esc(selDef ? selDef.nombre : '')}</b>. Sin reembolso.` : 'Toca un edificio para derribarlo.';
+        if (borrSec) {
+          secLbl = '↺ Reiniciar';
+          puede = secCount > 0; mainLbl = `🗑 Borrar sección${secCount ? ` (${secCount})` : ''}`;
+          aviso = !obrasSt.lineA ? 'Toca la <b>1.ª esquina</b> de la sección a limpiar.'
+            : !obrasSt.pos ? 'Ahora toca la <b>esquina opuesta</b>.'
+            : secCount ? `<span class="ok">${secCount} camino/muro en la sección · listo para borrar.</span>`
+            : '<span class="bad">No hay caminos ni muros en esa sección.</span>';
+        } else {
+          puede = !!selCc; mainLbl = selCc ? `🗑 Derribar` : 'Derribar';
+          aviso = selCc ? `Vas a derribar <b>${esc(selDef ? selDef.nombre : '')}</b>. Sin reembolso.` : 'Toca un edificio para derribarlo.';
+        }
       } else if (modo === 'mover') {
         if (!moviendo) { aviso = 'Toca el edificio que quieres <b>mover</b>.'; mainLbl = 'Mover aquí'; }
         else {
@@ -5619,6 +5644,7 @@
             ${obrasCensoHTML()}
             <div class="hacp-ob-modos">${modeBtn('construir', '營 Construir')}${modeBtn('mover', '✥ Mover')}${modeBtn('borrar', '🗑 Borrar')}${modeBtn('pabellon', '⬚ Pabellón')}</div>
             ${modo === 'construir' ? `<div class="hacp-ob-pick2">${pickedHtml}${obrasSt.pickOpen ? `<div class="hacp-ob-menu">${menuHtml}</div>` : ''}</div>${costeHtml}` : ''}
+            ${modo === 'borrar' ? `<div class="hacp-ob-modos hacp-ob-subtool"><button type="button" class="hacp-ob-mode${!borrSec ? ' on' : ''}" data-ob-bsec="0">🗑 Pieza</button><button type="button" class="hacp-ob-mode${borrSec ? ' on' : ''}" data-ob-bsec="1">▦ Sección</button></div>` : ''}
             <div class="hacp-ob-aviso">${aviso}</div>
             <div class="hacp-ob-acts">
               ${secLbl ? `<button type="button" class="hacp-cp-btn" data-ob-rot>${secLbl}</button>` : ''}
@@ -5640,16 +5666,23 @@
         if (grid) grid.style.setProperty('--ob-cell', obrasSt.zoom + 'px');
       }));
       el.querySelectorAll('[data-ob-modo]').forEach(b => b.addEventListener('click', () => {
-        obrasSt.modo = b.dataset.obModo; obrasSt.pos = null; obrasSt.lineA = null; obrasSt.sel = null; obrasSt.movingFrom = null; obrasSt.pabSel = null; obrasSt.pickOpen = false; buildObras();
+        obrasSt.modo = b.dataset.obModo; obrasSt.pos = null; obrasSt.lineA = null; obrasSt.sel = null; obrasSt.movingFrom = null; obrasSt.pabSel = null; obrasSt.pickOpen = false; obrasSt.borrarSec = false; buildObras();
       }));
+      el.querySelectorAll('[data-ob-bsec]').forEach(b => b.addEventListener('click', () => { obrasSt.borrarSec = b.dataset.obBsec === '1'; obrasSt.sel = null; obrasSt.lineA = null; obrasSt.pos = null; buildObras(); }));
       const pickBtn = el.querySelector('[data-ob-pick]'); if (pickBtn) pickBtn.addEventListener('click', () => { obrasSt.pickOpen = !obrasSt.pickOpen; buildObras(); });
       el.querySelectorAll('[data-ob-card]').forEach(b => b.addEventListener('click', () => { obrasSt.tipo = b.dataset.obCard; obrasSt.pos = null; obrasSt.lineA = null; obrasSt.rot = 0; obrasSt.pickOpen = false; buildObras(); }));
       const rot = el.querySelector('[data-ob-rot]'); if (rot) rot.addEventListener('click', () => {
-        if (modo === 'mover') { obrasSt.movingFrom = null; obrasSt.pos = null; }
+        if (borrSec) { obrasSt.lineA = null; obrasSt.pos = null; }
+        else if (modo === 'mover') { obrasSt.movingFrom = null; obrasSt.pos = null; }
         else if (linea) { obrasSt.lineA = null; obrasSt.pos = null; }
         else { obrasSt.rot = (obrasSt.rot + 1) % 4; }
         buildObras();
       });
+      if (borrSec) el.querySelectorAll('.hacp-ob-cell[data-gx]').forEach(b => b.addEventListener('click', () => {
+        const gx = Number(b.dataset.gx), gy = Number(b.dataset.gy);
+        if (!obrasSt.lineA || obrasSt.pos) { obrasSt.lineA = [gx, gy]; obrasSt.pos = null; } else { obrasSt.pos = [gx, gy]; }
+        buildObras();
+      }));
       el.querySelectorAll('.hacp-ob-cell.free, .hacp-ob-cell.ghost').forEach(b => b.addEventListener('click', () => {
         if (!colocando) return;
         const gx = Number(b.dataset.gx), gy = Number(b.dataset.gy);
@@ -5664,7 +5697,8 @@
         buildObras();
       }));
       const bb = el.querySelector('[data-ob-build]'); if (bb && !bb.disabled) bb.addEventListener('click', () => {
-        if (modo === 'borrar') obrasDerribar(obrasSt.sel);
+        if (borrSec) obrasBorrarSeccion();
+        else if (modo === 'borrar') obrasDerribar(obrasSt.sel);
         else if (modo === 'mover') obrasMover();
         else obrasConstruir();
       });
@@ -5677,7 +5711,9 @@
         const wrap = el.querySelector('.hacp-ob-gridwrap'), grid = el.querySelector('.hacp-ob-grid');
         if (!wrap || !grid) return;
         let anchor = null, footW = 1, footH = 1, danger = false, sub = '';
-        if (modo === 'borrar') {
+        if (borrSec) {
+          if (!secCount || !obrasSt.pos) return; anchor = obrasSt.pos; danger = true; sub = `${secCount} pieza${secCount !== 1 ? 's' : ''}`;
+        } else if (modo === 'borrar') {
           if (!selCc) return; anchor = selCc.pos; const f = HacBuild.footprintDe(selCc); footW = f[0]; footH = f[1]; danger = true; sub = 'sin reembolso';
         } else if (puede && obrasSt.pos && (modo === 'construir' || moviendo)) {
           anchor = obrasSt.pos;
@@ -5691,7 +5727,7 @@
         const btn = document.createElement('button');
         btn.type = 'button'; btn.className = 'hacp-ob-confirm' + (danger ? ' danger' : '');
         btn.innerHTML = `<span class="l">${mainLbl}</span>${sub ? `<span class="s">${esc(sub)}</span>` : ''}`;
-        btn.addEventListener('click', () => { if (modo === 'borrar') obrasDerribar(obrasSt.sel); else if (moviendo) obrasMover(); else obrasConstruir(); });
+        btn.addEventListener('click', () => { if (borrSec) obrasBorrarSeccion(); else if (modo === 'borrar') obrasDerribar(obrasSt.sel); else if (moviendo) obrasMover(); else obrasConstruir(); });
         wrap.appendChild(btn);
         btn.style.left = (cell.offsetLeft + footW * step / 2) + 'px';
         const bh = btn.offsetHeight || 36;
@@ -5763,6 +5799,24 @@
       toast(`營 Derribado${nom ? ': ' + nom : ''}`);
       if (window.HacBitacora && nom) HacBitacora.log(myId, 'progreso', `營 El fundador derribó ${nom}`);
       obrasSt.sel = null; redrawIso(); buildObras();
+    }
+    // Barrido: borra TODOS los caminos y muros cuyo ancla cae en el rectángulo (2 esquinas).
+    async function obrasBorrarSeccion() {
+      if (!esFundador() || !obrasSt.lineA || !obrasSt.pos || !window.HacProdCasa) return;
+      const a = obrasSt.lineA, b = obrasSt.pos;
+      const rx0 = Math.min(a[0], b[0]), ry0 = Math.min(a[1], b[1]), rx1 = Math.max(a[0], b[0]), ry1 = Math.max(a[1], b[1]);
+      const objetivos = ((h.mapa && h.mapa.construcciones) || [])
+        .filter(cc => HacBuild.esLinea && HacBuild.esLinea(cc.tipo) && cc.pos[0] >= rx0 && cc.pos[0] <= rx1 && cc.pos[1] >= ry0 && cc.pos[1] <= ry1)
+        .map(cc => cc.pos.slice());
+      if (!objetivos.length) { toast('No hay caminos ni muros en esa sección'); return; }
+      let done = 0;
+      for (const pos of objetivos) {
+        try { const res = await HacProdCasa.demoler({ haciendaId: h.id, pj: myId, pos: pos }); if (res && res.mapa) h.mapa = res.mapa; done++; }
+        catch (e) { break; }
+      }
+      toast(`營 Sección limpiada: ${done} pieza${done !== 1 ? 's' : ''}`);
+      if (window.HacBitacora && done) HacBitacora.log(myId, 'progreso', `營 El fundador limpió ${done} camino(s)/muro(s)`);
+      obrasSt.lineA = null; obrasSt.pos = null; redrawIso(); buildObras();
     }
     async function obrasMover() {
       if (!esFundador() || !obrasSt.movingFrom || !obrasSt.pos || !window.HacProdCasa) return;
