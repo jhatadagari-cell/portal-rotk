@@ -223,11 +223,15 @@ begin
   where en.hacienda_id = p_hac
   order by en.created_at desc limit 1;
 
+  -- SOLO los tres enviados canónicos (cada uno con su voz crafteada en
+  -- hac-enviados-dialogo.js): Fei Yi (Shu), Chen Qun (Wei), Zhao Zi (Wu). Así no
+  -- llegan personajes cualesquiera (p. ej. Guo Jia) sin diálogo propio.
   -- Personaje de un reino DISTINTO al último, que no sea ya enviado activo en otra casa.
   select p.id into pj_id
   from public.personajes p
   join public.facciones f on f.id = p.faccion and f.reino
   where (last_fac is null or p.faccion <> last_fac)
+    and p.nombre in ('Fei Yi', 'Chen Qun', 'Zhao Zi')
     and not exists (select 1 from public.enviados en where en.personaje_id = p.id and en.estado <> 'concluido')
   order by random() limit 1;
   -- Si no queda otro reino disponible, permite repetir (mejor uno que ninguno).
@@ -235,7 +239,8 @@ begin
     select p.id into pj_id
     from public.personajes p
     join public.facciones f on f.id = p.faccion and f.reino
-    where not exists (select 1 from public.enviados en where en.personaje_id = p.id and en.estado <> 'concluido')
+    where p.nombre in ('Fei Yi', 'Chen Qun', 'Zhao Zi')
+      and not exists (select 1 from public.enviados en where en.personaje_id = p.id and en.estado <> 'concluido')
     order by random() limit 1;
   end if;
   if pj_id is null then return null; end if;   -- aún no hay personajes de reino → no despacha
