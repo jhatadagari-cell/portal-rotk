@@ -34,12 +34,14 @@ alter table public.escaramuzas add column if not exists relaciones_hechas boolea
 create or replace function public.escaramuza_relaciones(
   p_id uuid, p_hac text, p_now bigint, p_afin jsonb, p_forjas jsonb)
 returns boolean language plpgsql security definer set search_path = public as $$
-declare b public.escaramuzas; e jsonb; aa text; bb text; d int; t text; st text; og text;
+declare esc public.escaramuzas; e jsonb; aa text; bb text; d int; t text; st text; og text;
 begin
-  select * into b from public.escaramuzas where id = p_id for update;
+  -- OJO: la variable NO puede llamarse `b` — la tabla `relaciones` tiene columna `b`
+  -- y el `on conflict (... , b)` la haría ambigua («column reference "b" is ambiguous»).
+  select * into esc from public.escaramuzas where id = p_id for update;
   if not found then return false; end if;
-  if b.relaciones_hechas then return false; end if;              -- ya procesada
-  if b.estado not in ('botin','resuelta') then return false; end if;  -- solo si combatió
+  if esc.relaciones_hechas then return false; end if;              -- ya procesada
+  if esc.estado not in ('botin','resuelta') then return false; end if;  -- solo si combatió
   -- Afinidad (upsert por par).
   for e in select value from jsonb_array_elements(coalesce(p_afin, '[]'::jsonb)) t(value) loop
     aa := e->>'a'; bb := e->>'b'; d := coalesce((e->>'d')::int, 0);

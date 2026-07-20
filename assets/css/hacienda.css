@@ -469,6 +469,127 @@ html.hacp-pseudofs, html.hacp-pseudofs body{ overflow:hidden; }
 .hacp-ob-cell.occ.moving{ opacity:.4; filter:grayscale(.5); }
 .hacp-suc-cancel{ background:rgba(200,80,66,.16)!important; border-color:rgba(224,113,90,.6)!important; color:#f0b8ab!important; font-weight:700; }
 .hacp-suc-cancel:hover{ background:rgba(200,80,66,.32)!important; color:#fff!important; }
+
+/* ═══ PLANOS DE OBRAS (營造圖) — panel inline bajo la finca, pergamino de bambú ═══
+   Mismo flavor que el manifiesto de la caravana (hac-albaran): rodillos de madera
+   con cabezales dorados y una hoja de pergamino que se DESENROLLA al abrir y se
+   PLIEGA al volver a la hacienda (la altura la mide el JS, ver openObras/closeObras). */
+.hacp-planos{
+  width:min(96vw,1760px); margin:24px auto 10px; margin-left:50%; transform:translateX(-50%);
+  --ink:#3a2812; --ink2:#6b5228; --sepia:#7a531e; --rojo:#7a2318; --doble:#a9853f;
+}
+.hacp-planos[hidden]{ display:none; }
+.hacp-planos-scroll{ position:relative; display:flex; flex-direction:column; align-items:stretch;
+  filter:drop-shadow(0 22px 42px rgba(0,0,0,.5)); }
+/* Rodillos de madera con cabezales dorados (arriba y abajo del pergamino) */
+.hacp-planos-roller{ height:22px; border-radius:12px; z-index:3; flex-shrink:0; position:relative;
+  background:linear-gradient(180deg,#8a6636,#5a3d1c 55%,#3d2810);
+  box-shadow:0 3px 10px rgba(0,0,0,.55), inset 0 2px 0 rgba(255,220,150,.35);
+  border:1px solid #2e1e0d; }
+.hacp-planos-roller.top{ margin-bottom:-6px; } .hacp-planos-roller.bot{ margin-top:-6px; }
+.hacp-planos-roller::before, .hacp-planos-roller::after{ content:''; position:absolute; top:-4px; width:18px; height:30px;
+  border-radius:5px; background:linear-gradient(180deg,#e6c15a,#7a531e); border:1px solid #3d2810;
+  box-shadow:inset 0 1px 0 rgba(255,244,214,.5); }
+.hacp-planos-roller::before{ left:-9px; } .hacp-planos-roller::after{ right:-9px; }
+/* La hoja: se desenrolla/pliega vía max-height (fijado en px por el JS) */
+.hacp-planos-sheet{
+  position:relative; overflow:hidden; max-height:0; opacity:0;
+  background:
+    repeating-linear-gradient(90deg, rgba(90,64,26,.14) 0 1px, transparent 1px 17px),
+    radial-gradient(120% 80% at 50% 0%, rgba(120,84,30,.10), transparent 60%),
+    linear-gradient(180deg,#efd9a1,#e2c583 60%,#d9bd7a);
+  border-left:2px solid #b79a56; border-right:2px solid #b79a56;
+  box-shadow:inset 0 0 40px rgba(120,84,30,.28);
+  transition:max-height .66s cubic-bezier(.22,.9,.28,1), opacity .34s ease;
+}
+.hacp-planos-body{ position:relative; padding:16px 22px 24px; color:var(--ink); }
+/* Cabecera del plano: título 營造圖 + botón «volver a la hacienda» */
+.hacp-planos-head{ display:flex; align-items:center; gap:14px; padding-bottom:12px; margin-bottom:16px;
+  border-bottom:2px double var(--doble); }
+.hacp-planos-ttl{ display:flex; align-items:center; gap:13px; min-width:0; }
+.hacp-planos-ttl .zh{ font:900 34px 'Noto Serif SC',serif; letter-spacing:.12em; color:var(--sepia);
+  text-shadow:0 1px 0 rgba(255,244,214,.55); flex:none; }
+.hacp-planos-ttl .tx{ display:flex; flex-direction:column; min-width:0; }
+.hacp-planos-ttl .tx b{ font:800 18px 'Noto Serif SC',serif; color:var(--ink); }
+.hacp-planos-ttl .tx i{ font:400 11.5px 'Noto Sans SC',sans-serif; font-style:normal; color:var(--ink2); margin-top:2px; }
+.hacp-planos-back{ margin-left:auto; flex:none; font:700 13px 'Noto Sans SC',sans-serif; color:#f6ead0; cursor:pointer;
+  background:linear-gradient(180deg,#8a3327,#661d13); border:1px solid #4a140c; border-radius:9px; padding:9px 16px;
+  box-shadow:0 2px 6px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,220,180,.28); transition:filter .14s, transform .14s; }
+.hacp-planos-back b{ font-family:'Noto Serif SC',serif; }
+.hacp-planos-back:hover{ filter:brightness(1.1); transform:translateY(-1px); }
+/* Dos columnas: herramientas | plano (apila en móvil) */
+.hacp-planos-cols{ display:grid; grid-template-columns:minmax(230px,300px) 1fr; gap:20px; align-items:start; }
+.hacp-planos-tools{ display:flex; flex-direction:column; min-width:0; }
+.hacp-planos-canvas{ min-width:0; }
+/* Sello de lacre 印 en la esquina */
+.hacp-planos-seal{ position:absolute; right:16px; bottom:6px; width:52px; height:52px; display:grid; place-items:center;
+  border-radius:9px; border:3px solid #a11f14; color:#a11f14; font:900 26px 'Noto Serif SC',serif;
+  background:rgba(200,60,45,.08); transform:rotate(-10deg); box-shadow:0 2px 7px rgba(0,0,0,.22); opacity:.9; pointer-events:none; }
+
+/* ── Herramientas re-vestidas a TINTA sobre pergamino ── */
+.hacp-planos .hacp-ob-pool{ color:var(--ink); border:1px solid rgba(122,83,30,.35); background:rgba(122,83,30,.06);
+  border-radius:8px; padding:7px 10px; margin:0 0 10px; }
+.hacp-planos .hacp-ob-pool b{ color:var(--rojo); }
+.hacp-planos .hacp-ob-modos{ margin:0 0 10px; }
+.hacp-planos .hacp-ob-mode{ background:rgba(122,83,30,.08); color:var(--ink2); border:1px solid rgba(122,83,30,.35); }
+.hacp-planos .hacp-ob-mode.on{ background:rgba(160,31,20,.14); color:var(--rojo); border-color:var(--rojo); }
+.hacp-planos .hacp-ob-pick2{ margin-bottom:10px; }
+.hacp-planos .hacp-ob-picked, .hacp-planos .hacp-ob-card{ background:rgba(255,250,235,.5); color:var(--ink); border-color:rgba(122,83,30,.3); }
+.hacp-planos .hacp-ob-picked:hover, .hacp-planos .hacp-ob-card:hover{ background:rgba(255,250,235,.82); border-color:rgba(122,83,30,.55); }
+.hacp-planos .hacp-ob-picked.open{ border-color:var(--sepia); }
+.hacp-planos .hacp-ob-card.on{ background:rgba(160,31,20,.12); border-color:var(--rojo); }
+.hacp-planos .hacp-ob-cname{ color:var(--ink); }
+.hacp-planos .hacp-ob-capt, .hacp-planos .hacp-ob-ccost{ color:var(--ink2); }
+.hacp-planos .hacp-ob-chev{ color:var(--sepia); }
+.hacp-planos .hacp-ob-menu{ border-color:var(--sepia); background:rgba(230,207,148,.78); max-height:none; }
+.hacp-planos .hacp-ob-cathdr{ background:linear-gradient(#e6cf90,#e6cf90); color:var(--rojo); }
+.hacp-planos .hacp-ob-cathdr .n{ color:var(--ink2); background:rgba(122,83,30,.14); }
+.hacp-planos .hacp-ob-sw{ border-color:rgba(0,0,0,.3); }
+.hacp-planos .hacp-ob-coste{ color:var(--ink2); }
+.hacp-planos .hacp-ob-coste span.short{ color:#b3341f; }
+.hacp-planos .hacp-ob-aviso{ color:var(--ink2); }
+.hacp-planos .hacp-ob-aviso .ok{ color:#2f7a3a; } .hacp-planos .hacp-ob-aviso .bad{ color:#b3341f; }
+.hacp-planos .hacp-ob-pick label{ color:var(--ink2); }
+.hacp-planos .hacp-ob-sel, .hacp-planos .hacp-ob-pabnm{ background:rgba(255,250,235,.72); color:var(--ink); border-color:rgba(122,83,30,.4); }
+.hacp-planos .hacp-ob-pablist{ margin-top:8px; }
+.hacp-planos .hacp-ob-pabrow{ color:var(--ink); background:rgba(255,250,235,.5); border-color:rgba(122,83,30,.28); }
+.hacp-planos .hacp-ob-pabrow i{ color:var(--ink2); }
+.hacp-planos .hacp-pab-mini{ background:rgba(160,31,20,.12); color:var(--rojo); border-color:var(--rojo); }
+/* Botones de acción a tinta / lacre */
+.hacp-planos .hacp-cp-btn{ background:rgba(122,83,30,.12); color:var(--sepia); border:1px solid var(--sepia); }
+.hacp-planos .hacp-cp-btn:hover{ background:rgba(122,83,30,.26); color:#3a2812; }
+.hacp-planos .hacp-suc-ok{ background:linear-gradient(180deg,#7a9a4e,#5c7a34)!important; color:#f6ffe0!important; border-color:#3f5720!important; }
+.hacp-planos .hacp-suc-ok:hover{ filter:brightness(1.08); }
+.hacp-planos .hacp-suc-cancel{ background:rgba(160,31,20,.14)!important; border-color:var(--rojo)!important; color:#8a2318!important; }
+.hacp-planos .hacp-suc-cancel:hover{ background:rgba(160,31,20,.26)!important; color:#661d13!important; }
+.hacp-planos .hacp-ob-zoom{ color:var(--ink2); }
+.hacp-planos .hacp-ob-zoom button{ background:rgba(122,83,30,.14); color:var(--sepia); border-color:var(--sepia); }
+/* ── El PLANO: retícula a tinta sobre pergamino ── */
+.hacp-planos-canvas .hacp-ob-gridwrap{ max-height:clamp(340px,62vh,700px); border:1px solid rgba(122,83,30,.4);
+  border-radius:8px; padding:8px;
+  background:
+    repeating-linear-gradient(0deg, rgba(58,40,18,.07) 0 1px, transparent 1px 100%),
+    rgba(226,197,131,.32); }
+.hacp-planos .hacp-ob-cell{ border:1px solid rgba(58,40,18,.18); background:rgba(255,250,235,.14); border-radius:2px; }
+.hacp-planos .hacp-ob-cell.free:hover{ background:rgba(122,83,30,.22); }
+.hacp-planos .hacp-ob-cell.occ{ border-color:rgba(0,0,0,.35); }
+.hacp-planos .hacp-ob-lbl{ color:#fff; text-shadow:0 1px 2px rgba(0,0,0,.7); }
+.hacp-planos .hacp-ob-legend{ color:var(--ink2); }
+.hacp-planos .hacp-ob-legend .sw{ background:rgba(122,83,30,.12); }
+.hacp-planos .hacp-ob-legend .sw.ok{ border-color:#2f7a3a; } .hacp-planos .hacp-ob-legend .sw.bad{ border-color:#b3341f; }
+/* Móvil: una sola columna (el plano bajo las herramientas) */
+@media (max-width:720px){
+  .hacp-planos{ margin-top:16px; }
+  .hacp-planos-cols{ grid-template-columns:1fr; gap:14px; }
+  .hacp-planos-body{ padding:12px 13px 20px; }
+  .hacp-planos-ttl .zh{ font-size:27px; }
+  .hacp-planos-ttl .tx b{ font-size:15px; }
+  .hacp-planos-head{ flex-wrap:wrap; }
+  .hacp-planos-back{ padding:8px 13px; }
+  .hacp-planos-seal{ width:42px; height:42px; font-size:21px; right:8px; }
+}
+@media (prefers-reduced-motion:reduce){ .hacp-planos-sheet{ transition:none; } }
+
 /* Panel del Pabellón (F1) */
 .hacp-pab-box{ width:min(420px,94%); }
 .hacp-pab-switch{ display:flex; flex-wrap:wrap; gap:6px; margin:0 0 12px; }

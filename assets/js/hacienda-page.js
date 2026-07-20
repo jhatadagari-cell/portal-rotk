@@ -5288,20 +5288,55 @@
       if (Math.abs(dx) >= Math.abs(dy)) { const s = Math.sign(dx) || 1; for (let x = a[0]; x !== b[0] + s; x += s) out.push([x, a[1]]); return { cells: out, rot: 0 }; }
       const s = Math.sign(dy) || 1; for (let y = a[1]; y !== b[1] + s; y += s) out.push([a[0], y]); return { cells: out, rot: 1 };
     }
+    // ── Planos de obras (營造圖) — panel INLINE bajo la finca, flavor pergamino ──
+    // Sale del canvas: se despliega como unos planos (rollo de bambú, igual que el
+    // manifiesto de la caravana) DEBAJO de .hacp-finca. El "cascarón" (rodillos +
+    // hoja) es PERSISTENTE; buildObras() solo reescribe .hacp-planos-body, así el
+    // desenrollado no se re-dispara en cada re-render (zoom, cambio de modo…).
     function ensureObrasEl() {
-      if (obrasEl) return obrasEl;
-      obrasEl = document.createElement('div'); obrasEl.className = 'hacp-shop hacp-obras-ov'; obrasEl.hidden = true; overlayHost().appendChild(obrasEl);
-      ['pointerdown', 'pointerup', 'wheel', 'click'].forEach(ev => obrasEl.addEventListener(ev, (e) => e.stopPropagation(), { passive: false }));
-      obrasEl.addEventListener('click', (e) => { if (e.target === obrasEl) closeObras(); });
-      return obrasEl;
+      let sec = document.getElementById('hacp-planos');
+      if (sec) { obrasEl = sec; return sec; }
+      sec = document.createElement('section');
+      sec.className = 'hacp-planos'; sec.id = 'hacp-planos'; sec.hidden = true;
+      sec.innerHTML =
+        '<div class="hacp-planos-scroll">'
+        + '<div class="hacp-planos-roller top"></div>'
+        + '<div class="hacp-planos-sheet"><div class="hacp-planos-body"></div></div>'
+        + '<div class="hacp-planos-roller bot"></div>'
+        + '</div>';
+      const finca = document.querySelector('.hacp-finca');
+      if (finca && finca.parentNode) finca.parentNode.insertBefore(sec, finca.nextSibling);
+      else (document.getElementById('hacp-content') || document.body).appendChild(sec);
+      obrasEl = sec; return sec;
     }
-    function closeObras() { if (obrasEl) obrasEl.hidden = true; }
+    const obrasBody = () => ensureObrasEl().querySelector('.hacp-planos-body');
+    const obrasSheet = () => { const s = document.getElementById('hacp-planos'); return s ? s.querySelector('.hacp-planos-sheet') : null; };
+    // Plegar los planos (max-height→0 desde la altura REAL) + re-centrar la finca.
+    function closeObras() {
+      const sec = document.getElementById('hacp-planos'); if (!sec || sec.hidden) return;
+      const sheet = obrasSheet();
+      if (sheet) { sheet.style.maxHeight = sheet.scrollHeight + 'px'; sheet.style.opacity = '1'; }
+      requestAnimationFrame(() => { sec.classList.remove('open'); if (sheet) { sheet.style.maxHeight = '0px'; sheet.style.opacity = '0'; } });
+      const iso = document.getElementById('hacp-iso-wrap');
+      if (iso) { try { iso.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) {} }
+      setTimeout(() => { sec.hidden = true; }, 640);
+    }
     function openObras() {
       if (!esFundador()) { toast('Solo el fundador de la casa puede construir'); return; }
       obrasSt.pos = null; obrasSt.lineA = null; obrasSt.modo = 'construir'; obrasSt.sel = null; obrasSt.movingFrom = null; obrasSt.pabSel = null; obrasSt.pickOpen = false;
       if (!obrasSt.tipo) { const first = HacBuild.CONSTRUCCIONES.find(t => (t.tierMin || 1) <= tier); obrasSt.tipo = first ? first.id : null; }
-      buildObras(); ensureObrasEl().hidden = false;
-      if (window.HacProdCasa) HacProdCasa.ready().then(() => { if (obrasEl && !obrasEl.hidden) buildObras(); }).catch(() => {});
+      const sec = ensureObrasEl();
+      buildObras();
+      sec.hidden = false;
+      const sheet = obrasSheet();
+      if (sheet) { sheet.style.maxHeight = '0px'; sheet.style.opacity = '0'; }
+      requestAnimationFrame(() => {                                     // desenrolla hasta la altura REAL del contenido
+        sec.classList.add('open');
+        if (sheet) { sheet.style.maxHeight = sheet.scrollHeight + 'px'; sheet.style.opacity = '1'; }
+      });
+      setTimeout(() => { if (sheet && sec.classList.contains('open')) sheet.style.maxHeight = 'none'; }, 720);   // luego crece libre en re-renders
+      setTimeout(() => { try { sec.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) {} }, 110);
+      if (window.HacProdCasa) HacProdCasa.ready().then(() => { const s = document.getElementById('hacp-planos'); if (s && !s.hidden) buildObras(); }).catch(() => {});
     }
     const obrasCoste = () => obrasSt.tipo ? HacBuild.coste(obrasSt.tipo) : { hierro: 0, tinta: 0, grano: 0, dinero: 0 };
     function obrasAsequibleN(co, n) {
@@ -5359,7 +5394,7 @@
         </span></button>`;
     }
     function buildObras() {
-      const el = ensureObrasEl();
+      const el = obrasBody();
       if (obrasSt.modo === 'pabellon') return buildObrasPab(el);
       const alm = window.HacProdCasa ? HacProdCasa.almacen(h.id) : { hierro: 0, tinta: 0, grano: 0 };
       const teso = window.HacProdCasa ? HacProdCasa.tesoreria(h.id) : 0;
@@ -5468,22 +5503,31 @@
         }
       }
       const modeBtn = (m, lbl) => `<button type="button" class="hacp-ob-mode${modo === m ? ' on' : ''}" data-ob-modo="${m}">${lbl}</button>`;
-      el.innerHTML = `<div class="hacp-shop-box hacp-obras-box">
-        <button type="button" class="hacp-shop-x" data-act="obras-close" aria-label="Cerrar">✕</button>
-        <div class="hacp-shop-h"><span class="hacp-shop-zh">營</span> Obras de la casa</div>
-        <div class="hacp-ob-pool">Casa: <b>🏛 ${teso}</b> · ${R.hierro.icon}${alm.hierro} · ${R.tinta.icon}${alm.tinta} · ${R.grano.icon}${alm.grano}</div>
-        <div class="hacp-ob-modos">${modeBtn('construir', '營 Construir')}${modeBtn('mover', '✥ Mover')}${modeBtn('borrar', '🗑 Borrar')}${modeBtn('pabellon', '⬚ Pabellón')}</div>
-        ${modo === 'construir' ? `<div class="hacp-ob-pick2">${pickedHtml}${obrasSt.pickOpen ? `<div class="hacp-ob-menu">${menuHtml}</div>` : ''}</div>${obrasSt.pickOpen ? '' : costeHtml}` : ''}
-        ${modo === 'construir' && obrasSt.pickOpen ? '' : `
-        <div class="hacp-ob-zoom"><button type="button" data-ob-zoom="-1" aria-label="alejar">−</button><span>zoom</span><button type="button" data-ob-zoom="1" aria-label="acercar">+</button><span class="hint">arrastra para moverte</span></div>
-        <div class="hacp-ob-gridwrap"><div class="hacp-ob-grid" style="grid-template-columns:repeat(${GW},var(--ob-cell));--ob-cell:${obrasSt.zoom}px">${cells}</div></div>
-        <div class="hacp-ob-legend">Las celdas de color = lo ya construido · <span class="sw ok"></span> cabe · <span class="sw bad"></span> no cabe</div>
-        <div class="hacp-ob-aviso">${aviso}</div>`}
-        <div class="hacp-ob-acts">
-          ${secLbl ? `<button type="button" class="hacp-cp-btn" data-ob-rot>${secLbl}</button>` : ''}
-          <button type="button" class="hacp-cp-btn ${modo === 'borrar' ? 'hacp-suc-cancel' : 'hacp-suc-ok'}" data-ob-build${puede ? '' : ' disabled'}>${mainLbl}</button>
+      el.innerHTML = `
+        <div class="hacp-planos-head">
+          <div class="hacp-planos-ttl"><span class="zh">營造圖</span>
+            <span class="tx"><b>Plano de obras</b><i>El solar de la Casa ${esc(h.nombre || '')} · vista en planta · rejilla ${GW}×${GH}</i></span>
+          </div>
+          <button type="button" class="hacp-planos-back" data-act="obras-close">‹ Volver a la hacienda&nbsp;<b>莊</b></button>
         </div>
-      </div>`;
+        <div class="hacp-planos-cols">
+          <aside class="hacp-planos-tools">
+            <div class="hacp-ob-pool">Almacén de la casa · <b>🏛 ${teso}</b> · ${R.hierro.icon}${alm.hierro} · ${R.tinta.icon}${alm.tinta} · ${R.grano.icon}${alm.grano}</div>
+            <div class="hacp-ob-modos">${modeBtn('construir', '營 Construir')}${modeBtn('mover', '✥ Mover')}${modeBtn('borrar', '🗑 Borrar')}${modeBtn('pabellon', '⬚ Pabellón')}</div>
+            ${modo === 'construir' ? `<div class="hacp-ob-pick2">${pickedHtml}${obrasSt.pickOpen ? `<div class="hacp-ob-menu">${menuHtml}</div>` : ''}</div>${costeHtml}` : ''}
+            <div class="hacp-ob-aviso">${aviso}</div>
+            <div class="hacp-ob-acts">
+              ${secLbl ? `<button type="button" class="hacp-cp-btn" data-ob-rot>${secLbl}</button>` : ''}
+              <button type="button" class="hacp-cp-btn ${modo === 'borrar' ? 'hacp-suc-cancel' : 'hacp-suc-ok'}" data-ob-build${puede ? '' : ' disabled'}>${mainLbl}</button>
+            </div>
+          </aside>
+          <div class="hacp-planos-canvas">
+            <div class="hacp-ob-zoom"><button type="button" data-ob-zoom="-1" aria-label="alejar">−</button><span>zoom</span><button type="button" data-ob-zoom="1" aria-label="acercar">+</button><span class="hint">arrastra para moverte por el plano</span></div>
+            <div class="hacp-ob-gridwrap"><div class="hacp-ob-grid" style="grid-template-columns:repeat(${GW},var(--ob-cell));--ob-cell:${obrasSt.zoom}px">${cells}</div></div>
+            <div class="hacp-ob-legend">Celdas a color = lo ya construido · <span class="sw ok"></span> cabe · <span class="sw bad"></span> no cabe</div>
+          </div>
+        </div>
+        <div class="hacp-planos-seal" aria-hidden="true">印</div>`;
       el.querySelector('[data-act="obras-close"]').addEventListener('click', closeObras);
       const grid = el.querySelector('.hacp-ob-grid');
       el.querySelectorAll('[data-ob-zoom]').forEach(b => b.addEventListener('click', () => {   // zoom en vivo (sin re-render → conserva el scroll)
@@ -6040,19 +6084,29 @@
       else if (!gOk) { aviso = `<span class="bad">${esc(gMot)}</span>`; mainLbl = 'Crear pabellón'; secLbl = '↺ Reiniciar'; }
       else { aviso = `<span class="ok">${nT} tiles · listo para crear.</span>`; mainLbl = `Crear pabellón (${nT})`; puede = true; secLbl = '↺ Reiniciar'; }
       const modeBtn = (m, lbl) => `<button type="button" class="hacp-ob-mode${obrasSt.modo === m ? ' on' : ''}" data-ob-modo="${m}">${lbl}</button>`;
-      el.innerHTML = `<div class="hacp-shop-box hacp-obras-box">
-        <button type="button" class="hacp-shop-x" data-act="obras-close" aria-label="Cerrar">✕</button>
-        <div class="hacp-shop-h"><span class="hacp-shop-zh">營</span> Obras de la casa</div>
-        <div class="hacp-ob-modos">${modeBtn('construir', '營 Construir')}${modeBtn('mover', '✥ Mover')}${modeBtn('borrar', '🗑 Borrar')}${modeBtn('pabellon', '⬚ Pabellón')}</div>
-        <div class="hacp-ob-pick"><label>Rol</label><select class="hacp-ob-sel" data-pab-rol>${ROLES.map(r => `<option value="${r.id}"${obrasSt.pabRol === r.id ? ' selected' : ''}>${r.zh} ${esc(r.nombre)}</option>`).join('')}</select><input type="text" class="hacp-ob-pabnm" data-pab-nm maxlength="24" placeholder="Nombre del patio" value="${esc(obrasSt.pabName || '')}"></div>
-        <div class="hacp-ob-coste">${pabs.length}/${maxP} pabellones · mín. <b>${HacBuild.MIN_PABELLON}</b> tiles (p. ej. 10×10, 5×20)</div>
-        <div class="hacp-ob-zoom"><button type="button" data-ob-zoom="-1" aria-label="alejar">−</button><span>zoom</span><button type="button" data-ob-zoom="1" aria-label="acercar">+</button><span class="hint">toca 2 esquinas</span></div>
-        <div class="hacp-ob-gridwrap"><div class="hacp-ob-grid" style="grid-template-columns:repeat(${GW},var(--ob-cell));--ob-cell:${obrasSt.zoom}px">${cells}</div></div>
-        <div class="hacp-ob-legend">Toca un pabellón para borrarlo · <span class="sw ok"></span> cabe · <span class="sw bad"></span> no cabe</div>
-        <div class="hacp-ob-aviso">${aviso}</div>
-        ${pabs.length ? `<div class="hacp-ob-pablist">${pabs.map(p => { const r2 = HacBuild.rolPabellon(p.rol) || {}, n = HacBuild.regionDePabellon(p, tier).length; return `<div class="hacp-ob-pabrow"><span class="g" style="color:${r2.color || '#c9a84c'}">${r2.zh || ''}</span><span class="nm">${esc(p.nombre || '—')}</span><i>${n} tiles${n < HacBuild.MIN_PABELLON ? ' · sin marcar' : ''}</i><button type="button" class="hacp-pab-mini" data-pabdel="${esc(p.id)}" title="Borrar">🗑</button></div>`; }).join('')}</div>` : ''}
-        <div class="hacp-ob-acts">${secLbl ? `<button type="button" class="hacp-cp-btn" data-ob-rot>${secLbl}</button>` : ''}<button type="button" class="hacp-cp-btn ${selPab ? 'hacp-suc-cancel' : 'hacp-suc-ok'}" data-ob-build${puede ? '' : ' disabled'}>${mainLbl}</button></div>
-      </div>`;
+      el.innerHTML = `
+        <div class="hacp-planos-head">
+          <div class="hacp-planos-ttl"><span class="zh">營造圖</span>
+            <span class="tx"><b>Plano de obras · Pabellones</b><i>Delimita los patios de la Casa ${esc(h.nombre || '')} · rejilla ${GW}×${GH}</i></span>
+          </div>
+          <button type="button" class="hacp-planos-back" data-act="obras-close">‹ Volver a la hacienda&nbsp;<b>莊</b></button>
+        </div>
+        <div class="hacp-planos-cols">
+          <aside class="hacp-planos-tools">
+            <div class="hacp-ob-modos">${modeBtn('construir', '營 Construir')}${modeBtn('mover', '✥ Mover')}${modeBtn('borrar', '🗑 Borrar')}${modeBtn('pabellon', '⬚ Pabellón')}</div>
+            <div class="hacp-ob-pick"><label>Rol</label><select class="hacp-ob-sel" data-pab-rol>${ROLES.map(r => `<option value="${r.id}"${obrasSt.pabRol === r.id ? ' selected' : ''}>${r.zh} ${esc(r.nombre)}</option>`).join('')}</select><input type="text" class="hacp-ob-pabnm" data-pab-nm maxlength="24" placeholder="Nombre del patio" value="${esc(obrasSt.pabName || '')}"></div>
+            <div class="hacp-ob-coste">${pabs.length}/${maxP} pabellones · mín. <b>${HacBuild.MIN_PABELLON}</b> tiles (p. ej. 10×10, 5×20)</div>
+            <div class="hacp-ob-aviso">${aviso}</div>
+            <div class="hacp-ob-acts">${secLbl ? `<button type="button" class="hacp-cp-btn" data-ob-rot>${secLbl}</button>` : ''}<button type="button" class="hacp-cp-btn ${selPab ? 'hacp-suc-cancel' : 'hacp-suc-ok'}" data-ob-build${puede ? '' : ' disabled'}>${mainLbl}</button></div>
+            ${pabs.length ? `<div class="hacp-ob-pablist">${pabs.map(p => { const r2 = HacBuild.rolPabellon(p.rol) || {}, n = HacBuild.regionDePabellon(p, tier).length; return `<div class="hacp-ob-pabrow"><span class="g" style="color:${r2.color || '#c9a84c'}">${r2.zh || ''}</span><span class="nm">${esc(p.nombre || '—')}</span><i>${n} tiles${n < HacBuild.MIN_PABELLON ? ' · sin marcar' : ''}</i><button type="button" class="hacp-pab-mini" data-pabdel="${esc(p.id)}" title="Borrar">🗑</button></div>`; }).join('')}</div>` : ''}
+          </aside>
+          <div class="hacp-planos-canvas">
+            <div class="hacp-ob-zoom"><button type="button" data-ob-zoom="-1" aria-label="alejar">−</button><span>zoom</span><button type="button" data-ob-zoom="1" aria-label="acercar">+</button><span class="hint">toca 2 esquinas</span></div>
+            <div class="hacp-ob-gridwrap"><div class="hacp-ob-grid" style="grid-template-columns:repeat(${GW},var(--ob-cell));--ob-cell:${obrasSt.zoom}px">${cells}</div></div>
+            <div class="hacp-ob-legend">Toca un pabellón para borrarlo · <span class="sw ok"></span> cabe · <span class="sw bad"></span> no cabe</div>
+          </div>
+        </div>
+        <div class="hacp-planos-seal" aria-hidden="true">印</div>`;
       el.querySelector('[data-act="obras-close"]').addEventListener('click', closeObras);
       const grid = el.querySelector('.hacp-ob-grid');
       el.querySelectorAll('[data-ob-zoom]').forEach(b => b.addEventListener('click', () => { obrasSt.zoom = Math.max(16, Math.min(58, obrasSt.zoom + Number(b.dataset.obZoom) * 6)); if (grid) grid.style.setProperty('--ob-cell', obrasSt.zoom + 'px'); }));
