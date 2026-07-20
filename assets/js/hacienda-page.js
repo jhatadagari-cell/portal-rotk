@@ -5347,6 +5347,14 @@
     }
     const obrasBody = () => ensureObrasEl().querySelector('.hacp-planos-body');
     const obrasSheet = () => { const s = document.getElementById('hacp-planos'); return s ? s.querySelector('.hacp-planos-sheet') : null; };
+    // Tras re-renderizar el cuerpo con los planos ABIERTOS, libera la altura de la
+    // hoja (max-height:none) para que no recorte el contenido que ha crecido (p. ej.
+    // el desplegable de edificios). Durante la animación de apertura aún no hay
+    // clase 'open', así que este no interfiere con el desenrollado.
+    function obrasFitSheet() {
+      const s = document.getElementById('hacp-planos');
+      if (s && s.classList.contains('open')) { const sh = s.querySelector('.hacp-planos-sheet'); if (sh) sh.style.maxHeight = 'none'; }
+    }
     // Plegar los planos (max-height→0 desde la altura REAL) + re-centrar la finca.
     function closeObras() {
       const sec = document.getElementById('hacp-planos'); if (!sec || sec.hidden) return;
@@ -5456,6 +5464,20 @@
     function wireCasaActions(el) {
       const a = el.querySelector('[data-ob-ampliar]'); if (a) a.addEventListener('click', ampliarFinca);
       const tb = el.querySelector('[data-ob-terreno]'); if (tb && !tb.disabled) tb.addEventListener('click', comprarTerreno);
+    }
+    // Censo de edificios por DOMINIO (武 militar · 文 cultural · 政 administrativo) +
+    // «otros» (edificios sin dominio: salón, mercado, tablón, casa, puerta…). Solo
+    // cuenta la categoría 'edificio' (no suelos/jardines/muros/decoración).
+    function obrasCensoHTML() {
+      const cnt = { militar: 0, cultural: 0, administrativo: 0 }; let otros = 0;
+      ((h.mapa && h.mapa.construcciones) || []).forEach(cc => {
+        const t = HacBuild.tipo(cc.tipo); if (!t || HacBuild.categoriaDe(cc.tipo) !== 'edificio') return;
+        if (t.dominio && cnt[t.dominio] != null) cnt[t.dominio]++; else otros++;
+      });
+      const chips = [];
+      ['militar', 'cultural', 'administrativo'].forEach(d => { if (cnt[d]) chips.push(`<span class="hacp-ob-censo-c" style="--dc:${DOM_COL[d]}">${DOM_GLYPH[d]} ${cnt[d]} ${esc(DOM_NOMBRE[d])}</span>`); });
+      if (otros) chips.push(`<span class="hacp-ob-censo-c otros">🏛 ${otros} otros</span>`);
+      return `<div class="hacp-ob-censo"><span class="hacp-ob-censo-h">户 Edificios</span>${chips.length ? chips.join('') : '<span class="hacp-ob-censo-c none">— ninguno aún</span>'}</div>`;
     }
     function buildObras() {
       const el = obrasBody();
@@ -5594,6 +5616,7 @@
         <div class="hacp-planos-cols">
           <aside class="hacp-planos-tools">
             <div class="hacp-ob-pool">Almacén de la casa · <b>🏛 ${teso}</b> · ${R.hierro.icon}${alm.hierro} · ${R.tinta.icon}${alm.tinta} · ${R.grano.icon}${alm.grano}</div>
+            ${obrasCensoHTML()}
             <div class="hacp-ob-modos">${modeBtn('construir', '營 Construir')}${modeBtn('mover', '✥ Mover')}${modeBtn('borrar', '🗑 Borrar')}${modeBtn('pabellon', '⬚ Pabellón')}</div>
             ${modo === 'construir' ? `<div class="hacp-ob-pick2">${pickedHtml}${obrasSt.pickOpen ? `<div class="hacp-ob-menu">${menuHtml}</div>` : ''}</div>${costeHtml}` : ''}
             <div class="hacp-ob-aviso">${aviso}</div>
@@ -5649,6 +5672,33 @@
       // ── HOVER (como el admin): tooltip de coordenadas + PREVIEW de huella/puerta ──
       // sin re-render (toca clases sobre las celdas concretas por índice fila-columna).
       wireObrasHover(el, { COLS, ROWS, X0, Y0, modo, linea, moviendo, colocando, lista, listaVal, eT });
+      // ── Botón FLOTANTE de confirmar SOBRE la pieza (no hay que ir a la izquierda) ──
+      (function floatConfirm() {
+        const wrap = el.querySelector('.hacp-ob-gridwrap'), grid = el.querySelector('.hacp-ob-grid');
+        if (!wrap || !grid) return;
+        let anchor = null, footW = 1, footH = 1, danger = false, sub = '';
+        if (modo === 'borrar') {
+          if (!selCc) return; anchor = selCc.pos; const f = HacBuild.footprintDe(selCc); footW = f[0]; footH = f[1]; danger = true; sub = 'sin reembolso';
+        } else if (puede && obrasSt.pos && (modo === 'construir' || moviendo)) {
+          anchor = obrasSt.pos;
+          if (!linea) { const f = HacBuild.footprintDe({ tipo: obrasSt.tipo, rot: obrasSt.rot }); footW = f[0]; footH = f[1]; }
+          if (modo === 'mover') sub = 'sin coste';
+          else if (!linea) sub = [co.hierro ? R.hierro.icon + co.hierro : '', co.tinta ? R.tinta.icon + co.tinta : '', co.grano ? R.grano.icon + co.grano : '', co.dinero ? '🏛' + co.dinero : ''].filter(Boolean).join(' ') || 'gratis';
+        } else return;
+        const cell = grid.children[(anchor[1] - Y0) * COLS + (anchor[0] - X0)]; if (!cell) return;
+        wrap.style.position = 'relative';
+        const step = obrasSt.zoom + 2;
+        const btn = document.createElement('button');
+        btn.type = 'button'; btn.className = 'hacp-ob-confirm' + (danger ? ' danger' : '');
+        btn.innerHTML = `<span class="l">${mainLbl}</span>${sub ? `<span class="s">${esc(sub)}</span>` : ''}`;
+        btn.addEventListener('click', () => { if (modo === 'borrar') obrasDerribar(obrasSt.sel); else if (moviendo) obrasMover(); else obrasConstruir(); });
+        wrap.appendChild(btn);
+        btn.style.left = (cell.offsetLeft + footW * step / 2) + 'px';
+        const bh = btn.offsetHeight || 36;
+        if (cell.offsetTop - bh - 8 < wrap.scrollTop) { btn.classList.add('below'); btn.style.top = (cell.offsetTop + footH * step + 6) + 'px'; }
+        else btn.style.top = (cell.offsetTop - 8) + 'px';
+      })();
+      obrasFitSheet();
     }
     // Tooltip de coordenadas (flotante, sigue al cursor) — persistente.
     function obrasCoordTip() {
@@ -6235,6 +6285,7 @@
         </div>
         <div class="hacp-planos-cols">
           <aside class="hacp-planos-tools">
+            ${obrasCensoHTML()}
             <div class="hacp-ob-modos">${modeBtn('construir', '營 Construir')}${modeBtn('mover', '✥ Mover')}${modeBtn('borrar', '🗑 Borrar')}${modeBtn('pabellon', '⬚ Pabellón')}</div>
             <div class="hacp-ob-pick"><label>Rol</label><select class="hacp-ob-sel" data-pab-rol>${ROLES.map(r => `<option value="${r.id}"${obrasSt.pabRol === r.id ? ' selected' : ''}>${r.zh} ${esc(r.nombre)}</option>`).join('')}</select><input type="text" class="hacp-ob-pabnm" data-pab-nm maxlength="24" placeholder="Nombre del patio" value="${esc(obrasSt.pabName || '')}"></div>
             <div class="hacp-ob-coste">${pabs.length}/${maxP} pabellones · mín. <b>${HacBuild.MIN_PABELLON}</b> tiles (p. ej. 10×10, 5×20)</div>
@@ -6262,6 +6313,7 @@
       el.querySelectorAll('[data-pabdel]').forEach(b => b.addEventListener('click', () => borrarPabellon(b.dataset.pabdel)));
       const bb = el.querySelector('[data-ob-build]'); if (bb && !bb.disabled) bb.addEventListener('click', () => { if (obrasSt.pabSel) borrarPabellon(obrasSt.pabSel); else crearPabellon(); });
       wireCasaActions(el);
+      obrasFitSheet();
     }
     async function crearPabellon() {
       if (!esFundador() || !obrasSt.lineA || !obrasSt.pos) return;

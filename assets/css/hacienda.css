@@ -541,7 +541,7 @@ html.hacp-pseudofs, html.hacp-pseudofs body{ overflow:hidden; }
 .hacp-planos .hacp-ob-cname{ color:var(--ink); }
 .hacp-planos .hacp-ob-capt, .hacp-planos .hacp-ob-ccost{ color:var(--ink2); }
 .hacp-planos .hacp-ob-chev{ color:var(--sepia); }
-.hacp-planos .hacp-ob-menu{ border-color:var(--sepia); background:rgba(230,207,148,.78); max-height:none; }
+.hacp-planos .hacp-ob-menu{ border-color:var(--sepia); background:rgba(230,207,148,.85); max-height:clamp(260px,48vh,520px); overflow:auto; overscroll-behavior:contain; -webkit-overflow-scrolling:touch; }
 .hacp-planos .hacp-ob-cathdr{ background:linear-gradient(#e6cf90,#e6cf90); color:var(--rojo); }
 .hacp-planos .hacp-ob-cathdr .n{ color:var(--ink2); background:rgba(122,83,30,.14); }
 .hacp-planos .hacp-ob-sw{ border-color:rgba(0,0,0,.3); }
@@ -615,6 +615,27 @@ html.hacp-pseudofs, html.hacp-pseudofs body{ overflow:hidden; }
 .hacp-ob-govbtn.terreno:hover:not(:disabled){ background:rgba(96,124,60,.3)!important; }
 .hacp-ob-govnote{ font:400 11px 'Noto Sans SC',sans-serif; color:var(--ink2); background:rgba(74,48,24,.08);
   border:1px dashed rgba(122,83,30,.4); border-radius:7px; padding:7px 9px; line-height:1.35; }
+/* Censo de edificios por dominio (户 Edificios · 武 N · 文 N · 政 N · otros) */
+.hacp-ob-censo{ display:flex; flex-wrap:wrap; align-items:center; gap:5px; margin:0 0 10px; }
+.hacp-ob-censo-h{ font:800 10px 'Cinzel Decorative',serif; text-transform:uppercase; letter-spacing:.05em; color:var(--sepia); }
+.hacp-ob-censo-c{ font:700 11px 'Noto Sans SC',sans-serif; color:var(--dc,#5a3d18); background:rgba(255,250,235,.5);
+  border:1px solid color-mix(in srgb, var(--dc,#7a531e) 50%, transparent); border-radius:999px; padding:2px 9px; font-variant-numeric:tabular-nums; }
+.hacp-ob-censo-c.otros{ --dc:#7a531e; } .hacp-ob-censo-c.none{ color:var(--ink2); border-color:rgba(122,83,30,.3); }
+/* Botón FLOTANTE de confirmar, sobre la pieza colocada (dentro del scroll del plano) */
+.hacp-ob-confirm{ position:absolute; z-index:6; transform:translate(-50%,-100%);
+  display:flex; flex-direction:column; align-items:center; gap:1px; white-space:nowrap; cursor:pointer;
+  font:800 13px 'Noto Sans SC',sans-serif; color:#f6ffe0; padding:7px 14px; border-radius:10px;
+  background:linear-gradient(180deg,#7a9a4e,#537030); border:1.5px solid #3f5720;
+  box-shadow:0 4px 12px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.25); }
+.hacp-ob-confirm.below{ transform:translate(-50%,0); }
+.hacp-ob-confirm::after{ content:''; position:absolute; left:50%; bottom:-6px; transform:translateX(-50%);
+  border:6px solid transparent; border-top-color:#537030; }
+.hacp-ob-confirm.below::after{ bottom:auto; top:-6px; border-top-color:transparent; border-bottom-color:#537030; }
+.hacp-ob-confirm .s{ font:600 10.5px 'Noto Sans SC',sans-serif; opacity:.92; font-variant-numeric:tabular-nums; }
+.hacp-ob-confirm:hover{ filter:brightness(1.08); }
+.hacp-ob-confirm.danger{ background:linear-gradient(180deg,#b0463a,#8a2a1f); border-color:#5c150d; color:#ffe9e2; }
+.hacp-ob-confirm.danger::after{ border-top-color:#8a2a1f; }
+.hacp-ob-confirm.danger.below::after{ border-bottom-color:#8a2a1f; border-top-color:transparent; }
 /* Móvil: una sola columna (el plano bajo las herramientas) */
 @media (max-width:720px){
   .hacp-planos{ margin-top:16px; }
