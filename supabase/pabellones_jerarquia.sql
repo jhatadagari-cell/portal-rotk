@@ -160,6 +160,19 @@ begin
   if not exists (select 1 from jsonb_array_elements(coalesce(h.miembros, '[]'::jsonb)) m where m ->> 'personajeId' = p_pj) then
     raise exception 'No perteneces a esta hacienda'; end if;
   if jsonb_array_length(coalesce(h.miembros, '[]'::jsonb)) >= 40 then raise exception 'La casa está llena'; end if;
+  -- Cupo SEMANAL de talentos del tablón (1/semana): SOLO reclutas con `talentoId`
+  -- (los NPC de expedición no lo llevan → sin límite). El `for update` serializa, y
+  -- esta guarda rechaza un 2.º talento si ya hay uno con desdeMs dentro de los últimos
+  -- 7 días. Usa el desdeMs entrante como "ahora" (lo sella el cliente = nowMs). Backstop
+  -- del check de cliente `semanaUsada()` frente a dos personas / doble-clic simultáneos.
+  if coalesce(p_npc ->> 'talentoId', '') <> '' and coalesce((p_npc ->> 'desdeMs')::bigint, 0) > 0
+     and exists (
+       select 1 from jsonb_array_elements(coalesce(h.miembros, '[]'::jsonb)) m
+       where coalesce(m ->> 'talentoId', '') <> '' and coalesce((m ->> 'desdeMs')::bigint, 0) > 0
+         and (p_npc ->> 'desdeMs')::bigint - (m ->> 'desdeMs')::bigint < 604800000
+     ) then
+    raise exception 'La casa ya acogió a un talento esta semana';
+  end if;
   update public.haciendas set miembros = coalesce(miembros, '[]'::jsonb) || jsonb_build_array(p_npc) where id = p_hac returning * into h;
   return jsonb_build_object('miembros', h.miembros);
 end; $$;

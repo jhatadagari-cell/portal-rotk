@@ -46,6 +46,13 @@ declare r public.produccion_casa; k text; add int; cred jsonb;
 begin
   insert into public.produccion_casa (hacienda_id) values (p_hac) on conflict (hacienda_id) do nothing;
   select * into r from public.produccion_casa where hacienda_id = p_hac for update;
+  -- Guarda (anti-doble-pago): el `for update` serializa dos pagos simultáneos, pero no
+  -- impide pagar dos veces. Si este mecenas ya selló HOY (aportes[pj].dia = p_dia),
+  -- rechaza: así un doble-clic / dos pestañas no duplican tesorería (el cliente descuenta
+  -- su oro SOLO si la RPC no lanza, así que aquí NO cobra de más).
+  if coalesce(p_dia, '') <> '' and coalesce(r.aportes -> p_pj ->> 'dia', '') = p_dia then
+    raise exception 'Ya pagaste el diezmo hoy';
+  end if;
   cred := coalesce(r.aportes -> p_pj, '{}'::jsonb) || jsonb_build_object('nombre', coalesce(p_pj_nombre,''), 'dia', coalesce(p_dia,''));
   -- Monedas a la tesorería.
   add := greatest(0, coalesce(p_dinero, 0));
@@ -133,15 +140,32 @@ end; $$;
 -- ── TRIBUTO (F3 政): un miembro ADMINISTRATIVO recibe la caravana ─────────────
 -- Deposita monedas + materiales en la casa y sella `mapa.tributo.ts` (temporizador
 -- de la próxima caravana). Solo un miembro del pabellón administrativo puede recibir.
+--
+-- IDEMPOTENTE (anti-doble-cobro): el `for update` de haciendas SERIALIZA dos recepciones
+-- simultáneas (dos mecenas 政 a la vez, o un doble-clic), pero por sí solo NO impide
+-- reclamar dos veces. La guarda es `mapa.tributo.ts`: la caravana solo está presente si
+-- ha pasado el periodo (4 h) desde el último sello. La 1ª recepción resella `ts=p_ts`;
+-- la 2ª (que esperaba en el lock) lo lee ya fresco → `p_ts - ts < periodo` → no-op, y
+-- devuelve `yaRecibido:true` sin sumar carga ni resellar. (En el primer tributo ts=0 →
+-- p_ts - 0 ≫ periodo → procede.)
 create or replace function public.casa_tributo(p_hac text, p_pj text, p_dinero int, p_lote jsonb, p_ts bigint)
 returns jsonb language plpgsql security definer set search_path = public as $$
 declare h public.haciendas; r public.produccion_casa; k text; add int;
+        v_last bigint; c_period constant bigint := 4 * 60 * 60 * 1000;   -- 4 h (igual que PERIOD_TRIBUTO en el cliente)
 begin
   select * into h from public.haciendas where id = p_hac for update;
   if not found then raise exception 'La hacienda no existe'; end if;
   if not exists (select 1 from jsonb_array_elements(coalesce(h.miembros, '[]'::jsonb)) m
                  where m ->> 'personajeId' = p_pj and m ->> 'pabellon' = 'administrativo') then
     raise exception 'Solo un mecenas del pabellón administrativo recibe el tributo'; end if;
+  -- ¿La caravana está realmente presente? Si no ha pasado el periodo desde el último
+  -- sello, ya la recibió alguien (o es un doble-clic): no sumes nada.
+  v_last := coalesce((h.mapa -> 'tributo' ->> 'ts')::bigint, 0);
+  if coalesce(p_ts, 0) - v_last < c_period then
+    select * into r from public.produccion_casa where hacienda_id = p_hac;
+    return jsonb_build_object('yaRecibido', true, 'mapa', h.mapa,
+                              'tesoreria', coalesce(r.tesoreria, 0), 'almacen', coalesce(r.almacen, '{}'::jsonb));
+  end if;
   insert into public.produccion_casa (hacienda_id) values (p_hac) on conflict (hacienda_id) do nothing;
   select * into r from public.produccion_casa where hacienda_id = p_hac for update;
   r.tesoreria := r.tesoreria + greatest(0, coalesce(p_dinero, 0));
