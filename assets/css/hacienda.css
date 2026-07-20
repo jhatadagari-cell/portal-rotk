@@ -639,6 +639,10 @@ html.hacp-pseudofs, html.hacp-pseudofs body{ overflow:hidden; }
 /* Borrar por SECCIÓN: rectángulo de barrido (secpick) + caminos/muros a borrar (secdel) */
 .hacp-planos .hacp-ob-cell.secpick{ box-shadow:inset 0 0 0 1px rgba(160,31,20,.45); background:rgba(160,31,20,.1); }
 .hacp-planos .hacp-ob-cell.secdel{ background:rgba(190,66,56,.62)!important; border-color:#8f2016!important; box-shadow:inset 0 0 0 2px #ffd24a; }
+/* Navegación del plano: arrastrar (grab) para desplazarse */
+.hacp-planos-canvas .hacp-ob-gridwrap{ cursor:grab; }
+.hacp-planos-canvas .hacp-ob-gridwrap.panning{ cursor:grabbing; }
+.hacp-planos-canvas .hacp-ob-gridwrap.panning .hacp-ob-cell{ cursor:grabbing; }
 /* Móvil: una sola columna (el plano bajo las herramientas) */
 @media (max-width:720px){
   .hacp-planos{ margin-top:16px; }

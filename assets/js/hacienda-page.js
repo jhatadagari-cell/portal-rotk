@@ -5653,7 +5653,7 @@
             ${obrasCasaActionsHTML()}
           </aside>
           <div class="hacp-planos-canvas">
-            <div class="hacp-ob-zoom"><button type="button" data-ob-zoom="-1" aria-label="alejar">−</button><span>zoom</span><button type="button" data-ob-zoom="1" aria-label="acercar">+</button><span class="hint">arrastra para moverte por el plano</span></div>
+            <div class="hacp-ob-zoom"><button type="button" data-ob-zoom="-1" aria-label="alejar">−</button><span>zoom</span><button type="button" data-ob-zoom="1" aria-label="acercar">+</button><span class="hint">arrastra para mover · Ctrl+rueda = zoom</span></div>
             <div class="hacp-ob-gridwrap"><div class="hacp-ob-grid" style="grid-template-columns:repeat(${COLS},var(--ob-cell));--ob-cell:${obrasSt.zoom}px">${cells}</div></div>
             <div class="hacp-ob-legend">Celdas a color = lo ya construido · <span class="sw ok"></span> cabe · <span class="sw bad"></span> no cabe${ringD > 0 ? ' · <span class="sw ext"></span> terreno exterior' : ''}</div>
           </div>
@@ -5706,6 +5706,7 @@
       // ── HOVER (como el admin): tooltip de coordenadas + PREVIEW de huella/puerta ──
       // sin re-render (toca clases sobre las celdas concretas por índice fila-columna).
       wireObrasHover(el, { COLS, ROWS, X0, Y0, modo, linea, moviendo, colocando, lista, listaVal, eT });
+      wireObrasNav(el);
       // ── Botón FLOTANTE de confirmar SOBRE la pieza (no hay que ir a la izquierda) ──
       (function floatConfirm() {
         const wrap = el.querySelector('.hacp-ob-gridwrap'), grid = el.querySelector('.hacp-ob-grid');
@@ -5781,6 +5782,7 @@
         });
       }
       wrap.addEventListener('pointermove', (ev) => {
+        if (wrap._panning) { clear(); tip.style.display = 'none'; return; }   // no previsualizar mientras se arrastra
         tip.style.left = (ev.clientX + 14) + 'px'; tip.style.top = (ev.clientY + 16) + 'px';
         const cellEl = ev.target.closest && ev.target.closest('.hacp-ob-cell');
         if (!cellEl || cellEl.parentNode !== grid) { clear(); tip.style.display = 'none'; return; }
@@ -5789,6 +5791,43 @@
         paintAt(X0 + (idx % COLS), Y0 + Math.floor(idx / COLS));
       });
       wrap.addEventListener('pointerleave', () => { clear(); tip.style.display = 'none'; });
+    }
+    // ── Navegación del plano: ARRASTRAR para desplazarse + Ctrl/rueda para ZOOM ──
+    // (el visor iso de arriba ya funciona así; aquí el grid vive en un scroller).
+    function wireObrasNav(el) {
+      const wrap = el.querySelector('.hacp-ob-gridwrap'), grid = el.querySelector('.hacp-ob-grid');
+      if (!wrap || !grid) return;
+      const GAP = 2;
+      // Zoom con Ctrl+rueda (o pellizco de trackpad), manteniendo el punto bajo el cursor.
+      wrap.addEventListener('wheel', (e) => {
+        if (!e.ctrlKey) return;                       // rueda normal = scroll nativo
+        e.preventDefault();
+        const r = wrap.getBoundingClientRect(), cx = e.clientX - r.left, cy = e.clientY - r.top;
+        const old = obrasSt.zoom, oldStep = old + GAP;
+        const px = wrap.scrollLeft + cx, py = wrap.scrollTop + cy;
+        let nz = Math.max(16, Math.min(58, old - Math.sign(e.deltaY) * 4));
+        if (nz === old) return;
+        obrasSt.zoom = nz; grid.style.setProperty('--ob-cell', nz + 'px');
+        const k = (nz + GAP) / oldStep;
+        wrap.scrollLeft = px * k - cx; wrap.scrollTop = py * k - cy;
+      }, { passive: false });
+      // Arrastrar para desplazarse. Si de verdad hubo arrastre, se suprime el click
+      // siguiente para no colocar/borrar sin querer.
+      let down = false, moved = false, sx = 0, sy = 0, sl = 0, st = 0, pid = null;
+      wrap.addEventListener('pointerdown', (e) => {
+        if (e.button !== 0 || e.pointerType === 'touch') return;   // táctil → scroll nativo (pan-x pan-y)
+        down = true; moved = false; pid = e.pointerId;
+        sx = e.clientX; sy = e.clientY; sl = wrap.scrollLeft; st = wrap.scrollTop;
+      });
+      wrap.addEventListener('pointermove', (e) => {
+        if (!down) return;
+        const dx = e.clientX - sx, dy = e.clientY - sy;
+        if (!moved && Math.hypot(dx, dy) > 5) { moved = true; wrap._panning = true; wrap.classList.add('panning'); try { wrap.setPointerCapture(pid); } catch (_) {} }
+        if (moved) { wrap.scrollLeft = sl - dx; wrap.scrollTop = st - dy; }
+      });
+      const end = () => { if (down && moved) { wrap._suppressClick = true; setTimeout(() => { wrap._suppressClick = false; }, 0); } down = false; wrap._panning = false; wrap.classList.remove('panning'); };
+      wrap.addEventListener('pointerup', end); wrap.addEventListener('pointercancel', end);
+      wrap.addEventListener('click', (e) => { if (wrap._suppressClick) { e.stopPropagation(); e.preventDefault(); } }, true);
     }
     async function obrasDerribar(pos) {
       if (!esFundador() || !pos || !window.HacProdCasa) return;
@@ -6349,7 +6388,7 @@
             ${obrasCasaActionsHTML()}
           </aside>
           <div class="hacp-planos-canvas">
-            <div class="hacp-ob-zoom"><button type="button" data-ob-zoom="-1" aria-label="alejar">−</button><span>zoom</span><button type="button" data-ob-zoom="1" aria-label="acercar">+</button><span class="hint">toca 2 esquinas</span></div>
+            <div class="hacp-ob-zoom"><button type="button" data-ob-zoom="-1" aria-label="alejar">−</button><span>zoom</span><button type="button" data-ob-zoom="1" aria-label="acercar">+</button><span class="hint">toca 2 esquinas · arrastra para mover · Ctrl+rueda = zoom</span></div>
             <div class="hacp-ob-gridwrap"><div class="hacp-ob-grid" style="grid-template-columns:repeat(${GW},var(--ob-cell));--ob-cell:${obrasSt.zoom}px">${cells}</div></div>
             <div class="hacp-ob-legend">Toca un pabellón para borrarlo · <span class="sw ok"></span> cabe · <span class="sw bad"></span> no cabe</div>
           </div>
@@ -6367,6 +6406,7 @@
       el.querySelectorAll('[data-pabdel]').forEach(b => b.addEventListener('click', () => borrarPabellon(b.dataset.pabdel)));
       const bb = el.querySelector('[data-ob-build]'); if (bb && !bb.disabled) bb.addEventListener('click', () => { if (obrasSt.pabSel) borrarPabellon(obrasSt.pabSel); else crearPabellon(); });
       wireCasaActions(el);
+      wireObrasNav(el);
       obrasFitSheet();
     }
     async function crearPabellon() {
