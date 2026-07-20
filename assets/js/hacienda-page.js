@@ -18,6 +18,9 @@
       </div>`;
   }
 
+  // Modo VISITA (solo lectura) — de ámbito de módulo porque lo leen tanto render()
+  // como setupFolk()/buildCharPanel() (funciones hermanas, no anidadas en render).
+  let esVisita = false;
   function render() {
     const host = document.getElementById('hacp-content');
     if (!host) return;
@@ -32,7 +35,7 @@
     const _viaUser = (window.Auth && Auth.current) ? Auth.current() : null;
     const _viaPj = (_viaUser && window.HacPersonajes && HacPersonajes.mine) ? HacPersonajes.mine(_viaUser.id) : null;
     const _soyMiembro = !!(_viaPj && (h.miembros || []).some(m => String(m.personajeId) === String(_viaPj.id)));
-    const esVisita = new URLSearchParams(location.search).get('visita') === '1' || (!_soyMiembro && !!(h.mapa && h.mapa.visitable));
+    esVisita = new URLSearchParams(location.search).get('visita') === '1' || (!_soyMiembro && !!(h.mapa && h.mapa.visitable));
     const miHac = _viaPj ? (HacStore.all().find(x => (x.miembros || []).some(m => String(m.personajeId) === String(_viaPj.id))) || null) : null;
     const facDeHac = (hh) => (hh && hh.mapa && hh.mapa.faccion && window.HacFacciones && HacFacciones.get) ? HacFacciones.get(hh.mapa.faccion) : null;
     const jineteDe = () => {
