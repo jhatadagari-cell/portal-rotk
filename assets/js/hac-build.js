@@ -547,6 +547,11 @@ const HacBuild = (function () {
     if (eT >= 3) out.exteriorTier = clampTier(eT);
     const ga = Math.floor(Number(mapa && mapa.gastado) || 0);
     if (ga > 0) out.gastado = ga;
+    // NPC / VISITABLE: marca de hacienda de NPC visitable (mapa de viajes). Vive en
+    // el mapa (jsonb), sin migración. Sin conservarlo, al cargar se perdía y la
+    // hacienda no aparecía como visitable.
+    if (mapa && mapa.npc) out.npc = true;
+    if (mapa && mapa.visitable) out.visitable = true;
     return out;
   }
 
