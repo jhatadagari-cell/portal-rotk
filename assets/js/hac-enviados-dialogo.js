@@ -206,14 +206,54 @@ const HacEnviadoDialogo = (function () {
     };
   }
 
-  function esShu(name, fac) {
-    return /fei\s*yi|費禕|费祎|wenwei/i.test(String(name || '')) || /shu|蜀/i.test(String(fac || ''));
+  // Detectores por NOMBRE del enviado canónico (el que tiene guion propio y voz
+  // biográfica). Solo si el enviado ES ese personaje se usa su guion tal cual.
+  const esFeiYiName  = (n) => /fei\s*yi|費禕|费祎|wenwei|文偉|文伟/i.test(String(n || ''));
+  const esChenQunName = (n) => /chen\s*qun|陳群|陈群|長文|长文|changwen/i.test(String(n || ''));
+  const esZhaoZiName  = (n) => /zhao\s*zi|趙咨|赵咨|德度|dedu/i.test(String(n || ''));
+  // Facción del enviado (por nombre canónico o por la facción explícita).
+  function facDe(name, fac) {
+    const f = String(fac || '');
+    if (esFeiYiName(name)  || /shu|蜀/i.test(f)) return 'shu';
+    if (esChenQunName(name) || /\bwei\b|魏/i.test(f)) return 'wei';
+    if (esZhaoZiName(name)  || /\bwu\b|吳|吴/i.test(f)) return 'wu';
+    return null;
   }
-  function esWei(name, fac) {
-    return /chen\s*qun|陳群|陈群|長文|长文|changwen/i.test(String(name || '')) || /\bwei\b|魏/i.test(String(fac || ''));
+  // Frases en PRIMERA PERSONA de Chen Qun (biografía suya) → versión de facción,
+  // para que cualquier OTRO enviado de Wei (p. ej. Guo Jia) no se las atribuya.
+  const WEI_FIX = {
+    'Yo mismo dispuse el sistema de los nueve rangos. En Wei el talento asciende aunque nazca en la choza, y la incompetencia cae aunque vista seda. Vuestra hacienda sería medida con rigor… y premiada en consecuencia.':
+      'En Wei rige el sistema de los nueve rangos: el talento asciende aunque nazca en la choza, y la incompetencia cae aunque vista seda. Vuestra hacienda sería medida con rigor… y premiada en consecuencia.',
+    'Cada hombre halla su nivel por lo que vale, no por quién fue su padre. Es el sistema que yo mismo dispuse: los nueve rangos.':
+      'Cada hombre halla su nivel por lo que vale, no por quién fue su padre: el sistema de los nueve rangos.'
+  };
+  // A partir del guion canónico, arma uno de FACCIÓN (persona-agnóstico): reemplaza
+  // el SALUDO por uno con el nombre real y neutraliza las frases en primera persona.
+  function variante(set, introF, introO, fix) {
+    const swap = (arr, intro) => [intro].concat(arr.slice(1));
+    const rep = (arr) => arr.map(s => (fix && fix[s]) || s);
+    const q = {}; Object.keys(set.q).forEach(k => { q[k] = rep(set.q[k]); });
+    return {
+      esperaFundador: swap(set.esperaFundador, introF),
+      esperaOtro: swap(set.esperaOtro, introO),
+      ofertaFundador: rep(set.ofertaFundador),
+      revisitaFundador: set.revisitaFundador.slice(),
+      ofertaOtro: set.ofertaOtro.slice(),
+      q: q
+    };
   }
-  function esWu(name, fac) {
-    return /zhao\s*zi|趙咨|赵咨|德度|dedu/i.test(String(name || '')) || /\bwu\b|吳|吴/i.test(String(fac || ''));
+  function setDeFaccion(fac, name) {
+    const n = name || 'Un enviado';
+    if (fac === 'shu') return variante(FEI_YI,
+      '抱拳 ' + n + ', de Chengdu, en tierras de Shu, para serviros.',
+      '抱拳 ' + n + ', enviado de Chengdu, en tierras de Shu.');
+    if (fac === 'wei') return variante(CHEN_QUN,
+      '抱拳 ' + n + ', de la corte de Wei, a vuestro servicio.',
+      '抱拳 ' + n + ', de la corte de Wei. Un placer correcto.', WEI_FIX);
+    if (fac === 'wu') return variante(ZHAO_ZI,
+      '抱拳 ' + n + ', enviado de Wu. No os robaré mucho tiempo… aún.',
+      '抱拳 ' + n + ', de Wu. Un gusto — para vos, quiero decir.');
+    return null;
   }
 
   // Elige el guion según el CONJUNTO de un enviado (Fei Yi, Chen Qun…) y el contexto.
@@ -230,9 +270,11 @@ const HacEnviadoDialogo = (function () {
     const facNombre = (facObj && (facObj.nombre || facObj.zh)) || (typeof facObj === 'string' ? facObj : '');
     const invitado = !!o.invitado, esFundador = !!o.esFundador, yaEscuchado = !!o.yaEscuchado;
 
-    if (esShu(name, facNombre)) return guion(FEI_YI, invitado, esFundador, yaEscuchado);
-    if (esWei(name, facNombre)) return guion(CHEN_QUN, invitado, esFundador, yaEscuchado);
-    if (esWu(name, facNombre)) return guion(ZHAO_ZI, invitado, esFundador, yaEscuchado);
+    if (esFeiYiName(name))  return guion(FEI_YI, invitado, esFundador, yaEscuchado);
+    if (esChenQunName(name)) return guion(CHEN_QUN, invitado, esFundador, yaEscuchado);
+    if (esZhaoZiName(name))  return guion(ZHAO_ZI, invitado, esFundador, yaEscuchado);
+    const set = setDeFaccion(facDe(name, facNombre), name);
+    if (set) return guion(set, invitado, esFundador, yaEscuchado);
     return generico(facNombre, invitado, esFundador, yaEscuchado);
   }
 
@@ -244,10 +286,10 @@ const HacEnviadoDialogo = (function () {
     const facObj = o.faccion || null;
     const facNombre = (facObj && (facObj.nombre || facObj.zh)) || (typeof facObj === 'string' ? facObj : '');
     let q;
-    if (esShu(name, facNombre)) q = FEI_YI.q;
-    else if (esWei(name, facNombre)) q = CHEN_QUN.q;
-    else if (esWu(name, facNombre)) q = ZHAO_ZI.q;
-    else q = genericoQ(facNombre);
+    if (esFeiYiName(name)) q = FEI_YI.q;
+    else if (esChenQunName(name)) q = CHEN_QUN.q;
+    else if (esZhaoZiName(name)) q = ZHAO_ZI.q;
+    else { const set = setDeFaccion(facDe(name, facNombre), name); q = set ? set.q : genericoQ(facNombre); }
     return PREG_LABELS.map(p => ({ id: p.id, label: p.label, lineas: ((q && q[p.id]) || ['…']).slice() }));
   }
 
