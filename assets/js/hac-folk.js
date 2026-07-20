@@ -2957,6 +2957,8 @@ const HacFolk = (function () {
       const cortesia = oculto ? '' : (w.cortesia || (pjx && pjx.aspecto && pjx.aspecto.cortesia) || '');
       return { id: w.id, name: oculto ? 'Visitante' : w.name, realName: w.name, color: w.color, inside, activity: activityText(w),
         onMission: !!w.onMission, misEnTarea: enTarea, fuera, cortesia, faccion: fac, visitante: !!w.visitante, reveal: !!w.reveal,
+        // ¿Tiene diálogo de visita? (bocadillo en la lista al visitar su hacienda)
+        quiereHablar: !oculto && !!(window.HacVisitaDialogo && HacVisitaDialogo.tiene(w.name)),
         dir: w.dir, bowing: !!w.bowing,
         misRestante: enTarea ? Math.max(0, Math.ceil(w.taskTimer)) : (fuera ? Math.max(0, Math.ceil(w.outTimer)) : null) };
     });

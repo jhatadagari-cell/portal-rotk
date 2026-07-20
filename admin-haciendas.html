@@ -772,6 +772,7 @@
                 const cur = ((h.mapa && h.mapa.tema) || '');
                 return `<option value="${v}"${v === cur ? ' selected' : ''}>${t}</option>`;
               }).join('')}</select></label>
+            <label class="adm-col2" style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" name="visitable"${(h.mapa && h.mapa.visitable) ? ' checked' : ''}> Visitable por otros <i class="adm-lbl-note">aparece en el mapa de viajes; se puede visitar</i></label>
             <label class="adm-col2">Lema<input name="lema" value="${esc(h.lema || '')}"></label>
             <label class="adm-col2">Descripción<textarea name="descripcion" rows="2">${esc(h.descripcion || '')}</textarea></label>
           </div>
@@ -936,6 +937,8 @@
       if (f.estacion) { h.mapa = h.mapa || { v: 1, construcciones: [] }; h.mapa.estacion = f.estacion.value; }
       // Tema visual (arte a mano por reino; '' = set gris por defecto).
       if (f.tema) { h.mapa = h.mapa || { v: 1, construcciones: [] }; if (f.tema.value) h.mapa.tema = f.tema.value; else delete h.mapa.tema; }
+      // Visitable: aparece en el mapa de viajes y se puede visitar (solo lectura).
+      if (f.visitable) { h.mapa = h.mapa || { v: 1, construcciones: [] }; if (f.visitable.checked) h.mapa.visitable = true; else delete h.mapa.visitable; }
       saveHacienda(h);
       render();
     });

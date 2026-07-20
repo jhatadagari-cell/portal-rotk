@@ -26,6 +26,36 @@
     const h = id ? HacStore.get(id) : null;
     if (!h) { notFound(host); return; }
 
+    // ── VISITA a otra hacienda (solo lectura) ────────────────────────────────
+    // Estás de visita si vienes con ?visita=1 o si miras una hacienda `visitable`
+    // de la que NO eres miembro. Nada de acciones: solo pasearte (cámara) y hablar.
+    const _viaUser = (window.Auth && Auth.current) ? Auth.current() : null;
+    const _viaPj = (_viaUser && window.HacPersonajes && HacPersonajes.mine) ? HacPersonajes.mine(_viaUser.id) : null;
+    const _soyMiembro = !!(_viaPj && (h.miembros || []).some(m => String(m.personajeId) === String(_viaPj.id)));
+    const esVisita = new URLSearchParams(location.search).get('visita') === '1' || (!_soyMiembro && !!(h.mapa && h.mapa.visitable));
+    const miHac = _viaPj ? (HacStore.all().find(x => (x.miembros || []).some(m => String(m.personajeId) === String(_viaPj.id))) || null) : null;
+    const facDeHac = (hh) => (hh && hh.mapa && hh.mapa.faccion && window.HacFacciones && HacFacciones.get) ? HacFacciones.get(hh.mapa.faccion) : null;
+    const jineteDe = () => {
+      const mont = (window.HacStats && _viaPj && HacStats.caballo) ? HacStats.caballo(_viaPj.id) : null;
+      const coat = mont ? ((typeof razaDe === 'function' && razaDe(mont.id) || {}).coat || mont.tono) : null;
+      return { aptitud: _viaPj ? _viaPj.aptitud : '', aspecto: _viaPj ? _viaPj.aspecto : {}, montura: coat ? { coat } : null };
+    };
+    function abrirViaje() {
+      if (!window.HacViajar) return;
+      const destinos = HacStore.all().filter(x => x.mapa && x.mapa.visitable && x.id !== h.id).map(x => {
+        const fac = facDeHac(x);
+        return { id: x.id, nombre: x.nombre, zh: x.zh, region: (x.mapa && x.mapa.tema) || '', faccion: fac ? { nombre: fac.nombre, zh: fac.zh, color: fac.color } : null };
+      });
+      HacViajar.abrir({ origen: { nombre: h.nombre }, jinete: jineteDe(), destinos: destinos,
+        onLlegar: (destId) => { location.href = 'hacienda.html?id=' + encodeURIComponent(destId) + '&visita=1'; } });
+    }
+    function volverAMiHacienda() {
+      const dest = miHac ? miHac.id : null;
+      const go = () => { location.href = dest ? ('hacienda.html?id=' + encodeURIComponent(dest)) : 'haciendas.html'; };
+      if (dest && window.HacViajar) HacViajar.transicion({ jinete: jineteDe(), destinoNombre: miHac.nombre, onLlegar: go });
+      else go();
+    }
+
     const pts   = HacCalc.haciendaPuntos(h);
     const tier  = HacCalc.nivelEfectivo(h);          // trinquete: no baja por puntos
     const tInfo = HacCalc.tierPorNivel(tier);
@@ -67,7 +97,17 @@
          </div>`
       : '';
 
+    // Banner de visita (solo lectura) + botón de viaje en la finca propia.
+    const _facH = facDeHac(h);
+    const visitaBar = esVisita ? `<div class="hacp-visita-bar">
+        <span class="vt">Estás de visita en <b>${esc(h.nombre)}</b></span>
+        ${_facH ? `<span class="vfac">${_facH.zh ? esc(_facH.zh) + ' ' : ''}${esc(_facH.nombre)}</span>` : ''}
+        <button type="button" class="hacp-visita-volver" id="hacp-visita-volver">‹ Volver a ${esc(miHac ? miHac.nombre : 'tu hacienda')}&nbsp;<b>莊</b></button>
+      </div>` : '';
+    const travelBtnHtml = (!esVisita && miHac && _soyMiembro) ? `<button type="button" class="hacp-travel-btn" id="hacp-travel-btn" title="Viajar a otra hacienda">圖</button>` : '';
+
     host.innerHTML = `
+      ${visitaBar}
       ${adminBar}
       <section class="hacp-hero" style="--hac:${esc(color)}">
         <canvas class="hacp-art" id="hacp-art"
@@ -96,6 +136,7 @@
                 <path class="hacp-fs-shrink" d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/>
               </svg>
             </button>
+            ${travelBtnHtml}
             <span class="hacp-iso-hint">arrastra para mover · pellizca o ctrl+rueda para zoom</span>
             <div class="hacp-char-panel" id="hacp-char-panel" hidden></div>
             <button type="button" class="hacp-folk-fab" id="hacp-folk-fab" aria-label="Ver mecenas" title="Ver mecenas" hidden>众 <span id="hacp-folk-fab-n"></span></button>
@@ -112,6 +153,10 @@
         </div>
       </section>
       <div class="hacp-detail">${HacRender.panelHTML(h)}</div>`;
+
+    // Botones de viaje / volver.
+    const _travelB = document.getElementById('hacp-travel-btn'); if (_travelB) _travelB.addEventListener('click', abrirViaje);
+    const _volverB = document.getElementById('hacp-visita-volver'); if (_volverB) _volverB.addEventListener('click', volverAMiHacienda);
 
     // Dibuja la escena de pixel art frontal (hero) con el nivel y color.
     const canvas = document.getElementById('hacp-art');
@@ -4256,6 +4301,7 @@
         ${equipoHTML(d)}
         ${woundsHTML(d)}
         ${d.it.visitante ? envoyHTML(d) : ''}
+        ${(esVisita && window.HacVisitaDialogo && HacVisitaDialogo.tiene(d.it.realName || d.it.name)) ? `<button type="button" class="hacp-cp-btn hacp-cp-talk" data-act="visita-talk">💬 Hablar con ${esc(d.it.name)}</button>` : ''}
         ${d.mine ? toolbarHTML(d) : ''}
         ${mision}
         ${guiaHTML(d)}
@@ -4298,6 +4344,20 @@
             if (!isEnvoyKnown(d.it.id)) { markEnvoyKnown(d.it.id); if (window.HacFolk && HacFolk.revelarEnviado) HacFolk.revelarEnviado(true); buildCharPanel(charId); }
             if (invitado && fund) markEnvoyPitched(d.it.id);
           }
+        });
+      });
+      // ── VISITA: hablar con un NPC que tiene diálogo (p. ej. Guo Jia en Luoyang) ──
+      const vtk = charEl.querySelector('[data-act="visita-talk"]');
+      if (vtk) vtk.addEventListener('click', () => {
+        if (!window.HacEnviadoVista || !window.HacVisitaDialogo) return;
+        const ch = HacVisitaDialogo.charla(d.it.realName || d.it.name); if (!ch) return;
+        const pj = (window.HacPersonajes && HacPersonajes.get) ? HacPersonajes.get(d.it.id) : null;
+        HacEnviadoVista.abrir({
+          aptitud: (pj && pj.aptitud) || (d.aptDef && d.aptDef.id) || '',
+          aspecto: (pj && pj.aspecto) || null,
+          faccion: d.it.faccion || null,
+          nombre: d.it.realName || d.it.name, cortesia: d.it.cortesia || '',
+          lineas: ch.lineas, preguntas: ch.preguntas
         });
       });
       // El FUNDADOR ACEPTA: la hacienda se adhiere a la facción del enviado (vía RPC),
@@ -6691,10 +6751,11 @@
       // Icono de "trabajando" (en misión): lo derivamos del estado COMPARTIDO, así
       // que todos los que miran la finca lo ven en ese mecenas.
       const work = m.onMission ? ' <span class="hacp-folk-work" title="En misión">⚒</span>' : '';
+      const bubble = (esVisita && m.quiereHablar) ? ' <span class="hacp-folk-bubble" title="Tiene algo que decir">💬</span>' : '';
       return `<li><button class="hacp-folk-item${m.id === sel ? ' on' : ''}${mine ? ' mine' : ''}" data-id="${esc(m.id)}">
         <span class="hacp-folk-dot" style="--c:${esc(m.color)}"></span>
         <span class="hacp-folk-info">
-          <span class="hacp-folk-name">${esc(m.name)}${work}${mine ? ' <em style="color:#7fc9a0;font-style:normal">(tú)</em>' : ''}</span>
+          <span class="hacp-folk-name">${esc(m.name)}${work}${bubble}${mine ? ' <em style="color:#7fc9a0;font-style:normal">(tú)</em>' : ''}</span>
           <span class="hacp-folk-state${m.inside ? ' inside' : ''}">${m.inside ? '⌂ ' : ''}${esc(m.activity || 'Paseando por la finca')}</span>
           <span class="hacp-folk-energy" title="Energía ${e}%" style="display:block;height:4px;margin-top:3px;border-radius:2px;background:rgba(255,255,255,.14);overflow:hidden"><i style="display:block;height:100%;width:${e}%;background:linear-gradient(90deg,#e0b85a,#7fc9a0)"></i></span>
         </span></button></li>`;
