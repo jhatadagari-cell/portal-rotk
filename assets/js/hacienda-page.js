@@ -5307,6 +5307,21 @@
       const finca = document.querySelector('.hacp-finca');
       if (finca && finca.parentNode) finca.parentNode.insertBefore(sec, finca.nextSibling);
       else (document.getElementById('hacp-content') || document.body).appendChild(sec);
+      // Atajos (como el admin): R gira el edificio · Esc pliega los planos. Solo
+      // cuando los planos están abiertos y no se está escribiendo en un campo.
+      document.addEventListener('keydown', (e) => {
+        const s = document.getElementById('hacp-planos');
+        if (!s || s.hidden || !s.classList.contains('open')) return;
+        if (/^(input|textarea|select)$/i.test((e.target && e.target.tagName) || '')) return;
+        if (e.key === 'Escape') { e.preventDefault(); closeObras(); }
+        else if (e.key === 'r' || e.key === 'R') {
+          if (obrasSt.modo === 'construir') {
+            if (obrasEsLinea()) { obrasSt.lineA = null; obrasSt.pos = null; }
+            else obrasSt.rot = (obrasSt.rot + 1) % 4;
+            buildObras();
+          }
+        }
+      });
       obrasEl = sec; return sec;
     }
     const obrasBody = () => ensureObrasEl().querySelector('.hacp-planos-body');
@@ -5459,6 +5474,17 @@
       const gt = colocando && obrasSt.tipo ? HacBuild.tipo(obrasSt.tipo) : null;
       const inG = (x, y) => gCells.some(p => p[0] === x && p[1] === y);
       const isAnchor = (x, y) => gAnchor && gAnchor[0] === x && gAnchor[1] === y;
+      // Cara/puerta del fantasma de edificio (marca el borde según la rotación, como
+      // el admin) — así se ve de un vistazo hacia dónde «mira» y cómo girarlo.
+      const obrDoorSide = (rr) => ['e', 's', 'w', 'n'][((rr % 4) + 4) % 4];
+      const gFace = new Map();
+      if (colocando && !linea && gAnchor && gt) {
+        const f = HacBuild.footprintDe({ tipo: obrasSt.tipo, rot: obrasSt.rot }), side = obrDoorSide(obrasSt.rot);
+        const x1 = gAnchor[0], y1 = gAnchor[1], x2 = x1 + f[0] - 1, y2 = y1 + f[1] - 1;
+        gCells.forEach(([cx, cy]) => {
+          if ((side === 'e' && cx === x2) || (side === 'w' && cx === x1) || (side === 's' && cy === y2) || (side === 'n' && cy === y1)) gFace.set(cx + ',' + cy, side);
+        });
+      }
       let cells = '';
       for (let y = 0; y < GH; y++) for (let x = 0; x < GW; x++) {
         const k = x + ',' + y, o = occ.get(k), g = inG(x, y);
@@ -5466,7 +5492,7 @@
           const isMov = movSet.has(k), isSel = selSet.has(k), clickable = seleccionable && !isMov;
           cells += `<button type="button" class="hacp-ob-cell occ${isSel ? ' sel' : ''}${isMov ? ' moving' : ''}"${clickable ? ` data-occ="${o.ax},${o.ay}"` : ' disabled'} style="background:${o.color}" title="${esc(o.nombre)}">${o.anchor && o.zh ? `<span class="hacp-ob-lbl">${esc(o.zh)}</span>` : ''}</button>`;
         } else if (g) {
-          cells += `<button type="button" class="hacp-ob-cell ghost ${gOkSet.has(k) ? 'ok' : 'bad'}" data-gx="${x}" data-gy="${y}" style="background:${gt ? gt.color : 'transparent'}" title="${gt ? esc(gt.nombre) : ''}">${isAnchor(x, y) && gt && gt.zh ? `<span class="hacp-ob-lbl">${esc(gt.zh)}</span>` : ''}</button>`;
+          cells += `<button type="button" class="hacp-ob-cell ghost ${gOkSet.has(k) ? 'ok' : 'bad'}${gFace.has(k) ? ' hov-face-' + gFace.get(k) : ''}" data-gx="${x}" data-gy="${y}" style="background:${gt ? gt.color : 'transparent'}" title="${gt ? esc(gt.nombre) : ''}">${isAnchor(x, y) && gt && gt.zh ? `<span class="hacp-ob-lbl">${esc(gt.zh)}</span>` : ''}</button>`;
         } else {
           cells += `<button type="button" class="hacp-ob-cell free"${colocando ? ` data-gx="${x}" data-gy="${y}"` : ' disabled'}></button>`;
         }
@@ -5508,7 +5534,8 @@
           <div class="hacp-planos-ttl"><span class="zh">營造圖</span>
             <span class="tx"><b>Plano de obras</b><i>El solar de la Casa ${esc(h.nombre || '')} · vista en planta · rejilla ${GW}×${GH}</i></span>
           </div>
-          <button type="button" class="hacp-planos-back" data-act="obras-close">‹ Volver a la hacienda&nbsp;<b>莊</b></button>
+          <div class="hacp-planos-headr"><span class="hacp-planos-kbd">R girar · Esc salir</span>
+          <button type="button" class="hacp-planos-back" data-act="obras-close">‹ Volver a la hacienda&nbsp;<b>莊</b></button></div>
         </div>
         <div class="hacp-planos-cols">
           <aside class="hacp-planos-tools">
@@ -5563,6 +5590,62 @@
         else if (modo === 'mover') obrasMover();
         else obrasConstruir();
       });
+      // ── HOVER (como el admin): tooltip de coordenadas + PREVIEW de huella/puerta ──
+      // sin re-render (toca clases sobre las celdas concretas por índice fila-columna).
+      wireObrasHover(el, GW, GH, { modo, linea, moviendo, colocando, lista, listaVal });
+    }
+    // Tooltip de coordenadas (flotante, sigue al cursor) — persistente.
+    function obrasCoordTip() {
+      let t = document.getElementById('hacp-ob-coordtip');
+      if (!t) { t = document.createElement('div'); t.id = 'hacp-ob-coordtip'; t.className = 'hacp-ob-coordtip'; document.body.appendChild(t); }
+      return t;
+    }
+    function wireObrasHover(el, GW, GH, st) {
+      const wrap = el.querySelector('.hacp-ob-gridwrap'), grid = el.querySelector('.hacp-ob-grid');
+      if (!wrap || !grid) return;
+      const cellAt = (x, y) => (x >= 0 && y >= 0 && x < GW && y < GH) ? grid.children[y * GW + x] : null;
+      const tip = obrasCoordTip();
+      const doorSide = (rr) => ['e', 's', 'w', 'n'][((rr % 4) + 4) % 4];
+      const FACE = ['hov-face-n', 'hov-face-s', 'hov-face-e', 'hov-face-w'];
+      let painted = [];
+      const clear = () => { painted.forEach(c => c.classList.remove('hov', 'hov-ok', 'hov-bad', ...FACE)); painted = []; };
+      const mark = (e, cls) => { if (!e) return; e.classList.add('hov', cls); painted.push(e); };
+      function paintAt(gx, gy) {
+        clear();
+        tip.textContent = gx + ' , ' + gy; tip.style.display = 'block';
+        // Borrar / elegir para mover: resalta el edificio BAJO el cursor.
+        if (st.modo === 'borrar' || (st.modo === 'mover' && !st.moviendo)) {
+          const cc = st.lista.find(x => HacBuild.celdasOcupadas(x).some(p => p[0] === gx && p[1] === gy));
+          if (cc) HacBuild.celdasOcupadas(cc).forEach(([cx, cy]) => mark(cellAt(cx, cy), 'hov-bad'));
+          return;
+        }
+        if (!st.colocando || !obrasSt.tipo) return;
+        // Camino/muro: previsualiza la LÍNEA inicio→cursor (o una celda si no hay inicio).
+        if (st.linea) {
+          if (!obrasSt.lineA) { mark(cellAt(gx, gy), 'hov-ok'); return; }
+          const lc = obrasLineCells(obrasSt.lineA, [gx, gy]);
+          lc.cells.forEach(([cx, cy]) => { const ok = HacBuild.puedeColocar({ tipo: obrasSt.tipo, pos: [cx, cy], rot: lc.rot }, tier, st.lista).ok; mark(cellAt(cx, cy), ok ? 'hov-ok' : 'hov-bad'); });
+          return;
+        }
+        // Edificio: huella coloreada + CARA/PUERTA marcada según la rotación.
+        const c = { tipo: obrasSt.tipo, pos: [gx, gy], rot: obrasSt.rot };
+        const ok = HacBuild.puedeColocar(c, tier, st.listaVal).ok;
+        const f = HacBuild.footprintDe(c), side = doorSide(obrasSt.rot);
+        const x2 = gx + f[0] - 1, y2 = gy + f[1] - 1;
+        HacBuild.celdasOcupadas(c).forEach(([cx, cy]) => {
+          const e = cellAt(cx, cy); mark(e, ok ? 'hov-ok' : 'hov-bad');
+          if (e && ((side === 'e' && cx === x2) || (side === 'w' && cx === gx) || (side === 's' && cy === y2) || (side === 'n' && cy === gy))) e.classList.add('hov-face-' + side);
+        });
+      }
+      wrap.addEventListener('pointermove', (ev) => {
+        tip.style.left = (ev.clientX + 14) + 'px'; tip.style.top = (ev.clientY + 16) + 'px';
+        const cellEl = ev.target.closest && ev.target.closest('.hacp-ob-cell');
+        if (!cellEl || cellEl.parentNode !== grid) { clear(); tip.style.display = 'none'; return; }
+        const idx = Array.prototype.indexOf.call(grid.children, cellEl);
+        if (idx < 0) { clear(); tip.style.display = 'none'; return; }
+        paintAt(idx % GW, Math.floor(idx / GW));
+      });
+      wrap.addEventListener('pointerleave', () => { clear(); tip.style.display = 'none'; });
     }
     async function obrasDerribar(pos) {
       if (!esFundador() || !pos || !window.HacProdCasa) return;
@@ -6089,7 +6172,8 @@
           <div class="hacp-planos-ttl"><span class="zh">營造圖</span>
             <span class="tx"><b>Plano de obras · Pabellones</b><i>Delimita los patios de la Casa ${esc(h.nombre || '')} · rejilla ${GW}×${GH}</i></span>
           </div>
-          <button type="button" class="hacp-planos-back" data-act="obras-close">‹ Volver a la hacienda&nbsp;<b>莊</b></button>
+          <div class="hacp-planos-headr"><span class="hacp-planos-kbd">Esc salir</span>
+          <button type="button" class="hacp-planos-back" data-act="obras-close">‹ Volver a la hacienda&nbsp;<b>莊</b></button></div>
         </div>
         <div class="hacp-planos-cols">
           <aside class="hacp-planos-tools">

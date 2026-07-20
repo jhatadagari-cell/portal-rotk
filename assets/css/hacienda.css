@@ -564,19 +564,41 @@ html.hacp-pseudofs, html.hacp-pseudofs body{ overflow:hidden; }
 .hacp-planos .hacp-suc-cancel:hover{ background:rgba(160,31,20,.26)!important; color:#661d13!important; }
 .hacp-planos .hacp-ob-zoom{ color:var(--ink2); }
 .hacp-planos .hacp-ob-zoom button{ background:rgba(122,83,30,.14); color:var(--sepia); border-color:var(--sepia); }
-/* ── El PLANO: retícula a tinta sobre pergamino ── */
-.hacp-planos-canvas .hacp-ob-gridwrap{ max-height:clamp(340px,62vh,700px); border:1px solid rgba(122,83,30,.4);
-  border-radius:8px; padding:8px;
+/* ── El PLANO: tablero de dibujo entintado, para que la retícula y las piezas
+   CONTRASTEN con el pergamino (antes se veía lavado) ── */
+.hacp-planos-canvas .hacp-ob-gridwrap{ max-height:clamp(340px,62vh,700px); border:2px solid #4a3018; border-radius:8px; padding:9px;
   background:
-    repeating-linear-gradient(0deg, rgba(58,40,18,.07) 0 1px, transparent 1px 100%),
-    rgba(226,197,131,.32); }
-.hacp-planos .hacp-ob-cell{ border:1px solid rgba(58,40,18,.18); background:rgba(255,250,235,.14); border-radius:2px; }
-.hacp-planos .hacp-ob-cell.free:hover{ background:rgba(122,83,30,.22); }
-.hacp-planos .hacp-ob-cell.occ{ border-color:rgba(0,0,0,.35); }
-.hacp-planos .hacp-ob-lbl{ color:#fff; text-shadow:0 1px 2px rgba(0,0,0,.7); }
-.hacp-planos .hacp-ob-legend{ color:var(--ink2); }
-.hacp-planos .hacp-ob-legend .sw{ background:rgba(122,83,30,.12); }
+    repeating-linear-gradient(90deg, rgba(38,26,12,.13) 0 1px, transparent 1px 15px),
+    repeating-linear-gradient(0deg, rgba(38,26,12,.13) 0 1px, transparent 1px 15px),
+    linear-gradient(180deg,#cbb079,#bfa066);
+  box-shadow:inset 0 0 30px rgba(74,48,24,.42), 0 2px 8px rgba(0,0,0,.3); }
+.hacp-planos .hacp-ob-cell{ border:1px solid rgba(46,30,14,.42); background:rgba(60,40,18,.07); border-radius:2px; }
+.hacp-planos .hacp-ob-cell.free:hover{ background:rgba(74,48,24,.28); border-color:rgba(46,30,14,.7); }
+.hacp-planos .hacp-ob-cell.occ{ border-color:rgba(0,0,0,.5); box-shadow:inset 0 0 0 1px rgba(255,255,255,.14); }
+.hacp-planos .hacp-ob-cell.ghost{ border-width:2px; }
+.hacp-planos .hacp-ob-cell.ghost.ok{ border-color:#2f7a3a; }
+.hacp-planos .hacp-ob-cell.ghost.bad{ border-color:#b3341f; }
+.hacp-planos .hacp-ob-lbl{ color:#fff; text-shadow:0 1px 2px rgba(0,0,0,.8); font-weight:700; }
+.hacp-planos .hacp-ob-legend{ color:var(--ink); }
+.hacp-planos .hacp-ob-legend .sw{ background:rgba(74,48,24,.16); border-width:2px; }
 .hacp-planos .hacp-ob-legend .sw.ok{ border-color:#2f7a3a; } .hacp-planos .hacp-ob-legend .sw.bad{ border-color:#b3341f; }
+/* HOVER: preview de huella (verde cabe / rojo no) + CARA/PUERTA marcada por rotación */
+.hacp-planos .hacp-ob-cell.hov.hov-ok{ background:rgba(74,150,90,.6)!important; border-color:#256b31; }
+.hacp-planos .hacp-ob-cell.hov.hov-bad{ background:rgba(190,66,56,.58)!important; border-color:#8f2016; }
+.hacp-planos .hacp-ob-cell.hov-face-e{ box-shadow:inset calc(var(--ob-cell,28px)*-0.2) 0 0 0 #ffd24a; }
+.hacp-planos .hacp-ob-cell.hov-face-w{ box-shadow:inset calc(var(--ob-cell,28px)*0.2) 0 0 0 #ffd24a; }
+.hacp-planos .hacp-ob-cell.hov-face-s{ box-shadow:inset 0 calc(var(--ob-cell,28px)*-0.2) 0 0 #ffd24a; }
+.hacp-planos .hacp-ob-cell.hov-face-n{ box-shadow:inset 0 calc(var(--ob-cell,28px)*0.2) 0 0 #ffd24a; }
+/* Chip de atajos + agrupador derecho de la cabecera */
+.hacp-planos-headr{ margin-left:auto; display:flex; align-items:center; gap:10px; }
+.hacp-planos-back{ margin-left:0; }
+.hacp-planos-kbd{ font:700 10px 'Noto Sans SC',sans-serif; color:var(--ink2); background:rgba(74,48,24,.12);
+  border:1px solid rgba(122,83,30,.4); border-radius:6px; padding:4px 8px; letter-spacing:.02em; white-space:nowrap; }
+/* Tooltip de coordenadas (sigue al cursor, como el admin) */
+.hacp-ob-coordtip{ position:fixed; z-index:9999; pointer-events:none; display:none;
+  font:800 11px 'Noto Sans SC',sans-serif; font-variant-numeric:tabular-nums;
+  background:#2a1c0c; color:#f3e0a6; border:1px solid #7a531e; border-radius:6px; padding:3px 8px;
+  box-shadow:0 2px 9px rgba(0,0,0,.55); }
 /* Móvil: una sola columna (el plano bajo las herramientas) */
 @media (max-width:720px){
   .hacp-planos{ margin-top:16px; }
