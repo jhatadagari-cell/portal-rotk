@@ -579,6 +579,13 @@
       const m = (h.miembros || []).find(x => String(x.id) === fid);
       return !!(m && String(m.personajeId) === String(myId));
     };
+    // ¿El fundador puede AMPLIAR ya? (el prestigio desbloquea un nivel por encima del
+    // confirmado). Mismo criterio que el panel de admin; el servidor lo revalida.
+    const puedeAmpliar = () => {
+      if (!esFundador() || !window.HacCalc) return false;
+      const ledger = window.HacPuntos ? HacPuntos.totalHacienda(h.id) : 0;
+      return HacCalc.nivelAlcanzable(h, ledger) > HacCalc.nivelEfectivo(h);
+    };
     // Modificador de prestigio por el diezmo: +buff al día, −debufo si pendiente.
     const diezmoFrac = () => !diezmoDisponible() ? 0 : (HacProdCasa.pagadoHoy(h.id, myId, prodDia()) ? TITHE_BUFF : -TITHE_DEBUFF);
     // Prestigio a otorgar con TODOS los modificadores (objetos + diezmo). Fuente única
@@ -4106,6 +4113,7 @@
       const casa = grupo('La hacienda', [
         hasMarket ? tool('shop', '市', 'Mercado', 0) : '',
         prodOk() ? tool('prod', '產', 'Producción', prodEnc, ' hacp-cp-prod') : '',
+        puedeAmpliar() ? tool('ampliar', '昇', 'Ampliar', 0, ' hacp-cp-ampliar pulse') : '',
         esFundador() ? tool('obras', '營', 'Obras', 0, ' hacp-cp-obras') : '',
         (window.HacStore && HacStore.pabellones && HacStore.pabellones(h.id).length) ? tool('pabellon', '部', 'Pabellón', 0) : '',
       ]);
@@ -4363,6 +4371,8 @@
       if (pdb) pdb.addEventListener('click', openProd);
       const obb = charEl.querySelector('[data-act="obras"]');
       if (obb) obb.addEventListener('click', openObras);
+      const amb = charEl.querySelector('[data-act="ampliar"]');
+      if (amb) amb.addEventListener('click', ampliarFinca);
       const pbb = charEl.querySelector('[data-act="pabellon"]');
       if (pbb) pbb.addEventListener('click', openPabPanelSmart);
       charEl.querySelectorAll('[data-item]').forEach(b => b.addEventListener('click', () => abrirObjeto(b.dataset.item)));
@@ -5247,6 +5257,27 @@
         HacIso.draw(iso, { mapa: h.mapa, tier, color: h.color || '#c9a84c', pabellones: pab, estacion: (h.mapa && h.mapa.estacion) || 'verano', tema: (h.mapa && h.mapa.tema) || '' });
       }
       if (window.HacFolk && HacFolk.repaintOverlay) HacFolk.repaintOverlay();
+    }
+    // ── AMPLIAR la finca (subir de nivel): el FUNDADOR confirma el ascenso ──────
+    // El prestigio ya desbloqueó un nivel; el servidor lo revalida y sube mapa.tier
+    // (trinquete). La finca cambia de TAMAÑO, así que recargamos la página para
+    // reconstruir la rejilla/iso/folk desde cero (no re-llamar render(): apilaría los
+    // intervalos de setupFolk). Al recargar, celebrarAscensoSiToca dispara el overlay.
+    let ampliarBusy = false;
+    async function ampliarFinca() {
+      if (ampliarBusy || !esFundador()) return;
+      if (!puedeAmpliar()) { toast('Aún no hay un nivel nuevo desbloqueado'); return; }
+      ampliarBusy = true;
+      try {
+        const d = await pabRPC('casa_subir_nivel', { p_hac: h.id, p_pj: myId });
+        if (d && d.subio) {
+          if (d.mapa) h.mapa = d.mapa;
+          toast('昇 ¡La casa asciende! Ampliando la finca…');
+          setTimeout(() => { try { location.reload(); } catch (e) {} }, 700);
+        } else {
+          toast('Aún no hay un nivel nuevo que confirmar'); ampliarBusy = false;
+        }
+      } catch (e) { toast('No se pudo ampliar: ' + (e && e.message || '')); ampliarBusy = false; }
     }
     let obrasEl = null;
     const obrasSt = { tipo: null, rot: 0, pos: null, lineA: null, zoom: 28, modo: 'construir', sel: null, movingFrom: null, pabRol: 'militar', pabName: '', pabSel: null, pickOpen: false };   // modo pabellon: pabRol/pabName + rect (lineA→pos) · pabSel (borrar) · pickOpen: selector de edificio desplegado
