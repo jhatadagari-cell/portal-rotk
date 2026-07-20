@@ -1138,10 +1138,17 @@
       if (ocupadoAhora(myId)) { toast('Tu mecenas ya está ocupado · espera a que vuelva'); return; }
       if (window.HacStats && HacStats.malherido && HacStats.malherido(myId)) { toast('Tu mecenas está malherido · cúralo antes de salir'); return; }
       const m = HacMisiones.get(misId); if (!m) return;
-      if (window.HacEnergia) HacEnergia.spend(h.id, myId, costeExped(m));
-      if (window.HacMisTomadas) HacMisTomadas.tomar(h.id, misId);   // se consume de TU tablón hasta el relleno diario
+      // La misión se consume del tablón SOLO cuando la orden se ha creado de verdad.
+      // Antes se «tomaba» ANTES de HacOrdenes.set: si el set fallaba (red/RLS/estado
+      // raro), la misión se quemaba el día entero sin salir ni cobrar → «no me quedan
+      // misiones y no las he hecho». Ahora: energía + tomar dentro del .then del set.
       HacOrdenes.set({ haciendaId: h.id, miembroId: myId, tipo: 'expedicion', targetId: 'mis:' + misId, duracionSeg: durExped(m) })
-        .then(applyOrders).catch(e => console.warn('[orden] set', e));
+        .then(() => {
+          if (window.HacEnergia) HacEnergia.spend(h.id, myId, costeExped(m));
+          if (window.HacMisTomadas) HacMisTomadas.tomar(h.id, misId);   // se consume de TU tablón hasta el relleno diario
+          applyOrders();
+        })
+        .catch(e => { console.warn('[orden] set', e); toast('No se pudo enviar la expedición · inténtalo de nuevo'); });
     }
     // ESCARAMUZA: cuando MI banda está 'en_curso', mi mecenas sale por la puerta
     // (reusa la maquinaria de expedición: camina al portón, 拱手/saludo y se va) hasta
