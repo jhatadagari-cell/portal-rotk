@@ -991,6 +991,8 @@ button.hacp-slot.comida:hover{ background:rgba(127,201,160,.24); }
 .hacp-esc-prob.hi{ border-color:rgba(127,199,106,.4); } .hacp-esc-prob.lo{ border-color:rgba(224,104,90,.4); }
 .hacp-esc-prob-v{ display:inline-flex; align-items:baseline; gap:8px; }
 .hacp-esc-prob-risk{ font-style:normal; font-weight:600; font-size:11px; color:var(--parch2); }
+.hacp-esc-prob-enc{ display:block; font-style:normal; font-weight:700; font-size:10px; margin-top:2px; }
+.hacp-esc-prob-enc.pos{ color:#7fc76a; } .hacp-esc-prob-enc.neg{ color:#e0685a; }
 .hacp-enc-lvl{ font-style:normal; font-weight:400; font-size:11px; color:var(--parch2); }
 .hacp-enc-hint{ font-size:11px; color:var(--parch2); text-align:center; margin:-6px 0 12px; opacity:.9; }
 .hacp-enc-hint b{ color:var(--parch); }
@@ -1047,6 +1049,13 @@ button.hacp-slot.comida:hover{ background:rgba(127,201,160,.24); }
 .hacp-suc-chk{ font:700 12px 'Noto Serif SC',serif; color:var(--gold); background:rgba(201,168,76,.12); border-radius:6px; padding:2px 7px; white-space:nowrap; }
 .hacp-suc-opt{ flex:1; }
 .hacp-suc-pct{ font-size:11px; font-variant-numeric:tabular-nums; color:var(--parch2,#c9bda6); }
+/* Encuentro coop: opción en columna (título + %) sobre sus recompensas, para que se vea qué gana/arriesga cada elección. */
+.hacp-enc-op{ flex-direction:column; align-items:stretch; gap:6px; }
+.hacp-enc-op-top{ display:flex; align-items:center; gap:9px; }
+.hacp-enc-op .hacp-suc-pct{ font:800 13px 'Cinzel',serif; }
+.hacp-enc-op-fx{ display:flex; flex-wrap:wrap; gap:2px 12px; font-size:11px; line-height:1.35; }
+.hacp-enc-op-fx .win{ color:#bfe0ac; font-variant-numeric:tabular-nums; }
+.hacp-enc-op-fx .lose{ color:#e2a06a; opacity:.85; font-variant-numeric:tabular-nums; }
 .hacp-suc-bar{ height:4px; border-radius:3px; background:rgba(255,255,255,.08); margin-top:14px; overflow:hidden; }
 .hacp-suc-bar i{ display:block; height:100%; width:100%; background:linear-gradient(90deg,#b23b2e,#e2a06a); transition:width .2s linear; }
 .hacp-suc-hint{ font-size:10.5px; color:var(--parch2,#c9bda6); text-align:center; margin-top:6px; opacity:.85; }

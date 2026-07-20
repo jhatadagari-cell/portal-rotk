@@ -2385,6 +2385,17 @@
       return escSucEl;
     }
     function closeEscSuc() { if (escReportAnim) { escReportAnim.stop(); escReportAnim = null; } if (escSucEl) escSucEl.hidden = true; }
+    // Recompensas de una opción en fichas cortas (para la CARTA del encuentro: deja claro
+    // qué gana/arriesga cada elección, no solo el %). Devuelve [] si el desenlace es neutro.
+    function fxChips(s) {
+      const p = [];
+      if (s.pMod) p.push((s.pMod > 0 ? '+' : '−') + Math.round(Math.abs(s.pMod) * 100) + '% éxito');
+      if (s.share) p.push((s.share > 0 ? '+' : '−') + Math.abs(s.share) + '💰');
+      if (s.loot) p.push((s.loot > 0 ? '+' : '') + s.loot + ' botín');
+      if (s.xp) p.push('+' + s.xp + ' XP');
+      if (s.cura) p.push('curación');
+      return p;
+    }
     // Abre la carta del encuentro que RESERVÉ (con opciones). true si había uno pendiente.
     function escEncAbrir(band) {
       band = band || (window.HacEscaramuzas && HacEscaramuzas.miBanda(h.id, myId)); if (!band) return false;
@@ -2396,8 +2407,15 @@
       const ops = enc.ops.map((op, ix) => {
         const bo = op.bonus || 0;
         const p = Math.round(Math.max(0.05, Math.min(0.95, pSuceso(nivelEf(e.dom), dif) + bo)) * 100);
-        const tag = bo > 0.01 ? '<span class="hacp-opt-tag seg">seguro</span>' : bo < -0.01 ? '<span class="hacp-opt-tag rie">arriesgado</span>' : '';
-        return `<button type="button" class="hacp-suc-op" data-eop="${ix}"><span class="hacp-suc-opt">${esc(op.t)}</span>${tag}<span class="hacp-suc-pct">${p}%</span></button>`;
+        const tag = bo > 0.01 ? '<span class="hacp-opt-tag seg">más seguro</span>' : bo < -0.01 ? '<span class="hacp-opt-tag rie">más arriesgado</span>' : '';
+        const win = fxChips(op.ok || {}), lose = fxChips(op.fail || {});
+        const fx = `<span class="hacp-enc-op-fx">`
+          + `<span class="win">✔ ${win.length ? esc(win.join(' · ')) : 'ventaja para la banda'}</span>`
+          + (lose.length ? `<span class="lose">✘ si falla ${esc(lose.join(' · '))}</span>` : '')
+          + `</span>`;
+        return `<button type="button" class="hacp-suc-op hacp-enc-op" data-eop="${ix}">`
+          + `<span class="hacp-enc-op-top"><span class="hacp-suc-opt">${esc(op.t)}</span>${tag}<span class="hacp-suc-pct">${p}%</span></span>`
+          + fx + `</button>`;
       }).join('');
       const el = ensureEscSucEl(); el.hidden = false;
       el.innerHTML = `<div class="hacp-suc-box">
@@ -2405,7 +2423,7 @@
         <div class="hacp-suc-ttl">${esc(enc.txt)}</div>
         <div class="hacp-suc-desc">${esc(enc.desc || '')}</div>
         <div class="hacp-enc-apt">Se resuelve con tu <b style="color:${DOM_COLOR[e.dom]}">${DOM_NOMBRE[e.dom]}</b> · nivel ${nivelEf(e.dom)} vs dificultad ${dif}</div>
-        <div class="hacp-enc-hint">El % sube cuanto más alto tengas tu <b>${DOM_NOMBRE[e.dom]}</b> respecto a la dificultad.</div>
+        <div class="hacp-enc-hint">La opción <b>arriesgada</b> baja el % pero da mejor recompensa (y peor castigo si falla); la <b>segura</b> sube el % a cambio de menos premio. El % base sube cuanto más alto tengas tu <b>${DOM_NOMBRE[e.dom]}</b>.</div>
         <div class="hacp-suc-ops">${ops}</div></div>`;
       el.querySelectorAll('[data-eop]').forEach(b => b.addEventListener('click', () => escEncTirar(band, slot, e.dom, e.encIdx, +b.dataset.eop)));
       return true;
@@ -2529,6 +2547,9 @@
       if (p.suc) rows.push(`<li><span>Doctrina y sucesos</span><b class="${cls(p.suc)}">${mod(p.suc)}</b></li>`);
       if (p.rel) rows.push(`<li><span>Vínculos entre mecenas</span><b class="${cls(p.rel)}">${mod(p.rel)}</b></li>`);
       if (p.cap) rows.push(`<li><span>Talento del capitán</span><b class="pos">${mod(p.cap)}</b></li>`);
+      // Encuentros ya resueltos durante la marcha (se van sumando en vivo).
+      const encPMod = escEncTot(band).pMod;
+      if (encPMod) rows.push(`<li><span>Encuentros resueltos</span><b class="${cls(encPMod)}">${mod(encPMod)}</b></li>`);
       // El consejo se adapta: si ya estás al tope de aptitudes, reclutar más NO sube esa línea.
       const tip = p.statTope
         ? 'Tus aptitudes ya superan de sobra el requisito (al tope). Suma más mecenas: cada compañero aporta al bono de compañía (hasta +6).'
@@ -2724,12 +2745,17 @@
       const scn = escenarioDef(b.escenario);
       const rating = bandRating(b);
       const rq = scn ? reqInfo(b, scn) : { ok: true, partes: [] };
-      const probPct = Math.round(escProb(b) * 100);
+      // Los ENCUENTROS ya resueltos ajustan la prob. real de la banda (mismo cálculo que la
+      // liquidación: escProb + et.pMod). Reflejarlo aquí para que «Éxito estimado» se
+      // recalcule según van resolviéndose los encuentros, no quede clavado en el base.
+      const et = escEncTot(b);
+      const probPct = Math.round(Math.max(0.05, Math.min(0.95, escProb(b) + et.pMod)) * 100);
       const probCls = probPct >= 65 ? 'hi' : (probPct >= 45 ? 'mid' : 'lo');
       const sharePrev = Math.max(0, shareRating(rating));
       const lootBonus = lootRating(rating);
       const riskPct = Math.max(0, 100 - probPct);
-      const probHTML = `<div class="hacp-esc-prob ${probCls}"><span>Éxito estimado</span><span class="hacp-esc-prob-v"><b>${probPct}%</b><i class="hacp-esc-prob-risk">riesgo ${riskPct}%</i></span></div>`;
+      const encDelta = et.pMod ? `<i class="hacp-esc-prob-enc ${et.pMod > 0 ? 'pos' : 'neg'}">${et.pMod > 0 ? '+' : '−'}${Math.abs(Math.round(et.pMod * 100))} pts por encuentros</i>` : '';
+      const probHTML = `<div class="hacp-esc-prob ${probCls}"><span>Éxito estimado${encDelta}</span><span class="hacp-esc-prob-v"><b>${probPct}%</b><i class="hacp-esc-prob-risk">riesgo ${riskPct}%</i></span></div>`;
       const desgloseHTML = probDesgloseHTML(b);
       const durMin = ESC_DUR_MIN[Math.max(1, Math.min(5, rating))];
       const rewardHTML = `<div class="hacp-esc-reward">Dura <b>~${durMin} min</b> · si vencéis: <b>~${sharePrev}💰</b>/mecenas · <b>1 objeto</b> c/u${lootBonus ? ` · <b>+${lootBonus}</b> de botín${rating >= 4 ? ' (mejor)' : ''}` : ''}</div>`;
@@ -3161,17 +3187,27 @@
       const FR = (window.HacChar && HacChar.FRAMES) || 4;
       const dir = back ? 'NW' : 'SE';                     // ida de cara (SE), vuelta de espaldas (NW)
       const pereg = esPereg(band);
+      const MOUNT_NF = (window.HacFolk && HacFolk.MOUNT_NF) || 8;
       const members = (band.miembros || []).map(m => {
         const pj = (window.HacPersonajes && HacPersonajes.get) ? HacPersonajes.get(m.id) : null;
         const sec = (window.HacStats && HacStats.secuelas) ? HacStats.secuelas(m.id) : [];
         const base = pj ? (pj.aspecto || {}) : { robe: color };
-        return { id: m.id, aptitud: pj ? pj.aptitud : '', aspecto: (window.HacStats && HacStats.vestir) ? HacStats.vestir(m.id, base) : base, mio: m.id === myId, hurt: pereg && m.id === band.hostId, secuelas: sec };
+        // Un dueño de caballo SALE MONTADO (salvo el herido del peregrinaje, que va a pie
+        // cojeando). Su montura y pelaje salen de la cuadra activa (HacStats.caballo).
+        const cab = (!(pereg && m.id === band.hostId) && window.HacStats && HacStats.caballo) ? HacStats.caballo(m.id) : null;
+        return { id: m.id, aptitud: pj ? pj.aptitud : '', aspecto: (window.HacStats && HacStats.vestir) ? HacStats.vestir(m.id, base) : base, mio: m.id === myId, hurt: pereg && m.id === band.hostId, secuelas: sec, mount: !!cab, coat: cab ? (cab.tono || '#8a5630') : null, tier: cab ? (cab.tier || 0) : 0 };
       });
       const sprCache = new Map();
       function spr(mem, frame) {
-        const key = mem.id + '|' + frame;
+        const key = mem.id + '|' + frame + (mem.mount ? '|m' : '');
         let c = sprCache.get(key);
-        if (!c && window.HacChar) { c = document.createElement('canvas'); HacChar.draw(c, { aptitud: mem.aptitud, aspecto: mem.aspecto || {}, dir: dir, frame: frame, scale: 2, pose: mem.hurt ? 'limp' : undefined, secuelas: mem.secuelas }); sprCache.set(key, c); }
+        if (c) return c;
+        if (mem.mount && window.HacFolk && HacFolk.mountSprite) {
+          c = HacFolk.mountSprite({ aptitud: mem.aptitud, aspecto: mem.aspecto || {}, secuelas: mem.secuelas, dir: dir, coat: mem.coat, tier: mem.tier, frame: frame, moving: true });
+        } else if (window.HacChar) {
+          c = document.createElement('canvas'); HacChar.draw(c, { aptitud: mem.aptitud, aspecto: mem.aspecto || {}, dir: dir, frame: frame, scale: 2, pose: mem.hurt ? 'limp' : undefined, secuelas: mem.secuelas });
+        }
+        if (c) sprCache.set(key, c);
         return c;
       }
       const dpr = Math.min(2, window.devicePixelRatio || 1);
@@ -3227,11 +3263,15 @@
         const baseX = w / 2 - (n - 1) * spread / 2, baseY = hh * 0.58, drawH = 60;
         const items = members.map((mem, i) => {
           const ph = t / 1000 + i * 0.53;
-          return { mem, i, x: baseX + i * spread + Math.sin(t / 900 + i) * 1.5, y: baseY + (i % 2 ? 6 : 0) + Math.sin(t / 380 + i * 1.7) * 1.2, fr: Math.floor((t / 145 + i * 1.9)) % FR, ph };
+          // Montados: cadencia del trote (MOUNT_NF fotogramas); a pie: ciclo de andar (FR).
+          const fr = mem.mount ? (Math.floor(t / 120 + i * 2) % MOUNT_NF) : (Math.floor(t / 145 + i * 1.9) % FR);
+          return { mem, i, x: baseX + i * spread + Math.sin(t / 900 + i) * 1.5, y: baseY + (i % 2 ? 6 : 0) + Math.sin(t / 380 + i * 1.7) * 1.2, fr, ph };
         }).sort((a, b) => a.y - b.y);
         items.forEach(({ mem, x, y, fr }) => {
-          const s = spr(mem, fr); if (!s) return;
-          const sh = drawH, sw = s.width * (sh / s.height);
+          const s = spr(mem, fr); if (!s || !s.width) return;
+          // El sprite montado es más alto (caballo + jinete): se agranda para que el
+          // JINETE quede a la escala de los de a pie, con el corcel debajo.
+          const sh = mem.mount ? drawH * 1.5 : drawH, sw = s.width * (sh / s.height);
           ctx.save(); ctx.globalAlpha = 0.26; ctx.fillStyle = '#000';
           ctx.beginPath(); ctx.ellipse(x, y + 1, sw * 0.30, 4.5, 0, 0, 6.283); ctx.fill(); ctx.restore();
           if (mem.mio) { ctx.save(); ctx.globalAlpha = 0.5; ctx.strokeStyle = '#e7c66a'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.ellipse(x, y + 1, sw * 0.32, 5.2, 0, 0, 6.283); ctx.stroke(); ctx.restore(); }

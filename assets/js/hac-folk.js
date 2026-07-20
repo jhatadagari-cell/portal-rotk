@@ -922,6 +922,7 @@ const HacFolk = (function () {
         // su idx para no solaparse. Los de a pie en la primera línea; los CON caballo en una
         // línea algo más al sur (hay sitio para el corcel), para silbar y montar allí.
         const e = wk.exitCell, off = (em.idx - (em.n - 1) / 2) * 1.3;
+        w._escOff = off;   // se CONSERVA al salir: cada quien mantiene su carril y no se fusionan en un píxel
         if (wk.outNear) {
           if (caballos[w.id]) { w._formSpot = [wk.outNear[0] + off, wk.outNear[1] + 1.4]; w._escHorse = 'pending'; }
           else { w._formSpot = [wk.outNear[0] + off, wk.outNear[1]]; w._escHorse = null; }
@@ -1473,7 +1474,8 @@ const HacFolk = (function () {
           if ((llegado && w.whistleT <= 0) || w._mountWait > 9) {   // MONTA (o timeout de seguridad)
             if (hh) { hh.rider = w.id; hh.summonTo = null; }
             w.mounted = !!hh; w.speech = null; w.speechT = 0; w.dir = 'S';
-            const out = []; if (wk.outFar) out.push(wk.outFar);
+            const ox = w._escOff || 0;
+            const out = []; if (wk.outFar) out.push([wk.outFar[0] + ox, wk.outFar[1]]);
             w.path = out.length ? out : null; w.state = out.length ? 'exped-out' : 'fuera'; w.moving = false;
             if (w.state === 'fuera') { const o = escOrder(w) || w.order, t0 = nowSimMs(), endOut = o ? o.startMs + (o.durMs || 120000) : t0; w.outTimer = Math.max(2, (endOut - t0) / 1000); }
           }
@@ -1504,9 +1506,10 @@ const HacFolk = (function () {
             // Si un dueño de caballo no llegó a montar, monta ahora (parte a caballo igual).
             if (caballos[w.id] && !w.mounted) { const hh = horseOf(w.id); if (hh) { hh.rider = w.id; hh.summonTo = null; w.mounted = true; } }
             w.bowing = false; w.speech = null; w._escHorse = null;
+            const ox = w._escOff || 0;
             const out = [];
-            if (wk.outNear && !w.mounted) out.push(wk.outNear);
-            if (wk.outFar) out.push(wk.outFar);
+            if (wk.outNear && !w.mounted) out.push([wk.outNear[0] + ox, wk.outNear[1]]);
+            if (wk.outFar) out.push([wk.outFar[0] + ox, wk.outFar[1]]);
             if (out.length) { w.path = out; w.state = 'exped-out'; w.moving = false; }
             else {
               w.state = 'fuera';
@@ -1738,6 +1741,35 @@ const HacFolk = (function () {
     };
     if (back) { drawHorseNow(); drawRiderNow(); } else { drawHorseNow(); drawRiderNow(); }
     g.restore();
+  }
+  // Compositor de MONTURA reutilizable para lienzos FUERA del motor iso (p.ej. la marcha
+  // de la escaramuza en el panel): caballo procedural (horseBaked) + jinete sentado
+  // (HacChar), con la misma geometría probada del retrato montado. Devuelve un canvas con
+  // los CASCOS anclados al borde inferior y el eje X centrado; el llamador lo dibuja como
+  // cualquier sprite de a pie (ancla en los pies). opts: { aptitud, aspecto, secuelas,
+  // dir:'SE'|'NW'|…, coat, tier, frame, moving }.
+  function mountSprite(opts) {
+    opts = opts || {};
+    if (!window.HacChar || !HacChar.draw) return null;
+    const dir = opts.dir || 'SE';
+    const view = HORSE_VIEW[dir] || 'SE';
+    const back = (view === 'NE' || view === 'NW'), mirror = (view === 'SW' || view === 'NW');
+    const frame = opts.moving ? ((((opts.frame | 0) % HORSE_FRAMES) + HORSE_FRAMES) % HORSE_FRAMES) : 0;
+    const coat = opts.coat || '#8a5630';
+    const hcv = horseBaked(back, frame, coat, opts.tier || 0, !!opts.moving);
+    if (!hcv) return null;
+    const rcv = document.createElement('canvas');
+    HacChar.draw(rcv, { aptitud: opts.aptitud || '', aspecto: opts.aspecto || {}, dir: dir, frame: 0, scale: 1, pose: 'sit', secuelas: opts.secuelas || [] });
+    const NWp = HW * HDRAW, NHp = HH * HDRAW;
+    const cW = Math.max(NWp, charW()), cH = RIDER_UP + charH();
+    const cv = document.createElement('canvas'); cv.width = cW; cv.height = cH;
+    const g = cv.getContext('2d'); g.imageSmoothingEnabled = false;
+    const fx = cW / 2, fy = cH;                                  // cascos al borde inferior, eje al centro
+    g.save(); g.translate(fx, fy); if (mirror) g.scale(-1, 1);
+    g.drawImage(hcv, -HCX * HDRAW, -HFEET * HDRAW, NWp, NHp); g.restore();
+    g.imageSmoothingEnabled = pngOn();
+    g.drawImage(rcv, Math.round(fx - charW() * 0.5 + RIDER_DX), Math.round(fy - RIDER_UP - charFEET()), charW(), charH());
+    return cv;
   }
   // Registro de VARIANTES de caballo (preparado para más caballos con distintas
   // características). Cada variante puede teñir el sprite (tono) — se HORNEA una vez
@@ -3030,6 +3062,6 @@ const HacFolk = (function () {
     if (!running) paint();
   }
 
-  return { start, stop, list, select, selected, position, buildings, buildingTypes, setOrders, setEscaramuzas, setDebate, setHighlight, setCaballos, drawAvatar, goHome, consultar, consultando, dejarConsulta, mainBuildingId, repaintOverlay, refreshCargos, setCaravan, caravanHit, caravanActiva: () => !!caravan, setEnviado, esVisitante, revelarEnviado, enviadoAspecto, despedirEnviado };
+  return { start, stop, list, select, selected, position, buildings, buildingTypes, setOrders, setEscaramuzas, setDebate, setHighlight, setCaballos, drawAvatar, mountSprite, MOUNT_NF: HORSE_FRAMES, goHome, consultar, consultando, dejarConsulta, mainBuildingId, repaintOverlay, refreshCargos, setCaravan, caravanHit, caravanActiva: () => !!caravan, setEnviado, esVisitante, revelarEnviado, enviadoAspecto, despedirEnviado };
 })();
 if (typeof window !== 'undefined') window.HacFolk = HacFolk;
