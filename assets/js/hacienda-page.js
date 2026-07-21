@@ -699,17 +699,50 @@
     // Clave de casa con id de finca (evita colisiones "gx,gy" entre haciendas).
     const casaKey = (c) => h.id + '@' + c.pos[0] + ',' + c.pos[1];
     const casasFinca = () => ((h.mapa && h.mapa.construcciones) || []).filter(c => c.tipo === 'casa');
-    // Casa de un mecenas: la asignada por el admin (dueño) O la que él COMPRÓ (casa_pos).
-    function miCasa(personajeId) {
-      if (casaDe(personajeId)) return casaDe(personajeId);
-      const pos = (window.HacStats && HacStats.casaPos) ? HacStats.casaPos(personajeId) : null;
-      return pos ? (casasFinca().find(c => casaKey(c) === pos) || null) : null;
-    }
-    // Primera casa LIBRE: ni asignada por el admin ni comprada por ningún mecenas.
-    function casaLibre() {
-      const reclamadas = (window.HacStats && HacStats.casasReclamadas) ? HacStats.casasReclamadas() : new Set();
-      const asignadas = new Set(casasFinca().filter(c => c.dueno != null).map(casaKey));
-      return casasFinca().find(c => !asignadas.has(casaKey(c)) && !reclamadas.has(casaKey(c))) || null;
+    // Casa de un mecenas = la construcción 'casa' cuyo DUEÑO es él (mapa.construcciones
+    // [x].dueno = id de miembro). Fuente única, estable: si la mueven en Obras, el
+    // dueño viaja con el edificio. (Antes se rastreaba por posición → frágil.)
+    function miCasa(personajeId) { return casaDe(personajeId); }
+    // Primera casa LIBRE (sin dueño).
+    function casaLibre() { return casasFinca().find(c => c.dueno == null) || null; }
+    // MIGRACIÓN una-vez: casas viejas rastreadas por posición (stat casa_pos) → propiedad
+    // por DUEÑO. Si arrastro un casa_pos heredado y aún no soy dueño de ninguna casa,
+    // reclamo (RPC) la casa de esa posición —o una libre si me la movieron— para estampar
+    // el dueño, y limpio el casa_pos. Esto también recupera casas «colgadas» por un movimiento.
+    (async function migrarHogar() {
+      if (!myId || esVisita || !window.HacStats || !HacStats.casaPos) return;
+      const pos = HacStats.casaPos(myId); if (!pos) return;
+      if (casaDe(myId)) { if (HacStats.liberarCasa) HacStats.liberarCasa(myId); return; }   // ya soy dueño → solo limpia el legacy
+      const enPos = casasFinca().find(c => casaKey(c) === pos && c.dueno == null);
+      const target = enPos || casaLibre();
+      if (!target) return;
+      try {
+        const d = await pabRPC('casa_reclamar_hogar', { p_hac: h.id, p_pj: myId, p_pos: target.pos });
+        if (d && d.mapa) { h.mapa = d.mapa; if (HacStats.liberarCasa) HacStats.liberarCasa(myId); redrawIso(); renderList(); if (charId) buildCharPanel(charId); }
+      } catch (e) { /* RPC aún no desplegada → se reintenta en la próxima carga */ }
+    })();
+    // Comprar (RECLAMAR) una casa libre: paga y estampa el dueño en el mapa (RPC).
+    async function reclamarHogar() {
+      if (!myId || !window.HacStats) return;
+      const lib = casaLibre();
+      if (!lib) { toast('Ya no hay casas libres'); buildCharPanel(charId); return; }
+      if (HacStats.dinero(myId) < PRECIO_CASA) { toast('No tienes suficiente dinero'); return; }
+      try {
+        const d = await pabRPC('casa_reclamar_hogar', { p_hac: h.id, p_pj: myId, p_pos: lib.pos });
+        if (d && d.mapa) h.mapa = d.mapa;
+        HacStats.pagar(myId, PRECIO_CASA);
+        toast(`🏠 ¡Compraste una casa por ${PRECIO_CASA} 💰!`);
+        if (window.HacBitacora) HacBitacora.log(myId, 'progreso', `🏠 Compraste una casa (−${PRECIO_CASA}💰)`);
+        redrawIso(); buildCharPanel(charId);
+      } catch (e) {
+        const msg = String(e && e.message || '');
+        if (/funci|function|does not exist|schema cache|404|not found/i.test(msg) && HacStats.comprarCasa) {
+          const res = HacStats.comprarCasa(myId, casaKey(lib), PRECIO_CASA);   // fallback legacy (por posición)
+          if (res.ok) { toast(`🏠 ¡Compraste una casa por ${PRECIO_CASA} 💰!`); buildCharPanel(charId); return; }
+          toast(res.motivo || 'No se pudo comprar'); return;
+        }
+        toast('No se pudo reclamar la casa: ' + msg); buildCharPanel(charId);
+      }
     }
     // Coste de una misión según si el mecenas DOMINA el dominio del edificio (suave).
     function costeMision(dominio) {
@@ -4468,14 +4501,7 @@
       const cub = charEl.querySelector('[data-act="cura"]');
       if (cub && !cub.disabled) cub.addEventListener('click', curarHerida);
       const bh = charEl.querySelector('[data-act="buyhome"]');
-      if (bh && !bh.disabled) bh.addEventListener('click', () => {
-        if (!myId || !window.HacStats) return;
-        const lib = casaLibre();                          // re-evalúa por si otra ya la compró
-        if (!lib) { toast('Ya no hay casas libres'); buildCharPanel(charId); return; }
-        const res = HacStats.comprarCasa(myId, casaKey(lib), PRECIO_CASA);
-        if (res.ok) { toast(`🏠 ¡Compraste una casa por ${PRECIO_CASA} 💰!`); if (window.HacBitacora) HacBitacora.log(myId, 'progreso', `🏠 Compraste una casa (−${PRECIO_CASA}💰)`); buildCharPanel(charId); }
-        else toast(res.motivo || 'No se pudo comprar la casa');
-      });
+      if (bh && !bh.disabled) bh.addEventListener('click', reclamarHogar);
     }
     // Firma para decidir cuándo RECONSTRUIR el panel entero (vs. refresco parcial de
     // contadores). Incluye los datos que llegan async (HacStats) y NO se actualizan en

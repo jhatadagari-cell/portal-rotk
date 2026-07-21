@@ -324,6 +324,14 @@ const HacStats = (function () {
     return cuanto;
   }
 
+  // Gasta n monedas del monedero si hay suficientes (compras personales, p. ej.
+  // reclamar una casa — cuya PROPIEDAD ya vive en el mapa como `dueno`, no aquí).
+  function pagar(mid, n) {
+    const r = ensure(mid); const c = Math.max(0, n | 0);
+    if (r.dinero < c) return { ok: false, motivo: 'No tienes suficiente dinero' };
+    r.dinero -= c; persist(r); return { ok: true };
+  }
+
   // Curva de nivel: cada nivel n→n+1 cuesta 50·n XP (acumulado: 25·n·(n-1)).
   // Curva APLANADA (endgame real): subir es asequible para que niveles altos (hasta
   // ~150 por dominio) sean una meta larga pero alcanzable, no imposible. Coste por
@@ -414,8 +422,9 @@ const HacStats = (function () {
   function quitarItem(mid, id) { const r = ensure(mid); if (!quita(r.inv, id)) return { ok: false, motivo: 'No llevas ese objeto' }; persist(r); return { ok: true }; }
   // Mete un objeto de la MOCHILA al almacén de CASA (requiere casa).
   function meterEnCasa(mid, id) {
+    // La PROPIEDAD de la casa vive en el mapa (construccion.dueno); la UI solo
+    // muestra «guardar en casa» a quien la posee. Aquí solo movemos el objeto.
     const r = ensure(mid);
-    if (!r.casaPos) return { ok: false, motivo: 'No tienes casa' };
     if (!quita(r.inv, id)) return { ok: false, motivo: 'No llevas ese objeto' };
     mete(r.casaInv, id); persist(r); return { ok: true };
   }
@@ -549,6 +558,6 @@ const HacStats = (function () {
   function encargosHechos(mid, dia) { const p = prodObj(mid); if (p.encargos.dia !== dia) { p.encargos.dia = dia; p.encargos.hechos = []; } return p.encargos.hechos.slice(); }
   function marcarEncargo(mid, dia, id) { const p = prodObj(mid); if (p.encargos.dia !== dia) { p.encargos.dia = dia; p.encargos.hechos = []; } if (p.encargos.hechos.indexOf(id) < 0) { p.encargos.hechos.push(id); persist(ensure(mid)); } }
 
-  return { ready, reload, dinero, ahorro, casaPos, casasReclamadas, duenoDeCasa, comprarCasa, liberarCasa, abandonar, heridas, penHerida, malherido, herir, curar, secuelas, tieneSecuela, escaramuzaCd, bonusDinero, bonusExped, bonusPrestigio, bonusAntirrobo, usarManual, comerItem, usarAmpliacion, abrirRecompensaSemanal, xp, nivel, progresoNivel, bonus, nivelTotal, nivelPersonaje, setNiveles, puntosTalento, talentos, puntosGastados, puntosLibres, tieneTalento, aprenderTalento, equipados, equipar, desequipar, slotDe, MAX_EQUIP, bonusPct, bonusPctNiveles, torsoViste, vestir, otorgarArmaInicial, award, comprar, guardar, sacar, darItem, quitarItem, meterEnCasa, sacarDeCasa, inventario, casaInventario, capInventario, ocupadas, recompensaExped, caballo, tieneCaballo, cuadra, tieneVariante, comprarCaballo, montarCaballo, venderCaballo, venderItem, ventaCd, ventaEnfriada, ventaCdRestanteMs, enfriarVenta, bonusRegateo, recursos, recursoTotal, recursoDesdeCal, addLote, quitaRecurso, quitaCal, oficioNivel, subirOficio, recolectarRenta, rentaPendiente, encargosHechos, marcarEncargo, DOMS, dbOk: () => ok, TABLE };
+  return { ready, reload, dinero, ahorro, pagar, casaPos, casasReclamadas, duenoDeCasa, comprarCasa, liberarCasa, abandonar, heridas, penHerida, malherido, herir, curar, secuelas, tieneSecuela, escaramuzaCd, bonusDinero, bonusExped, bonusPrestigio, bonusAntirrobo, usarManual, comerItem, usarAmpliacion, abrirRecompensaSemanal, xp, nivel, progresoNivel, bonus, nivelTotal, nivelPersonaje, setNiveles, puntosTalento, talentos, puntosGastados, puntosLibres, tieneTalento, aprenderTalento, equipados, equipar, desequipar, slotDe, MAX_EQUIP, bonusPct, bonusPctNiveles, torsoViste, vestir, otorgarArmaInicial, award, comprar, guardar, sacar, darItem, quitarItem, meterEnCasa, sacarDeCasa, inventario, casaInventario, capInventario, ocupadas, recompensaExped, caballo, tieneCaballo, cuadra, tieneVariante, comprarCaballo, montarCaballo, venderCaballo, venderItem, ventaCd, ventaEnfriada, ventaCdRestanteMs, enfriarVenta, bonusRegateo, recursos, recursoTotal, recursoDesdeCal, addLote, quitaRecurso, quitaCal, oficioNivel, subirOficio, recolectarRenta, rentaPendiente, encargosHechos, marcarEncargo, DOMS, dbOk: () => ok, TABLE };
 })();
 if (typeof window !== 'undefined') window.HacStats = HacStats;
