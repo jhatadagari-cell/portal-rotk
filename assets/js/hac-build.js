@@ -367,9 +367,16 @@ const HacBuild = (function () {
       for (let cx = Math.max(0, x); cx < Math.min(GW, x + w); cx++) out.push([cx, cy]);
     return out;
   }
-  // Región de un pabellón `p` (usa su seed [x,y,w,h]). [] si aún no está delimitado.
+  // Región de un pabellón `p`. El seed puede ser:
+  //   · { c:[[x,y],…] }  → conjunto de celdas a mano (PINCEL, forma libre), o
+  //   · [x,y,w,h]        → rectángulo (formato antiguo; se sigue soportando).
+  // Se recorta a la rejilla del tier.
   function regionDePabellon(p, tier) {
     const s = p && p.seed;
+    if (s && Array.isArray(s.c)) {
+      const dims = gridDims(tier), GW = dims[0], GH = dims[1];
+      return s.c.map(c => [Math.floor(c[0]), Math.floor(c[1])]).filter(c => c[0] >= 0 && c[1] >= 0 && c[0] < GW && c[1] < GH);
+    }
     return (Array.isArray(s) && s.length >= 4) ? regionRect(s[0], s[1], s[2], s[3], tier) : [];
   }
   // ¿La región vale como pabellón? Tamaño mínimo, no es toda la finca y está
