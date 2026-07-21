@@ -25,9 +25,10 @@ begin
   if v_mid is null then raise exception 'No eres miembro de esta casa'; end if;
   px := (p_pos ->> 0)::int; py := (p_pos ->> 1)::int;
   -- ¿ya tienes OTRA casa? (una construccion 'casa' con dueno = tú en otra posición)
-  if exists (select 1 from jsonb_array_elements(coalesce(h.mapa -> 'construcciones', '[]'::jsonb)) c
-             where c ->> 'tipo' = 'casa' and c ->> 'dueno' = v_mid
-               and not ((c -> 'pos' ->> 0)::int = px and (c -> 'pos' ->> 1)::int = py)) then
+  -- OJO: alias `e` (no `c`) — `c` es la variable del bucle y daría «column c is ambiguous».
+  if exists (select 1 from jsonb_array_elements(coalesce(h.mapa -> 'construcciones', '[]'::jsonb)) e
+             where e ->> 'tipo' = 'casa' and e ->> 'dueno' = v_mid
+               and not ((e -> 'pos' ->> 0)::int = px and (e -> 'pos' ->> 1)::int = py)) then
     raise exception 'Ya tienes casa';
   end if;
   -- Reconstruye construcciones estampando el dueño en la casa libre de (px,py).
