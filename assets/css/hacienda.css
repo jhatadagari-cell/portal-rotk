@@ -639,6 +639,15 @@ html.hacp-pseudofs, html.hacp-pseudofs body{ overflow:hidden; }
 /* Borrar por SECCIÓN: rectángulo de barrido (secpick) + caminos/muros a borrar (secdel) */
 .hacp-planos .hacp-ob-cell.secpick{ box-shadow:inset 0 0 0 1px rgba(160,31,20,.45); background:rgba(160,31,20,.1); }
 .hacp-planos .hacp-ob-cell.secdel{ background:rgba(190,66,56,.62)!important; border-color:#8f2016!important; box-shadow:inset 0 0 0 2px #ffd24a; }
+/* Etiqueta CASTELLANA (3 letras, tipo admin) dentro de la celda — cabe mejor que el glifo */
+.hacp-planos .hacp-ob-lbl{ font:800 calc(var(--ob-cell,28px)*0.34)/1 'Noto Sans SC',sans-serif; letter-spacing:-.4px; color:#fff; text-shadow:0 1px 2px rgba(0,0,0,.85); }
+/* Modo PABELLÓN: los edificios se ven DEBAJO; el pabellón es un tinte translúcido encima
+   (así cuadras el patio con las murallas). box-shadow inset = velo de color sobre el fondo. */
+.hacp-planos .hacp-ob-cell.pabreg{ box-shadow:inset 0 0 0 999px color-mix(in srgb, var(--pt,#888) 42%, transparent), inset 0 0 0 1px color-mix(in srgb, var(--pt,#888) 85%, transparent); }
+.hacp-planos .hacp-ob-cell.pabreg.sel{ box-shadow:inset 0 0 0 999px color-mix(in srgb, var(--pt,#888) 52%, transparent), inset 0 0 0 2px #ffd24a; }
+.hacp-planos .hacp-ob-cell.pabghost{ box-shadow:inset 0 0 0 999px color-mix(in srgb, var(--pt,#888) 34%, transparent); }
+.hacp-planos .hacp-ob-cell.pabghost.ok{ box-shadow:inset 0 0 0 999px rgba(74,150,90,.42), inset 0 0 0 2px #2f7a3a; }
+.hacp-planos .hacp-ob-cell.pabghost.bad{ box-shadow:inset 0 0 0 999px rgba(190,66,56,.4), inset 0 0 0 2px #a3271b; }
 /* Navegación del plano: arrastrar (grab) para desplazarse */
 .hacp-planos-canvas .hacp-ob-gridwrap{ cursor:grab; }
 .hacp-planos-canvas .hacp-ob-gridwrap.panning{ cursor:grabbing; }

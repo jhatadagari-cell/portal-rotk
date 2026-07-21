@@ -5526,6 +5526,9 @@
           <span class="hacp-ob-ccost">${obCosteCorto(t)} · huella ${t.footprint[0]}×${t.footprint[1]}</span>
         </span></button>`;
     }
+    // Etiqueta CORTA en castellano dentro de la celda (como el admin), en vez del
+    // glifo chino (ilegible/feo). «Muralla»→Mur, «Casa»→Cas, «Camino»→Cam, «Salón…»→Sal…
+    const obLbl = (t) => (t && t.nombre ? String(t.nombre) : '').slice(0, 3);
     // Terreno EXTERIOR (espejo del admin): saldo = prestigio − mapa.gastado; el
     // siguiente nivel de anillo es 3, luego +1; nunca por encima del nivel confirmado.
     function obrasTerrenoInfo() {
@@ -5638,7 +5641,8 @@
       const selDef = selCc ? HacBuild.tipo(selCc.tipo) : null;
       // Mapa de ocupación con COLOR + glifo del edificio (como el admin) — se ve qué hay.
       const occ = new Map();
-      lista.forEach(cc => { const bt = HacBuild.tipo(cc.tipo); if (!bt) return; HacBuild.celdasOcupadas(cc).forEach(([cx, cy]) => occ.set(cx + ',' + cy, { color: bt.color || '#c9a84c', zh: bt.zh || '', nombre: bt.nombre || '', anchor: cc.pos[0] === cx && cc.pos[1] === cy, ax: cc.pos[0], ay: cc.pos[1] })); });
+      lista.forEach(cc => { const bt = HacBuild.tipo(cc.tipo); if (!bt) return; HacBuild.celdasOcupadas(cc).forEach(([cx, cy]) => occ.set(cx + ',' + cy, { color: bt.color || '#c9a84c', lbl: obLbl(bt), nombre: bt.nombre || '', anchor: cc.pos[0] === cx && cc.pos[1] === cy, ax: cc.pos[0], ay: cc.pos[1] })); });
+      const lblOK = obrasSt.zoom >= 22;   // con celdas pequeñas la etiqueta no cabe → solo color
       const gt = colocando && obrasSt.tipo ? HacBuild.tipo(obrasSt.tipo) : null;
       const inG = (x, y) => gCells.some(p => p[0] === x && p[1] === y);
       const isAnchor = (x, y) => gAnchor && gAnchor[0] === x && gAnchor[1] === y;
@@ -5669,14 +5673,14 @@
       for (let y = Y0; y < GH + ringD; y++) for (let x = X0; x < GW + ringD; x++) {
         const k = x + ',' + y, o = occ.get(k), g = inG(x, y);
         if (borrSec) {   // todas las celdas clicables (esquinas del rectángulo); marca caminos/muros a borrar
-          cells += `<button type="button" class="hacp-ob-cell ${o ? 'occ' : ('free' + (esExt(x, y) ? ' ext' : ''))}${inSecRect(x, y) ? ' secpick' : ''}${secSet.has(k) ? ' secdel' : ''}" data-gx="${x}" data-gy="${y}"${o ? ` style="background:${o.color}" title="${esc(o.nombre)}"` : ''}>${o && o.anchor && o.zh ? `<span class="hacp-ob-lbl">${esc(o.zh)}</span>` : ''}</button>`;
+          cells += `<button type="button" class="hacp-ob-cell ${o ? 'occ' : ('free' + (esExt(x, y) ? ' ext' : ''))}${inSecRect(x, y) ? ' secpick' : ''}${secSet.has(k) ? ' secdel' : ''}" data-gx="${x}" data-gy="${y}"${o ? ` style="background:${o.color}" title="${esc(o.nombre)}"` : ''}>${o && o.anchor && lblOK ? `<span class="hacp-ob-lbl">${esc(o.lbl)}</span>` : ''}</button>`;
           continue;
         }
         if (o) {
           const isMov = movSet.has(k), isSel = selSet.has(k), clickable = seleccionable && !isMov;
-          cells += `<button type="button" class="hacp-ob-cell occ${isSel ? ' sel' : ''}${isMov ? ' moving' : ''}"${clickable ? ` data-occ="${o.ax},${o.ay}"` : ' disabled'} style="background:${o.color}" title="${esc(o.nombre)}">${o.anchor && o.zh ? `<span class="hacp-ob-lbl">${esc(o.zh)}</span>` : ''}</button>`;
+          cells += `<button type="button" class="hacp-ob-cell occ${isSel ? ' sel' : ''}${isMov ? ' moving' : ''}"${clickable ? ` data-occ="${o.ax},${o.ay}"` : ' disabled'} style="background:${o.color}" title="${esc(o.nombre)}">${o.anchor && lblOK ? `<span class="hacp-ob-lbl">${esc(o.lbl)}</span>` : ''}</button>`;
         } else if (g) {
-          cells += `<button type="button" class="hacp-ob-cell ghost ${gOkSet.has(k) ? 'ok' : 'bad'}${gFace.has(k) ? ' hov-face-' + gFace.get(k) : ''}" data-gx="${x}" data-gy="${y}" style="background:${gt ? gt.color : 'transparent'}" title="${gt ? esc(gt.nombre) : ''}">${isAnchor(x, y) && gt && gt.zh ? `<span class="hacp-ob-lbl">${esc(gt.zh)}</span>` : ''}</button>`;
+          cells += `<button type="button" class="hacp-ob-cell ghost ${gOkSet.has(k) ? 'ok' : 'bad'}${gFace.has(k) ? ' hov-face-' + gFace.get(k) : ''}" data-gx="${x}" data-gy="${y}" style="background:${gt ? gt.color : 'transparent'}" title="${gt ? esc(gt.nombre) : ''}">${isAnchor(x, y) && gt && lblOK ? `<span class="hacp-ob-lbl">${esc(obLbl(gt))}</span>` : ''}</button>`;
         } else {
           cells += `<button type="button" class="hacp-ob-cell free${esExt(x, y) ? ' ext' : ''}"${colocando ? ` data-gx="${x}" data-gy="${y}"` : ' disabled'}></button>`;
         }
@@ -6437,6 +6441,11 @@
       // Pabellones existentes (tinte por rol) + ancla para la etiqueta.
       const occ = new Map();
       pabs.forEach(p => { const rr = HacBuild.rolPabellon(p.rol) || {}, reg = HacBuild.regionDePabellon(p, tier), a = reg[0]; reg.forEach(([cx, cy]) => occ.set(cx + ',' + cy, { color: rr.color || '#888', zh: rr.zh || '', nombre: p.nombre || '', anchor: a && a[0] === cx && a[1] === cy, pabId: p.id })); });
+      // EDIFICIOS debajo (murallas, salón…): se pintan bajo el tinte del pabellón para
+      // poder CUADRARLO con las murallas que delimitan el espacio. Etiqueta castellana.
+      const bocc = new Map();
+      ((h.mapa && h.mapa.construcciones) || []).forEach(cc => { const bt = HacBuild.tipo(cc.tipo); if (!bt) return; HacBuild.celdasOcupadas(cc).forEach(([cx, cy]) => bocc.set(cx + ',' + cy, { color: bt.color || '#c9a84c', lbl: obLbl(bt), nombre: bt.nombre || '', anchor: cc.pos[0] === cx && cc.pos[1] === cy })); });
+      const lblOK = obrasSt.zoom >= 22;
       // Fantasma del rectángulo (dos toques: lineA → pos).
       let gCells = [], gOk = false, gMot = '', gAnchor = null;
       if (obrasSt.lineA) {
@@ -6449,10 +6458,18 @@
       const gSet = new Set(gCells.map(c => c[0] + ',' + c[1])), selId = obrasSt.pabSel, rr = HacBuild.rolPabellon(obrasSt.pabRol) || {};
       let cells = '';
       for (let y = 0; y < GH; y++) for (let x = 0; x < GW; x++) {
-        const k = x + ',' + y, o = occ.get(k), g = gSet.has(k);
-        if (o) cells += `<button type="button" class="hacp-ob-cell occ${o.pabId === selId ? ' sel' : ''}" data-pab="${esc(o.pabId)}" style="background:${o.color}" title="${esc(o.nombre)}">${o.anchor && o.zh ? `<span class="hacp-ob-lbl">${esc(o.zh)}</span>` : ''}</button>`;
-        else if (g) cells += `<button type="button" class="hacp-ob-cell ghost ${gOk ? 'ok' : 'bad'}" data-gx="${x}" data-gy="${y}" style="background:${rr.color || '#888'}">${gAnchor && gAnchor[0] === x && gAnchor[1] === y ? `<span class="hacp-ob-lbl">${rr.zh || ''}</span>` : ''}</button>`;
-        else cells += `<button type="button" class="hacp-ob-cell free" data-gx="${x}" data-gy="${y}"></button>`;
+        const k = x + ',' + y, o = occ.get(k), g = gSet.has(k), b = bocc.get(k);
+        const bLbl = (b && b.anchor && lblOK) ? `<span class="hacp-ob-lbl">${esc(b.lbl)}</span>` : '';
+        const baseBg = b ? b.color : 'transparent';   // edificio debajo (se ve a través del tinte)
+        if (o) {   // pabellón existente: SELECCIONABLE (borrar) · tinte translúcido sobre el edificio
+          cells += `<button type="button" class="hacp-ob-cell pabreg${b ? ' occ' : ''}${o.pabId === selId ? ' sel' : ''}" data-pab="${esc(o.pabId)}" style="background:${baseBg};--pt:${o.color}" title="${esc(o.nombre)}">${bLbl}</button>`;
+        } else if (g) {   // rectángulo fantasma (crear): esquina; tinte translúcido sobre el edificio
+          cells += `<button type="button" class="hacp-ob-cell pabghost ${gOk ? 'ok' : 'bad'}${b ? ' occ' : ''}" data-gx="${x}" data-gy="${y}" style="background:${baseBg};--pt:${rr.color || '#888'}" title="${b ? esc(b.nombre) : ''}">${bLbl}</button>`;
+        } else if (b) {   // edificio (fuera de pabellón): sirve de esquina y muestra QUÉ hay debajo
+          cells += `<button type="button" class="hacp-ob-cell occ" data-gx="${x}" data-gy="${y}" style="background:${b.color}" title="${esc(b.nombre)}">${bLbl}</button>`;
+        } else {
+          cells += `<button type="button" class="hacp-ob-cell free" data-gx="${x}" data-gy="${y}"></button>`;
+        }
       }
       const selPab = selId ? pabs.find(p => p.id === selId) : null, nT = gCells.length;
       let aviso, mainLbl, puede = false, secLbl = '';
@@ -6496,8 +6513,8 @@
       const rsel = el.querySelector('[data-pab-rol]'); if (rsel) rsel.addEventListener('change', () => { obrasSt.pabRol = rsel.value; buildObras(); });
       const nm = el.querySelector('[data-pab-nm]'); if (nm) nm.addEventListener('input', () => { obrasSt.pabName = nm.value; });
       const rot = el.querySelector('[data-ob-rot]'); if (rot) rot.addEventListener('click', () => { obrasSt.lineA = null; obrasSt.pos = null; obrasSt.pabSel = null; buildObras(); });
-      el.querySelectorAll('.hacp-ob-cell.free, .hacp-ob-cell.ghost').forEach(b => b.addEventListener('click', () => { if (obrasSt.pabSel) return; const gx = Number(b.dataset.gx), gy = Number(b.dataset.gy); if (!obrasSt.lineA) { obrasSt.lineA = [gx, gy]; obrasSt.pos = null; } else { obrasSt.pos = [gx, gy]; } buildObras(); }));
-      el.querySelectorAll('.hacp-ob-cell.occ[data-pab]').forEach(b => b.addEventListener('click', () => { obrasSt.pabSel = b.dataset.pab; obrasSt.lineA = null; obrasSt.pos = null; buildObras(); }));
+      el.querySelectorAll('.hacp-ob-cell[data-gx]').forEach(b => b.addEventListener('click', () => { if (obrasSt.pabSel) return; const gx = Number(b.dataset.gx), gy = Number(b.dataset.gy); if (!obrasSt.lineA) { obrasSt.lineA = [gx, gy]; obrasSt.pos = null; } else { obrasSt.pos = [gx, gy]; } buildObras(); }));
+      el.querySelectorAll('.hacp-ob-cell[data-pab]').forEach(b => b.addEventListener('click', () => { obrasSt.pabSel = b.dataset.pab; obrasSt.lineA = null; obrasSt.pos = null; buildObras(); }));
       el.querySelectorAll('[data-pabdel]').forEach(b => b.addEventListener('click', () => borrarPabellon(b.dataset.pabdel)));
       const bb = el.querySelector('[data-ob-build]'); if (bb && !bb.disabled) bb.addEventListener('click', () => { if (obrasSt.pabSel) borrarPabellon(obrasSt.pabSel); else crearPabellon(); });
       wireCasaActions(el);
