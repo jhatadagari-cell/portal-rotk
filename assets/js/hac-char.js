@@ -69,7 +69,8 @@ const HacChar = (function () {
     fiero:         { kind: 'armor', prop: 'none',   arma: 'serpentspear', robe: '#33402c', accent: '#d8b65a', imperial: true, cape: true, capeLong: true, capeColor: '#9e2f27', bandana: true, beard: 2, beardWild: true }
   };
   const SKINS = ['#eac9a0', '#dcb487', '#c89a6e', '#ad7d54'];
-  const HAIRS = ['#1b1712', '#2c2318', '#46301a', '#0f0d0b'];
+  // Índices 0..3 = tonos oscuros originales (retrocompat); 4 entrecano, 5 canoso.
+  const HAIRS = ['#1b1712', '#2c2318', '#46301a', '#0f0d0b', '#6b5b4a', '#9a938a'];
 
   function palette(aptId, aspecto) {
     aspecto = aspecto || {};
@@ -84,6 +85,18 @@ const HacChar = (function () {
     // Flags de modelo: por defecto los del atuendo, con override opcional por aspecto.
     const flag = (k) => aspecto[k] != null ? !!aspecto[k] : !!o[k];
     const imperial = flag('imperial');
+    // BARBA editable por `aspecto.barba` (índice 0..5); si no, la del atuendo (retrocompat).
+    //  0 rasurado · 1 corta · 2 perilla (candado) · 3 larga · 4 hirsuta · 5 bigote caído (八字鬍)
+    let beard = o.beard || 0, beardLong = !!o.beardLong, beardWild = !!o.beardWild, beardStyle = '';
+    if (aspecto.barba != null) {
+      const bi = Number(aspecto.barba) || 0;
+      beard = 0; beardLong = false; beardWild = false; beardStyle = '';
+      if (bi === 1) beard = 1;
+      else if (bi === 2) beardStyle = 'perilla';
+      else if (bi === 3) beardLong = true;
+      else if (bi === 4) beardWild = true;
+      else if (bi === 5) beardStyle = 'fumanchu';
+    }
     return {
       // `aspecto.kind`/`aspecto.torsoLujo` permiten que una ROPA DE TORSO equipada
       // (HacTienda item.viste) redefina el atuendo del tronco sin tocar la cabeza:
@@ -92,9 +105,9 @@ const HacChar = (function () {
       // `gala` = SELLO VISUAL de la ROPA DE TORSO RARA equipada ('general', 'erudito',
       // 'ministro', 'estratega', 'preceptor', 'intendente'): cada prenda de gala se
       // dibuja DISTINTA (cf. galaSello y la rama armor de torso), no solo recoloreada.
-      gala: aspecto.torsoGala ? String(aspecto.gala || '') : '', beard: o.beard || 0, beardLong: !!o.beardLong,
+      gala: aspecto.torsoGala ? String(aspecto.gala || '') : '', beard, beardLong, beardStyle,
       mantle: okHex(aspecto.mantle) ? aspecto.mantle : (okHex(o.mantle) ? o.mantle : null), dualSwords: flag('dualSwords'), beastBuckle: flag('beastBuckle'),
-      capeColor: okHex(aspecto.capeColor) ? aspecto.capeColor : (okHex(o.capeColor) ? o.capeColor : null), bandana: flag('bandana'), beardWild: !!o.beardWild,
+      capeColor: okHex(aspecto.capeColor) ? aspecto.capeColor : (okHex(o.capeColor) ? o.capeColor : null), bandana: flag('bandana'), beardWild,
       robe, robeHi: light(robe, 0.16), robeDk: dark(robe, 0.30), robeSh: dark(robe, 0.50),
       beardC: dark(hair, 0.05),
       sash: dark(mix(robe, accent, 0.25), 0.05),
@@ -815,6 +828,8 @@ const HacChar = (function () {
       if (P.beard) { px(c, hy + 9, 5, 1 + P.beard, P.beardC); px(c + 4, hy + 7, 1, 2 + P.beard, P.beardC); } // barba al frente
       if (P.beardLong) { px(c + 1, hy + 12, 4, 2, P.beardC); px(c + 1, hy + 14, 4, 2, P.beardC); px(c + 2, hy + 16, 3, 2, dark(P.beardC, 0.05)); px(c + 2, hy + 18, 2, 2, dark(P.beardC, 0.08)); px(c + 3, hy + 20, 1, 2, dark(P.beardC, 0.12)); }  // barba larga (perfil)
       if (P.beardWild) { px(c - 1, hy + 8, 7, 5, P.beardC); px(c + 5, hy + 9, 1, 4, P.beardC); px(c, hy + 13, 6, 2, P.beardC); px(c + 1, hy + 15, 2, 3, P.beardC); px(c + 3, hy + 15, 2, 2, P.beardC); px(c - 1, hy + 8, 7, 1, dark(P.beardC, 0.18)); }  // barba HIRSUTA (perfil)
+      if (P.beardStyle === 'perilla') { px(c + 1, hy + 7, 4, 1, P.beardC); px(c + 3, hy + 9, 2, 4, P.beardC); px(c + 3, hy + 13, 1, 2, dark(P.beardC, 0.1)); }  // PERILLA/candado (perfil)
+      if (P.beardStyle === 'fumanchu') { px(c + 1, hy + 7, 4, 1, P.beardC); px(c + 4, hy + 8, 1, 5, P.beardC); px(c + 4, hy + 13, 1, 2, dark(P.beardC, 0.12)); }  // bigote CAÍDO 八字 (perfil)
     } else {
       headBlock(px, c, hy, 5, 11, P.skin, P.skinHi, P.skinDk);
       if (!v.back) {
@@ -826,6 +841,8 @@ const HacChar = (function () {
           if (P.beard) { px(c - 2, hy + 9, 5, 1, P.beardC); px(c - 1, hy + 10, 3, P.beard === 2 ? 4 : 2, P.beardC); }
           if (P.beardLong) { px(c - 1, hy + 14, 3, 2, P.beardC); px(c - 1, hy + 16, 3, 2, P.beardC); px(c, hy + 18, 2, 2, dark(P.beardC, 0.06)); px(c, hy + 20, 1, 2, dark(P.beardC, 0.12)); }  // barba larga (frente)
           if (P.beardWild) { px(c - 4, hy + 8, 9, 5, P.beardC); px(c - 5, hy + 9, 1, 3, P.beardC); px(c + 4, hy + 9, 1, 3, P.beardC); px(c - 4, hy + 13, 8, 2, P.beardC); px(c - 4, hy + 15, 2, 2, P.beardC); px(c - 1, hy + 15, 2, 3, P.beardC); px(c + 2, hy + 15, 2, 2, P.beardC); px(c - 4, hy + 8, 9, 1, dark(P.beardC, 0.18)); }  // barba HIRSUTA (frente)
+          if (P.beardStyle === 'perilla') { px(c - 2, hy + 8, 5, 1, P.beardC); px(c - 1, hy + 10, 3, 3, P.beardC); px(c, hy + 13, 1, 2, dark(P.beardC, 0.1)); }  // PERILLA/candado (frente)
+          if (P.beardStyle === 'fumanchu') { px(c - 2, hy + 8, 5, 1, P.beardC); px(c - 2, hy + 9, 1, 5, P.beardC); px(c + 2, hy + 9, 1, 5, P.beardC); px(c - 2, hy + 14, 1, 1, dark(P.beardC, 0.12)); px(c + 2, hy + 14, 1, 1, dark(P.beardC, 0.12)); }  // bigote CAÍDO 八字 (frente)
         } else {                                                               // 3/4 frontal
           px(c, hy + 5, 2, 1, P.hair); px(c + 3, hy + 5, 1, 1, P.hair);
           px(c, hy + 6, 1, 1, P.ink); px(c + 3, hy + 6, 1, 1, P.ink);
@@ -834,6 +851,8 @@ const HacChar = (function () {
           if (P.beard) { px(c, hy + 9, 5, 1, P.beardC); px(c + 1, hy + 10, 3, P.beard === 2 ? 4 : 2, P.beardC); }
           if (P.beardLong) { px(c + 1, hy + 14, 3, 2, P.beardC); px(c + 1, hy + 16, 3, 2, P.beardC); px(c + 1, hy + 18, 2, 2, dark(P.beardC, 0.06)); px(c + 2, hy + 20, 1, 2, dark(P.beardC, 0.12)); }  // barba larga (¾)
           if (P.beardWild) { px(c - 3, hy + 8, 9, 5, P.beardC); px(c + 5, hy + 9, 1, 3, P.beardC); px(c - 3, hy + 13, 8, 2, P.beardC); px(c - 2, hy + 15, 2, 2, P.beardC); px(c + 1, hy + 15, 2, 3, P.beardC); px(c + 3, hy + 15, 2, 2, P.beardC); px(c - 3, hy + 8, 9, 1, dark(P.beardC, 0.18)); }  // barba HIRSUTA (¾)
+          if (P.beardStyle === 'perilla') { px(c, hy + 8, 5, 1, P.beardC); px(c + 1, hy + 10, 3, 3, P.beardC); px(c + 2, hy + 13, 1, 2, dark(P.beardC, 0.1)); }  // PERILLA/candado (¾)
+          if (P.beardStyle === 'fumanchu') { px(c, hy + 8, 5, 1, P.beardC); px(c, hy + 9, 1, 5, P.beardC); px(c + 4, hy + 9, 1, 5, P.beardC); px(c, hy + 14, 1, 1, dark(P.beardC, 0.12)); px(c + 4, hy + 14, 1, 1, dark(P.beardC, 0.12)); }  // bigote CAÍDO 八字 (¾)
         }
       }
     }

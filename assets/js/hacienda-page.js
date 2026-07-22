@@ -5098,8 +5098,10 @@
             <div class="hacp-home-col"><div class="hacp-home-colh">🎒 Mochila <span>${nMo}/${cap}</span></div><div class="hacp-home-list">${moch}</div></div>
             <div class="hacp-home-col"><div class="hacp-home-colh">🏠 Almacén de casa</div><div class="hacp-home-list">${enc}</div></div>
           </div>
+          ${myPjEditable() ? `<button type="button" class="hacp-cp-btn hacp-home-aspecto" data-act="home-aspecto">🎨 Personalizar aspecto</button>` : ''}
         </div>`;
       el.querySelector('[data-act="home-close"]').addEventListener('click', closeHome);
+      bind('[data-act="home-aspecto"]', openAspecto);
       const refrescar = () => { buildHome(); if (charId) buildCharPanel(charId); };
       const amtEl = el.querySelector('[data-vault-amt]');
       const getAmt = () => Math.max(1, Math.floor(Number(amtEl && amtEl.value) || 0));
@@ -5133,6 +5135,89 @@
       homeTimer = setTimeout(doOpen, 8000);
     }
     function closeHome() { if (homeEl) homeEl.hidden = true; }
+
+    // ══ PERSONALIZAR ASPECTO (en tu casa): color de ropa · pelo · barba · piel ══
+    // El aspecto vive en el PERSONAJE (personajes.aspecto, jsonb) — visible para todos y
+    // persistente (RLS de owner permite editar el propio). El color de ropa se ve cuando NO
+    // llevas una prenda de torso equipada (el equipo sobrescribe robe/accent al vestir).
+    const ROBE_COLS = ['#8a2f25', '#b8863a', '#264f39', '#2f5a6e', '#3a4a6a', '#5b2c83', '#6a5a2c', '#2a2630', '#7a7a82', '#e6ebf0'];
+    const BARBAS = [{ i: 0, n: 'Rasurado' }, { i: 1, n: 'Corta' }, { i: 2, n: 'Perilla' }, { i: 3, n: 'Larga' }, { i: 4, n: 'Poblada' }, { i: 5, n: 'Bigote' }];
+    // El personaje del jugador (para editar SU aspecto base). null si es un mecenas sin pj.
+    function myPjEditable() {
+      const m = (h.miembros || []).find(x => (x.personajeId || x.id) === myId);
+      return (m && m.personajeId && window.HacPersonajes && HacPersonajes.get) ? HacPersonajes.get(m.personajeId) : null;
+    }
+    let aspectoEl = null, aspEdit = null;
+    function ensureAspectoEl() {
+      if (aspectoEl) return aspectoEl;
+      aspectoEl = document.createElement('div'); aspectoEl.className = 'hacp-shop hacp-aspecto-ov'; aspectoEl.id = 'hacp-aspecto'; aspectoEl.hidden = true;
+      overlayHost().appendChild(aspectoEl);
+      ['pointerdown', 'pointerup', 'wheel', 'click'].forEach(ev => aspectoEl.addEventListener(ev, (e) => e.stopPropagation(), { passive: false }));
+      aspectoEl.addEventListener('click', (e) => { if (e.target === aspectoEl) closeAspecto(); });
+      return aspectoEl;
+    }
+    function swatchRow(label, items, cur, act) {
+      return `<div class="hacp-asp-rowh">${label}</div><div class="hacp-asp-sw">${items.map(it =>
+        `<button type="button" class="hacp-asp-chip${it.on ? ' on' : ''}" data-${act}="${it.v}"${it.bg ? ` style="background:${it.bg}"` : ''}>${it.lbl || ''}</button>`).join('')}</div>`;
+    }
+    function buildAspecto() {
+      const el = ensureAspectoEl(), pj = myPjEditable(); if (!pj) return;
+      const a = aspEdit || {};
+      const robeCur = a.robe || '', peloCur = Number(a.pelo) || 0, barbaCur = a.barba != null ? Number(a.barba) : 1, pielCur = Number(a.piel) || 0;
+      const HAIRS = (window.HacChar && HacChar.HAIRS) || ['#1b1712'], SKINS = (window.HacChar && HacChar.SKINS) || ['#eac9a0'];
+      const robeItems = ROBE_COLS.map(hx => ({ v: hx, bg: hx, on: robeCur.toLowerCase() === hx.toLowerCase() }));
+      const peloItems = HAIRS.map((hx, i) => ({ v: i, bg: hx, on: peloCur === i }));
+      const pielItems = SKINS.map((hx, i) => ({ v: i, bg: hx, on: pielCur === i }));
+      const barbaItems = BARBAS.map(b => ({ v: b.i, lbl: b.n, on: barbaCur === b.i }));
+      el.innerHTML = `
+        <div class="hacp-shop-box hacp-asp-box">
+          <button type="button" class="hacp-shop-x" data-act="asp-close" aria-label="Cerrar">✕</button>
+          <div class="hacp-shop-h"><span class="hacp-shop-zh">妝</span> Personalizar aspecto</div>
+          <div class="hacp-asp-wrap">
+            <div class="hacp-asp-preview"><canvas width="160" height="224"></canvas></div>
+            <div class="hacp-asp-controls">
+              ${swatchRow('Ropa', robeItems, robeCur, 'robe')}
+              ${swatchRow('Pelo', peloItems, peloCur, 'pelo')}
+              ${swatchRow('Barba', barbaItems, barbaCur, 'barba')}
+              ${swatchRow('Piel', pielItems, pielCur, 'piel')}
+              <div class="hacp-asp-note">El color de ropa se ve cuando <b>no</b> llevas una prenda de torso equipada.</div>
+            </div>
+          </div>
+          <div class="hacp-asp-acts">
+            <button type="button" class="hacp-cp-btn" data-act="asp-reset">↺ Deshacer</button>
+            <button type="button" class="hacp-cp-btn hacp-suc-ok" data-act="asp-save">Guardar</button>
+          </div>
+        </div>`;
+      // Preview grande (aspecto base editado, SIN vestir, para que se vea el color elegido).
+      const cv = el.querySelector('.hacp-asp-preview canvas');
+      if (cv && window.HacChar && HacChar.draw) { try { HacChar.draw(cv, { aptitud: pj.aptitud, aspecto: a, dir: 'S', pose: 'stand', frame: 0, scale: 4, outline: true }); } catch (e) {} }
+      const reb = () => buildAspecto();
+      el.querySelector('[data-act="asp-close"]').addEventListener('click', closeAspecto);
+      el.querySelectorAll('[data-robe]').forEach(b => b.addEventListener('click', () => { aspEdit.robe = b.dataset.robe; aspEdit.accent = aspEdit.accent || '#d8b65a'; reb(); }));
+      el.querySelectorAll('[data-pelo]').forEach(b => b.addEventListener('click', () => { aspEdit.pelo = Number(b.dataset.pelo); reb(); }));
+      el.querySelectorAll('[data-barba]').forEach(b => b.addEventListener('click', () => { aspEdit.barba = Number(b.dataset.barba); reb(); }));
+      el.querySelectorAll('[data-piel]').forEach(b => b.addEventListener('click', () => { aspEdit.piel = Number(b.dataset.piel); reb(); }));
+      el.querySelector('[data-act="asp-reset"]').addEventListener('click', () => { aspEdit = Object.assign({}, pj.aspecto || {}); reb(); });
+      el.querySelector('[data-act="asp-save"]').addEventListener('click', guardarAspecto);
+    }
+    function openAspecto() {
+      const pj = myPjEditable(); if (!pj) { toast('Solo puedes personalizar tu propio mecenas'); return; }
+      aspEdit = Object.assign({}, pj.aspecto || {});
+      if (aspEdit.barba == null) aspEdit.barba = 1;   // por defecto barba corta editable
+      buildAspecto(); ensureAspectoEl().hidden = false;
+    }
+    function closeAspecto() { if (aspectoEl) aspectoEl.hidden = true; }
+    async function guardarAspecto() {
+      const pj = myPjEditable(); if (!pj || !aspEdit || !window.HacPersonajes || !HacPersonajes.update) return;
+      const nuevo = Object.assign({}, pj.aspecto || {}, aspEdit);
+      try {
+        await HacPersonajes.update({ id: pj.id, aspecto: nuevo });
+        pj.aspecto = nuevo;                                   // refleja en la caché local
+        const w = HacFolk.list && HacFolk.list().find(x => x.id === myId); if (w) w.aspecto = nuevo;   // el walker de la finca
+        toast('妝 Aspecto actualizado');
+        closeAspecto(); redrawIso(); if (charId) buildCharPanel(charId);
+      } catch (e) { toast('No se pudo guardar el aspecto: ' + (e && e.message || e)); }
+    }
 
     // ── Equipo del mecenas (overlay): hasta 3 objetos equipados que dan +stats ──
     let equipEl = null;

@@ -182,7 +182,7 @@ const HacFolk = (function () {
     const sec = (window.HacStats && HacStats.secuelas) ? HacStats.secuelas(w.id) : [];
     const secKey = sec.length ? sec.slice().sort().join(',') : '';
     const wpKey = oficio ? '|' + oficio + Math.floor((workPhase || 0) * 6) : '';   // labor cuantizada (6 pasos) → cacheable
-    const key = (w.aptitud || '_') + '|' + (a.atuendo || '') + '|' + (a.robe || '') + '|' + (a.accent || '') + '|' + (a.kind || '') + (a.torsoLujo ? 'L' : '') + (a.torsoGala ? 'G' : '') + (a.gala || '') + '|' + (a.arma || '') + '|' + (a.piel || 0) + '|' + (a.pelo || 0) + '|' + dir + '|' + frame + '|' + (pose || 's') + wpKey + (secKey ? '|' + secKey : '');
+    const key = (w.aptitud || '_') + '|' + (a.atuendo || '') + '|' + (a.robe || '') + '|' + (a.accent || '') + '|' + (a.kind || '') + (a.torsoLujo ? 'L' : '') + (a.torsoGala ? 'G' : '') + (a.gala || '') + '|' + (a.arma || '') + '|' + (a.piel || 0) + '|' + (a.pelo || 0) + '|' + (a.barba != null ? 'b' + a.barba : '') + '|' + dir + '|' + frame + '|' + (pose || 's') + wpKey + (secKey ? '|' + secKey : '');
     let cv = spriteCache.get(key);
     if (!cv && window.HacChar) {
       cv = document.createElement('canvas');

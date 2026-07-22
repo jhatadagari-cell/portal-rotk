@@ -851,6 +851,23 @@ html.hacp-pseudofs, html.hacp-pseudofs body{ overflow:hidden; }
 .hacp-home-row .hacp-cp-btn{ flex:1; text-align:center; padding-left:6px; padding-right:6px; }
 /* Panel "Casa": reusa el overlay .hacp-shop; añade dinero y dos columnas de objetos. */
 .hacp-home-ov .hacp-shop-box{ width:min(460px,94%); }
+.hacp-home-aspecto{ width:100%; margin-top:12px; text-align:center; background:rgba(150,110,180,.16)!important; border-color:rgba(150,110,180,.5)!important; color:#e0c8f0!important; }
+.hacp-home-aspecto:hover{ background:rgba(150,110,180,.3)!important; }
+/* ── Personalizar aspecto (妝) ── */
+.hacp-aspecto-ov .hacp-shop-box{ width:min(480px,95%); }
+.hacp-asp-wrap{ display:flex; gap:14px; align-items:flex-start; margin:6px 0 10px; }
+.hacp-asp-preview{ flex:0 0 auto; }
+.hacp-asp-preview canvas{ image-rendering:pixelated; background:rgba(20,16,11,.35); border:1px solid rgba(201,168,76,.3); border-radius:8px; width:120px; height:168px; }
+.hacp-asp-controls{ flex:1 1 auto; min-width:0; }
+.hacp-asp-rowh{ font:800 11px 'Cinzel Decorative',serif; text-transform:uppercase; letter-spacing:.05em; color:var(--gold); margin:8px 0 4px; }
+.hacp-asp-sw{ display:flex; flex-wrap:wrap; gap:5px; }
+.hacp-asp-chip{ width:26px; height:26px; border:2px solid rgba(0,0,0,.4); border-radius:6px; cursor:pointer; padding:0; box-shadow:inset 0 0 0 1px rgba(255,255,255,.12); }
+.hacp-asp-chip.on{ border-color:var(--gold); box-shadow:0 0 0 1px var(--gold), 0 0 7px rgba(216,182,90,.6); }
+.hacp-asp-chip:not([style]){ width:auto; min-width:44px; height:auto; padding:5px 9px; font:600 11px 'Noto Sans SC',sans-serif; color:var(--parch); background:rgba(201,168,76,.1); }
+.hacp-asp-chip:not([style]).on{ background:rgba(216,182,90,.22); color:#f6dd94; }
+.hacp-asp-note{ font:400 10.5px 'Noto Sans SC',sans-serif; color:var(--ink2,#b8a888); margin-top:10px; line-height:1.35; opacity:.85; }
+.hacp-asp-acts{ display:flex; gap:8px; }
+.hacp-asp-acts .hacp-cp-btn{ flex:1; text-align:center; }
 .hacp-home-money{ display:flex; gap:14px; flex-wrap:wrap; font:600 14px 'Noto Sans SC',sans-serif; color:var(--parch); margin:4px 0 10px; }
 .hacp-home-money b{ color:#e0b85a; font-variant-numeric:tabular-nums; }
 .hacp-home-money b.g{ color:#7fc9a0; }
