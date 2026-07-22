@@ -5440,6 +5440,7 @@
         if (k === 'p') { obrasSetModo('pabellon'); return; }
         if (k === 'r') {
           if (obrasSt.modo === 'construir') { if (obrasEsLinea()) { obrasSt.lineA = null; obrasSt.pos = null; } else obrasSt.rot = (obrasSt.rot + 1) % 4; buildObras(); }
+          else if (obrasSt.modo === 'mover' && obrasSt.movingFrom && !obrasEsLinea()) { obrasSt.rot = (obrasSt.rot + 1) % 4; buildObras(); }   // girar el edificio que se recoloca
           return;
         }
         if (k === 'e') {   // goma: pincel del pabellón, o barrido en modo borrar
@@ -5829,6 +5830,7 @@
             ${modo === 'borrar' ? `<div class="hacp-ob-modos hacp-ob-subtool"><button type="button" class="hacp-ob-mode${!borrSec ? ' on' : ''}" data-ob-bsec="0">🗑 Pieza</button><button type="button" class="hacp-ob-mode${borrSec ? ' on' : ''}" data-ob-bsec="1">▦ Sección</button></div>` : ''}
             <div class="hacp-ob-aviso">${aviso}</div>
             <div class="hacp-ob-acts">
+              ${(moviendo && !obrasEsLinea()) ? `<button type="button" class="hacp-cp-btn" data-ob-rotate>↻ Girar</button>` : ''}
               ${secLbl ? `<button type="button" class="hacp-cp-btn" data-ob-rot>${secLbl}</button>` : ''}
               <button type="button" class="hacp-cp-btn ${modo === 'borrar' ? 'hacp-suc-cancel' : 'hacp-suc-ok'}" data-ob-build${puede ? '' : ' disabled'}>${mainLbl}</button>
             </div>
@@ -5871,6 +5873,9 @@
         else { obrasSt.rot = (obrasSt.rot + 1) % 4; }
         buildObras();
       });
+      // Girar el edificio que se está RECOLOCANDO (modo mover). El botón data-ob-rot es
+      // «Cancelar» en mover, así que la rotación va en su propio botón.
+      const rotate = el.querySelector('[data-ob-rotate]'); if (rotate) rotate.addEventListener('click', () => { obrasSt.rot = (obrasSt.rot + 1) % 4; buildObras(); });
       if (borrSec) el.querySelectorAll('.hacp-ob-cell[data-gx]').forEach(b => b.addEventListener('click', () => {
         const gx = Number(b.dataset.gx), gy = Number(b.dataset.gy);
         if (!obrasSt.lineA || obrasSt.pos) { obrasSt.lineA = [gx, gy]; obrasSt.pos = null; } else { obrasSt.pos = [gx, gy]; }
@@ -6060,7 +6065,8 @@
       const from = obrasSt.movingFrom, to = obrasSt.pos;
       const cc = ((h.mapa && h.mapa.construcciones) || []).find(x => x.pos[0] === from[0] && x.pos[1] === from[1]);
       if (!cc) { obrasSt.movingFrom = null; buildObras(); return; }
-      const tipo = cc.tipo, rot = cc.rot || 0, dueno = cc.dueno || null, nom = (HacBuild.tipo(tipo) || {}).nombre || '';
+      // rot = el de obrasSt (puede haberse girado al recolocar); cae al rot original si no.
+      const tipo = cc.tipo, rot = (obrasSt.rot != null ? obrasSt.rot : (cc.rot || 0)), dueno = cc.dueno || null, nom = (HacBuild.tipo(tipo) || {}).nombre || '';
       const listaSin = ((h.mapa && h.mapa.construcciones) || []).filter(x => !(x.pos[0] === from[0] && x.pos[1] === from[1]));
       const eT = Number(h.mapa && h.mapa.exteriorTier) || 0;
       const v = HacBuild.puedeColocar({ tipo: tipo, pos: to, rot: rot }, tier, listaSin, eT);
