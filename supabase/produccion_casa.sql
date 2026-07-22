@@ -155,8 +155,12 @@ declare h public.haciendas; r public.produccion_casa; k text; add int;
 begin
   select * into h from public.haciendas where id = p_hac for update;
   if not found then raise exception 'La hacienda no existe'; end if;
-  if not exists (select 1 from jsonb_array_elements(coalesce(h.miembros, '[]'::jsonb)) m
-                 where m ->> 'personajeId' = p_pj and m ->> 'pabellon' = 'administrativo') then
+  -- Membresía por IDENTIDAD: m.pabellon = ID de pabellón (no rol). Casa el rol vía la
+  -- tabla pabellones. Ver supabase/pabellones_identidad.sql (refactor + migración).
+  if not exists (
+      select 1 from jsonb_array_elements(coalesce(h.miembros, '[]'::jsonb)) m
+      join public.pabellones pb on pb.id::text = (m ->> 'pabellon') and pb.hacienda_id = p_hac
+      where m ->> 'personajeId' = p_pj and pb.rol = 'administrativo') then
     raise exception 'Solo un mecenas del pabellón administrativo recibe el tributo'; end if;
   -- ¿La caravana está realmente presente? Si no ha pasado el periodo desde el último
   -- sello, ya la recibió alguien (o es un doble-clic): no sumes nada.
