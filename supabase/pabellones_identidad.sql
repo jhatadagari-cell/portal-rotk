@@ -58,6 +58,9 @@ end $$;
 -- ── pab_unirse (por ID) ──────────────────────────────────────────────────
 -- Un miembro se UNE a un pabellón concreto (p_pab_id) o lo deja (''). El escalafón
 -- se GANA por mérito → al cambiar de pabellón el aporte arranca de cero.
+-- OJO: la versión antigua tenía el 3.er parámetro `p_rol`. Postgres NO permite cambiar el
+-- nombre de un parámetro con CREATE OR REPLACE → hay que DROP explícito primero.
+drop function if exists public.pab_unirse(text, text, text);
 create or replace function public.pab_unirse(p_hac text, p_pj text, p_pab_id text)
 returns jsonb language plpgsql security definer set search_path = public as $$
 declare h public.haciendas;
@@ -77,6 +80,8 @@ end; $$;
 
 -- ── pab_responsable (por ID) ─────────────────────────────────────────────
 -- El FUNDADOR nombra al responsable (personajeId) de un pabellón concreto (o lo quita).
+-- Antes el 3.er parámetro era `p_rol` → DROP explícito antes de recrear (ver nota en pab_unirse).
+drop function if exists public.pab_responsable(text, text, text, text);
 create or replace function public.pab_responsable(p_hac text, p_pj text, p_pab_id text, p_target text)
 returns jsonb language plpgsql security definer set search_path = public as $$
 declare h public.haciendas;
