@@ -73,7 +73,7 @@ const HacBuild = (function () {
     { id: 'mercado', dominio: 'administrativo',    nombre: 'Mercado',            zh: '市',   capa: 'edificio', footprint: [2, 2], tierMin: 2, unico: false, cargoMin: null, funcional: true, color: '#b8863a', altura: 26, desc: 'Puesto de mercado con su mercader: DESBLOQUEA la tienda, donde los mecenas gastan el dinero ganado en misiones (artículos por tiers).' },
     { id: 'tablon',  dominio: 'administrativo',    nombre: 'Tablón de Anuncios', zh: '告示牌', capa: 'edificio', footprint: [1, 1], tierMin: 1, unico: false, cargoMin: null, funcional: true, color: '#9a7a4a', altura: 30, desc: 'Tablón techado donde se pregonan los encargos: DESBLOQUEA las misiones de la hacienda. Los mecenas acuden aquí a buscar trabajo.' },
     { id: 'casa',    dominio: null,                nombre: 'Casa de Mecenas',    zh: '宅',   capa: 'edificio', footprint: [2, 2], tierMin: 1, unico: false, cargoMin: null, color: '#9a7a4a', altura: 24, desc: 'Vivienda de un mecenas. Asígnasela (dueño) y podrá guardar a salvo en casa el dinero que gana.' },
-    { id: 'gran-palacio', dominio: 'administrativo',      nombre: 'Gran Palacio',       zh: '大宮', capa: 'edificio', footprint: [4, 7], tierMin: 6, unico: true,  cargoMin: null,    color: '#c43c1a', altura: 70, desc: 'El palacio mayor: triple alero sobre el eje ceremonial de la casa.' },
+    { id: 'gran-palacio', dominio: 'administrativo',      nombre: 'Gran Palacio',       zh: '大宮', capa: 'edificio', footprint: [4, 7], tierMin: 6, unico: true,  cargoMin: null,    color: '#c43c1a', altura: 70, principal: true, rango: 5, desc: 'El palacio mayor: triple alero sobre el eje ceremonial de la casa. Edificio PRINCIPAL (mejora del 宮殿).' },
     // ── Compuestos (huella en L, U o anillo · campo `mask`) ────────────────
     { id: 'ala-l', dominio: 'administrativo',             nombre: 'Ala en Escuadra',    zh: '曲尺', capa: 'edificio', footprint: [3, 3], mask: [[0,0],[0,1],[0,2],[1,2],[2,2]], tierMin: 2, unico: false, cargoMin: null, color: '#a85a30', altura: 28, desc: 'Dos crujías en ángulo recto que cierran la esquina de un patio.' },
     { id: 'ala-l-mayor', dominio: 'administrativo',       nombre: 'Ala en L Mayor',     zh: '大曲尺', capa: 'edificio', footprint: [4, 4], mask: [[0,0],[1,0],[0,1],[1,1],[0,2],[1,2],[2,2],[3,2],[0,3],[1,3],[2,3],[3,3]], tierMin: 3, unico: false, cargoMin: null, color: '#a85a2e', altura: 30, desc: 'Amplia ala en escuadra de doble crujía para flanquear un patio señorial.' },
@@ -81,7 +81,7 @@ const HacBuild = (function () {
     { id: 'patio-o', dominio: 'administrativo',           nombre: 'Patio Cerrado',      zh: '四合院', capa: 'edificio', footprint: [4, 4], mask: [[0,0],[1,0],[2,0],[3,0],[0,1],[3,1],[0,2],[3,2],[0,3],[1,3],[2,3],[3,3]], tierMin: 4, unico: false, cargoMin: null, color: '#b03c1c', altura: 30, desc: 'Recinto de cuatro crujías en torno a un patio central (四合院).' },
     // ── Rectángulos monumentales ──────────────────────────────────────────
     { id: 'salon-doble', dominio: 'administrativo',       nombre: 'Salón Doble',        zh: '重殿', capa: 'edificio', footprint: [4, 8], tierMin: 5, unico: false, cargoMin: null, color: '#bb3c1e', altura: 48, desc: 'Doble salón corrido para las grandes audiencias de la casa.' },
-    { id: 'gran-recinto', dominio: 'administrativo',      nombre: 'Gran Recinto',       zh: '大院', capa: 'edificio', footprint: [5, 8], tierMin: 6, unico: true,  cargoMin: null, color: '#c43c1a', altura: 56, principal: true, rango: 5, desc: 'Bloque palaciego monumental: la mayor construcción de la finca. Edificio PRINCIPAL (cima de la escalera).' },
+    { id: 'gran-recinto', dominio: 'administrativo',      nombre: 'Gran Recinto',       zh: '大院', capa: 'edificio', footprint: [5, 8], tierMin: 6, unico: true,  cargoMin: null, color: '#c43c1a', altura: 56, principal: true, rango: 6, desc: 'Bloque palaciego monumental: la mayor construcción de la finca. Edificio PRINCIPAL (mejora del 大宮 · cima de la escalera).' },
     { id: 'pabellon-te', dominio: 'cultural',       nombre: 'Pabellón de Té',     zh: '茶亭', capa: 'edificio', footprint: [1, 1], tierMin: 1, unico: false, cargoMin: null,    color: '#9a6b3a', altura: 26, desc: 'Quiosco abierto para el té, la lectura y la caligrafía.' },
     // ── Monumentos imperiales (variedad para las grandes haciendas de reino) ──
     // Sin sprite procedural: se muestran como bloque placeholder salvo que la
@@ -570,9 +570,28 @@ const HacBuild = (function () {
     cons.forEach(c => { const t = byId[c.tipo]; if (t && t.principal && (t.rango || 0) > bestR) { bestR = t.rango || 0; best = c; } });
     return best;
   }
+  // La ESCALERA de edificios principales, ordenada por rango asc (正殿→大殿→朝堂→宮殿→大宮→大院).
+  // Solo se puede tener UNO por finca; se sube de uno al siguiente con la «mejora» (in situ),
+  // que da recompensa semanal ASCENDENTE según el rango.
+  const PRINCIPALES = CONSTRUCCIONES.filter(t => t.principal).slice().sort((a, b) => (a.rango || 0) - (b.rango || 0));
+  // Rango del principal presente en la finca (0 si no hay ninguno).
+  function rangoPrincipal(mapa) { const p = edificioPrincipal(mapa); return p ? ((byId[p.tipo] && byId[p.tipo].rango) || 0) : 0; }
+  // Def del SIGUIENTE principal a construir/mejorar: el de rango = actual+1 (rango 1 si no hay
+  // ninguno). null si la finca ya está en la cima de la escalera.
+  function siguientePrincipal(mapa) { const r = rangoPrincipal(mapa); return PRINCIPALES.find(t => (t.rango || 0) === r + 1) || null; }
+  // Coste DIFERENCIAL de mejorar del principal actual al siguiente (por recurso, nunca < 0).
+  // null si no hay mejora superior. Al mejorar se derriba el actual SIN reembolso y se paga
+  // solo esta diferencia, así el gasto total de la escalera equivale al coste del edificio final.
+  function costeMejora(mapa) {
+    const from = edificioPrincipal(mapa), to = siguientePrincipal(mapa);
+    if (!to) return null;
+    const cto = coste(to.id), cfr = from ? coste(from.tipo) : { hierro: 0, tinta: 0, grano: 0, dinero: 0 };
+    return { hierro: Math.max(0, cto.hierro - cfr.hierro), tinta: Math.max(0, cto.tinta - cfr.tinta), grano: Math.max(0, cto.grano - cfr.grano), dinero: Math.max(0, cto.dinero - cfr.dinero) };
+  }
 
   return {
     CONSTRUCCIONES, tipo, esSuelo, esLinea, CATEGORIAS, categoriaDe, TAREAS, tareaDe, lugarDe, gridDims, slotsDesbloqueados, footprintDe, celdasOcupadas, edificioPrincipal,
+    PRINCIPALES, rangoPrincipal, siguientePrincipal, costeMejora,
     dentroDeRejilla, colisiona, construccionEn, puedeColocar, patios, enMuro, coste,
     construccionesValidas, normalizaMapa, MAX_TIER,
     ringDepth, costeExterior, esCeldaExterior, enExterior, COSTE_EXTERIOR,

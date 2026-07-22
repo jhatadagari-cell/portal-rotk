@@ -168,15 +168,22 @@ const HacStats = (function () {
     r.cap += cap; persist(r);
     return { ok: true, cap: r.cap };
   }
-  // Abre la «Recompensa semanal» del señor: la consume y suma +10% de la XP ACTUAL
-  // de cada aptitud (con un suelo para que valga la pena a nivel bajo). {ok, ganado:{dom:xp}}.
-  function abrirRecompensaSemanal(mid) {
+  // Recompensa semanal ASCENDENTE según el RANGO del edificio principal de la finca
+  // (1..6 · 正殿→大殿→朝堂→宮殿→大宮→大院). A mayor rango, mayor % de XP y mayor suelo.
+  // Índice por rango; [0] = fallback (sin edificio principal → como el rango 1).
+  const RECOMP_PCT   = [0.10, 0.10, 0.14, 0.18, 0.22, 0.26, 0.30];
+  const RECOMP_PISO  = [15,   15,   20,   25,   30,   35,   40];
+  // Abre la «Recompensa semanal» del señor: la consume y suma un % de la XP ACTUAL de
+  // cada aptitud (con un suelo), escalado por el rango del edificio principal. {ok, ganado:{dom:xp}, rango}.
+  function abrirRecompensaSemanal(mid, rango) {
     const r = ensure(mid);
     if (!quita(r.inv, 'recompensa-semanal')) return { ok: false, motivo: 'No la llevas en la mochila' };
+    const rr = Math.max(1, Math.min(6, Math.round(Number(rango) || 1)));
+    const pct = RECOMP_PCT[rr], piso = RECOMP_PISO[rr];
     const ganado = {};
-    DOMS.forEach(d => { const x = r[d] || 0, g = Math.max(15, Math.round(x * 0.10)); r[d] = x + g; ganado[d] = g; });
+    DOMS.forEach(d => { const x = r[d] || 0, g = Math.max(piso, Math.round(x * pct)); r[d] = x + g; ganado[d] = g; });
     persist(r);
-    return { ok: true, ganado };
+    return { ok: true, ganado, rango: rr };
   }
   function nivelTotal(mid, dom) { return nivel(mid, dom) + bonus(mid, dom) + bonusPctNiveles(mid, dom); }
   // Slot de un item equipado: 'torso' (ropa) o 'arma' — ranuras DEDICADAS (una cada

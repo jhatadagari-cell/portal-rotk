@@ -467,6 +467,8 @@ html.hacp-pseudofs, html.hacp-pseudofs body{ overflow:hidden; }
 .hacp-ob-mode.on{ background:rgba(201,168,76,.2); color:var(--gold); border-color:var(--hac,var(--gold)); }
 .hacp-ob-cell.occ.sel{ outline:2px solid #e0715a; outline-offset:-2px; }
 .hacp-ob-cell.occ.moving{ opacity:.4; filter:grayscale(.5); }
+/* Muro que se puede SUSTITUIR por una puerta/portón (clic para colocarla encima). */
+.hacp-ob-cell.occ.puerta-ok{ outline:2px dashed #d8b24a; outline-offset:-2px; cursor:pointer; }
 .hacp-suc-cancel{ background:rgba(200,80,66,.16)!important; border-color:rgba(224,113,90,.6)!important; color:#f0b8ab!important; font-weight:700; }
 .hacp-suc-cancel:hover{ background:rgba(200,80,66,.32)!important; color:#fff!important; }
 
@@ -615,6 +617,21 @@ html.hacp-pseudofs, html.hacp-pseudofs body{ overflow:hidden; }
 .hacp-ob-govbtn.terreno:hover:not(:disabled){ background:rgba(96,124,60,.3)!important; }
 .hacp-ob-govnote{ font:400 11px 'Noto Sans SC',sans-serif; color:var(--ink2); background:rgba(74,48,24,.08);
   border:1px dashed rgba(122,83,30,.4); border-radius:7px; padding:7px 9px; line-height:1.35; }
+/* Bloque «Edificio principal» (營 construir): estado de la escalera + acción de MEJORA */
+.hacp-ob-mejora{ margin:10px 0 4px; padding:10px 11px; border:1px solid rgba(196,60,26,.4);
+  border-radius:9px; background:linear-gradient(180deg,rgba(196,60,26,.08),rgba(196,60,26,.03));
+  display:flex; flex-direction:column; gap:6px; }
+.hacp-ob-mejora.on{ border-color:var(--gold); background:linear-gradient(180deg,rgba(216,178,74,.16),rgba(216,178,74,.05)); }
+.hacp-ob-mejora-h{ font:800 11px 'Cinzel Decorative',serif; letter-spacing:.05em; text-transform:uppercase; color:var(--rojo); }
+.hacp-ob-mejora-line{ font:400 12px 'Noto Sans SC',sans-serif; color:var(--ink); line-height:1.35; }
+.hacp-ob-mejora-line b{ color:var(--rojo); font-weight:800; }
+.hacp-ob-mejora-line .zh{ opacity:.7; font-size:11px; }
+.hacp-ob-mejora-cost{ font:700 11.5px 'Noto Sans SC',sans-serif; color:var(--ink2); font-variant-numeric:tabular-nums; }
+.hacp-ob-mejora-cost.short{ color:var(--rojo); }
+.hacp-ob-mejora-note{ font:400 11px 'Noto Sans SC',sans-serif; color:var(--ink2); line-height:1.35; }
+.hacp-ob-mejora-btn{ text-align:center; background:linear-gradient(180deg,#d8b24a,#b98a1e)!important;
+  color:#2a1c06!important; border-color:#8a6510!important; font-weight:800; }
+.hacp-ob-mejora-btn:hover:not(:disabled){ filter:brightness(1.08); }
 /* Censo de edificios por dominio (户 Edificios · 武 N · 文 N · 政 N · otros) */
 .hacp-ob-censo{ display:flex; flex-wrap:wrap; align-items:center; gap:5px; margin:0 0 10px; }
 .hacp-ob-censo-h{ font:800 10px 'Cinzel Decorative',serif; text-transform:uppercase; letter-spacing:.05em; color:var(--sepia); }
@@ -1315,8 +1332,11 @@ button.hacp-slot.comida:hover{ background:rgba(127,201,160,.24); }
 .hacp-board-encb{ display:flex; align-items:center; gap:10px; justify-content:space-between; margin-bottom:9px; padding:9px 11px; border-radius:8px;
   font-size:12.5px; line-height:1.4; color:var(--parch2,#c9bda6); background:rgba(201,168,76,.08); border:1px solid rgba(201,168,76,.28); }
 .hacp-board-encb.hot{ color:#f0d9a0; background:rgba(201,168,76,.16); border-color:rgba(201,168,76,.55); }
+.hacp-board-encb.bloqueo{ color:#e7b6a6; background:rgba(224,113,90,.1); border-color:rgba(224,113,90,.4); }
 .hacp-board-encb b{ color:var(--parch,#eadfce); }
 .hacp-board-encb .hacp-cp-btn{ flex:0 0 auto; white-space:nowrap; }
+/* Motivo por el que un botón «Enviar» está deshabilitado (bajo el botón, alineado a la derecha). */
+.hacp-mis-why{ flex:0 0 auto; max-width:150px; text-align:right; font-size:10px; line-height:1.25; color:#e0715a; opacity:.92; }
 /* Parpadeo del botón «Misiones» en la barra de acciones móvil (encuentro pendiente). */
 .hacp-mobar-btn{ position:relative; }
 .hacp-mobar-btn.pulse{ color:var(--gold); animation:hacpToolPulse 1s ease-in-out infinite; }

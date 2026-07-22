@@ -66,10 +66,15 @@ const HacStore = (function () {
   }
 
   // ── Pabellones (tabla aparte, FK hacienda_id) ───────────────────────────
-  // El pabellón se delimita a mano como RECTÁNGULO: seed = [x, y, w, h] (mín. 100
-  // tiles). Se conserva el array completo tal cual (los formatos viejos [x,y] de la
-  // época de murallas quedan con length 2 → región vacía hasta re-delimitar).
-  const cleanSeed = (s) => Array.isArray(s) ? s.map(n => Number(n) || 0) : [];
+  // El pabellón se delimita de dos formas: RECTÁNGULO seed = [x, y, w, h] (formato
+  // antiguo) o PINCEL de forma libre seed = { c: [[x,y],…] } (celdas sueltas). Hay que
+  // CONSERVAR ambas: antes esto solo aceptaba arrays y convertía el objeto del pincel a
+  // [] → al recargar, todo pabellón pintado a mano perdía su región (y con ella el patio).
+  const cleanSeed = (s) => {
+    if (Array.isArray(s)) return s.map(n => Number(n) || 0);                        // rect [x,y,w,h]
+    if (s && Array.isArray(s.c)) return { c: s.c.filter(p => Array.isArray(p) && p.length >= 2).map(p => [Number(p[0]) || 0, Number(p[1]) || 0]) };   // pincel {c:[[x,y],…]}
+    return [];
+  };
   function rowToPab(r) {
     return { id: r.id, haciendaId: r.hacienda_id, nombre: r.nombre || '', rol: r.rol || '',
       seed: cleanSeed(r.seed) };

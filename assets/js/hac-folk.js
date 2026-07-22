@@ -790,11 +790,20 @@ const HacFolk = (function () {
 
   // EXPEDICIÓN (misión FUERA): camina al portón sur y SIGUE hacia el exterior
   // (waypoints fuera de la muralla) hasta perderse de vista; luego se oculta.
+  // Parte «sin trazar»: cuando NO hay ruta al portón (p.ej. atrapado en una sección
+  // amurallada mal conectada, o dentro de un edificio sin salida transitable), el mecenas
+  // NO debe quedarse plantado dentro de una casa. Sale igual: desaparece (oculto, estado
+  // 'fuera') y volverá por TIEMPO con startReturn. La expedición no depende nunca del pathing.
+  function departHidden(w) {
+    const o = escOrder(w) || w.order, t = nowSimMs();
+    const endOut = o ? o.startMs + (o.durMs || 60000) : t + 60000;
+    w.insideId = null; w.task = null; w.goalBid = null; w.path = null; w.moving = false; w.bowing = false;
+    w.state = 'fuera'; w.outTimer = Math.max(2, (endOut - t) / 1000);
+  }
   function startExpedition(w) {
     const e = wk.exitCell;
-    if (!e) { endMission(w); return; }
-    const path = bfs([Math.round(w.fx), Math.round(w.fy)], new Set([wk.exitKey]));
-    if (!path) { endMission(w); return; }
+    const path = e ? bfs([Math.round(w.fx), Math.round(w.fy)], new Set([wk.exitKey])) : null;
+    if (!path) { departHidden(w); return; }   // sin ruta al portón → parte oculto en vez de quedarse atascado
     // ESCARAMUZA en ventana de concentración: se detiene EN el portón (no cruza aún)
     // y espera a los demás. El resto (o si la ventana ya cerró) sigue hasta el campo.
     const em = escMap[w.id];

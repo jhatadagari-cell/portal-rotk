@@ -185,7 +185,7 @@
       // Nombre del pabellón al pasar el ratón (mapa celda→pabellón en vivo).
       const pabPorCelda = {};
       if (window.HacBuild) pabellones.forEach(p => {
-        if (!Array.isArray(p.seed)) return;
+        if (!p.seed) return;   // acepta rect [x,y,w,h] Y pincel {c:[…]} — regionDePabellon resuelve ambos
         HacBuild.regionDePabellon(p, tier).forEach(([gx, gy]) => { pabPorCelda[gx + ',' + gy] = p; });
       });
       enablePabHover(vp, iso, pabPorCelda);
@@ -3658,7 +3658,8 @@
     // Abre la «Recompensa semanal» de la mochila → +10% XP en las tres aptitudes.
     function abrirRecompensaUI(id) {
       if (!myId || !window.HacStats || !HacStats.abrirRecompensaSemanal) return;
-      const res = HacStats.abrirRecompensaSemanal(myId);
+      const rango = (window.HacBuild && HacBuild.rangoPrincipal) ? HacBuild.rangoPrincipal(h.mapa) : 1;
+      const res = HacStats.abrirRecompensaSemanal(myId, rango);
       if (!res.ok) { toast(res.motivo || 'No se pudo abrir'); return; }
       const g = res.ganado || {}, parts = Object.keys(g).filter(d => g[d] > 0).map(d => `+${g[d]} ${DOM_GLYPH[d] || ''}`.trim());
       toast(`🎁 Recompensa abierta · ${parts.join(' · ')} XP`);
@@ -5390,14 +5391,14 @@
       terrenoBusy = false;
     }
     let obrasEl = null;
-    const obrasSt = { tipo: null, rot: 0, pos: null, lineA: null, zoom: 28, modo: 'construir', sel: null, movingFrom: null, pabRol: 'militar', pabName: '', pabSel: null, pickOpen: false, borrarSec: false, pincel: 1, pincelErase: false, pabEditId: null, pabCells: null };
+    const obrasSt = { tipo: null, rot: 0, pos: null, lineA: null, zoom: 28, modo: 'construir', sel: null, movingFrom: null, pabRol: 'militar', pabName: '', pabSel: null, pickOpen: false, borrarSec: false, pincel: 1, pincelErase: false, pabEditId: null, pabCells: null, mejoraFrom: null };
     // Cambia de modo reseteando todo el estado transitorio (usado por botones y teclado).
     function obrasSetModo(m) {
       obrasSt.modo = m; obrasSt.pos = null; obrasSt.lineA = null; obrasSt.sel = null; obrasSt.movingFrom = null;
       obrasSt.pabSel = null; obrasSt.pickOpen = false; obrasSt.borrarSec = false;
-      obrasSt.pabEditId = null; obrasSt.pincelErase = false; obrasSt.pabCells = new Set();
+      obrasSt.pabEditId = null; obrasSt.pincelErase = false; obrasSt.pabCells = new Set(); obrasSt.mejoraFrom = null;
       buildObras();
-    }   // modo pabellon: pabRol/pabName + rect (lineA→pos) · pabSel (borrar) · pickOpen: selector desplegado · borrarSec: barrido de caminos/muros
+    }   // modo pabellon: pabRol/pabName + rect (lineA→pos) · pabSel (borrar) · pickOpen: selector desplegado · borrarSec: barrido de caminos/muros · mejoraFrom: pos del principal a reemplazar (mejora)
     const obrasEsLinea = () => !!(obrasSt.tipo && window.HacBuild && HacBuild.esLinea && HacBuild.esLinea(obrasSt.tipo));   // camino/muro → se trazan A→B
     // Celdas de una línea recta ortogonal a→b (el eje más largo), + rotación (igual que el admin).
     function obrasLineCells(a, b) {
@@ -5474,7 +5475,7 @@
     }
     function openObras() {
       if (!esFundador()) { toast('Solo el fundador de la casa puede construir'); return; }
-      obrasSt.pos = null; obrasSt.lineA = null; obrasSt.modo = 'construir'; obrasSt.sel = null; obrasSt.movingFrom = null; obrasSt.pabSel = null; obrasSt.pickOpen = false; obrasSt.borrarSec = false;
+      obrasSt.pos = null; obrasSt.lineA = null; obrasSt.modo = 'construir'; obrasSt.sel = null; obrasSt.movingFrom = null; obrasSt.pabSel = null; obrasSt.pickOpen = false; obrasSt.borrarSec = false; obrasSt.mejoraFrom = null;
       if (!obrasSt.tipo) { const first = HacBuild.CONSTRUCCIONES.find(t => (t.tierMin || 1) <= tier); obrasSt.tipo = first ? first.id : null; }
       const sec = ensureObrasEl();
       buildObras();
@@ -5528,8 +5529,10 @@
       return '🏛 Construcción de la casa';
     }
     // Coste compacto (icono+cantidad) para las tarjetas del selector.
-    function obCosteCorto(t) {
-      const co = HacBuild.coste(t.id), R = HacProd.RECURSOS;
+    function obCosteCorto(t) { return obCosteChips(HacBuild.coste(t.id)); }
+    // Chips de coste a partir de un objeto {hierro,tinta,grano,dinero} (0 = 'gratis').
+    function obCosteChips(co) {
+      const R = HacProd.RECURSOS;
       const s = [co.hierro ? R.hierro.icon + co.hierro : '', co.tinta ? R.tinta.icon + co.tinta : '',
                  co.grano ? R.grano.icon + co.grano : '', co.dinero ? '🏛' + co.dinero : ''].filter(Boolean).join(' ');
       return s || 'gratis';
@@ -5610,9 +5613,25 @@
       const moviendo = modo === 'mover' && !!obrasSt.movingFrom;            // paso 2 de mover (recolocando)
       const colocando = modo === 'construir' || moviendo;                   // hay fantasma de colocación
       const seleccionable = modo === 'borrar' || (modo === 'mover' && !moviendo);   // se tocan edificios ya puestos
-      // Al mover, validar EXCLUYENDO el propio edificio (no colisiona consigo mismo).
-      const listaVal = moviendo ? lista.filter(cc => !(cc.pos[0] === obrasSt.movingFrom[0] && cc.pos[1] === obrasSt.movingFrom[1])) : lista;
-      const disponibles = HacBuild.CONSTRUCCIONES.filter(t => (t.tierMin || 1) <= tier);
+      // ── Edificio PRINCIPAL: escalera de UNO solo, que se sube con «Mejorar» ──
+      // Se puede tener un único principal por finca; desde cero solo el 正殿 (rango 1)
+      // aparece en la paleta, y de ahí se sube al siguiente con el botón Mejorar (in situ).
+      const rangoActual = HacBuild.rangoPrincipal ? HacBuild.rangoPrincipal(h.mapa) : 0;
+      const nextPrin = HacBuild.siguientePrincipal ? HacBuild.siguientePrincipal(h.mapa) : null;
+      const mejorando = modo === 'construir' && !!obrasSt.mejoraFrom;   // colocando el nuevo principal que reemplaza al actual
+      const diffMejora = mejorando && HacBuild.costeMejora ? (HacBuild.costeMejora(h.mapa) || { hierro: 0, tinta: 0, grano: 0, dinero: 0 }) : null;
+      // Al mover —o al MEJORAR— validar EXCLUYENDO el edificio origen (no colisiona consigo
+      // mismo, y el principal mejorado puede solaparse con el que reemplaza).
+      const excluirPos = moviendo ? obrasSt.movingFrom : (mejorando ? obrasSt.mejoraFrom : null);
+      const listaVal = excluirPos ? lista.filter(cc => !(cc.pos[0] === excluirPos[0] && cc.pos[1] === excluirPos[1])) : lista;
+      const disponibles = HacBuild.CONSTRUCCIONES.filter(tt => {
+        if ((tt.tierMin || 1) > tier) return false;
+        if (tt.principal) return rangoActual === 0 && (tt.rango || 0) === 1;   // solo el 正殿 desde cero; el resto por «Mejorar»
+        return true;
+      });
+      // Si el edificio elegido dejó de estar en la paleta (p. ej. era un principal ya
+      // construido), reelige el primero disponible para no mostrar una tarjeta fantasma.
+      if (modo === 'construir' && !mejorando && obrasSt.tipo && !disponibles.some(tt => tt.id === obrasSt.tipo)) obrasSt.tipo = (disponibles[0] || {}).id || null;
       const t = obrasSt.tipo ? HacBuild.tipo(obrasSt.tipo) : null, co = obrasCoste();
       // Desplegable RICO por categorías (sustituye al <select> plano): cada tarjeta
       // deja ver de un vistazo la categoría (por sección), el dominio y QUÉ APORTA.
@@ -5636,6 +5655,30 @@
         ${co.grano ? `<span class="${falta(co.grano, alm.grano)}">${R.grano.icon}${co.grano}</span>` : ''}
         ${(co.hierro || co.tinta || co.grano || co.dinero) ? (co.dinero ? `<span class="${falta(co.dinero, teso)}">🏛${co.dinero}</span>` : '') : '<span class="ok">gratis</span>'}
         <span class="hacp-ob-fp">huella ${t.footprint[0]}×${t.footprint[1]}</span></div>` : '';
+      // ── Bloque «Edificio principal» (營 construir): estado + acción de MEJORA in situ ──
+      // Solo aparece si ya hay un principal en la finca (el 1.º se levanta desde la paleta).
+      function obrasMejoraHTML() {
+        if (modo !== 'construir' || rangoActual < 1) return '';
+        const curCC = HacBuild.edificioPrincipal(h.mapa), cur = curCC ? HacBuild.tipo(curCC.tipo) : null;
+        if (mejorando) {
+          const nx = HacBuild.tipo(obrasSt.tipo);
+          return `<div class="hacp-ob-mejora on"><div class="hacp-ob-mejora-h">昇 Mejorar edificio principal</div>
+            <div class="hacp-ob-mejora-line"><b>${esc(cur ? cur.nombre : '')}</b> → <b>${esc(nx ? nx.nombre : '')}</b> <span class="zh">${esc(nx ? nx.zh : '')}</span></div>
+            <div class="hacp-ob-mejora-cost">Coste: ${obCosteChips(diffMejora)}</div>
+            <button type="button" class="hacp-cp-btn" data-ob-mejora-cancel>✕ Cancelar mejora</button></div>`;
+        }
+        if (!nextPrin) return `<div class="hacp-ob-mejora"><div class="hacp-ob-mejora-h">昇 Edificio principal</div>
+          <div class="hacp-ob-mejora-note">${esc(cur ? cur.nombre : '')} · ya está en la cima de la escalera (大院). No hay mejora superior.</div></div>`;
+        if ((nextPrin.tierMin || 1) > tier) return `<div class="hacp-ob-mejora"><div class="hacp-ob-mejora-h">昇 Edificio principal</div>
+          <div class="hacp-ob-mejora-note">Sube la hacienda a nivel ${nextPrin.tierMin} para mejorar a <b>${esc(nextPrin.nombre)}</b> (${esc(nextPrin.zh)}).</div></div>`;
+        const diff = HacBuild.costeMejora(h.mapa) || { hierro: 0, tinta: 0, grano: 0, dinero: 0 };
+        const afford = obrasAsequible(diff);
+        return `<div class="hacp-ob-mejora"><div class="hacp-ob-mejora-h">昇 Edificio principal</div>
+          <div class="hacp-ob-mejora-line">Mejorar <b>${esc(cur ? cur.nombre : '')}</b> → <b>${esc(nextPrin.nombre)}</b> <span class="zh">${esc(nextPrin.zh)}</span></div>
+          <div class="hacp-ob-mejora-cost${afford ? '' : ' short'}">Coste: ${obCosteChips(diff)}</div>
+          <button type="button" class="hacp-cp-btn hacp-suc-ok hacp-ob-mejora-btn" data-ob-mejora${afford ? '' : ' disabled'}>⬆ Mejorar edificio principal</button></div>`;
+      }
+      const mejoraHtml = obrasMejoraHTML();
       // Fantasma de colocación (solo si estamos construyendo o recolocando).
       let gCells = [], gOk = false, gMot = '', gAnchor = null, lineRot = 0, nLineOk = 0;
       const gOkSet = new Set();
@@ -5647,7 +5690,11 @@
       } else if (colocando && !linea && obrasSt.pos) {                      // EDIFICIO: huella en la celda ancla
         const c = { tipo: obrasSt.tipo, pos: [obrasSt.pos[0], obrasSt.pos[1]], rot: obrasSt.rot };
         gCells = HacBuild.celdasOcupadas(c); gAnchor = obrasSt.pos;
-        const v = HacBuild.puedeColocar(c, tier, listaVal, eT); gOk = v.ok; gMot = v.motivo || '';
+        // PUERTA sobre MURO: valida como si las murallas bajo la huella no estuvieran (se
+        // SUSTITUYEN al construir), igual que hace el admin. Así el portón cabe sobre el muro.
+        const gtDef = HacBuild.tipo(obrasSt.tipo);
+        const valList = (gtDef && gtDef.puerta) ? listaVal.filter(cc => !(cc.tipo === 'muralla' && gCells.some(([cx, cy]) => cx === cc.pos[0] && cy === cc.pos[1]))) : listaVal;
+        const v = HacBuild.puedeColocar(c, tier, valList, eT); gOk = v.ok; gMot = v.motivo || '';
         if (gOk) gCells.forEach(([cx, cy]) => gOkSet.add(cx + ',' + cy));
       }
       // Celdas del edificio SELECCIONADO (borrar) o EN MOVIMIENTO — para resaltarlas.
@@ -5658,15 +5705,28 @@
       const movCc = moviendo ? ccAt(movFrom) : null; if (movCc) HacBuild.celdasOcupadas(movCc).forEach(([cx, cy]) => movSet.add(cx + ',' + cy));
       const selDef = selCc ? HacBuild.tipo(selCc.tipo) : null;
       // Mapa de ocupación con COLOR + glifo del edificio (como el admin) — se ve qué hay.
+      // Al MEJORAR se oculta el principal actual (mejoraFrom): sus celdas quedan libres
+      // para poder situar el nuevo encima (se reemplaza al confirmar).
       const occ = new Map();
-      lista.forEach(cc => { const bt = HacBuild.tipo(cc.tipo); if (!bt) return; HacBuild.celdasOcupadas(cc).forEach(([cx, cy]) => occ.set(cx + ',' + cy, { color: bt.color || '#c9a84c', lbl: obLbl(bt), nombre: bt.nombre || '', anchor: cc.pos[0] === cx && cc.pos[1] === cy, ax: cc.pos[0], ay: cc.pos[1] })); });
+      (mejorando ? listaVal : lista).forEach(cc => { const bt = HacBuild.tipo(cc.tipo); if (!bt) return; HacBuild.celdasOcupadas(cc).forEach(([cx, cy]) => occ.set(cx + ',' + cy, { color: bt.color || '#c9a84c', lbl: obLbl(bt), nombre: bt.nombre || '', anchor: cc.pos[0] === cx && cc.pos[1] === cy, ax: cc.pos[0], ay: cc.pos[1], tipo: cc.tipo })); });
       const lblOK = obrasSt.zoom >= 22;   // con celdas pequeñas la etiqueta no cabe → solo color
       const gt = colocando && obrasSt.tipo ? HacBuild.tipo(obrasSt.tipo) : null;
       const inG = (x, y) => gCells.some(p => p[0] === x && p[1] === y);
       const isAnchor = (x, y) => gAnchor && gAnchor[0] === x && gAnchor[1] === y;
+      // PUERTA sobre MURO: las murallas bajo la huella del portón se SUSTITUYEN. Se marcan
+      // para (a) dejar ver el fantasma de la puerta encima y (b) poder clicar el muro para
+      // situar la puerta aunque la celda esté ocupada. `puertaSobreMuro` = pieza puerta activa.
+      const puertaSobreMuro = colocando && !linea && !!(gt && gt.puerta);
+      const sustSet = new Set();
+      if (puertaSobreMuro && obrasSt.pos) lista.forEach(cc => { if (cc.tipo === 'muralla' && gCells.some(([cx, cy]) => cx === cc.pos[0] && cy === cc.pos[1])) sustSet.add(cc.pos[0] + ',' + cc.pos[1]); });
       // Cara/puerta del fantasma de edificio (marca el borde según la rotación, como
       // el admin) — así se ve de un vistazo hacia dónde «mira» y cómo girarlo.
-      const obrDoorSide = (rr) => ['e', 's', 'w', 'n'][((rr % 4) + 4) % 4];
+      // MUROS/PORTONES: su sprite solo tiene 2 orientaciones por rot%2 (par = a lo largo de
+      // x → vano al SUR; impar = a lo largo de y → vano al ESTE). El resto de edificios usan
+      // las 4 caras n/s/e/w. Sin esto, la preview marcaba «sur» pero el portón salía «de lado».
+      const obrDoorSide = (rr) => (gt && (gt.puerta || gt.id === 'muralla'))
+        ? ((((rr % 2) + 2) % 2) === 0 ? 's' : 'e')
+        : ['e', 's', 'w', 'n'][((rr % 4) + 4) % 4];
       const gFace = new Map();
       if (colocando && !linea && gAnchor && gt) {
         const f = HacBuild.footprintDe({ tipo: obrasSt.tipo, rot: obrasSt.rot }), side = obrDoorSide(obrasSt.rot);
@@ -5694,9 +5754,11 @@
           cells += `<button type="button" class="hacp-ob-cell ${o ? 'occ' : ('free' + (esExt(x, y) ? ' ext' : ''))}${inSecRect(x, y) ? ' secpick' : ''}${secSet.has(k) ? ' secdel' : ''}" data-gx="${x}" data-gy="${y}"${o ? ` style="background:${o.color}" title="${esc(o.nombre)}"` : ''}>${o && o.anchor && lblOK ? `<span class="hacp-ob-lbl">${esc(o.lbl)}</span>` : ''}</button>`;
           continue;
         }
-        if (o) {
-          const isMov = movSet.has(k), isSel = selSet.has(k), clickable = seleccionable && !isMov;
-          cells += `<button type="button" class="hacp-ob-cell occ${isSel ? ' sel' : ''}${isMov ? ' moving' : ''}"${clickable ? ` data-occ="${o.ax},${o.ay}"` : ' disabled'} style="background:${o.color}" title="${esc(o.nombre)}">${o.anchor && lblOK ? `<span class="hacp-ob-lbl">${esc(o.lbl)}</span>` : ''}</button>`;
+        if (o && !sustSet.has(k)) {
+          const isMov = movSet.has(k), isSel = selSet.has(k);
+          const puedePuerta = puertaSobreMuro && o.tipo === 'muralla';   // clic sobre muro → situar la puerta encima
+          const clickable = (seleccionable && !isMov) || puedePuerta;
+          cells += `<button type="button" class="hacp-ob-cell occ${isSel ? ' sel' : ''}${isMov ? ' moving' : ''}${puedePuerta ? ' puerta-ok' : ''}"${clickable ? ` data-occ="${o.ax},${o.ay}"` : ' disabled'} style="background:${o.color}" title="${puedePuerta ? 'Coloca la puerta aquí (sustituye el muro)' : esc(o.nombre)}">${o.anchor && lblOK ? `<span class="hacp-ob-lbl">${esc(o.lbl)}</span>` : ''}</button>`;
         } else if (g) {
           cells += `<button type="button" class="hacp-ob-cell ghost ${gOkSet.has(k) ? 'ok' : 'bad'}${gFace.has(k) ? ' hov-face-' + gFace.get(k) : ''}" data-gx="${x}" data-gy="${y}" style="background:${gt ? gt.color : 'transparent'}" title="${gt ? esc(gt.nombre) : ''}">${isAnchor(x, y) && gt && lblOK ? `<span class="hacp-ob-lbl">${esc(obLbl(gt))}</span>` : ''}</button>`;
         } else {
@@ -5726,9 +5788,15 @@
             : !gOk ? `<span class="bad">${esc(gMot || 'Ahí no cabe.')}</span>` : '<span class="ok">Listo para mover aquí.</span>';
         }
       } else {   // construir
-        const cazaN = obrasAsequibleN(co, linea ? Math.max(1, nLineOk) : 1);
+        const cazaN = obrasAsequibleN(mejorando ? diffMejora : co, linea ? Math.max(1, nLineOk) : 1);
         secLbl = linea ? '↺ Reiniciar' : '↻ Girar';
-        if (linea) {
+        if (mejorando) {
+          puede = !!(t && obrasSt.pos && gOk && cazaN); mainLbl = 'Mejorar aquí';
+          aviso = !obrasSt.pos ? 'Toca dónde situar el <b>nuevo</b> edificio principal (reemplaza al actual).'
+            : !gOk ? `<span class="bad">${esc(gMot)}</span>`
+            : !cazaN ? '<span class="bad">La casa no reúne recursos para la mejora.</span>'
+            : '<span class="ok">Listo para mejorar.</span>';
+        } else if (linea) {
           if (!obrasSt.lineA) { aviso = `Toca el <b>inicio</b> del ${esc((t && t.nombre || 'camino').toLowerCase())}.`; }
           else if (!obrasSt.pos) { aviso = 'Ahora toca el <b>final</b> (se traza en recto).'; }
           else if (!gOk) { aviso = `<span class="bad">${esc(gMot)}</span>`; }
@@ -5757,7 +5825,7 @@
             <div class="hacp-ob-pool">Almacén de la casa · <b>🏛 ${teso}</b> · ${R.hierro.icon}${alm.hierro} · ${R.tinta.icon}${alm.tinta} · ${R.grano.icon}${alm.grano}</div>
             ${obrasCensoHTML()}
             <div class="hacp-ob-modos">${modeBtn('construir', '營 Construir')}${modeBtn('mover', '✥ Mover')}${modeBtn('borrar', '🗑 Borrar')}${modeBtn('pabellon', '⬚ Pabellón')}</div>
-            ${modo === 'construir' ? `<div class="hacp-ob-pick2">${pickedHtml}${obrasSt.pickOpen ? `<div class="hacp-ob-menu">${menuHtml}</div>` : ''}</div>${costeHtml}` : ''}
+            ${modo === 'construir' ? `${mejorando ? '' : `<div class="hacp-ob-pick2">${pickedHtml}${obrasSt.pickOpen ? `<div class="hacp-ob-menu">${menuHtml}</div>` : ''}</div>${costeHtml}`}${mejoraHtml}` : ''}
             ${modo === 'borrar' ? `<div class="hacp-ob-modos hacp-ob-subtool"><button type="button" class="hacp-ob-mode${!borrSec ? ' on' : ''}" data-ob-bsec="0">🗑 Pieza</button><button type="button" class="hacp-ob-mode${borrSec ? ' on' : ''}" data-ob-bsec="1">▦ Sección</button></div>` : ''}
             <div class="hacp-ob-aviso">${aviso}</div>
             <div class="hacp-ob-acts">
@@ -5784,6 +5852,18 @@
       el.querySelectorAll('[data-ob-bsec]').forEach(b => b.addEventListener('click', () => { obrasSt.borrarSec = b.dataset.obBsec === '1'; obrasSt.sel = null; obrasSt.lineA = null; obrasSt.pos = null; buildObras(); }));
       const pickBtn = el.querySelector('[data-ob-pick]'); if (pickBtn) pickBtn.addEventListener('click', () => { obrasSt.pickOpen = !obrasSt.pickOpen; buildObras(); });
       el.querySelectorAll('[data-ob-card]').forEach(b => b.addEventListener('click', () => { obrasSt.tipo = b.dataset.obCard; obrasSt.pos = null; obrasSt.lineA = null; obrasSt.rot = 0; obrasSt.pickOpen = false; buildObras(); }));
+      // MEJORA del edificio principal: entra en modo colocación del siguiente rango,
+      // marcando el actual (mejoraFrom) para reemplazarlo al confirmar.
+      const mejBtn = el.querySelector('[data-ob-mejora]'); if (mejBtn && !mejBtn.disabled) mejBtn.addEventListener('click', () => {
+        const nx = HacBuild.siguientePrincipal(h.mapa), cur = HacBuild.edificioPrincipal(h.mapa);
+        if (!nx || !cur) return;
+        obrasSt.mejoraFrom = cur.pos.slice(); obrasSt.tipo = nx.id; obrasSt.pos = null; obrasSt.rot = 0; obrasSt.pickOpen = false; buildObras();
+      });
+      const mejCancel = el.querySelector('[data-ob-mejora-cancel]'); if (mejCancel) mejCancel.addEventListener('click', () => {
+        obrasSt.mejoraFrom = null; obrasSt.pos = null;
+        const fb = HacBuild.CONSTRUCCIONES.find(tt => !tt.principal && (tt.tierMin || 1) <= tier);   // vuelve a un edificio normal seleccionable
+        obrasSt.tipo = fb ? fb.id : null; buildObras();
+      });
       const rot = el.querySelector('[data-ob-rot]'); if (rot) rot.addEventListener('click', () => {
         if (borrSec) { obrasSt.lineA = null; obrasSt.pos = null; }
         else if (modo === 'mover') { obrasSt.movingFrom = null; obrasSt.pos = null; }
@@ -5807,6 +5887,7 @@
         const p = b.dataset.occ.split(',').map(Number);
         if (modo === 'borrar') { obrasSt.sel = p; }
         else if (modo === 'mover') { const cc = ccAt(p); if (cc) { obrasSt.movingFrom = p; obrasSt.tipo = cc.tipo; obrasSt.rot = cc.rot || 0; obrasSt.pos = null; } }
+        else if (modo === 'construir') { const cc = ccAt(p), sd = obrasSt.tipo ? HacBuild.tipo(obrasSt.tipo) : null; if (sd && sd.puerta && cc && cc.tipo === 'muralla') obrasSt.pos = p; }   // puerta sobre muro: fija la celda
         buildObras();
       }));
       const bb = el.querySelector('[data-ob-build]'); if (bb && !bb.disabled) bb.addEventListener('click', () => {
@@ -5833,7 +5914,7 @@
           anchor = obrasSt.pos;
           if (!linea) { const f = HacBuild.footprintDe({ tipo: obrasSt.tipo, rot: obrasSt.rot }); footW = f[0]; footH = f[1]; }
           if (modo === 'mover') sub = 'sin coste';
-          else if (!linea) sub = [co.hierro ? R.hierro.icon + co.hierro : '', co.tinta ? R.tinta.icon + co.tinta : '', co.grano ? R.grano.icon + co.grano : '', co.dinero ? '🏛' + co.dinero : ''].filter(Boolean).join(' ') || 'gratis';
+          else if (!linea) sub = obCosteChips(mejorando ? diffMejora : co);
         } else return;
         const cell = grid.children[(anchor[1] - Y0) * COLS + (anchor[0] - X0)]; if (!cell) return;
         wrap.style.position = 'relative';
@@ -5862,7 +5943,10 @@
       const COLS = st.COLS, ROWS = st.ROWS, X0 = st.X0, Y0 = st.Y0;   // rejilla puede incluir anillo exterior (coords negativas)
       const cellAt = (x, y) => (x >= X0 && y >= Y0 && x < X0 + COLS && y < Y0 + ROWS) ? grid.children[(y - Y0) * COLS + (x - X0)] : null;
       const tip = obrasCoordTip();
-      const doorSide = (rr) => ['e', 's', 'w', 'n'][((rr % 4) + 4) % 4];
+      // Igual que obrDoorSide: muros/portones marcan la cara por rot%2 (par=sur, impar=este).
+      const doorSide = (rr, def) => (def && (def.puerta || def.id === 'muralla'))
+        ? ((((rr % 2) + 2) % 2) === 0 ? 's' : 'e')
+        : ['e', 's', 'w', 'n'][((rr % 4) + 4) % 4];
       const FACE = ['hov-face-n', 'hov-face-s', 'hov-face-e', 'hov-face-w'];
       let painted = [];
       const clear = () => { painted.forEach(c => c.classList.remove('hov', 'hov-ok', 'hov-bad', ...FACE)); painted = []; };
@@ -5887,7 +5971,7 @@
         // Edificio: huella coloreada + CARA/PUERTA marcada según la rotación.
         const c = { tipo: obrasSt.tipo, pos: [gx, gy], rot: obrasSt.rot };
         const ok = HacBuild.puedeColocar(c, tier, st.listaVal, st.eT).ok;
-        const f = HacBuild.footprintDe(c), side = doorSide(obrasSt.rot);
+        const f = HacBuild.footprintDe(c), side = doorSide(obrasSt.rot, HacBuild.tipo(obrasSt.tipo));
         const x2 = gx + f[0] - 1, y2 = gy + f[1] - 1;
         HacBuild.celdasOcupadas(c).forEach(([cx, cy]) => {
           const e = cellAt(cx, cy); mark(e, ok ? 'hov-ok' : 'hov-bad');
@@ -6002,7 +6086,7 @@
       if (!window.HacStore || !window.HacBuild || !HacBuild.regionDePabellon) return null;
       const pabs = HacStore.pabellones(h.id) || [];
       for (const p of pabs) {
-        if (!Array.isArray(p.seed)) continue;
+        if (!p.seed) continue;   // rect o pincel: regionDePabellon resuelve ambos formatos
         if (HacBuild.regionDePabellon(p, tier).some(c => c[0] === gx && c[1] === gy)) return p;
       }
       return null;
@@ -6049,7 +6133,7 @@
     const nowMs = () => (window.HacClock && HacClock.now) ? HacClock.now() : Date.now();
     function pabSinergia(rol) {
       const pabs = (window.HacStore && HacStore.pabellones) ? HacStore.pabellones(h.id) : [];
-      const p = pabs.find(x => x.rol === rol); if (!p || !Array.isArray(p.seed)) return 0;
+      const p = pabs.find(x => x.rol === rol); if (!p || !p.seed) return 0;   // rect o pincel
       const reg = new Set(HacBuild.regionDePabellon(p, tier).map(c => c[0] + ',' + c[1]));
       let s = 0; ((h.mapa && h.mapa.construcciones) || []).forEach(c => { const t = HacBuild.tipo(c.tipo); if (t && t.dominio === rol && reg.has(c.pos[0] + ',' + c.pos[1])) s += t.restringido ? 2 : 1; });
       return s;
@@ -6063,8 +6147,13 @@
     const tareasDe = (rol) => rol === 'militar' ? 'gana <b>misiones militares</b>, <b>escaramuzas</b> o trabaja un <b>oficio 军</b> en la jornada'
       : rol === 'cultural' ? 'completa <b>misiones culturales</b> o trabaja un <b>oficio 文</b> en la jornada'
       : 'completa <b>misiones administrativas</b> o trabaja un <b>oficio 政</b> en la jornada';
+    // Miembro ↔ pabellón por IDENTIDAD (id del pabellón en m.pabellon), no por rol/posición
+    // (robusto a reformas). El ROL se deriva del pabellón para las cuentas por dominio.
+    const pabById = (id) => id ? (((window.HacStore && HacStore.pabellones) ? HacStore.pabellones(h.id) : []) || []).find(p => String(p.id) === String(id)) || null : null;
+    const rolDeMiembro = (m) => { const p = (m && m.pabellon) ? pabById(m.pabellon) : null; return p ? p.rol : ''; };
+    const miembrosDeRol = (rol) => (h.miembros || []).filter(m => rolDeMiembro(m) === rol);
     function pabPassiveRate(rol) {   // pts/hora = gente ×2 + escalafones + edificios del patio + ★ de servidores (consejeros)
-      const ms = (h.miembros || []).filter(m => m.pabellon === rol);
+      const ms = miembrosDeRol(rol);
       return ms.length * 2 + ms.reduce((a, m) => a + escDeMiembro(m), 0) + pabSinergia(rol) + servidorEstrellas(rol);
     }
     const pabInvestig = (rol) => (h.mapa && h.mapa.investig && h.mapa.investig[rol]) || null;
@@ -6079,10 +6168,10 @@
     async function aportarInvestig(dom, base) {
       const inv = pabInvestig(dom), def = inv ? invDefById(dom, inv.id) : null; if (!inv || inv.done || !def || !myId) return;
       const yo = (h.miembros || []).find(m => String(m.personajeId) === String(myId));
-      if (!yo || yo.pabellon !== dom) return;                              // solo contribuyes a TU pabellón
+      if (!yo || rolDeMiembro(yo) !== dom) return;                         // solo contribuyes a la investigación de TU pabellón (por su rol)
       const chunk = Math.round((base || 0) * (1 + escDeMiembro(yo) * 0.25));   // el rango acelera la investigación (perk)
       const np = Math.min(def.target, Math.round(pabLiveProg(dom)) + chunk);
-      try { const d = await pabRPC('pab_investig_prog', { p_hac: h.id, p_pj: myId, p_rol: dom, p_prog: np, p_ts: nowMs(), p_target: def.target, p_done_key: np >= def.target ? def.unlock : '', p_aporte: Math.round(base || 0) }); if (d && d.mapa) h.mapa = d.mapa; if (d && d.miembros) h.miembros = d.miembros; } catch (e) { return; }
+      try { const d = await pabRPC('pab_investig_prog', { p_hac: h.id, p_pj: myId, p_rol: dom, p_prog: np, p_ts: nowMs(), p_target: def.target, p_done_key: np >= def.target ? def.unlock : '', p_aporte: Math.round(base || 0), p_pab_id: yo.pabellon || '' }); if (d && d.mapa) h.mapa = d.mapa; if (d && d.miembros) h.miembros = d.miembros; } catch (e) { return; }
       if (np >= def.target) toast(`🔬 ¡Investigación completada: ${def.nombre}!`);
     }
     async function pabCompletar(rol) {   // completar por acumulación pasiva (al abrir el panel)
@@ -6137,7 +6226,7 @@
     // única recompensa por investigar más es la carga → saltos GRANDES entre tiers.
     const TRIBUTO_MULT = [0, 1, 1.8, 2.8, 4.2, 6];   // nv1..5 (×1 … ×6)
     function tributoCargo() {   // escala con la fuerza del pabellón 政 Y (sobre todo) con el nivel
-      const s = pabSinergia('administrativo'), a = (h.miembros || []).filter(m => m.pabellon === 'administrativo').length;
+      const s = pabSinergia('administrativo'), a = miembrosDeRol('administrativo').length;
       const mult = TRIBUTO_MULT[Math.max(1, Math.min(5, tributoNivel()))] || 1;
       const r = (n) => Math.round(n * mult);
       return { dinero: r(40 + 6 * s + 4 * a), grano: r(8 + s), hierro: r(4), tinta: r(4) };
@@ -6160,7 +6249,7 @@
     // mecenas del pabellón 政 puede firmarlo; el resto puede mirar la escena.
     function recibirTributo() {
       const yo = (h.miembros || []).find(m => String(m.personajeId) === String(myId));
-      const puede = !!(yo && yo.pabellon === 'administrativo');
+      const puede = !!(yo && rolDeMiembro(yo) === 'administrativo');
       const cg = tributoCargo();
       if (window.HacAlbaran && HacAlbaran.recepcion) {
         HacAlbaran.recepcion({
@@ -6328,7 +6417,7 @@
       const pabs = (window.HacStore && HacStore.pabellones) ? HacStore.pabellones(h.id) : [];
       if (!pabs.length) { toast('Aún no hay pabellones en esta finca'); return; }
       const yo = (h.miembros || []).find(m => String(m.personajeId) === String(myId));
-      const mine = (yo && yo.pabellon) ? pabs.find(p => p.rol === yo.pabellon) : null;
+      const mine = (yo && yo.pabellon) ? pabs.find(p => String(p.id) === String(yo.pabellon)) : null;   // por id (no por rol)
       openPabPanel(mine || pabs[0]);
     }
     function openPabPanel(p) {
@@ -6348,14 +6437,14 @@
         return `<button type="button" class="hacp-pab-chip${on ? ' on' : ''}" data-pab-go="${esc(pp.id)}" style="--pc:${RR.color}"><span class="zh">${RR.zh}</span>${esc(pp.nombre || RR.nombre)}</button>`;
       }).join('')}</div>` : '';
       const miembros = h.miembros || [];
-      const resId = (h.mapa && h.mapa.responsables && h.mapa.responsables[rol]) || null;
+      const resId = (h.mapa && h.mapa.responsables && h.mapa.responsables[p.id]) || null;   // responsable por id de pabellón
       const resM = resId ? miembros.find(m => String(m.personajeId) === String(resId)) : null;
       const soyFund = esFundador(), soyResp = resId && String(resId) === String(myId);
-      const mios = miembros.filter(m => m.pabellon === rol);
+      const mios = miembros.filter(m => String(m.pabellon) === String(p.id));   // miembros de ESTE pabellón (por id)
       const yoM = miembros.find(m => String(m.personajeId) === String(myId));
-      const yoEnEste = !!(yoM && yoM.pabellon === rol);
+      const yoEnEste = !!(yoM && String(yoM.pabellon) === String(p.id));
       // Sinergia: edificios del dominio dentro de la región (los de CLASE cuentan doble).
-      const reg = Array.isArray(p.seed) ? HacBuild.regionDePabellon(p, tier) : [];
+      const reg = HacBuild.regionDePabellon(p, tier);   // resuelve rect [x,y,w,h] y pincel {c:[…]}
       const regSet = new Set(reg.map(c => c[0] + ',' + c[1]));
       let sin = 0; ((h.mapa && h.mapa.construcciones) || []).forEach(c => { const t = HacBuild.tipo(c.tipo); if (t && t.dominio === rol && regSet.has(c.pos[0] + ',' + c.pos[1])) sin += t.restringido ? 2 : 1; });
       const pct = Math.min(15, sin * 3);
@@ -6373,7 +6462,7 @@
         <select data-pab-resp><option value="">— sin responsable —</option>${mios.map(m => `<option value="${esc(m.personajeId)}"${String(m.personajeId) === String(resId) ? ' selected' : ''}>${esc(m.nombre)}</option>`).join('')}</select></div>` : '';
       const miAccion = yoM ? (yoEnEste
         ? `<button type="button" class="hacp-cp-btn" data-pab-salir>Salir del pabellón</button>`
-        : `<button type="button" class="hacp-cp-btn hacp-suc-ok" data-pab-unir="${rol}">Unirme a este pabellón${yoM.pabellon ? ' (dejo el otro)' : ''}</button>`)
+        : `<button type="button" class="hacp-cp-btn hacp-suc-ok" data-pab-unir="${esc(p.id)}">Unirme a este pabellón${yoM.pabellon ? ' (dejo el otro)' : ''}</button>`)
         : '<div class="hacp-inv-note">Solo los miembros de la hacienda pueden unirse.</div>';
       // Investigación del pabellón, POR NIVELES (tiers). Muestra el tier en curso, o
       // el siguiente listo para iniciarse (con su coste creciente), o «al máximo».
@@ -6434,16 +6523,16 @@
       const tbt = el.querySelector('[data-pab-talentos]'); if (tbt) tbt.addEventListener('click', openTalentos);
       el.querySelector('[data-pab-x]').addEventListener('click', () => { el.hidden = true; });
       el.querySelectorAll('[data-pab-go]').forEach(b => b.addEventListener('click', () => { const pp = todos.find(x => String(x.id) === String(b.dataset.pabGo)); if (pp) openPabPanel(pp); }));
-      const unir = el.querySelector('[data-pab-unir]'); if (unir) unir.addEventListener('click', () => pabAccion('unir', rol));
+      const unir = el.querySelector('[data-pab-unir]'); if (unir) unir.addEventListener('click', () => pabAccion('unir', p.id));   // por id de pabellón
       const salir = el.querySelector('[data-pab-salir]'); if (salir) salir.addEventListener('click', () => pabAccion('unir', ''));
-      const rsel = el.querySelector('[data-pab-resp]'); if (rsel) rsel.addEventListener('change', () => pabAccion('resp', rol, rsel.value));
-      const invb = el.querySelector('[data-inv-start]'); if (invb) invb.addEventListener('click', () => pabAccion('inv-start', rol));
+      const rsel = el.querySelector('[data-pab-resp]'); if (rsel) rsel.addEventListener('change', () => pabAccion('resp', p.id, rsel.value));   // responsable por id de pabellón
+      const invb = el.querySelector('[data-inv-start]'); if (invb) invb.addEventListener('click', () => pabAccion('inv-start', rol));   // investigación por rol (dominio)
     }
     async function pabAccion(kind, a, b) {
       if (!myId) return;
       try {
-        if (kind === 'unir') { const d = await pabRPC('pab_unirse', { p_hac: h.id, p_pj: myId, p_rol: a }); if (d && d.miembros) h.miembros = d.miembros; toast(a ? '部 Te uniste al pabellón' : 'Saliste del pabellón'); }
-        else if (kind === 'resp') { const d = await pabRPC('pab_responsable', { p_hac: h.id, p_pj: myId, p_rol: a, p_target: b || '' }); if (d && d.mapa) h.mapa = d.mapa; toast('責 Responsable actualizado'); }
+        if (kind === 'unir') { const d = await pabRPC('pab_unirse', { p_hac: h.id, p_pj: myId, p_pab_id: a || '' }); if (d && d.miembros) h.miembros = d.miembros; toast(a ? '部 Te uniste al pabellón' : 'Saliste del pabellón'); }
+        else if (kind === 'resp') { const d = await pabRPC('pab_responsable', { p_hac: h.id, p_pj: myId, p_pab_id: a, p_target: b || '' }); if (d && d.mapa) h.mapa = d.mapa; toast('責 Responsable actualizado'); }
         else if (kind === 'inv-start') { const def = invSiguiente(a); if (!def) { toast('🔬 Ya está todo investigado'); return; } if (def.licencia) { toast('🔒 Necesita una licencia especial (próximamente)'); return; } const yaEnCurso = !!(pabInvestig(a) && !pabInvestig(a).done); const d = await pabRPC('pab_investig_elegir', { p_hac: h.id, p_pj: myId, p_rol: a, p_id: def.id, p_ts: nowMs() }); if (d && d.mapa) h.mapa = d.mapa; toast(yaEnCurso ? '🔬 Esa investigación ya estaba en curso' : `🔬 Investigación iniciada: ${def.nombre}`); }
       } catch (e) { toast(String(e && e.message || e)); return; }
       buildPabPanel();
@@ -6589,7 +6678,31 @@
       toast('⬚ Pabellón borrado' + (p ? ': ' + p.nombre : ''));
       obrasSt.pabSel = null; redrawIso(); buildObras();
     }
+    // MEJORAR el edificio principal in situ: derriba el actual (sin reembolso) y levanta
+    // el siguiente rango en la posición elegida, pagando solo el coste DIFERENCIAL. Igual
+    // patrón demoler→construir que obrasMover (el servidor confía en el cliente para coste/geometría).
+    async function obrasMejorar() {
+      if (!esFundador() || !obrasSt.tipo || !obrasSt.pos || !obrasSt.mejoraFrom || !window.HacProdCasa) return;
+      const from = obrasSt.mejoraFrom, to = obrasSt.pos, rot = obrasSt.rot || 0;
+      const nextDef = HacBuild.tipo(obrasSt.tipo);
+      const eT = Number(h.mapa && h.mapa.exteriorTier) || 0;
+      const listaSin = ((h.mapa && h.mapa.construcciones) || []).filter(x => !(x.pos[0] === from[0] && x.pos[1] === from[1]));
+      const v = HacBuild.puedeColocar({ tipo: obrasSt.tipo, pos: to, rot: rot }, tier, listaSin, eT);
+      if (!v.ok) { toast(v.motivo); return; }
+      const diff = HacBuild.costeMejora(h.mapa) || { hierro: 0, tinta: 0, grano: 0, dinero: 0 };   // se calcula ANTES de derribar (usa el principal actual)
+      if (!obrasAsequible(diff)) { toast('La casa no reúne recursos para la mejora'); return; }
+      const curCC = HacBuild.edificioPrincipal(h.mapa), oldNom = curCC ? ((HacBuild.tipo(curCC.tipo) || {}).nombre || '') : '';
+      try {
+        const d = await HacProdCasa.demoler({ haciendaId: h.id, pj: myId, pos: from }); if (d && d.mapa) h.mapa = d.mapa;
+        const r = await HacProdCasa.construir({ haciendaId: h.id, pj: myId, tipo: obrasSt.tipo, pos: to, rot: rot, dueno: null, mat: { hierro: diff.hierro, tinta: diff.tinta, grano: diff.grano }, dinero: diff.dinero });
+        if (r && r.mapa) h.mapa = r.mapa;
+      } catch (e) { toast('No se pudo mejorar: ' + (e && e.message || e)); redrawIso(); buildObras(); return; }
+      toast(`昇 Edificio principal mejorado: ${oldNom} → ${nextDef.nombre}`);
+      if (window.HacBitacora) HacBitacora.log(myId, 'progreso', `昇 El fundador mejoró el edificio principal a ${nextDef.nombre} (${nextDef.zh})`);
+      obrasSt.mejoraFrom = null; obrasSt.pos = null; redrawIso(); buildObras();
+    }
     async function obrasConstruir() {
+      if (obrasSt.mejoraFrom) return obrasMejorar();
       if (!esFundador() || !obrasSt.tipo || !obrasSt.pos || !window.HacProdCasa) return;
       const t = HacBuild.tipo(obrasSt.tipo), co = HacBuild.coste(obrasSt.tipo);
       const eT = Number(h.mapa && h.mapa.exteriorTier) || 0;
@@ -6613,14 +6726,21 @@
         return;
       }
       const c = { tipo: obrasSt.tipo, pos: obrasSt.pos, rot: obrasSt.rot };
-      const v = HacBuild.puedeColocar(c, tier, (h.mapa && h.mapa.construcciones) || [], eT);
+      // PUERTA sobre MURO: las murallas bajo la huella se SUSTITUYEN (como el admin). Se
+      // valida ignorándolas y luego se derriban antes de levantar la puerta (demoler→construir,
+      // el mismo patrón servidor que mover/mejorar). casa_demoler borra por pos de ancla.
+      const foot = HacBuild.celdasOcupadas(c);
+      const murosSust = t.puerta ? ((h.mapa && h.mapa.construcciones) || []).filter(cc => cc.tipo === 'muralla' && foot.some(([fx, fy]) => fx === cc.pos[0] && fy === cc.pos[1])) : [];
+      const listaVal = murosSust.length ? ((h.mapa && h.mapa.construcciones) || []).filter(cc => !murosSust.includes(cc)) : ((h.mapa && h.mapa.construcciones) || []);
+      const v = HacBuild.puedeColocar(c, tier, listaVal, eT);
       if (!v.ok) { toast(v.motivo); return; }
       if (!obrasAsequible(co)) { toast('La casa no reúne tesorería/materiales suficientes'); return; }
       try {
+        for (const mu of murosSust) { const d = await HacProdCasa.demoler({ haciendaId: h.id, pj: myId, pos: mu.pos }); if (d && d.mapa) h.mapa = d.mapa; }
         const res = await HacProdCasa.construir({ haciendaId: h.id, pj: myId, tipo: obrasSt.tipo, pos: obrasSt.pos, rot: obrasSt.rot, dueno: null, mat: unaCelda, dinero: co.dinero });
         if (res && res.mapa) h.mapa = res.mapa;
       } catch (e) { toast('No se pudo construir: ' + (e && e.message || e)); return; }
-      toast(`營 Construido: ${t.nombre}`);
+      toast(t.puerta && murosSust.length ? `營 ${t.nombre} colocado sobre el muro` : `營 Construido: ${t.nombre}`);
       if (window.HacBitacora) HacBitacora.log(myId, 'progreso', `營 El fundador levantó ${t.nombre}`);
       obrasSt.pos = null;
       redrawIso();
@@ -6755,6 +6875,26 @@
       const list = (window.HacMisiones ? HacMisiones.disponibles(tier) : []).filter(m => !tomadas.has(m.id));
       const ocupado = ocupadoAhora(myId);   // orden activa O banda/peregrinaje (incl. 'abierta')
       const energia = window.HacEnergia ? HacEnergia.current(h.id, myId) : 100;
+      const malheridoMe = !!(window.HacStats && HacStats.malherido && HacStats.malherido(myId));
+      // Estado de MI expedición en curso (para explicar el bloqueo por encuentros).
+      const eMe = miExped();
+      const hayEnc = !!(eMe && encPend(eMe.o, eMe.mis));
+      const encHot = hayEnc && !!encResolvible(eMe.o, eMe.mis);
+      // Motivo GLOBAL por el que ahora mismo NO se puede enviar al mecenas ('' = se puede).
+      // TODO botón deshabilitado debe decir por qué; este cubre malherido/ocupado (comunes
+      // a todas las filas). El caso de energía es por-misión y se añade en cada botón.
+      function motivoOcupado() {
+        if (hayEnc) return encHot
+          ? 'Tu mecenas vuelve de la expedición: atiende el encuentro pendiente (botón «Atender») para que cobre y quede libre'
+          : 'Tu mecenas está de expedición · volverá con encuentros que atender antes de quedar libre';
+        const b = window.HacEscaramuzas && HacEscaramuzas.miBanda(h.id, myId);
+        if (b) return b.estado === 'abierta'
+          ? 'Tu mecenas está comprometido en una escaramuza que se está formando · no puede salir a la vez'
+          : 'Tu mecenas está fuera en una escaramuza · volverá pronto';
+        return 'Tu mecenas ya está ocupado en otra actividad · espera a que vuelva';
+      }
+      const bloqueoMsg = malheridoMe ? 'Tu mecenas está malherido · cúralo en la enfermería antes de salir de expedición'
+        : ocupado ? motivoOcupado() : '';
       const rows = list.slice().sort((a, b) => (a.dom < b.dom ? -1 : a.dom > b.dom ? 1 : a.dif - b.dif)).map(m => {
         const risk = riesgoMision(m), rc = HacMisiones.nivelColor(risk), rec = HacMisiones.recompensa(m);
         const en = costeExped(m), sinEn = energia < en, loot = Math.round(HacMisiones.lootChance(m.dif) * 100);
@@ -6787,23 +6927,30 @@
           </div>
           <div class="hacp-mis-side">
             <span class="hacp-mis-risk r-${rc}" title="Riesgo de fracaso (baja con tu nivel de ${DOM_NOMBRE[m.dom]} y el equipo)"><i>Riesgo</i><b>⚠ ${Math.round(risk * 100)}%</b></span>
-            <button type="button" class="hacp-mis-go" data-mis="${esc(m.id)}"${ocupado || sinEn ? ' disabled' : ''} title="${sinEn ? 'Energía insuficiente' : ''}">Enviar</button>
+            ${(() => {
+              const motivo = bloqueoMsg || (sinEn ? `Energía insuficiente · necesitas ${en}⚡ (tienes ${Math.round(energia)})` : '');
+              const dis = malheridoMe || ocupado || sinEn;
+              return `<button type="button" class="hacp-mis-go" data-mis="${esc(m.id)}"${dis ? ' disabled' : ''} title="${esc(motivo)}">Enviar</button>${dis ? `<span class="hacp-mis-why">${esc(motivo)}</span>` : ''}`;
+            })()}
           </div>
         </div>`;
       }).join('');
       // Banner de ENCUENTROS pendientes: mientras queden, la misión no cobra y no puedes
       // enviar otra (el mecenas sigue ocupado). Si ya son resolubles, botón «Atender».
-      const e = miExped();
-      const hayEnc = !!(e && encPend(e.o, e.mis));
-      const encHot = hayEnc && !!encResolvible(e.o, e.mis);
-      const nEnc = (e && e.mis && e.mis.enc) ? e.mis.enc.length : 0;
+      // (eMe/hayEnc/encHot ya calculados arriba para el motivo de los botones.)
+      const nEnc = (eMe && eMe.mis && eMe.mis.enc) ? eMe.mis.enc.length : 0;
       const encBanner = hayEnc
         ? `<div class="hacp-board-encb${encHot ? ' hot' : ''}">
             <span>${encHot
-              ? `⚑ Tu expedición <b>«${esc(e.mis.nombre)}»</b> tiene un <b>encuentro</b> que atender antes de cobrar.`
-              : `Tu expedición <b>«${esc(e.mis.nombre)}»</b> traerá <b>${nEnc}</b> ${nEnc > 1 ? 'encuentros' : 'encuentro'} por el camino.`}</span>
+              ? `⚑ Tu expedición <b>«${esc(eMe.mis.nombre)}»</b> tiene un <b>encuentro</b> que atender antes de cobrar.`
+              : `Tu expedición <b>«${esc(eMe.mis.nombre)}»</b> traerá <b>${nEnc}</b> ${nEnc > 1 ? 'encuentros' : 'encuentro'} por el camino.`}</span>
             ${encHot ? '<button type="button" class="hacp-cp-btn" data-act="enc-go">Atender</button>' : ''}
           </div>`
+        : '';
+      // Banner de BLOQUEO global (malherido / escaramuza / ocupado sin encuentros): explica
+      // por qué TODOS los botones «Enviar» están grises. El caso de encuentros ya lo cubre encBanner.
+      const bloqueoBanner = (bloqueoMsg && !hayEnc)
+        ? `<div class="hacp-board-encb bloqueo"><span>🚫 ${esc(bloqueoMsg)}.</span></div>`
         : '';
       const vacio = tomadas.size
         ? '✔ Has agotado las misiones de hoy · el tablón se renueva mañana.'
@@ -6814,10 +6961,10 @@
           <div class="hacp-shop-h"><span class="hacp-shop-zh">📜</span> Tablón de misiones <span class="hacp-shop-money">⚡ <b>${Math.round(energia)}</b></span></div>
           ${retosStripHTML()}
           <div class="hacp-board-seclbl">檄 Misiones disponibles</div>
-          <div class="hacp-shop-sub">Cada misión que <b>coges</b> desaparece de tu tablón hasta mañana. A tu nivel es una apuesta real; superarla baja el riesgo (nunca es gratis). Las muy por debajo de tu nivel son <b>rutina</b> y pagan menos. Las difíciles cuestan más ⚡ y dan más 🎁 botín.${ocupado ? ' <b>Tu mecenas ya está ocupado en otra actividad.</b>' : ''}</div>
+          <div class="hacp-shop-sub">Cada misión que <b>coges</b> desaparece de tu tablón hasta mañana. A tu nivel es una apuesta real; superarla baja el riesgo (nunca es gratis). Las muy por debajo de tu nivel son <b>rutina</b> y pagan menos. Las difíciles cuestan más ⚡ y dan más 🎁 botín.</div>
           <div class="hacp-board-legend">⚑ El icono de bandera marca <b>encuentros</b>: mini-retos que aparecen a mitad del viaje y resuelves con la aptitud indicada (con una animación). Si sale bien suman recompensa; si fallas, restan. El % es tu probabilidad de superarlos.</div>
           ${hayBonos() ? `<div class="hacp-shop-note">Bonos de los pabellones de la finca: ${bonosTexto()}</div>` : ''}
-          ${encBanner}
+          ${bloqueoBanner}${encBanner}
           <div class="hacp-board-list">${rows || `<div class="hacp-inv-note">${vacio}</div>`}</div>
         </div>`;
       el.querySelector('[data-act="board-close"]').addEventListener('click', closeBoard);
