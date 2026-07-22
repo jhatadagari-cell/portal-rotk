@@ -142,6 +142,27 @@ const HacTienda = (function () {
     { id: 'ropa-am-r',  nombre: 'Sobreveste del Gran Intendente', zh: '大司農袍', icon: '👘', tier: 5, tipo: 'equipo', slot: 'torso', raro: true, oculto: true, precio: 220,
       efecto: { equip: { pct: { administrativo: 0.05, militar: 0.05 }, prestigioPct: 0.05, antirroboPct: 0.20 } }, viste: { kind: 'robe', torsoLujo: true, torsoGala: true, gala: 'intendente', robe: '#5a4a22', accent: '#a83a2e' }, desc: 'Sobreveste del intendente mayor del ejército, con bandolera de cuero y bolsas de avituallamiento. +5% Administrativo 政, +5% Militar 武, +5% prestigio y 20% antirrobo. (Rara)' },
 
+    // ══ ARMADURAS ÉPICAS (絕品 · contorno dorado) ════════════════════════════════
+    //   El escalón por encima de RARO. NO se compran (oculto) → SOLO caen como botín
+    //   ÉPICO: 1% en expediciones, 4% en escaramuzas (5% en las de dificultad alta,
+    //   rating ≥ 4). Cada una evoca a una FIGURA legendaria de los Tres Reinos, tiene un
+    //   EFECTO ÚNICO que ninguna otra pieza da, y un SELLO VISUAL propio (`viste.gala`
+    //   'epic-*', dibujado a mano en hac-char). Puras +15% del dominio; combinadas +8/+8%.
+    //   Todas: +5% prestigio y +22% antirrobo (un pelín por encima de las raras). Lo que
+    //   las hace especiales es el EFECTO ÚNICO, no cifras infladas. `epico:true`.
+    { id: 'epic-mil', nombre: 'Coraza del Dios de la Guerra', zh: '戰神鎧', icon: '👘', tier: 6, tipo: 'equipo', slot: 'torso', epico: true, oculto: true, precio: 340,
+      efecto: { equip: { pct: { militar: 0.12 }, prestigioPct: 0.05, antirroboPct: 0.22, heridaInmune: 1 } }, viste: { kind: 'armor', torsoGala: true, gala: 'epic-zhanshen', robe: '#2a2630', accent: '#d8b65a' }, desc: 'La coraza negra y oro del guerrero sin igual, coronada por el casco de dos plumas de faisán (雉尾). +12% Militar 武, +5% prestigio y 22% antirrobo. FURIA: ignoras la primera herida de cada escaramuza. (Épica)' },
+    { id: 'epic-cul', nombre: 'Manto de Plumas de Grulla', zh: '鶴氅', icon: '👘', tier: 6, tipo: 'equipo', slot: 'torso', epico: true, oculto: true, precio: 340,
+      efecto: { equip: { pct: { cultural: 0.12 }, prestigioPct: 0.05, antirroboPct: 0.22, investigPct: 0.20 } }, viste: { kind: 'robe', torsoLujo: true, torsoGala: true, gala: 'epic-hechang', robe: '#e6ebf0', accent: '#7db0c8' }, desc: 'El níveo manto de plumas de grulla del gran estratega durmiente, con la corona daoísta de las ocho direcciones. +12% Cultural 文, +5% prestigio y 22% antirrobo. ESTRATAGEMA: +20% de aporte a la investigación de tu pabellón. (Épica)' },
+    { id: 'epic-adm', nombre: 'Toga del Dragón Imperial', zh: '蟒袍', icon: '👘', tier: 6, tipo: 'equipo', slot: 'torso', epico: true, oculto: true, precio: 340,
+      efecto: { equip: { pct: { administrativo: 0.12 }, prestigioPct: 0.05, antirroboPct: 0.22, dineroPct: 0.10 } }, viste: { kind: 'robe', torsoLujo: true, torsoGala: true, gala: 'epic-manpao', robe: '#4a2568', accent: '#d8b65a' }, desc: 'La toga púrpura del soberano, con el dragón dorado ascendente y la corona de cuentas (冕旒). +12% Administrativo 政, +5% prestigio y 22% antirrobo. MANDATO: +10% de dinero en misiones (el mayor del mundo). (Épica)' },
+    { id: 'epic-mc', nombre: 'Sobreveste del Sabio Marcial', zh: '武聖袍', icon: '👘', tier: 6, tipo: 'equipo', slot: 'torso', epico: true, oculto: true, precio: 380,
+      efecto: { equip: { pct: { militar: 0.06, cultural: 0.06 }, prestigioPct: 0.05, antirroboPct: 0.22, auraBanda: 0.04 } }, viste: { kind: 'robe', torsoLujo: true, torsoGala: true, gala: 'epic-wusheng', robe: '#1f5a3a', accent: '#d8b65a' }, desc: 'La sobreveste verde jade del Sabio de la Guerra, que lee los Anales sobre su armadura y peina la barba de dos codos. +6% Militar 武, +6% Cultural 文, +5% prestigio y 22% antirrobo. LEALTAD: guías la banda — sube un poco la probabilidad de éxito de toda tu escaramuza. (Épica)' },
+    { id: 'epic-ca', nombre: 'Vestidura de las Nueve Distinciones', zh: '九錫袍', icon: '👘', tier: 6, tipo: 'equipo', slot: 'torso', epico: true, oculto: true, precio: 380,
+      efecto: { equip: { pct: { cultural: 0.06, administrativo: 0.06 }, prestigioPct: 0.06, antirroboPct: 0.22 } }, viste: { kind: 'robe', torsoLujo: true, torsoGala: true, gala: 'epic-jiuxi', robe: '#26304a', accent: '#d8b65a' }, desc: 'La vestidura oscura del gran tutor honrado con las Nueve Concesiones imperiales (九錫), bordada con los símbolos del máximo mérito. +6% Cultural 文, +6% Administrativo 政, +6% prestigio (el mayor) y 22% antirrobo. (Épica)' },
+    { id: 'epic-am', nombre: 'Coraza del Señor de Wu', zh: '江東鎧', icon: '👘', tier: 6, tipo: 'equipo', slot: 'torso', epico: true, oculto: true, precio: 380,
+      efecto: { equip: { pct: { administrativo: 0.06, militar: 0.06 }, prestigioPct: 0.05, antirroboPct: 0.22, botinPct: 0.3 } }, viste: { kind: 'armor', torsoGala: true, gala: 'epic-jiangdong', robe: '#8a2f2a', accent: '#d8b65a' }, desc: 'La coraza escarlata y bronce del joven señor de ojos azules que heredó las tierras del este del río. +6% Administrativo 政, +6% Militar 武, +5% prestigio y 22% antirrobo. FORTUNA: +30% de probabilidad de traer botín. (Épica)' },
+
     // ── ARMAS (兵 · slot dedicado 'arma') ────────────────────────────────────────
     //   3 por dominio. Por AHORA su efecto es +10% de su dominio (como las túnicas,
     //   vía equip.pct); en el futuro tendrán además efectos en el combate por turnos.
@@ -219,17 +240,28 @@ const HacTienda = (function () {
   const RARE_LOOT_CHANCE = 0.05;   // 5 % del botín de misión es una reliquia rara
   const ROPA_LOOT_CHANCE = 0.14;       // ~14 % del botín es una ROPA DE TORSO COMÚN (medianamente raro)
   const ROPA_RARA_LOOT_CHANCE = 0.05;  // ~5 % es una ROPA DE TORSO RARA (efectos superiores, contorno azul)
-  const ropasTorso = () => CATALOGO.filter(i => i.slot === 'torso' && !i.raro);        // comunes
-  const ropasTorsoRaras = () => CATALOGO.filter(i => i.slot === 'torso' && i.raro);    // raras
+  // ARMADURAS ÉPICAS (contorno dorado): el escalón por encima de raro. Probabilidad por
+  // CONTEXTO — muy baja en expediciones, mayor en escaramuzas (y más en las difíciles).
+  const EPICO_CHANCE = { exped: 0.01, escaramuza: 0.04, 'escaramuza-alta': 0.05 };
+  const ropasTorso = () => CATALOGO.filter(i => i.slot === 'torso' && !i.raro && !i.epico);   // comunes
+  const ropasTorsoRaras = () => CATALOGO.filter(i => i.slot === 'torso' && i.raro);           // raras
+  const epicos = () => CATALOGO.filter(i => i.epico);                                          // épicas
   const esRaro = (id) => !!(byId[id] && byId[id].raro);
+  const esEpico = (id) => !!(byId[id] && byId[id].epico);
   const raros = () => CATALOGO.filter(i => i.raro);
   function raroAleatorio(rng) {                       // una reliquia rara al azar (regalo del fundador, etc.)
     const pool = raros(); if (!pool.length) return null;
     return pool[Math.floor((rng ? rng.next() : Math.random()) * pool.length)].id;
   }
   // Botín aleatorio PONDERADO por tier (los de mayor tier salen menos), de ≤ tier.
-  // Con baja probabilidad, en su lugar cae una RELIQUIA RARA (de tier cercano).
-  function botinAleatorio(tier) {
+  // `ctx` ('exped'|'escaramuza'|'escaramuza-alta') fija la probabilidad de ÉPICO; con
+  // baja probabilidad cae una reliquia RARA. `epicoMult` (>1) mejora la tirada épica
+  // (efecto FORTUNA de la Coraza del Señor de Wu). Devuelve un id o null.
+  function botinAleatorio(tier, ctx, epicoMult) {
+    // ARMADURAS ÉPICAS (contorno dorado): canal propio, el más raro, según contexto.
+    const epChance = (EPICO_CHANCE[ctx] || 0) * (epicoMult && epicoMult > 0 ? epicoMult : 1);
+    const epPool = epicos();
+    if (epPool.length && epChance > 0 && Math.random() < epChance) return epPool[Math.floor(Math.random() * epPool.length)].id;
     // RELIQUIAS raras (NO las ropas raras, que tienen su propio canal).
     const raroPool = raros().filter(i => i.slot !== 'torso' && (i.tier || 1) <= (tier || 1) + 1);
     if (raroPool.length && Math.random() < RARE_LOOT_CHANCE) return raroPool[Math.floor(Math.random() * raroPool.length)].id;
@@ -246,6 +278,6 @@ const HacTienda = (function () {
     return pool[pool.length - 1].id;
   }
 
-  return { CATALOGO, get, disponibles, bloqueados, efectoTexto, equipBonus, manualDe, stockDelDia, botinAleatorio, esRaro, raroAleatorio, ropasTorso, COUNT_BY_TIER, GLIFOS: G };
+  return { CATALOGO, get, disponibles, bloqueados, efectoTexto, equipBonus, manualDe, stockDelDia, botinAleatorio, esRaro, esEpico, raroAleatorio, epicos, ropasTorso, COUNT_BY_TIER, GLIFOS: G };
 })();
 if (typeof window !== 'undefined') window.HacTienda = HacTienda;

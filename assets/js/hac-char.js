@@ -447,22 +447,9 @@ const HacChar = (function () {
       const sTop = aTop + aH + 1;
       px(c - Math.round(hemHalf * 0.45), sTop, 1, hemY - sTop, P.robeSh);
       px(c + Math.round(hemHalf * 0.4), sTop, 1, hemY - sTop, P.robeSh);
-      // GALA (Casaca del General 名將袍): coraza de PARADA — gola y láminas con filo
-      // dorado, hombreras ribeteadas, espejo pectoral 護心鏡 con correas y fajín de
-      // mando escarlata. La distingue de la armadura corriente del guerrero.
-      if (P.torsoGala) {
-        px(c - 5, top, 10, 1, P.goldHi);                                                    // gola ribeteada en oro
-        for (let r = 0; r < aH; r += 4) px(c - aHalf, aTop + r + 1, aHalf * 2, 1, P.gold);  // filo dorado de las láminas (filas alternas)
-        if (v.side < 1) px(c - aHalf - 3, top + 1, 5, 1, P.gold);                           // ribete de las hombreras
-        px(c + aHalf - 2, top + 1, 5, 1, P.gold);
-        if (!v.back) {                                                                      // 護心鏡: espejo pectoral bruñido
-          const mx = c + Math.round(v.dx * 0.4);
-          px(mx - 4, aTop + 3, 3, 1, P.robeSh); px(mx + 2, aTop + 3, 3, 1, P.robeSh);       // correas a los hombros
-          px(mx - 2, aTop + 2, 4, 4, P.gold); px(mx - 1, aTop + 3, 2, 2, P.steelHi);        // marco dorado + espejo
-        }
-        if (v.front) { px(c - 1, aTop + aH + 1, 2, 4, '#a83a2e'); px(c - 1, aTop + aH + 1, 2, 1, '#c5543f'); }  // fajín de mando
-        for (let s = -aHalf + 1; s <= aHalf - 3; s += 3) px(c + s, aTop + aH + 6, 3, 1, P.gold);                // puntas doradas de los tassets
-      }
+      // GALA de armadura: la Casaca del General (rara) o una ARMADURA ÉPICA (Lü Bu / Sun
+      // Quan). Cada una remata la coraza con su sello propio. Ver galaArmor.
+      if (P.torsoGala) galaArmor(px, P, v, { c, top, aTop, aH, aHalf });
     } else {
       // Hombros + cuello.
       px(c - shHalf, top, shHalf * 2, 2, P.robeHi);
@@ -506,6 +493,56 @@ const HacChar = (function () {
       px(c + Math.round(hemHalf * 0.45) + 1, sTop, 1, hemY - sTop, P.robeHi);
       // SELLO VISUAL de la ropa rara (encima de todo el acabado genérico).
       if (gala && P.gala) galaSello(px, P, v, { c, top, beltY, hemY, shHalf, hemHalf, rows });
+    }
+  }
+
+  // ── SELLO de las CORAZAS de gala (kind 'armor'): la Casaca del General (rara) y las
+  // ARMADURAS ÉPICAS (戰神鎧 Lü Bu, 江東鎧 Sun Quan). `q` trae la geometría de la coraza.
+  function galaArmor(px, P, v, q) {
+    const { c, top, aTop, aH, aHalf } = q;
+    const dx4 = Math.round(v.dx * 0.4), mx = c + dx4;
+    if (P.gala === 'epic-zhanshen') {
+      // 戰神鎧 — DIOS DE LA GUERRA (Lü Bu): coraza negra laqueada con TODO el filo dorado,
+      // hombreras de cabeza de bestia (獸吞) doradas y GRAN espejo pectoral con relieve.
+      const negro = '#1e1b24', filo = P.gold;
+      for (let r = 0; r < aH; r += 2) { px(c - aHalf, aTop + r, aHalf * 2, 1, negro); px(c - aHalf, aTop + r + 1, aHalf * 2, 1, filo); }  // láminas negras, filo oro
+      px(c - 5, top, 10, 2, negro); px(c - 5, top, 10, 1, P.goldHi);                        // gola negra ribeteada en oro
+      // Hombreras 獸吞 (fauces de bestia doradas que "muerden" el hombro).
+      const shoulder = (sx) => { px(sx, top, 5, 4, filo); px(sx, top, 5, 1, P.goldHi); px(sx + 1, top + 2, 1, 1, '#7a2620'); px(sx + 3, top + 2, 1, 1, '#7a2620'); px(sx, top + 3, 5, 1, dark(P.gold, 0.35)); };
+      if (v.side < 1) shoulder(c - aHalf - 3); shoulder(c + aHalf - 2);
+      if (!v.back) {                                                                        // GRAN espejo pectoral 護心鏡 con relieve
+        px(mx - 4, aTop + 2, 2, 1, negro); px(mx + 3, aTop + 2, 2, 1, negro);               // correas
+        px(mx - 3, aTop + 2, 6, 6, filo); px(mx - 3, aTop + 2, 6, 1, P.goldHi);             // marco dorado
+        px(mx - 2, aTop + 3, 4, 4, '#2a2630'); px(mx - 1, aTop + 4, 2, 2, P.goldHi);        // espejo oscuro con brillo central
+      }
+      px(c - aHalf - 1, aTop + aH - 1, aHalf * 2 + 2, 2, filo);                             // cinturón dorado ancho
+      if (v.front) { px(c - 1, aTop + aH + 1, 2, 5, '#7a2620'); px(c - 1, aTop + aH + 1, 2, 1, '#b8402f'); }  // fajín de guerra granate
+      for (let s = -aHalf + 1; s <= aHalf - 3; s += 3) px(c + s, aTop + aH + 6, 3, 1, filo);                  // puntas doradas de los tassets
+    } else if (P.gala === 'epic-jiangdong') {
+      // 江東鎧 — SEÑOR DE WU (Sun Quan): coraza escarlata y BRONCE, con espejo pectoral
+      // redondo bruñido y ribetes de bronce; cinturón con placa central.
+      const rojo = '#7a2620', rojoHi = '#a8352a', bronce = '#c98a3a', bronceHi = '#e6b878';
+      for (let r = 0; r < aH; r += 2) { px(c - aHalf, aTop + r, aHalf * 2, 1, rojo); px(c - aHalf, aTop + r, aHalf * 2, 1, r % 4 === 0 ? rojoHi : rojo); px(c - aHalf, aTop + r + 1, aHalf * 2, 1, bronce); }  // escamas rojas, filo bronce
+      px(c - 5, top, 10, 2, rojo); px(c - 5, top, 10, 1, bronceHi);                         // gola escarlata ribete bronce
+      if (v.side < 1) { px(c - aHalf - 3, top + 1, 5, 4, bronce); px(c - aHalf - 3, top + 1, 5, 1, bronceHi); }  // hombreras de bronce
+      px(c + aHalf - 2, top + 1, 5, 4, bronce); px(c + aHalf - 2, top + 1, 5, 1, bronceHi);
+      if (!v.back) { px(mx - 3, aTop + 3, 6, 5, bronce); px(mx - 3, aTop + 3, 6, 1, bronceHi); px(mx - 2, aTop + 4, 4, 3, rojoHi); px(mx - 1, aTop + 5, 2, 1, bronceHi); }  // espejo redondo bruñido
+      px(c - aHalf - 1, aTop + aH - 1, aHalf * 2 + 2, 2, bronce);                           // cinturón de bronce
+      if (v.front) { px(c - 2, aTop + aH - 1, 4, 3, bronceHi); px(c - 1, aTop + aH, 2, 1, rojoHi); }  // placa central de la hebilla
+      for (let s = -aHalf + 1; s <= aHalf - 3; s += 3) px(c + s, aTop + aH + 6, 3, 1, bronce);
+    } else {
+      // Casaca del General 名將袍 (RARA): gola y láminas con filo dorado, hombreras
+      // ribeteadas, espejo pectoral 護心鏡 con correas y fajín de mando escarlata.
+      px(c - 5, top, 10, 1, P.goldHi);
+      for (let r = 0; r < aH; r += 4) px(c - aHalf, aTop + r + 1, aHalf * 2, 1, P.gold);
+      if (v.side < 1) px(c - aHalf - 3, top + 1, 5, 1, P.gold);
+      px(c + aHalf - 2, top + 1, 5, 1, P.gold);
+      if (!v.back) {
+        px(mx - 4, aTop + 3, 3, 1, P.robeSh); px(mx + 2, aTop + 3, 3, 1, P.robeSh);
+        px(mx - 2, aTop + 2, 4, 4, P.gold); px(mx - 1, aTop + 3, 2, 2, P.steelHi);
+      }
+      if (v.front) { px(c - 1, aTop + aH + 1, 2, 4, '#a83a2e'); px(c - 1, aTop + aH + 1, 2, 1, '#c5543f'); }
+      for (let s = -aHalf + 1; s <= aHalf - 3; s += 3) px(c + s, aTop + aH + 6, 3, 1, P.gold);
     }
   }
 
@@ -559,6 +596,64 @@ const HacChar = (function () {
       }
       if (!v.back) px(c - 1 + dx4, top + 8, 2, 2, P.gold);                                   // hebilla
       if (v.front) { px(c - 7, beltY + 3, 4, 4, P.boot); px(c - 7, beltY + 3, 4, 1, P.bootHi); px(c + 4, beltY + 4, 3, 3, P.boot); px(c + 4, beltY + 4, 3, 1, P.bootHi); }  // bolsas
+    } else if (P.gala === 'epic-hechang') {
+      // 鶴氅 — PLUMAS DE GRULLA (Zhuge Liang): manto níveo con esclavina de plumas (vivo
+      // celeste marcado para dar contraste sobre el blanco), una GRULLA volando bordada al
+      // pecho, columna de jades por la solapa y ancho ribete celeste con nubes en el bajo.
+      const celeste = P.trim, celHi = P.trimHi, celDk = P.trimDk;
+      for (let i = 0; i < 7; i++) {
+        const hw = Math.round(shHalf + (hemHalf - shHalf) * Math.pow(i / (q.rows - 1), 0.8)) + 1;
+        px(c - hw, top + i, hw * 2, 1, i >= 5 ? celeste : '#f6f9fc');                     // capa de plumas, borde celeste
+        if (i === 4) px(c - hw, top + i, hw * 2, 1, celHi);                               // vivo claro intermedio
+        if (i < 5) { px(c - hw, top + i, 1, 1, celDk); px(c + hw - 1, top + i, 1, 1, celDk); }  // cantos celestes (contraste)
+      }
+      if (!v.back) {                                                                      // columna de jades por la solapa
+        for (let yy = top + 8; yy < beltY; yy += 3) px(c - 4 + Math.round(v.dx * 0.5), yy, 2, 1, celeste);
+      }
+      if (v.front) {                                                                      // GRULLA volando (alas en V + cuello arqueado)
+        px(c - 1, top + 10, 2, 2, celeste);                                               // cuerpo
+        px(c - 4, top + 9, 3, 1, celeste); px(c + 2, top + 9, 3, 1, celeste);             // alas abiertas
+        px(c - 5, top + 8, 1, 1, celHi); px(c + 4, top + 8, 1, 1, celHi);                 // puntas de las alas
+        px(c + 1, top + 8, 1, 2, celeste); px(c + 1, top + 7, 1, 1, celDk);               // cuello arqueado + cabeza
+      }
+      px(c - hemHalf, hemY - 4, hemHalf * 2, 1, celeste); px(c - hemHalf, hemY - 3, hemHalf * 2, 1, celHi);   // ancho ribete celeste
+      for (let s = -hemHalf + 1; s <= hemHalf - 2; s += 3) px(c + s, hemY - 2, 2, 1, celeste);                // nubes del bajo
+      if (v.back) { px(c - 4, top + 3, 8, 1, celeste); px(c - 5, top + 6, 10, 1, celeste); }                  // pliegues de la esclavina por detrás
+    } else if (P.gala === 'epic-manpao') {
+      // 蟒袍 — DRAGÓN IMPERIAL (Wei): dragón dorado ascendente al frente, cuello de nubes
+      // doradas, cinturón de jade y olas doradas (海水江崖) en el bajo.
+      px(c - shHalf, top + 1, shHalf * 2, 1, P.gold);                                         // cuello de nubes
+      if (!v.back) {
+        // DRAGÓN dorado serpenteante ascendente (cuerpo fino ondulado de 1px + cabeza y
+        // garra), a lo largo del eje del pecho: se lee como criatura, no como aspa.
+        const dxb = c + dx4;
+        const seg = [[-1, beltY - 1], [0, beltY - 3], [1, beltY - 5], [0, beltY - 7], [-1, beltY - 9], [0, beltY - 11]];
+        seg.forEach(([ox, oy], i) => { px(dxb + ox, oy, 1, 2, i % 2 ? P.goldHi : P.gold); });   // cuerpo ondulado
+        px(dxb - 1, beltY - 12, 3, 2, P.goldHi);                                              // cabeza
+        px(dxb + 2, beltY - 13, 1, 1, P.gold); px(dxb - 2, beltY - 13, 1, 1, P.gold);          // cuernos/melena
+        px(dxb - 3, beltY - 6, 1, 1, P.gold); px(dxb + 2, beltY - 8, 1, 1, P.gold);            // garras
+      } else { px(c, top + 5, 1, 2, P.gold); px(c - 1, top + 8, 1, 2, P.gold); px(c, top + 11, 1, 2, P.gold); px(c - 1, top + 14, 1, 2, P.gold); }  // dragón sugerido subiendo por la espalda
+      px(c - hemHalf + 1, beltY, hemHalf * 2 - 2, 3, P.gold); px(c - hemHalf + 1, beltY, hemHalf * 2 - 2, 1, P.goldHi);   // cinturón dorado
+      for (let s = -hemHalf + 3; s <= hemHalf - 5; s += 4) px(c + s, beltY + 1, 2, 1, P.jade);  // jades del cinturón
+      for (let s = -hemHalf; s <= hemHalf - 2; s += 2) { px(c + s, hemY - 2, 2, 1, P.gold); px(c + s + 1, hemY - 3, 1, 1, P.goldHi); }  // olas 海水江崖 del bajo
+    } else if (P.gala === 'epic-wusheng') {
+      // 武聖袍 — SABIO MARCIAL (Guan Yu): sobreveste verde jade sobre coraza insinuada,
+      // banda cruzada dorada al pecho y borde dorado; el pañuelo verde va en hairAndCap.
+      const jadeV = P.trim;
+      if (!v.back) { for (let i = 0; i < 11; i++) px(c - 5 + i + dx5, top + 3 + i, 2, 1, i < 3 ? dark(jadeV, 0.2) : P.gold); }  // banda cruzada dorada
+      px(c - shHalf, top, shHalf * 2, 1, P.gold);                                             // hombro ribeteado
+      if (v.front) { px(c - 3, beltY - 3, 6, 2, P.steelDk); px(c - 3, beltY - 3, 6, 1, P.steelHi); }   // coraza insinuada bajo la veste
+      px(c - hemHalf, hemY - 2, hemHalf * 2, 1, P.gold); px(c - hemHalf, hemY - 1, hemHalf * 2, 1, dark(P.gold, 0.3));  // bajo dorado
+      for (let s = -hemHalf + 3; s <= hemHalf - 3; s += 4) px(c + s, hemY - 5, 1, 2, P.gold);  // grecas
+    } else if (P.gala === 'epic-jiuxi') {
+      // 九錫袍 — NUEVE DISTINCIONES (Sima Yi): vestidura oscura con cuello alto de nubes
+      // doradas y NUEVE emblemas dorados (符命) dispuestos en el pecho y la falda.
+      px(c - shHalf, top, shHalf * 2, 1, P.gold); px(c - shHalf, top + 1, shHalf * 2, 1, P.goldHi);   // cuello alto dorado
+      if (!v.back) for (let i = 0; i < 11; i += 2) px(c - 6 + i + dx5, top + 2 + i, 1, 1, P.goldHi);   // festón de la solapa
+      // Nueve emblemas 符命: 3 filas × 3, dorados, sobre el torso/falda.
+      const ey = [beltY - 6, beltY + 2, hemY - 5];
+      ey.forEach((yy, ri) => { for (let k = -1; k <= 1; k++) { px(c + k * 4 + (ri === 1 ? 0 : 0), yy, 2, 2, P.gold); px(c + k * 4, yy, 1, 1, P.goldHi); } });
+      if (v.front) { px(c - 2, beltY + 1, 4, 3, P.gold); px(c - 1, beltY + 2, 2, 1, P.jade); }   // placa de jade central
     }
   }
 
@@ -751,6 +846,7 @@ const HacChar = (function () {
     px(c - 5, hy - 1, 11, 3, P.hair); px(c - 5, hy - 1, 11, 1, P.hairHi);
     if (v.back) { px(c - 4, hy, 9, 9, P.hair); px(c - 5, hy + 1, 1, 7, P.hair); px(c + 4, hy + 1, 1, 7, P.hair); }
     else { px(c - 5, hy, 1, 6, P.hair); px(c + 4, hy, 1, 6, P.hair); }
+    if (P.gala && P.gala.indexOf('epic-') === 0) { galaTocado(px, P, v, c, hy); return; }   // tocado/casco de armadura ÉPICA
     if (P.crown) { crownImperial(px, P, v, c, hy); return; }                   // corona alta dorada (通天冠)
     if (P.topknot) { crownTopknot(px, P, v, c, hy); return; }                  // moño recogido con corona/pincho
     if (P.headwrap) { headWrap(px, P, v, c, hy); return; }                     // pañuelo 綸巾 (Guan Yu)
@@ -772,6 +868,61 @@ const HacChar = (function () {
       px(c - 5, hy - 4, 11, 4, P.ink); px(c - 5, hy - 4, 11, 1, light(P.ink, 0.18));
       if (!v.back) px(c - 1, hy - 3, 2, 1, P.gold);                            // broche
       px(c + 4, hy - 1, 2, 3, P.ink);                                          // caída trasera
+    }
+  }
+
+  // ── TOCADO/CASCO de las ARMADURAS ÉPICAS (絕品) ──────────────────────────────
+  // Cada épica corona la cabeza con su sello: el casco de plumas de faisán de Lü Bu,
+  // la corona daoísta de Zhuge Liang, la de cuentas del soberano de Wei, el pañuelo
+  // verde de Guan Yu, el casco de bronce de Sun Quan y el tocado del gran tutor.
+  function galaTocado(px, P, v, c, hy) {
+    const g = P.gala;
+    if (g === 'epic-zhanshen') {
+      // 雉尾冠 — casco negro y oro con DOS plumas de faisán largas que se elevan (Lü Bu).
+      px(c - 5, hy - 3, 11, 4, '#26232c'); px(c - 5, hy - 3, 11, 1, P.goldHi);          // casco negro, frontal dorado
+      px(c - 5, hy + 1, 11, 1, dark('#26232c', 0.3));
+      px(c - 5, hy + 1, 1, 4, '#1a1820'); px(c + 5, hy + 1, 1, 4, '#1a1820');            // carrilleras
+      px(c - 1, hy - 1, 3, 1, P.gold);                                                   // remache/frente dorado
+      // Dos plumas de faisán (雉尾): curvas, largas, con vivo claro; se abren en V.
+      const pluma = (sx, dir) => {
+        for (let i = 0; i < 9; i++) { const yy = hy - 4 - i, xx = sx + dir * Math.round(i * 0.6); px(xx, yy, 2, 1, i < 3 ? '#8a2620' : (i < 6 ? '#c98a3a' : '#e6c060')); if (i > 2) px(xx + dir, yy, 1, 1, P.goldHi); }
+      };
+      pluma(c - 2, -1); pluma(c + 2, 1);
+    } else if (g === 'epic-jiangdong') {
+      // Casco de BRONCE con cresta y borde escarlata (Sun Quan).
+      const bronce = '#c98a3a', bronceHi = '#e6b878';
+      px(c - 5, hy - 3, 11, 4, bronce); px(c - 5, hy - 3, 11, 1, bronceHi);
+      px(c - 5, hy + 1, 11, 1, dark(bronce, 0.35));
+      px(c - 1, hy - 7, 3, 4, '#7a2620'); px(c - 1, hy - 8, 3, 1, '#b8402f');            // cresta escarlata
+      px(c - 5, hy + 1, 1, 4, dark(bronce, 0.3)); px(c + 5, hy + 1, 1, 4, dark(bronce, 0.3));  // carrilleras
+      px(c, hy - 1, 1, 1, bronceHi);
+    } else if (g === 'epic-hechang') {
+      // 綸巾 — corona/pañuelo daoísta claro con banda de jade y horquilla (Zhuge Liang).
+      px(c - 5, hy - 5, 11, 5, '#e8ecf0'); px(c - 5, hy - 5, 11, 1, '#ffffff');          // paño níveo alto
+      px(c - 5, hy, 11, 1, dark('#e8ecf0', 0.2));
+      px(c - 4, hy - 6, 9, 1, P.trim);                                                   // cresta de la corona
+      if (!v.back) { px(c - 2, hy - 4, 4, 2, P.trim); px(c - 1, hy - 3, 2, 1, P.jade); } // banda + jade frontal
+      px(c + 4, hy - 1, 2, 4, '#dfe4ea');                                                // caída trasera del paño
+    } else if (g === 'epic-manpao') {
+      // 冕旒 — corona plana del soberano con tablero y CUENTAS colgantes (Wei).
+      px(c - 5, hy - 2, 11, 2, P.ink); px(c - 5, hy - 2, 11, 1, light(P.ink, 0.2));      // casquete
+      px(c - 6, hy - 5, 13, 3, P.gold); px(c - 6, hy - 5, 13, 1, P.goldHi);              // tablero 綖 dorado (plano y ancho)
+      px(c - 6, hy - 3, 13, 1, dark(P.gold, 0.3));
+      if (!v.back) { for (let k = -4; k <= 4; k += 2) { px(c + k, hy - 2, 1, 3, P.jade); px(c + k, hy - 2, 1, 1, P.goldHi); } }  // 旒: sartas de cuentas de jade colgando
+      else { px(c - 5, hy - 2, 11, 2, dark(P.gold, 0.2)); }
+    } else if (g === 'epic-wusheng') {
+      // 綠巾 — pañuelo VERDE anudado (Guan Yu), a juego con la sobreveste de jade.
+      const verde = '#1f5a3a', verdeHi = '#2f7a4a';
+      px(c - 5, hy - 4, 11, 4, verde); px(c - 5, hy - 4, 11, 1, verdeHi);
+      if (!v.back) px(c - 1, hy - 3, 2, 1, P.gold);                                      // broche dorado
+      px(c - 5, hy - 5, 3, 1, verdeHi); px(c + 3, hy - 5, 3, 1, verdeHi);                // pliegues altos del nudo
+      px(c + 4, hy - 1, 2, 4, verde);                                                    // caída trasera
+    } else if (g === 'epic-jiuxi') {
+      // 進賢冠 alto — tocado oscuro del gran tutor con doble banda dorada y gema (Sima Yi).
+      px(c - 4, hy - 6, 9, 5, '#1a1a22'); px(c - 4, hy - 6, 9, 1, P.gold);
+      px(c - 2, hy - 9, 4, 3, '#1a1a22'); px(c - 1, hy - 9, 1, 1, P.goldHi);             // realce superior
+      px(c - 4, hy - 2, 9, 1, P.gold); px(c - 4, hy - 4, 9, 1, dark(P.gold, 0.25));      // doble banda dorada
+      if (!v.back) px(c - 1, hy - 5, 2, 1, P.jade);                                      // gema frontal
     }
   }
 

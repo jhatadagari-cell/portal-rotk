@@ -268,6 +268,7 @@ html.hacp-pseudofs, html.hacp-pseudofs body{ overflow:hidden; }
 .hacp-cp-eqitem .ic{ font-size:20px; line-height:1; }
 .hacp-cp-eqitem.torso{ background:rgba(127,201,160,.14); border-color:rgba(127,201,160,.5); }
 .hacp-cp-eqitem.rare{ border-color:#5aa6e6; box-shadow:0 0 0 1px #5aa6e6, 0 0 8px rgba(90,166,230,.45); background:rgba(90,166,230,.12); }
+.hacp-cp-eqitem.epic{ border-color:#e6b422; box-shadow:0 0 0 1px #e6b422, 0 0 10px rgba(230,180,34,.55); background:rgba(230,180,34,.14); }
 .hacp-cp-equip-none{ font-size:11px; color:var(--parch2,#c9bda6); opacity:.75; }
 /* Menú de Equipo (reusa overlay .hacp-shop). */
 .hacp-eq-box{ width:min(460px,94%); }
@@ -297,6 +298,7 @@ html.hacp-pseudofs, html.hacp-pseudofs body{ overflow:hidden; }
 .hacp-eq-cell.arma.full:hover{ background:rgba(154,164,174,.24); border-color:#c0c8d0; }
 .hacp-eq-own.arma{ border-color:rgba(154,164,174,.35); }
 .hacp-eq-cell.rare{ border-color:#5aa6e6 !important; box-shadow:0 0 0 1px #5aa6e6,0 0 9px rgba(90,166,230,.5); background:rgba(90,166,230,.12); }
+.hacp-eq-cell.epic{ border-color:#e6b422 !important; box-shadow:0 0 0 1px #e6b422,0 0 11px rgba(230,180,34,.6); background:rgba(230,180,34,.14); }
 .hacp-eq-cell-ic{ font-size:24px; line-height:1; }
 .hacp-eq-cell-ic.ghost{ opacity:.4; filter:grayscale(.4); }
 .hacp-eq-cell-nm{ font:700 10.5px 'Noto Sans SC',sans-serif; }
@@ -839,6 +841,10 @@ html.hacp-pseudofs, html.hacp-pseudofs body{ overflow:hidden; }
 .hacp-slot.rare, .hacp-eq-slot.full.rare, .hacp-eq-own.rare{ border-color:#5aa6e6 !important; box-shadow:0 0 0 1px #5aa6e6, 0 0 9px rgba(90,166,230,.5); background:rgba(90,166,230,.12); }
 .hacp-eq-slot.full.rare:hover, .hacp-eq-own.rare:hover{ border-color:#8ac4f2 !important; background:rgba(90,166,230,.2); }
 .hacp-eq-own.rare .hacp-eq-nm, .hacp-eq-slot.full.rare .hacp-eq-nm{ color:#bfe0ff; }
+/* Rareza ÉPICA (contorno dorado + brillo cálido) — el escalón por encima de rara. */
+.hacp-slot.epic, .hacp-eq-slot.full.epic, .hacp-eq-own.epic{ border-color:#e6b422 !important; box-shadow:0 0 0 1px #e6b422, 0 0 11px rgba(230,180,34,.6); background:rgba(230,180,34,.14); }
+.hacp-eq-slot.full.epic:hover, .hacp-eq-own.epic:hover{ border-color:#f4cf55 !important; background:rgba(230,180,34,.24); }
+.hacp-eq-own.epic .hacp-eq-nm, .hacp-eq-slot.full.epic .hacp-eq-nm{ color:#f6dd94; }
 .hacp-store{ display:block; width:100%; text-align:center; }
 .hacp-buyhome,.hacp-gohome{ display:block; width:100%; text-align:center; }
 .hacp-home-row{ display:flex; gap:6px; }
@@ -1013,10 +1019,12 @@ button.hacp-slot.comida:hover{ background:rgba(127,201,160,.24); }
 .hacp-obj-ic{ display:flex; align-items:center; justify-content:center; width:46px; height:46px; flex:none; font-size:26px;
   background:rgba(201,168,76,.12); border:1px solid rgba(201,168,76,.4); border-radius:7px; }
 .hacp-obj-ic.rare{ border-color:#5aa6e6; box-shadow:0 0 0 1px #5aa6e6, 0 0 9px rgba(90,166,230,.5); background:rgba(90,166,230,.12); }
+.hacp-obj-ic.epic{ border-color:#e6b422; box-shadow:0 0 0 1px #e6b422, 0 0 11px rgba(230,180,34,.6); background:rgba(230,180,34,.14); }
 .hacp-obj-nm{ font:900 16px 'Noto Serif SC',serif; color:var(--gold); }
 .hacp-obj-n{ color:var(--parch2); font-weight:700; }
 .hacp-obj-sub{ font:600 11px 'Noto Sans SC',sans-serif; color:var(--parch2); margin-top:2px; }
 .hacp-obj-sub .rare{ color:#5aa6e6; }
+.hacp-obj-sub .epic{ color:#e6b422; }
 .hacp-obj-ef{ margin-top:11px; padding:7px 9px; border-radius:6px; background:rgba(201,168,76,.1);
   border:1px solid rgba(201,168,76,.25); font:700 13px 'Noto Sans SC',sans-serif; color:#e0b85a; }
 .hacp-obj-desc{ margin:9px 0 0; font:400 12.5px/1.6 'Noto Sans SC',sans-serif; color:var(--parch); }

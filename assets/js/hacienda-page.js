@@ -908,8 +908,10 @@
           if (hurt < 1) extra += ` · herido −${Math.round((1 - hurt) * 100)}%`;
           // BOTÍN: prob. baja (sube con la dificultad) de traer 1 objeto del pool
           // completo, ponderado por tier. Si es comida, se aplica; si no, a la mochila.
-          const gotLoot = HacMisiones.lootChance ? (Math.random() < HacMisiones.lootChance(mis.dif)) : false;
-          const lootId = gotLoot && HacTienda.botinAleatorio ? HacTienda.botinAleatorio(tier) : null;
+          // FORTUNA (江東鎧): +% de probabilidad de que salga botín.
+          const epMul = 1 + (HacStats.bonusBotin ? HacStats.bonusBotin(myId) : 0);
+          const gotLoot = HacMisiones.lootChance ? (Math.random() < HacMisiones.lootChance(mis.dif) * epMul) : false;
+          const lootId = gotLoot && HacTienda.botinAleatorio ? HacTienda.botinAleatorio(tier, 'exped', epMul) : null;
           const loot = lootId && window.HacTienda ? HacTienda.get(lootId) : null;
           if (loot) {
             // COMIDA (té, raciones): se come en el camino → energía al momento, NO va a la
@@ -919,7 +921,7 @@
           }
           // Botín EXTRA de los encuentros superados.
           for (let k = 0; k < (em.loot || 0); k++) {
-            const xid = HacTienda.botinAleatorio ? HacTienda.botinAleatorio(tier) : null;
+            const xid = HacTienda.botinAleatorio ? HacTienda.botinAleatorio(tier, 'exped', epMul) : null;
             const xit = xid ? HacTienda.get(xid) : null;
             if (xit) {
               if (xit.efecto && xit.efecto.energia) { if (window.HacEnergia) HacEnergia.add(h.id, myId, xit.efecto.energia); extra += ` · ${xit.icon} ${xit.nombre} +${xit.efecto.energia}⚡`; }
@@ -2106,10 +2108,15 @@
       // La RAREZA del botín escala con el rating de la escaramuza (no solo con el nivel de
       // la finca): una escaramuza dura suelta objetos mejores aunque tu finca sea humilde.
       const lot = Math.max(tier || 1, rtg || 1);
+      // Contexto para el canal ÉPICO: 4% normal, 5% en escaramuza dura (rating ≥ 4).
+      const ctx = (rtg || 0) >= 4 ? 'escaramuza-alta' : 'escaramuza';
       const out = [];
-      for (let i = 0; i < Math.max(0, n); i++) { const id = (window.HacTienda && HacTienda.botinAleatorio) ? HacTienda.botinAleatorio(lot) : null; if (id) out.push(id); }
+      for (let i = 0; i < Math.max(0, n); i++) { const id = (window.HacTienda && HacTienda.botinAleatorio) ? HacTienda.botinAleatorio(lot, ctx) : null; if (id) out.push(id); }
       return out;
     }
+    // ¿Algún miembro de la banda lleva un efecto de armadura épica? (aura/furia son del
+    // portador pero benefician a la banda que lidera). Devuelve la suma del campo.
+    function bandEpico(band, fn) { let s = 0; (band.miembros || []).forEach(mm => { if (window.HacStats && HacStats[fn]) s += HacStats[fn](mm.id) || 0; }); return s; }
 
     // ── A2b: DOCTRINA de banda + SUCESOS cooperativos (deterministas por id de banda) ──
     const DOCTRINAS = [
@@ -2682,7 +2689,9 @@
       // Los ENCUENTROS resueltos ajustan prob. de éxito, botín y reparto de la banda.
       const rb = relBonos(band), et = escEncTot(band);
       const R = window.HacRand ? HacRand.make('escres#' + band.id) : null;   // determinista → todos coinciden
-      const pFinal = Math.max(0.05, Math.min(0.95, escProb(band) + et.pMod));
+      // AURA DE LEALTAD (武聖袍): un portador en la banda sube la prob. de éxito de TODOS.
+      const aura = bandEpico(band, 'bonusAuraBanda');
+      const pFinal = Math.max(0.05, Math.min(0.95, escProb(band) + et.pMod + aura));
       const exito = R ? (R.next() < pFinal) : (Math.random() < pFinal);
       const rtg = bandRating(band);
       const share = Math.round(Math.max(0, shareRating(rtg) + et.share) * (1 + (bonos.escDinero || 0)));   // 武 séquito: +dinero de escaramuza
@@ -2693,7 +2702,8 @@
         const eq = (window.HacStats && HacStats.bonusDinero) ? HacStats.bonusDinero(mm.id) : 0;
         const p = eq + (rb.per[mm.id] || 0); if (p) bonosPct[mm.id] = p;
       });
-      const wounds = bandTiene(band, 'tigre') ? 0 : null;   // 虎將: ignora la 1ª herida al fracasar
+      // 虎將 (talento tigre) o FURIA (戰神鎧 en la banda): ignora la 1ª herida al fracasar.
+      const wounds = (bandTiene(band, 'tigre') || bandEpico(band, 'bonusHeridaInmune') > 0) ? 0 : null;
       HacEscaramuzas.resolver(band.id, clock(), exito, exito ? generarBotin(band, et.loot + lootRating(rtg) + (bonos.escBotin || 0) + rb.loot, rtg) : [], share, hostBonus, ESC_FAST ? 30000 : 0, bonosPct, wounds)
         .then(() => { if (window.HacStats) HacStats.reload().then(() => { if (charId) buildCharPanel(charId); }); })
         .catch(e => console.warn('[escaramuza] resolver', e));
@@ -3837,7 +3847,7 @@
       const slots = Array.from({ length: cap }, (_, i) => {
         const def = flat[i];
         if (!def) return '<div class="hacp-slot"></div>';
-        if (!d.mine) return `<div class="hacp-slot full${def.raro ? ' rare' : ''}" title="${esc(def.nombre)} ${esc(def.zh || '')}${def.raro ? ' · RARO' : ''}">${def.icon || '∎'}</div>`;
+        if (!d.mine) return `<div class="hacp-slot full${def.raro ? ' rare' : ''}${def.epico ? ' epic' : ''}" title="${esc(def.nombre)} ${esc(def.zh || '')}${def.epico ? ' · ÉPICO' : def.raro ? ' · RARO' : ''}">${def.icon || '∎'}</div>`;
         // MÍO: cada ranura abre la FICHA del objeto (qué es, qué hace y qué puedes
         // hacer con él). En móvil no hay hover, así que el `title` no bastaba.
         const e = def.efecto || {};
@@ -3852,7 +3862,7 @@
         } else if (def.tipo === 'recompensa') { tag = '<span class="hacp-slot-xp" style="color:#e7c66a">abrir</span>'; cls = ' recompensa'; }
         else if (e.capInv) tag = `<span class="hacp-slot-xp" style="color:#c9a84c">+${e.capInv} 🎒</span>`;
         else if (e.equip) tag = '<span class="hacp-slot-xp hacp-slot-eq">equipar</span>';
-        return `<button type="button" class="hacp-slot full act${cls}${def.raro ? ' rare' : ''}" data-item="${esc(def.id)}" title="${esc(def.nombre)} · toca para ver qué hace">${def.icon || '∎'}${tag}</button>`;
+        return `<button type="button" class="hacp-slot full act${cls}${def.raro ? ' rare' : ''}${def.epico ? ' epic' : ''}" data-item="${esc(def.id)}" title="${esc(def.nombre)} · toca para ver qué hace">${def.icon || '∎'}${tag}</button>`;
       }).join('');
       const canStore = hasHome && d.mine && d.money > 0;
       const canTake = hasHome && d.mine && d.ahorro > 0;
@@ -3931,10 +3941,10 @@
         <div class="hacp-shop-box hacp-obj-box">
           <button type="button" class="hacp-shop-x" data-oact="cerrar" aria-label="Cerrar">✕</button>
           <div class="hacp-obj-head">
-            <span class="hacp-obj-ic${def.raro ? ' rare' : ''}">${def.icon || '∎'}</span>
+            <span class="hacp-obj-ic${def.raro ? ' rare' : ''}${def.epico ? ' epic' : ''}">${def.icon || '∎'}</span>
             <div>
               <div class="hacp-obj-nm">${esc(def.nombre)}${n > 1 ? ` <span class="hacp-obj-n">×${n}</span>` : ''}</div>
-              <div class="hacp-obj-sub">${esc(def.zh || '')} · ${tipo}${def.raro ? ' · <b class="rare">RARO</b>' : ''}</div>
+              <div class="hacp-obj-sub">${esc(def.zh || '')} · ${tipo}${def.epico ? ' · <b class="epic">ÉPICO</b>' : def.raro ? ' · <b class="rare">RARO</b>' : ''}</div>
             </div>
           </div>
           <div class="hacp-obj-ef">${esc(HacTienda.efectoTexto(def) || 'Sin efecto')}</div>
@@ -4121,7 +4131,7 @@
       const chips = orden.map(id => {
         const def = HacTienda.get(id); if (!def) return '';
         const ef = HacTienda.efectoTexto(def).replace('Equipable · ', '');
-        return `<span class="hacp-cp-eqitem${def.raro ? ' rare' : ''}${esTorso(id) ? ' torso' : ''}" data-tip="${esc(def.nombre + (def.zh ? ' ' + def.zh : '') + (ef ? ' · ' + ef : ''))}"><span class="ic">${def.icon || '∎'}</span></span>`;
+        return `<span class="hacp-cp-eqitem${def.raro ? ' rare' : ''}${def.epico ? ' epic' : ''}${esTorso(id) ? ' torso' : ''}" data-tip="${esc(def.nombre + (def.zh ? ' ' + def.zh : '') + (ef ? ' · ' + ef : ''))}"><span class="ic">${def.icon || '∎'}</span></span>`;
       }).join('');
       return `<div class="hacp-cp-equip"><div class="hacp-cp-equiplbl">Equipo</div>${chips ? `<div class="hacp-cp-equiprow">${chips}</div>` : '<div class="hacp-cp-equip-none">Sin objetos equipados</div>'}</div>`;
     }
@@ -5153,7 +5163,7 @@
         const def = id && HacTienda.get(id);
         if (def) {
           const ef = HacTienda.efectoTexto(def).replace('Equipable · ', '');
-          return `<button type="button" class="hacp-eq-cell full ${kind}${def.raro ? ' rare' : ''}" data-uneq="${esc(id)}" title="${esc(def.nombre + ' · ' + ef)} · clic para quitar"><span class="hacp-eq-cell-ic">${def.icon}</span><span class="hacp-eq-cell-nm">${esc(def.nombre)}</span><span class="hacp-eq-cell-bo">${esc(ef)}</span><span class="hacp-eq-x">✕</span></button>`;
+          return `<button type="button" class="hacp-eq-cell full ${kind}${def.raro ? ' rare' : ''}${def.epico ? ' epic' : ''}" data-uneq="${esc(id)}" title="${esc(def.nombre + ' · ' + ef)} · clic para quitar"><span class="hacp-eq-cell-ic">${def.icon}</span><span class="hacp-eq-cell-nm">${esc(def.nombre)}</span><span class="hacp-eq-cell-bo">${esc(ef)}</span><span class="hacp-eq-x">✕</span></button>`;
         }
         const ghost = kind === 'torso' ? '👘' : kind === 'arma' ? '⚔️' : '✦';
         const lbl = kind === 'torso' ? 'Torso' : kind === 'arma' ? 'Arma' : 'Vacío';
@@ -5169,7 +5179,7 @@
             const reqNo = esA ? reqNoCumplido(def) : null;
             const full = (esT ? torsoFull : esA ? armaFull : genFull) || !!reqNo;
             const tip = reqNo ? ` title="Necesitas ${DOM_GLYPH[reqNo] || reqNo} ${def.req[reqNo]}"` : '';
-            return `<button type="button" class="hacp-eq-own${def.raro ? ' rare' : ''}${esT ? ' torso' : ''}${esA ? ' arma' : ''}" data-eq="${esc(it.id)}"${full ? ' disabled' : ''}${tip}><span class="hacp-eq-ic">${def.icon}</span><span class="hacp-eq-nm">${esc(def.nombre)}${(it.n || 1) > 1 ? ' ×' + it.n : ''}${reqNo ? ' 🔒' : ''}</span><span class="hacp-eq-bo">${esc(HacTienda.efectoTexto(def).replace('Equipable · ', ''))}</span></button>`;
+            return `<button type="button" class="hacp-eq-own${def.raro ? ' rare' : ''}${def.epico ? ' epic' : ''}${esT ? ' torso' : ''}${esA ? ' arma' : ''}" data-eq="${esc(it.id)}"${full ? ' disabled' : ''}${tip}><span class="hacp-eq-ic">${def.icon}</span><span class="hacp-eq-nm">${esc(def.nombre)}${(it.n || 1) > 1 ? ' ×' + it.n : ''}${reqNo ? ' 🔒' : ''}</span><span class="hacp-eq-bo">${esc(HacTienda.efectoTexto(def).replace('Equipable · ', ''))}</span></button>`;
           }).join('')
         : '<span class="hacp-inv-note">No tienes objetos equipables. Cómpralos en el mercado (tratados, sellos, armas…) o consíguelos como botín (ropas de torso, armas).</span>';
       el.innerHTML = `
@@ -6175,7 +6185,9 @@
       const inv = pabInvestig(dom), def = inv ? invDefById(dom, inv.id) : null; if (!inv || inv.done || !def || !myId) return;
       const yo = (h.miembros || []).find(m => String(m.personajeId) === String(myId));
       if (!yo || rolDeMiembro(yo) !== dom) return;                         // solo contribuyes a la investigación de TU pabellón (por su rol)
-      const chunk = Math.round((base || 0) * (1 + escDeMiembro(yo) * 0.25));   // el rango acelera la investigación (perk)
+      // El rango acelera la investigación (perk) + ESTRATAGEMA (鶴氅): +% de aporte.
+      const invPct = (window.HacStats && HacStats.bonusInvestig) ? HacStats.bonusInvestig(myId) : 0;
+      const chunk = Math.round((base || 0) * (1 + escDeMiembro(yo) * 0.25 + invPct));
       const np = Math.min(def.target, Math.round(pabLiveProg(dom)) + chunk);
       try { const d = await pabRPC('pab_investig_prog', { p_hac: h.id, p_pj: myId, p_rol: dom, p_prog: np, p_ts: nowMs(), p_target: def.target, p_done_key: np >= def.target ? def.unlock : '', p_aporte: Math.round(base || 0), p_pab_id: yo.pabellon || '' }); if (d && d.mapa) h.mapa = d.mapa; if (d && d.miembros) h.miembros = d.miembros; } catch (e) { return; }
       if (np >= def.target) toast(`🔬 ¡Investigación completada: ${def.nombre}!`);
