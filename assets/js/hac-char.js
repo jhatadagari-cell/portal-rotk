@@ -1500,8 +1500,54 @@ const HacChar = (function () {
   }
   if (PNG_ENABLED) pngLoad();   // desactivado → no se cargan los maestros HD
 
+  // ── MANOS en PRIMERA PERSONA (para el mostrador del mercado al VENDER) ────────
+  // Dos antebrazos que entran desde abajo y ofrecen las palmas abiertas hacia el
+  // mostrador. Mangas del color de la TÚNICA del jugador (robe) con puño de acento;
+  // manos de su tono de piel. Se dibuja en lienzo lógico y se escala nítido.
+  function firstPersonHands(canvas, opts) {
+    if (!canvas) return; opts = opts || {};
+    const robe = okHex(opts.robe) ? opts.robe : '#5b4a8a';
+    const accent = okHex(opts.accent) ? opts.accent : '#d8b65a';
+    const skin = SKINS[(Number(opts.piel) || 0) % SKINS.length];
+    const scale = Math.max(1, Math.round(opts.scale || 6));
+    const robeHi = light(robe, 0.16), robeDk = dark(robe, 0.34), robeSh = dark(robe, 0.5);
+    const skinHi = light(skin, 0.12), skinDk = dark(skin, 0.24), cuff = accent, cuffHi = light(accent, 0.22);
+    const W2 = 120, H2 = 62;
+    const off = document.createElement('canvas'); off.width = W2; off.height = H2;
+    const o = off.getContext('2d'); if (!o) return; o.imageSmoothingEnabled = false;
+    const px = (x, y, w, h, c) => { o.fillStyle = c; o.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h)); };
+    // Un brazo: manga desde una esquina inferior subiendo a la muñeca (interior), puño
+    // dorado y MANO abierta con la palma hacia arriba y dedos definidos. dir=+1 mano
+    // izquierda (a la izquierda, palma mirando al centro), dir=-1 mano derecha (espejo).
+    function arm(bottomX, wristX, dir) {
+      const wy = 24;                                        // altura de la muñeca
+      for (let y = H2 - 1; y >= wy; y--) {                  // manga: interpola de la esquina inferior a la muñeca
+        const t = (H2 - 1 - y) / (H2 - 1 - wy);
+        const cx = bottomX + (wristX - bottomX) * t;
+        const w = 17 - t * 5;
+        px(cx - w / 2, y, w, 1, robe);
+        px(cx - w / 2, y, Math.max(2, w * 0.3), 1, dir > 0 ? robeHi : robeSh);
+        px(cx + w / 2 - 2, y, 2, 1, dir > 0 ? robeSh : robeHi);
+      }
+      const wx = wristX;
+      px(wx - 6, wy - 2, 12, 3, cuff); px(wx - 6, wy - 2, 12, 1, cuffHi);           // puño
+      // palma (cuenco de la mano)
+      px(wx - 6, wy - 8, 12, 6, skin); px(wx - 6, wy - 8, 12, 1, skinHi); px(wx - 6, wy - 3, 12, 1, skinDk);
+      // 4 dedos abiertos con surco oscuro entre ellos
+      for (let f = 0; f < 4; f++) { const fx = wx - 6 + f * 3; px(fx, wy - 15, 2, 8, skin); px(fx, wy - 15, 2, 1, skinHi); px(fx + 2, wy - 14, 1, 7, skinDk); }
+      // pulgar hacia el centro (lado interior de cada mano)
+      px(wx + dir * 5, wy - 7, 3, 5, skin); px(wx + dir * 5, wy - 7, 1, 5, skinHi); px(wx + dir * 5, wy - 3, 3, 1, skinDk);
+    }
+    arm(22, 34, 1); arm(98, 86, -1);   // manos separadas → hueco central para ofrecer los objetos
+    outlinePass(o);
+    canvas.width = W2 * scale; canvas.height = H2 * scale;
+    const ctx = canvas.getContext('2d'); if (!ctx) return; ctx.imageSmoothingEnabled = false;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(off, 0, 0, W2, H2, 0, 0, W2 * scale, H2 * scale);
+  }
+
   return {
-    draw, DIRS, FRAMES, W, H, palette, OUTFIT, SKINS, HAIRS,
+    draw, firstPersonHands, DIRS, FRAMES, W, H, palette, OUTFIT, SKINS, HAIRS,
     sprite, imgFor, pngReady: () => PNG_ENABLED && pngReadyFlag, PNG_W, PNG_H, PNG_FEET, PNG_NF,
     // Fracciones del MAESTRO (para la capa de personajes nítida, que dibuja el
     // maestro de alta resolución directamente): pies y ancho relativos a su alto.

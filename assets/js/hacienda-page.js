@@ -4727,7 +4727,7 @@
     const mktReduce = () => !!(window.matchMedia && matchMedia('(prefers-reduced-motion:reduce)').matches);
     function openMercado() {
       if (!hasMarket) return;
-      const el = ensureMktEl(); mkt.yaw = 0; mkt.target = 0; mkt.mode = 'comprar';
+      const el = ensureMktEl(); mkt.view = 0; mkt.mode = 'comprar';
       buildMercado(); el.hidden = false;
       mktCrujido();
       // Puerta: se crea SOLO al entrar (aparte del innerHTML de buildMercado, que se
@@ -4737,7 +4737,6 @@
       el.appendChild(door);
       if (!mktReduce()) { requestAnimationFrame(() => door.classList.add('open')); setTimeout(() => door.remove(), 1250); }
       else door.remove();
-      mktLoop();
       mktJoinPresence();   // F2: anúnciate y escucha a otros clientes en la tienda
       setTimeout(mktPregon, 1800); mkt.criaInt = setInterval(mktPregon, 8000);   // el mercader pregona
     }
@@ -4749,7 +4748,6 @@
     }
     function closeMercado() {
       if (!mktEl) return; mktEl.hidden = true;
-      if (mkt.raf) { cancelAnimationFrame(mkt.raf); mkt.raf = 0; }
       if (mkt.tipEl) mkt.tipEl.classList.remove('show');
       if (mkt.popEl) { mkt.popEl.remove(); mkt.popEl = null; }
       if (mkt.criaInt) { clearInterval(mkt.criaInt); mkt.criaInt = 0; }
@@ -4824,32 +4822,34 @@
         <div class="hook"></div><div class="disc">${it.icon || '∎'}</div>
         <span class="price">💰${priceHTML}</span></div>`;
     }
-    // Artículos de una pared concreta.
-    const mktWallItems = (layout, w, vender) => layout.filter(o => o.wall === w).map(o => mktItemHTML(o, vender)).join('');
+    // Artículos de una pared concreta (siempre el género del mercader).
+    const mktWallItems = (layout, w) => layout.filter(o => o.wall === w).map(o => mktItemHTML(o, false)).join('');
     function buildMercado() {
       const el = ensureMktEl();
       const money = window.HacStats ? HacStats.dinero(myId) : 0;
       const vender = mkt.mode === 'vender';
-      let layout;
-      if (vender) {
-        const inv = (window.HacStats ? HacStats.inventario(myId) : []).map(x => ({ ...x, ...(HacTienda.get(x.id) || {}) })).filter(x => x.id);
-        layout = mktLayout(inv).map((o, i) => ({ ...o, n: inv[i].n }));
-      } else {
-        const disp = (window.HacTienda ? (HacTienda.stockDelDia ? HacTienda.stockDelDia(tier, h.id) : HacTienda.disponibles(tier)) : []);
-        layout = mktLayout(disp);
-      }
-      // La PUERTA no va aquí: solo la crea openMercado al ENTRAR. Si estuviera en el
-      // innerHTML, cada rebuild (cambiar a Vender, comprar…) la regeneraría CERRADA y taparía
-      // toda la escena — ese era el «bug» al pasar a Vender.
+      // La PARED muestra SIEMPRE el género del mercader (al vender queda de fondo).
+      const disp = (window.HacTienda ? (HacTienda.stockDelDia ? HacTienda.stockDelDia(tier, h.id) : HacTienda.disponibles(tier)) : []);
+      const layout = mktLayout(disp);
+      // La PUERTA no va aquí: solo la crea openMercado al ENTRAR (si no, cada rebuild la
+      // regeneraría cerrada y taparía la escena).
       const tab = (m, lbl) => `<button type="button" class="hacp-mkt-tab${mkt.mode === m ? ' on' : ''}" data-mkt-mode="${m}">${lbl}</button>`;
       const shelves = `<div class="hacp-mkt-shelf" style="top:34%"></div><div class="hacp-mkt-shelf" style="top:60%"></div>`;
+      // VENDER: bandeja de tus objetos sobre tus manos en primera persona.
+      const inv = vender ? (window.HacStats ? HacStats.inventario(myId) : []).map(x => ({ n: x.n, def: HacTienda.get(x.id) })).filter(x => x.def) : [];
+      const sellHTML = vender ? `
+        <div class="hacp-mkt-sell">
+          <div class="hacp-mkt-hands"><canvas width="360" height="224"></canvas></div>
+          <div class="hacp-mkt-tray">${inv.length ? inv.map(it => `<button type="button" class="hacp-mkt-goods" data-sell="${esc(it.def.id)}" title="${esc(it.def.nombre)}"><span class="g">${it.def.icon || '∎'}</span>${(it.n || 1) > 1 ? `<i>×${it.n}</i>` : ''}</button>`).join('') : '<span class="hacp-mkt-tray-empty">No llevas nada que vender</span>'}</div>
+        </div>` : '';
+      el.classList.toggle('sell', vender);
       el.innerHTML = `
         <div class="hacp-mkt-scene">
           <div class="hacp-mkt-face back">${shelves}
             <div class="hacp-mkt-lantern" style="left:30%"></div><div class="hacp-mkt-lantern" style="left:66%"></div>
-            ${mktWallItems(layout, 'back', vender)}</div>
-          <div class="hacp-mkt-face left"><div class="hacp-mkt-peer" style="left:46%" data-peer="L"></div>${mktWallItems(layout, 'left', vender)}</div>
-          <div class="hacp-mkt-face right"><div class="hacp-mkt-peer" style="left:54%" data-peer="R"></div>${mktWallItems(layout, 'right', vender)}</div>
+            ${mktWallItems(layout, 'back')}</div>
+          <div class="hacp-mkt-face left"><div class="hacp-mkt-peer" style="left:46%" data-peer="L"></div>${mktWallItems(layout, 'left')}</div>
+          <div class="hacp-mkt-face right"><div class="hacp-mkt-peer" style="left:54%" data-peer="R"></div>${mktWallItems(layout, 'right')}</div>
           <div class="hacp-mkt-face floor"></div>
           <div class="hacp-mkt-face ceil"></div>
         </div>
@@ -4860,80 +4860,77 @@
           <div class="hacp-mkt-merchant"><canvas width="230" height="322"></canvas><div class="hacp-mkt-cry"></div></div>
           <div class="hacp-mkt-counter"><div class="top"></div><div class="front"></div></div>
         </div>
+        ${sellHTML}
         <button type="button" class="hacp-mkt-arrow left" data-mkt-turn="-1">‹</button>
         <button type="button" class="hacp-mkt-arrow right" data-mkt-turn="1">›</button>
-        <div class="hacp-mkt-sign">${vender ? '換 Trae tu género' : '市 Género del día'}</div>
+        <div class="hacp-mkt-sign">${vender ? '換 ¿Qué me traes?' : '市 Género del día'}</div>
         <div class="hacp-mkt-hud">
           <span class="hacp-mkt-title"><span class="zh">市</span> Mercado</span>
           ${myId ? `<span class="hacp-mkt-tabs">${tab('comprar', '市 Comprar')}${tab('vender', '換 Vender')}</span>` : ''}
           <span class="hacp-mkt-money">💰 ${money}</span>
           <button type="button" class="hacp-mkt-x" data-mkt-close aria-label="Salir">✕</button>
         </div>
-        <div class="hacp-mkt-hint">Gira la vista: arrastra o lleva el cursor a los lados · toca un artículo para ${vender ? 'venderlo' : 'comprarlo'}</div>
+        <div class="hacp-mkt-hint">${vender ? 'Ofrécele un objeto de tu mano para regatear su precio' : 'Gira la vista acercando el cursor a un lado · toca un artículo para comprarlo'}</div>
         <div class="hacp-mkt-tip"></div>`;
       mkt.tipEl = el.querySelector('.hacp-mkt-tip');
-      applyYaw();
+      applyView();
       renderPeers();
       const mc = el.querySelector('.hacp-mkt-merchant canvas');
       if (mc && window.HacChar) { try { HacChar.draw(mc, { aptitud: '', aspecto: MKT_MERC, dir: 'S', pose: 'stand', frame: 0, scale: 7, outline: true }); } catch (e) {} }
+      // VENDER: dibuja tus manos con las mangas de TU túnica + el pregón del mercader.
+      if (vender) {
+        const hc = el.querySelector('.hacp-mkt-hands canvas');
+        if (hc && window.HacChar && HacChar.firstPersonHands) { const yo = regYoAspecto(); try { HacChar.firstPersonHands(hc, { robe: yo.aspecto.robe, accent: yo.aspecto.accent, piel: yo.aspecto.piel, scale: 4 }); } catch (e) {} }
+        const cry = el.querySelector('.hacp-mkt-cry'); if (cry) { cry.textContent = '¿Qué tenéis para mí?'; cry.classList.add('show'); }
+      }
       wireMercado(el, vender);
     }
-    function applyYaw() {
+    // TRES VISTAS discretas: -1 izquierda · 0 frontal · 1 derecha. El salto entre ellas lo
+    // anima el CSS (transición de .hacp-mkt-scene), así que aquí solo fijamos el ángulo.
+    const MKT_ANG = 40;   // grados de giro en las vistas laterales
+    function applyView() {
       const scene = mktEl && mktEl.querySelector('.hacp-mkt-scene'); if (!scene) return;
-      // yaw>0 = mirar a la DERECHA (rotateY positivo trae la pared derecha al centro).
-      scene.style.setProperty('--yaw', (mkt.yaw * 30) + 'deg');
-      // El PRIMER PLANO (mostrador + mercader) se desplaza en sentido contrario (paralaje):
-      // al mirar a la derecha, lo que tienes delante se va hacia la izquierda.
+      const v = mkt.view || 0;
+      scene.style.setProperty('--yaw', (v * MKT_ANG) + 'deg');
       const front = mktEl.querySelector('.hacp-mkt-front');
-      if (front) front.style.transform = 'translateX(' + (-mkt.yaw * 13) + '%)';
+      if (front) front.style.transform = 'translateX(' + (-v * 12) + '%)';   // paralaje del primer plano
       const la = mktEl.querySelector('.hacp-mkt-arrow.left'), ra = mktEl.querySelector('.hacp-mkt-arrow.right');
-      if (la) la.toggleAttribute('disabled', mkt.yaw < -0.98); if (ra) ra.toggleAttribute('disabled', mkt.yaw > 0.98);
+      if (la) la.classList.toggle('at', v === -1); if (ra) ra.classList.toggle('at', v === 1);
     }
-    function mktLoop() {
-      if (mkt.raf) cancelAnimationFrame(mkt.raf);
-      const step = () => {
-        if (mkt.hold) mkt.target = Math.max(-1, Math.min(1, mkt.target + mkt.hold * 0.035));
-        else if (!mkt.drag) mkt.target += (0 - mkt.target) * 0.10;   // sin mirar a los lados → vuelve al frente
-        if (mktReduce()) mkt.yaw = mkt.target; else mkt.yaw += (mkt.target - mkt.yaw) * 0.16;
-        applyYaw();
-        mkt.raf = requestAnimationFrame(step);
-      };
-      step();
-    }
+    function setView(v) { v = v < 0 ? -1 : v > 0 ? 1 : 0; if (v === mkt.view) return; mkt.view = v; applyView(); }
     function wireMercado(el, vender) {
       el.querySelector('[data-mkt-close]').addEventListener('click', closeMercado);
-      el.querySelectorAll('[data-mkt-mode]').forEach(b => b.addEventListener('click', () => { mkt.mode = b.dataset.mktMode; mkt.yaw = 0; mkt.target = 0; buildMercado(); }));
-      // Flechas: escritorio = girar mientras hover; móvil/clic = un paso.
+      el.querySelectorAll('[data-mkt-mode]').forEach(b => b.addEventListener('click', () => { mkt.mode = b.dataset.mktMode; mkt.view = 0; buildMercado(); }));
+      const stage = el;
+      // RATÓN: la vista cambia SOLO al acercar el cursor mucho a un borde (zona estrecha);
+      // en el centro vuelve a frontal. No se mueve al pasear el cursor por el medio.
+      stage.addEventListener('pointermove', (e) => {
+        if (e.pointerType === 'touch') return;
+        if (e.target.closest('.hacp-mkt-hud, .hacp-mkt-pop, .hacp-mkt-item')) return;
+        const r = el.getBoundingClientRect(), fx = (e.clientX - r.left) / r.width;
+        setView(fx < 0.11 ? -1 : fx > 0.89 ? 1 : 0);
+      });
+      stage.addEventListener('pointerleave', () => setView(0));
+      // Flechas: ratón = mientras el cursor está encima; TÁCTIL = toca para alternar la vista.
       el.querySelectorAll('[data-mkt-turn]').forEach(b => {
         const dir = Number(b.dataset.mktTurn);
-        b.addEventListener('pointerenter', (e) => { if (e.pointerType !== 'touch') mkt.hold = dir; });
-        b.addEventListener('pointerleave', () => { mkt.hold = 0; });
-        b.addEventListener('click', () => { mkt.hold = 0; mkt.target = Math.max(-1, Math.min(1, mkt.target + dir * 0.5)); });
+        b.addEventListener('pointerenter', (e) => { if (e.pointerType !== 'touch') setView(dir); });
+        b.addEventListener('click', () => setView(mkt.view === dir ? 0 : dir));
       });
-      // Arrastrar (escritorio y táctil) para panoramizar.
-      const stage = el;
-      stage.addEventListener('pointerdown', (e) => {
-        if (e.target.closest('.hacp-mkt-item,.hacp-mkt-arrow,.hacp-mkt-hud,.hacp-mkt-pop,.hacp-mkt-sign')) return;
-        mkt.drag = { x: e.clientX, yaw: mkt.target, w: el.clientWidth || 800 }; mkt.hold = 0;
-      });
-      window.addEventListener('pointermove', mktOnMove);
-      window.addEventListener('pointerup', mktOnUp);
-      // El giro por HOVER solo ocurre sobre las FLECHAS laterales (ya pegadas a los bordes),
-      // no por pasar el cursor por la escena — así no gira «todo el rato». Girar además con
-      // las flechas al clic y arrastrando.
-      // Artículos: hover = tooltip · clic = popover (comprar/vender).
+      applyView();
+      // Género del mercader (pared): hover = tooltip · clic = comprar (solo en modo comprar;
+      // al vender la pared es fondo).
       el.querySelectorAll('.hacp-mkt-item').forEach(node => {
-        const id = node.dataset.buy || node.dataset.sell;
-        node.addEventListener('pointerenter', (e) => { if (e.pointerType !== 'touch') mktTip(node, id, vender); });
+        const id = node.dataset.buy;
+        node.addEventListener('pointerenter', (e) => { if (e.pointerType !== 'touch') mktTip(node, id, false); });
         node.addEventListener('pointerleave', () => { if (mkt.tipEl) mkt.tipEl.classList.remove('show'); });
-        node.addEventListener('click', (e) => { e.stopPropagation(); mktPopover(node, id, vender); });
+        if (!vender) node.addEventListener('click', (e) => { e.stopPropagation(); mktPopover(node, id, false); });
+      });
+      // VENDER: ofreces un objeto de tu mano → escena de regateo.
+      el.querySelectorAll('.hacp-mkt-goods').forEach(node => {
+        node.addEventListener('click', (e) => { e.stopPropagation(); const it = HacTienda.get(node.dataset.sell); if (it) { closeMercado(); abrirRegateo(it); } });
       });
     }
-    function mktOnMove(e) {
-      if (!mkt.drag || mktEl.hidden) return;
-      const dx = e.clientX - mkt.drag.x; mkt.target = Math.max(-1, Math.min(1, mkt.drag.yaw + (dx / mkt.drag.w) * 2.2));
-    }
-    function mktOnUp() { mkt.drag = null; }
     function mktTip(node, id, vender) {
       const it = HacTienda.get(id); if (!it || !mkt.tipEl) return;
       const precio = vender ? null : precioMercado(it);

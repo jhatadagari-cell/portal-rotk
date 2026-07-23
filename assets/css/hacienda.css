@@ -2012,7 +2012,7 @@ button.hacp-slot.comida:hover{ background:rgba(127,201,160,.24); }
    Cada cara se centra con translate(-50%,-50%) y se empuja a su sitio con translateZ =
    mitad de la dimensión perpendicular → las paredes/suelo/techo encajan sin huecos. */
 .hacp-mkt-scene{ position:absolute; left:50%; top:50%; transform-style:preserve-3d;
-  transform:translateZ(360px) rotateY(var(--yaw,0deg)); transition:transform .16s ease-out; will-change:transform; }
+  transform:translateZ(360px) rotateY(var(--yaw,0deg)); transition:transform .42s cubic-bezier(.5,.05,.2,1); will-change:transform; }
 .hacp-mkt-face{ position:absolute; top:0; left:0; transform-style:preserve-3d;
   background:repeating-linear-gradient(90deg, rgba(0,0,0,.13) 0 2px, transparent 2px 78px), linear-gradient(#3f2e19,#2c1f11); }
 .hacp-mkt-face.back { width:var(--w); height:var(--h); transform:translate(-50%,-50%) translateZ(calc(var(--d)/-2)); }
@@ -2062,7 +2062,8 @@ button.hacp-slot.comida:hover{ background:rgba(127,201,160,.24); }
   border:1px solid #6b5327; border-radius:999px; padding:3px 9px; display:inline-block; margin-top:3px; }
 
 /* CAPA FRONTAL fija: mostrador con volumen + mercader DETRÁS + props */
-.hacp-mkt-front{ position:absolute; inset:0; z-index:6; pointer-events:none; overflow:hidden; }
+.hacp-mkt-front{ position:absolute; inset:0; z-index:6; pointer-events:none; overflow:hidden;
+  transition:transform .42s cubic-bezier(.5,.05,.2,1); }
 .hacp-mkt-halo{ position:absolute; left:50%; bottom:60px; width:400px; height:380px; margin-left:-200px;
   background:radial-gradient(50% 50% at 50% 50%, rgba(230,180,90,.20), transparent 68%); }
 .hacp-mkt-merchant{ position:absolute; left:50%; bottom:60px; transform:translateX(-50%); width:230px; height:322px; z-index:2; }
@@ -2094,7 +2095,7 @@ button.hacp-slot.comida:hover{ background:rgba(127,201,160,.24); }
 .hacp-mkt-arrow.right{ right:0; background:linear-gradient(270deg, rgba(230,180,34,.14), transparent); }
 .hacp-mkt-arrow:hover{ color:#f4dd94; background:linear-gradient(90deg, rgba(230,180,34,.3), transparent); }
 .hacp-mkt-arrow.right:hover{ background:linear-gradient(270deg, rgba(230,180,34,.3), transparent); }
-.hacp-mkt-arrow[disabled]{ opacity:0; pointer-events:none; }
+.hacp-mkt-arrow.at{ color:#f4dd94; }   /* vista lateral activa */
 
 /* HUD, cartel, hint, tooltip, popover, puerta (2D, fijos) */
 .hacp-mkt-hud{ position:absolute; top:0; left:0; right:0; z-index:12; display:flex; align-items:center; gap:12px; padding:12px 16px; pointer-events:none; }
@@ -2141,7 +2142,31 @@ button.hacp-slot.comida:hover{ background:rgba(127,201,160,.24); }
 .hacp-mkt-door.open .leaf.l{ transform:perspective(1200px) rotateY(-105deg); }
 .hacp-mkt-door.open .leaf.r{ transform:perspective(1200px) rotateY(105deg); }
 
+/* ── MODO VENDER: bajas al mostrador y ofreces tus objetos con tus propias manos ── */
+.hacp-mkt3d.sell{ perspective-origin:50% 66%; }                       /* la «cámara» mira más abajo */
+.hacp-mkt3d.sell .hacp-mkt-scene{ transform:translateZ(360px) translateY(-40px) rotateY(var(--yaw,0deg)); }
+.hacp-mkt3d.sell .hacp-mkt-arrow{ opacity:0; pointer-events:none; }   /* al vender no giras la vista */
+.hacp-mkt-sell{ position:absolute; inset:0; z-index:8; pointer-events:none; overflow:hidden; }
+.hacp-mkt-hands{ position:absolute; left:50%; bottom:0; transform:translateX(-50%); width:min(760px,96%);
+  animation:mktHandsIn .5s cubic-bezier(.4,.1,.2,1) both; }
+.hacp-mkt-hands canvas{ width:100%; height:auto; image-rendering:pixelated; display:block;
+  filter:drop-shadow(0 -6px 14px rgba(0,0,0,.5)); }
+@keyframes mktHandsIn{ from{ transform:translate(-50%,70px); } to{ transform:translate(-50%,0); } }
+/* Bandeja de tus objetos, apoyados sobre las palmas */
+.hacp-mkt-tray{ position:absolute; left:50%; bottom:150px; transform:translateX(-50%); z-index:9;
+  display:flex; gap:12px; flex-wrap:wrap; justify-content:center; max-width:70%; pointer-events:auto;
+  animation:mktHandsIn .5s cubic-bezier(.4,.1,.2,1) both; }
+.hacp-mkt-goods{ position:relative; width:62px; height:62px; border-radius:12px; cursor:pointer; padding:0;
+  background:radial-gradient(60% 60% at 50% 38%, #33271a, #1a120a); border:2px solid #6b5327;
+  box-shadow:0 6px 12px rgba(0,0,0,.5), inset 0 0 0 1px rgba(216,182,90,.18);
+  display:flex; align-items:center; justify-content:center; transition:transform .1s, box-shadow .1s; }
+.hacp-mkt-goods .g{ font-size:32px; line-height:1; }
+.hacp-mkt-goods i{ position:absolute; right:3px; bottom:2px; font:800 10px/1 ui-monospace,monospace; color:#f0d98a; font-style:normal; }
+.hacp-mkt-goods:hover{ transform:translateY(-5px) scale(1.06); box-shadow:0 10px 16px rgba(0,0,0,.55), 0 0 12px rgba(230,180,34,.5); border-color:#e6b422; }
+.hacp-mkt-tray-empty{ font:600 13px/1 'Noto Sans SC',sans-serif; color:#c9b487; background:rgba(20,14,7,.8); border:1px solid #6b5327; border-radius:10px; padding:10px 16px; }
+
 @media (prefers-reduced-motion:reduce){
-  .hacp-mkt-scene, .hacp-mkt-item{ transition:none; }
+  .hacp-mkt-scene, .hacp-mkt-item, .hacp-mkt-front{ transition:none; }
   .hacp-mkt-door .leaf{ transition:none; } .hacp-mkt-lantern{ animation:none; }
+  .hacp-mkt-hands, .hacp-mkt-tray{ animation:none; }
 }
