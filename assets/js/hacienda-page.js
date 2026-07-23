@@ -4889,8 +4889,9 @@
     function mktLoop() {
       if (mkt.raf) cancelAnimationFrame(mkt.raf);
       const step = () => {
-        if (mkt.hold) mkt.target = Math.max(-1, Math.min(1, mkt.target + mkt.hold * 0.03));
-        if (mktReduce()) mkt.yaw = mkt.target; else mkt.yaw += (mkt.target - mkt.yaw) * 0.14;
+        if (mkt.hold) mkt.target = Math.max(-1, Math.min(1, mkt.target + mkt.hold * 0.035));
+        else if (!mkt.drag) mkt.target += (0 - mkt.target) * 0.10;   // sin mirar a los lados → vuelve al frente
+        if (mktReduce()) mkt.yaw = mkt.target; else mkt.yaw += (mkt.target - mkt.yaw) * 0.16;
         applyYaw();
         mkt.raf = requestAnimationFrame(step);
       };

@@ -2020,8 +2020,8 @@ button.hacp-slot.comida:hover{ background:rgba(127,201,160,.24); }
     repeating-linear-gradient(90deg, rgba(0,0,0,.16) 0 2px, transparent 2px 66px),
     linear-gradient(#3a2a17, #2a1d10 55%, #1f1409);
   box-shadow:inset 0 40px 70px rgba(0,0,0,.5), inset 0 -30px 60px rgba(0,0,0,.55); border-top:8px solid #4a361c; }
-.hacp-mkt-face.back::before{ content:""; position:absolute; left:0; right:0; top:47%; height:16px;
-  background:linear-gradient(#5a4326,#3a2a15); box-shadow:0 4px 8px rgba(0,0,0,.4); }   /* riel de madera */
+.hacp-mkt-face.back::before{ content:""; position:absolute; left:0; right:0; bottom:0; height:150px;
+  background:linear-gradient(transparent, #140d06); }   /* zócalo oscuro: funde la unión pared–suelo (sin línea) */
 .hacp-mkt-face.left,.hacp-mkt-face.right{ width:600px; height:760px; margin:-380px 0 0 0;
   background:
     repeating-linear-gradient(90deg, rgba(0,0,0,.14) 0 2px, transparent 2px 60px),
@@ -2039,10 +2039,11 @@ button.hacp-slot.comida:hover{ background:rgba(127,201,160,.24); }
 .hacp-mkt-face.floor{ width:1680px; height:640px; margin:-320px 0 0 -840px; transform-origin:center top;
   transform:translateY(380px) rotateX(-90deg);
   background:
+    linear-gradient(#0d0803 0 90px, transparent 220px),
     radial-gradient(70% 90% at 50% 100%, rgba(230,180,90,.16), transparent 60%),
     repeating-linear-gradient(90deg,#3a2a16 0 74px,#31230f 74px 78px),
     linear-gradient(#160e06, #2e2110 55%);
-  box-shadow:inset 0 60px 90px rgba(0,0,0,.6); }
+  box-shadow:inset 0 70px 110px rgba(0,0,0,.75); }
 /* Techo con vigas de madera (no negro plano) */
 .hacp-mkt-face.ceil{ width:1680px; height:640px; margin:-320px 0 0 -840px; transform-origin:center bottom;
   transform:translateY(-380px) rotateX(90deg);
@@ -2088,16 +2089,16 @@ button.hacp-slot.comida:hover{ background:rgba(127,201,160,.24); }
 
 /* CAPA FRONTAL fija: mostrador con volumen + mercader DETRÁS + props */
 .hacp-mkt-front{ position:absolute; inset:0; z-index:6; pointer-events:none; overflow:hidden; }
-.hacp-mkt-halo{ position:absolute; left:50%; bottom:150px; width:380px; height:360px; margin-left:-190px;
+.hacp-mkt-halo{ position:absolute; left:50%; bottom:90px; width:380px; height:360px; margin-left:-190px;
   background:radial-gradient(50% 50% at 50% 50%, rgba(230,180,90,.20), transparent 68%); }
-.hacp-mkt-merchant{ position:absolute; left:50%; bottom:150px; transform:translateX(-50%); width:210px; height:294px; z-index:2; }
+.hacp-mkt-merchant{ position:absolute; left:50%; bottom:56px; transform:translateX(-50%); width:206px; height:288px; z-index:2; }
 .hacp-mkt-merchant canvas{ width:100%; height:100%; image-rendering:pixelated; filter:drop-shadow(0 8px 10px rgba(0,0,0,.6)); }
 .hacp-mkt-cry{ position:absolute; left:50%; top:-34px; transform:translateX(-50%) translateY(6px); white-space:nowrap;
   background:#f4ecd6; color:#3a2a15; font:700 12px/1 'Noto Sans SC',sans-serif; padding:7px 12px; border-radius:12px;
   box-shadow:0 4px 10px rgba(0,0,0,.4); opacity:0; transition:opacity .25s, transform .25s; }
 .hacp-mkt-cry::after{ content:""; position:absolute; left:50%; bottom:-6px; margin-left:-6px; border:6px solid transparent; border-top-color:#f4ecd6; border-bottom:0; }
 .hacp-mkt-cry.show{ opacity:1; transform:translateX(-50%) translateY(0); }
-.hacp-mkt-counter{ position:absolute; left:-42%; right:-42%; bottom:0; height:190px; z-index:3; }
+.hacp-mkt-counter{ position:absolute; left:-42%; right:-42%; bottom:0; height:172px; z-index:3; }
 .hacp-mkt-counter .top{ position:absolute; left:0; right:0; top:0; height:46px; background:linear-gradient(#6a4e28,#4a361c);
   transform:perspective(500px) rotateX(52deg); transform-origin:bottom; box-shadow:0 -6px 16px rgba(0,0,0,.4);
   border-top:2px solid #7a5a2e; }
