@@ -4730,10 +4730,13 @@
       const el = ensureMktEl(); mkt.yaw = 0; mkt.target = 0; mkt.mode = 'comprar';
       buildMercado(); el.hidden = false;
       mktCrujido();
-      // Puerta: arranca cerrada y se abre (salvo reduced-motion).
-      const door = el.querySelector('.hacp-mkt-door');
-      if (door && !mktReduce()) { requestAnimationFrame(() => door.classList.add('open')); setTimeout(() => { if (door) door.hidden = true; }, 1250); }
-      else if (door) door.hidden = true;
+      // Puerta: se crea SOLO al entrar (aparte del innerHTML de buildMercado, que se
+      // regenera en cada rebuild) y se retira al abrirse.
+      const door = document.createElement('div'); door.className = 'hacp-mkt-door';
+      door.innerHTML = '<div class="leaf l"></div><div class="leaf r"></div>';
+      el.appendChild(door);
+      if (!mktReduce()) { requestAnimationFrame(() => door.classList.add('open')); setTimeout(() => door.remove(), 1250); }
+      else door.remove();
       mktLoop();
       mktJoinPresence();   // F2: anúnciate y escucha a otros clientes en la tienda
       setTimeout(mktPregon, 1800); mkt.criaInt = setInterval(mktPregon, 8000);   // el mercader pregona
@@ -4836,7 +4839,9 @@
         const disp = (window.HacTienda ? (HacTienda.stockDelDia ? HacTienda.stockDelDia(tier, h.id) : HacTienda.disponibles(tier)) : []);
         layout = mktLayout(disp);
       }
-      const doorHTML = `<div class="hacp-mkt-door"><div class="leaf l"></div><div class="leaf r"></div></div>`;
+      // La PUERTA no va aquí: solo la crea openMercado al ENTRAR. Si estuviera en el
+      // innerHTML, cada rebuild (cambiar a Vender, comprar…) la regeneraría CERRADA y taparía
+      // toda la escena — ese era el «bug» al pasar a Vender.
       const tab = (m, lbl) => `<button type="button" class="hacp-mkt-tab${mkt.mode === m ? ' on' : ''}" data-mkt-mode="${m}">${lbl}</button>`;
       const shelves = `<div class="hacp-mkt-shelf" style="top:150px"></div><div class="hacp-mkt-shelf" style="top:340px"></div>`;
       el.innerHTML = `
@@ -4866,8 +4871,7 @@
           <button type="button" class="hacp-mkt-x" data-mkt-close aria-label="Salir">✕</button>
         </div>
         <div class="hacp-mkt-hint">Gira la vista: arrastra o lleva el cursor a los lados · toca un artículo para ${vender ? 'venderlo' : 'comprarlo'}</div>
-        <div class="hacp-mkt-tip"></div>
-        ${doorHTML}`;
+        <div class="hacp-mkt-tip"></div>`;
       mkt.tipEl = el.querySelector('.hacp-mkt-tip');
       applyYaw();
       renderPeers();
