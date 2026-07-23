@@ -101,7 +101,7 @@ const HacChar = (function () {
       // `aspecto.kind`/`aspecto.torsoLujo` permiten que una ROPA DE TORSO equipada
       // (HacTienda item.viste) redefina el atuendo del tronco sin tocar la cabeza:
       // p. ej. un guerrero (armadura) que se pone una túnica pasa a kind 'robe'.
-      kind: aspecto.kind || o.kind, prop: o.prop, arma: aspecto.arma || o.arma || null, cape: flag('cape'), capeLong: flag('capeLong'), imperial, crown: flag('crown'), topknot: flag('topknot'), headwrap: flag('headwrap'), robeLong: flag('robeLong'), sleevesRolled: flag('sleevesRolled'), ornate: !!o.ornate, torsoLujo: !!aspecto.torsoLujo, torsoGala: !!aspecto.torsoGala,
+      kind: aspecto.kind || o.kind, prop: o.prop, arma: aspecto.arma || o.arma || null, cape: flag('cape'), capeLong: flag('capeLong'), imperial, crown: flag('crown'), topknot: flag('topknot'), headwrap: flag('headwrap'), futou: flag('futou'), robeLong: flag('robeLong'), sleevesRolled: flag('sleevesRolled'), ornate: !!o.ornate, torsoLujo: !!aspecto.torsoLujo, torsoGala: !!aspecto.torsoGala,
       // `gala` = SELLO VISUAL de la ROPA DE TORSO RARA equipada ('general', 'erudito',
       // 'ministro', 'estratega', 'preceptor', 'intendente'): cada prenda de gala se
       // dibuja DISTINTA (cf. galaSello y la rama armor de torso), no solo recoloreada.
@@ -870,6 +870,7 @@ const HacChar = (function () {
     if (P.topknot) { crownTopknot(px, P, v, c, hy); return; }                  // moño recogido con corona/pincho
     if (P.headwrap) { headWrap(px, P, v, c, hy); return; }                     // pañuelo 綸巾 (Guan Yu)
     if (P.bandana) { redBandana(px, P, v, c, hy); return; }                    // bandana roja 紅巾 (Zhang Fei)
+    if (P.futou) { futou(px, P, v, c, hy); return; }                          // 幞頭 gorro de comerciante/oficial
     if (P.kind === 'armor') {                                                  // casco con frontal y cresta
       px(c - 5, hy - 3, 11, 4, P.steel); px(c - 5, hy - 3, 11, 1, P.steelHi);
       px(c - 5, hy + 1, 11, 1, P.steelDk);
@@ -1194,6 +1195,27 @@ const HacChar = (function () {
     // Nudo lateral + cola ondeante (a un lado).
     px(c - 7, hy - 1, 2, 2, red); px(c - 7, hy - 1, 2, 1, rl);                                   // nudo
     px(c - 9, hy, 2, 1, red); px(c - 10, hy + 1, 2, 1, rd); px(c - 9, hy + 2, 1, 1, red);        // cola volando
+  }
+
+  // 幞頭 (futou): gorro negro de comerciante/oficial Han con casquete redondeado y dos
+  // ALAS horizontales (翅) que sobresalen a los lados — silueta inconfundible de mercader.
+  function futou(px, P, v, c, hy) {
+    const neg = '#211c16', ng = light(neg, 0.16), nd = dark(neg, 0.4);
+    // Casquete abombado (dos escalones para dar volumen de gorro).
+    px(c - 5, hy - 5, 11, 5, neg); px(c - 4, hy - 7, 9, 2, neg);
+    px(c - 5, hy - 5, 11, 1, ng); px(c - 4, hy - 7, 9, 1, ng);
+    px(c - 5, hy - 1, 11, 1, nd);
+    if (v.back) {
+      // Alas por detrás, más juntas; nudo del paño en la nuca.
+      px(c - 8, hy - 3, 3, 2, neg); px(c + 5, hy - 3, 3, 2, neg);
+      px(c - 8, hy - 3, 3, 1, ng); px(c + 5, hy - 3, 3, 1, ng);
+      px(c - 1, hy - 1, 2, 2, nd);
+      return;
+    }
+    // Alas laterales horizontales (una por lado; en perfil solo la trasera se insinúa).
+    if (v.side < 1) { px(c - 9, hy - 4, 4, 2, neg); px(c - 9, hy - 4, 4, 1, ng); px(c - 9, hy - 2, 4, 1, nd); }
+    px(c + 5, hy - 4, 4, 2, neg); px(c + 5, hy - 4, 4, 1, ng); px(c + 5, hy - 2, 4, 1, nd);
+    if (v.front) px(c - 1, hy - 5, 2, 1, P.gold);   // broche dorado al frente
   }
 
   // ARMA equipada (兵): sustituye al prop de la aptitud cuando el mecenas empuña una.

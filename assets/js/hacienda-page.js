@@ -4690,9 +4690,12 @@
     // mostrador, artículos colgados de la pared, girar el «cuello» (yaw) con hover en
     // los bordes / arrastrar (escritorio) o swipe / flechas (móvil).
     // ══════════════════════════════════════════════════════════════════════════
-    const MKT_MERC = { robe: '#3f6e9c', accent: '#d4a83a', piel: 1, pelo: 1, barba: 1 };
+    // Mercader con carácter: túnica jade de comerciante próspero, ribete dorado, barba
+    // y gorro 幞頭 (futou) de las dos alas — inconfundiblemente un tendero.
+    const MKT_MERC = { robe: '#356b6b', accent: '#d8b65a', piel: 1, pelo: 1, barba: 1, futou: true };
+    const MKT_CRIES = ['¡Género fresco del sur!', '¡Buen precio, buen acero!', '¡Pasa, pasa y mira!', '¡Lo mejor de la ruta!', '¡Sedas, libros y vituallas!'];
     let mktEl = null;
-    const mkt = { yaw: 0, target: 0, mode: 'comprar', raf: 0, hold: 0, drag: null, tipEl: null, popEl: null };
+    const mkt = { yaw: 0, target: 0, mode: 'comprar', raf: 0, hold: 0, drag: null, tipEl: null, popEl: null, ch: null, peers: [], criaT: 0 };
     // Crujido de puerta de madera: ruido filtrado descendente + golpe seco (sintético).
     function mktCrujido() {
       try {
@@ -4732,12 +4735,65 @@
       if (door && !mktReduce()) { requestAnimationFrame(() => door.classList.add('open')); setTimeout(() => { if (door) door.hidden = true; }, 1250); }
       else if (door) door.hidden = true;
       mktLoop();
+      mktJoinPresence();   // F2: anúnciate y escucha a otros clientes en la tienda
+      setTimeout(mktPregon, 1800); mkt.criaInt = setInterval(mktPregon, 8000);   // el mercader pregona
+    }
+    function mktPregon() {
+      const cry = mktEl && mktEl.querySelector('.hacp-mkt-cry'); if (!cry) return;
+      cry.textContent = MKT_CRIES[Math.floor(Math.random() * MKT_CRIES.length)];
+      cry.hidden = false; cry.classList.add('show');
+      clearTimeout(mkt.criaHide); mkt.criaHide = setTimeout(() => { cry.classList.remove('show'); }, 3200);
     }
     function closeMercado() {
       if (!mktEl) return; mktEl.hidden = true;
       if (mkt.raf) { cancelAnimationFrame(mkt.raf); mkt.raf = 0; }
       if (mkt.tipEl) mkt.tipEl.classList.remove('show');
       if (mkt.popEl) { mkt.popEl.remove(); mkt.popEl = null; }
+      if (mkt.criaInt) { clearInterval(mkt.criaInt); mkt.criaInt = 0; }
+      clearTimeout(mkt.criaHide);
+      mktLeavePresence();
+    }
+    // ── PRESENCIA (F2): un canal efímero por hacienda; cada cliente con la tienda abierta
+    // se «anuncia» (track) con su aspecto. Al girarte ves a otro comprador contemplando el
+    // escaparate. Sin tabla ni SQL — Supabase Presence puro. ──
+    function mktJoinPresence() {
+      mktLeavePresence();
+      try {
+        if (typeof Auth === 'undefined' || !Auth.client) return;
+        const client = Auth.client(); if (!client || !client.channel) return;
+        const me = (typeof regYoAspecto === 'function') ? regYoAspecto() : { aptitud: '', aspecto: {} };
+        const ch = client.channel('mkt-' + h.id, { config: { presence: { key: String(myId || 'anon') } } });
+        ch.on('presence', { event: 'sync' }, () => {
+          try {
+            const st = ch.presenceState(); const peers = [];
+            Object.keys(st).forEach(k => { if (String(k) === String(myId)) return; const m = st[k] && st[k][0]; if (m) peers.push(m); });
+            mkt.peers = peers; renderPeers();
+          } catch (e) {}
+        });
+        ch.subscribe((status) => { if (status === 'SUBSCRIBED') { try { ch.track({ id: String(myId), nombre: (typeof myName !== 'undefined' ? myName : ''), aptitud: me.aptitud, aspecto: me.aspecto }); } catch (e) {} } });
+        mkt.ch = ch;
+      } catch (e) {}
+    }
+    function mktLeavePresence() {
+      try { if (mkt.ch) { if (mkt.ch.untrack) mkt.ch.untrack(); const c = Auth.client && Auth.client(); if (c && c.removeChannel) c.removeChannel(mkt.ch); } } catch (e) {}
+      mkt.ch = null; mkt.peers = [];
+    }
+    // Pinta hasta 2 peers (uno a cada lado, aleatorio si hay más) contemplando el escaparate.
+    function renderPeers() {
+      if (!mktEl || mktEl.hidden) return;
+      const slots = [mktEl.querySelector('.hacp-mkt-peer.left'), mktEl.querySelector('.hacp-mkt-peer.right')];
+      if (!slots[0]) return;
+      const pool = (mkt.peers || []).slice();
+      // Baraja ligera (determinista no hace falta): elige hasta 2.
+      for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const t = pool[i]; pool[i] = pool[j]; pool[j] = t; }
+      slots.forEach((slot, i) => {
+        if (!slot) return; slot.innerHTML = '';
+        const p = pool[i]; if (!p) { slot.classList.remove('on'); return; }
+        slot.classList.add('on');
+        const cv = document.createElement('canvas'); cv.width = 120; cv.height = 168; slot.appendChild(cv);
+        if (window.HacChar) { try { HacChar.draw(cv, { aptitud: p.aptitud || '', aspecto: p.aspecto || {}, dir: i === 0 ? 'NE' : 'NW', pose: 'stand', frame: 0, scale: 3, outline: true }); } catch (e) {} }
+        const tag = document.createElement('div'); tag.className = 'hacp-mkt-peer-nm'; tag.textContent = p.nombre || 'Un comprador'; slot.appendChild(tag);
+      });
     }
     // Reparte los artículos por la pared: rango X amplio (-26%..126%) en 2 alturas, de modo
     // que los de los extremos SOLO se ven al girar el cuello. Devuelve [{item, x, y}].
@@ -4775,14 +4831,26 @@
       }
       const doorHTML = `<div class="hacp-mkt-door"><div class="leaf l"></div><div class="leaf r"></div></div>`;
       const tab = (m, lbl) => `<button type="button" class="hacp-mkt-tab${mkt.mode === m ? ' on' : ''}" data-mkt-mode="${m}">${lbl}</button>`;
+      // Estantes de madera bajo cada fila de artículos (dan «tienda» a la pared).
+      const shelves = `<div class="hacp-mkt-shelf" style="top:19%"></div><div class="hacp-mkt-shelf" style="top:47%"></div>`;
       el.innerHTML = `
         <div class="hacp-mkt-amb"></div>
+        <div class="hacp-mkt-lantern l"></div><div class="hacp-mkt-lantern r"></div>
         <div class="hacp-mkt-stage">
-          <div class="hacp-mkt-wall">${layout.map(o => mktItemHTML(o, vender)).join('')}</div>
+          <div class="hacp-mkt-wall">
+            ${shelves}
+            <div class="hacp-mkt-peer left" data-peer="L"></div>
+            <div class="hacp-mkt-peer right" data-peer="R"></div>
+            ${layout.map(o => mktItemHTML(o, vender)).join('')}
+          </div>
         </div>
         <div class="hacp-mkt-front">
-          <div class="hacp-mkt-counter"></div>
-          <div class="hacp-mkt-merchant"><canvas width="200" height="280"></canvas></div>
+          <div class="hacp-mkt-halo"></div>
+          <div class="hacp-mkt-counter">
+            <div class="hacp-mkt-props left"><span class="abaco"></span><span class="ingots"></span></div>
+            <div class="hacp-mkt-props right"><span class="scale"></span><span class="jar"></span></div>
+          </div>
+          <div class="hacp-mkt-merchant"><canvas width="200" height="280"></canvas><div class="hacp-mkt-cry" hidden></div></div>
         </div>
         <button type="button" class="hacp-mkt-arrow left" data-mkt-turn="1">‹</button>
         <button type="button" class="hacp-mkt-arrow right" data-mkt-turn="-1">›</button>
@@ -4798,6 +4866,7 @@
         ${doorHTML}`;
       mkt.tipEl = el.querySelector('.hacp-mkt-tip');
       applyYaw();
+      renderPeers();
       // Mercader (sprite HacChar a escala).
       const mc = el.querySelector('.hacp-mkt-merchant canvas');
       if (mc && window.HacChar) { try { HacChar.draw(mc, { aptitud: '', aspecto: MKT_MERC, dir: 'S', pose: 'stand', frame: 0, scale: 5, outline: true }); } catch (e) {} }
