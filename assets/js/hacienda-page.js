@@ -4715,7 +4715,9 @@
     function ensureMktEl() {
       if (mktEl) return mktEl;
       mktEl = document.createElement('div'); mktEl.className = 'hacp-mkt3d'; mktEl.id = 'hacp-mkt'; mktEl.hidden = true;
-      overlayHost().appendChild(mktEl);
+      // A <body> con position:fixed: cubre la ventana entera de forma fiable y ESCAPA del
+      // contexto de apilado del visor iso (montarlo en el vp anclaba mal la escena → negro).
+      document.body.appendChild(mktEl);
       ['pointerdown', 'pointerup', 'wheel', 'click'].forEach(ev => mktEl.addEventListener(ev, (e) => e.stopPropagation(), { passive: false }));
       return mktEl;
     }
