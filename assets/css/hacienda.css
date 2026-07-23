@@ -2069,7 +2069,7 @@ button.hacp-slot.comida:hover{ background:rgba(127,201,160,.24); }
   box-shadow:0 4px 10px rgba(0,0,0,.4); opacity:0; transition:opacity .25s, transform .25s; }
 .hacp-mkt-cry::after{ content:""; position:absolute; left:50%; bottom:-6px; margin-left:-6px; border:6px solid transparent; border-top-color:#f4ecd6; border-bottom:0; }
 .hacp-mkt-cry.show{ opacity:1; transform:translateX(-50%) translateY(0); }
-.hacp-mkt-counter{ position:absolute; left:-8%; right:-8%; bottom:0; height:190px; z-index:3; }
+.hacp-mkt-counter{ position:absolute; left:-42%; right:-42%; bottom:0; height:190px; z-index:3; }
 .hacp-mkt-counter .top{ position:absolute; left:0; right:0; top:0; height:46px; background:linear-gradient(#6a4e28,#4a361c);
   transform:perspective(500px) rotateX(52deg); transform-origin:bottom; box-shadow:0 -6px 16px rgba(0,0,0,.4);
   border-top:2px solid #7a5a2e; }

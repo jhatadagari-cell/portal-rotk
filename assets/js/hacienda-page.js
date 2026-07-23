@@ -4856,8 +4856,8 @@
           <div class="hacp-mkt-merchant"><canvas width="210" height="294"></canvas><div class="hacp-mkt-cry"></div></div>
           <div class="hacp-mkt-counter"><div class="top"></div><div class="front"></div></div>
         </div>
-        <button type="button" class="hacp-mkt-arrow left" data-mkt-turn="1">‹</button>
-        <button type="button" class="hacp-mkt-arrow right" data-mkt-turn="-1">›</button>
+        <button type="button" class="hacp-mkt-arrow left" data-mkt-turn="-1">‹</button>
+        <button type="button" class="hacp-mkt-arrow right" data-mkt-turn="1">›</button>
         <div class="hacp-mkt-sign">${vender ? '換 Trae tu género' : '市 Género del día'}</div>
         <div class="hacp-mkt-hud">
           <span class="hacp-mkt-title"><span class="zh">市</span> Mercado</span>
@@ -4877,9 +4877,14 @@
     }
     function applyYaw() {
       const scene = mktEl && mktEl.querySelector('.hacp-mkt-scene'); if (!scene) return;
-      scene.style.setProperty('--yaw', (mkt.yaw * 32) + 'deg');   // girar el cuello → rota la sala
+      // yaw>0 = mirar a la DERECHA (rotateY positivo trae la pared derecha al centro).
+      scene.style.setProperty('--yaw', (mkt.yaw * 32) + 'deg');
+      // El PRIMER PLANO (mostrador + mercader) se desplaza en sentido contrario (paralaje):
+      // al mirar a la derecha, lo que tienes delante se va hacia la izquierda.
+      const front = mktEl.querySelector('.hacp-mkt-front');
+      if (front) front.style.transform = 'translateX(' + (-mkt.yaw * 13) + '%)';
       const la = mktEl.querySelector('.hacp-mkt-arrow.left'), ra = mktEl.querySelector('.hacp-mkt-arrow.right');
-      if (la) la.toggleAttribute('disabled', mkt.yaw > 0.98); if (ra) ra.toggleAttribute('disabled', mkt.yaw < -0.98);
+      if (la) la.toggleAttribute('disabled', mkt.yaw < -0.98); if (ra) ra.toggleAttribute('disabled', mkt.yaw > 0.98);
     }
     function mktLoop() {
       if (mkt.raf) cancelAnimationFrame(mkt.raf);
@@ -4913,7 +4918,7 @@
       stage.addEventListener('pointermove', (e) => {
         if (mkt.drag || e.pointerType === 'touch') return;
         const r = el.getBoundingClientRect(), fx = (e.clientX - r.left) / r.width;
-        mkt.hold = fx < 0.16 ? 1 : fx > 0.84 ? -1 : 0;
+        mkt.hold = fx < 0.16 ? -1 : fx > 0.84 ? 1 : 0;   // borde izq → mira izquierda; borde der → derecha
       });
       stage.addEventListener('pointerleave', () => { if (!mkt.drag) mkt.hold = 0; });
       // Artículos: hover = tooltip · clic = popover (comprar/vender).
