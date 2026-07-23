@@ -4678,9 +4678,10 @@
           <button type="button" class="hacp-item-buy" data-sell="${esc(item.id)}">Regatear</button>
         </div></div>`;
     }
-    // El «mercado» clásico (overlay de tarjetas) queda como plano B; la entrada normal
-    // es la ESCENA INMERSIVA (openMercado). Los 3 disparadores llaman a openShop → escena.
-    function openShop() { if (!hasMarket) return; openMercado(); }
+    // ENTRADA NORMAL del mercado = overlay de tarjetas clásico (responsive, hoja
+    // inferior en móvil). La ESCENA INMERSIVA (openMercado, más abajo) queda hecha y
+    // lista pero SIN cablear: se reservará para un mercader especial más adelante.
+    function openShop() { if (!hasMarket) return; const el = ensureShopEl(); buildShop(); el.hidden = false; }
     function closeShop() { if (shopEl) shopEl.hidden = true; }
     function shopRefresh() { if (mktEl && !mktEl.hidden) buildMercado(); else if (shopEl && !shopEl.hidden) buildShop(); }
 

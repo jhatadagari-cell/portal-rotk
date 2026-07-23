@@ -1010,7 +1010,10 @@ html.hacp-pseudofs, html.hacp-pseudofs body{ overflow:hidden; }
      dentro del visor iso. */
   .hacp-shop:not(.hacp-board-inline){ position:fixed; align-items:flex-end; padding:0; z-index:9500; }
   .hacp-shop:not(.hacp-board-inline) .hacp-shop-box, .hacp-eq-box{ width:100%; max-width:none; max-height:90dvh; border-radius:14px 14px 0 0; padding:14px 12px calc(16px + env(safe-area-inset-bottom)); }
-  .hacp-shop-grid, .hacp-eq-slots, .hacp-home-objs{ grid-template-columns:1fr 1fr; }
+  .hacp-eq-slots, .hacp-home-objs{ grid-template-columns:1fr 1fr; }
+  /* Mercado en móvil: UNA columna → tarjetas anchas, nada de texto partido a la mitad
+     (sobre todo en «Vender», que lleva dos botones). El tablón (board-inline) va aparte. */
+  .hacp-shop:not(.hacp-board-inline) .hacp-shop-grid{ grid-template-columns:1fr; }
   .hacp-folk-panel{ width:min(230px,86vw); top:36px; bottom:68px; }
   .hacp-fs-btn{ display:none; }
   .hacp-cta{ font-size:13px; padding:7px 15px; }
@@ -1057,30 +1060,35 @@ button.hacp-slot.comida:hover{ background:rgba(127,201,160,.24); }
 .hacp-shop{ position:absolute; inset:0; z-index:40; display:flex; align-items:center; justify-content:center;
   background:rgba(6,5,3,.62); -webkit-backdrop-filter:blur(2px); backdrop-filter:blur(2px); padding:14px; box-sizing:border-box; }
 .hacp-shop[hidden]{ display:none; }
-.hacp-shop-box{ position:relative; width:min(560px,94%); max-height:88%; overflow-y:auto; box-sizing:border-box;
-  background:rgba(13,11,7,.97); border:1px solid rgba(201,168,76,.45); border-radius:10px;
-  padding:16px 16px 18px; box-shadow:0 10px 40px rgba(0,0,0,.6); color:var(--parch); }
-.hacp-shop-x{ position:absolute; top:8px; right:10px; width:24px; height:24px; padding:0; line-height:1;
-  background:none; border:0; color:var(--parch2); cursor:pointer; font-size:15px; opacity:.7; }
-.hacp-shop-x:hover{ opacity:1; color:#fff; }
-.hacp-shop-h{ font:900 18px 'Noto Serif SC',serif; color:var(--gold); display:flex; align-items:center; gap:8px; padding-right:26px; }
+.hacp-shop-box{ position:relative; width:min(560px,94%); max-height:min(88%,88dvh); overflow-y:auto; overflow-x:hidden;
+  overscroll-behavior:contain; -webkit-overflow-scrolling:touch; box-sizing:border-box;
+  background:linear-gradient(180deg,rgba(20,17,11,.98),rgba(11,9,6,.98)); border:1px solid rgba(201,168,76,.45); border-radius:12px;
+  padding:15px 16px 18px; box-shadow:0 14px 46px rgba(0,0,0,.62); color:var(--parch); }
+.hacp-shop-box::-webkit-scrollbar{ width:9px; }
+.hacp-shop-box::-webkit-scrollbar-thumb{ background:rgba(201,168,76,.28); border-radius:6px; border:2px solid transparent; background-clip:padding-box; }
+.hacp-shop-x{ position:absolute; top:9px; right:10px; width:26px; height:26px; padding:0; line-height:1; border-radius:6px;
+  background:none; border:0; color:var(--parch2); cursor:pointer; font-size:15px; opacity:.7; transition:background .15s,opacity .15s; }
+.hacp-shop-x:hover{ opacity:1; color:#fff; background:rgba(201,168,76,.16); }
+.hacp-shop-h{ font:900 18px 'Noto Serif SC',serif; color:var(--gold); display:flex; align-items:center; gap:8px;
+  padding:0 30px 10px 0; margin-bottom:10px; border-bottom:1px solid rgba(201,168,76,.22); }
 .hacp-shop-zh{ font-size:22px; }
-.hacp-shop-money{ margin-left:auto; font:700 14px 'Noto Sans SC',sans-serif; color:var(--parch); }
+.hacp-shop-money{ margin-left:auto; font:700 14px 'Noto Sans SC',sans-serif; color:var(--parch); white-space:nowrap; }
 .hacp-shop-money b{ color:#e0b85a; font-variant-numeric:tabular-nums; }
-.hacp-shop-sub{ font-size:11px; color:var(--parch2); opacity:.85; margin:4px 0 12px; }
+.hacp-shop-sub{ font-size:11.5px; line-height:1.45; color:var(--parch2); opacity:.85; margin:0 0 12px; }
 .hacp-shop-note{ font-size:12px; color:#e0b85a; background:rgba(201,168,76,.1); border:1px solid rgba(201,168,76,.3);
   border-radius:6px; padding:7px 10px; margin-bottom:12px; }
 .hacp-shop-lockttl{ font:700 10px 'Cinzel Decorative',serif; letter-spacing:.08em; text-transform:uppercase;
   color:var(--parch2); opacity:.7; margin:16px 0 8px; }
-.hacp-shop-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:8px; }
-.hacp-item{ display:flex; align-items:center; gap:8px; padding:8px 9px;
-  background:rgba(255,255,255,.03); border:1px solid rgba(201,168,76,.2); border-radius:7px; }
+.hacp-shop-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:8px; align-items:start; }
+.hacp-item{ display:flex; align-items:center; gap:9px; padding:9px 10px; min-width:0;
+  background:rgba(255,255,255,.035); border:1px solid rgba(201,168,76,.2); border-radius:8px; transition:border-color .15s,background .15s; }
+.hacp-item:not(.locked):hover{ border-color:rgba(201,168,76,.42); background:rgba(255,255,255,.055); }
 .hacp-item.locked{ opacity:.5; }
 .hacp-item-ic{ font-size:22px; flex:0 0 auto; width:26px; text-align:center; }
-.hacp-item-main{ flex:1; min-width:0; }
-.hacp-item-name{ font:700 12.5px/1.2 'Noto Sans SC',sans-serif; color:var(--parch); }
+.hacp-item-main{ flex:1 1 auto; min-width:0; }
+.hacp-item-name{ font:700 12.5px/1.25 'Noto Sans SC',sans-serif; color:var(--parch); overflow-wrap:break-word; }
 .hacp-item-name .zh{ font-family:'Noto Serif SC',serif; color:var(--parch2); opacity:.7; font-weight:400; font-size:11px; }
-.hacp-item-ef{ font-size:10.5px; color:#7fc9a0; margin-top:2px; }
+.hacp-item-ef{ font-size:10.5px; line-height:1.35; color:#7fc9a0; margin-top:2px; overflow-wrap:break-word; }
 .hacp-item.t-inventario .hacp-item-ef{ color:#e0b85a; }
 .hacp-item.t-mascota .hacp-item-ef{ color:#d8a0d0; }
 .hacp-item.t-comida .hacp-item-ef{ color:#7fc9a0; }
