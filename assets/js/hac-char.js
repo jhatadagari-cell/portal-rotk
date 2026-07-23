@@ -826,7 +826,7 @@ const HacChar = (function () {
       px(c + 2, hy + 8, 2, 1, P.skinDk);                                       // boca
       px(c - 2, hy + 5, 1, 2, P.skinDk);                                       // oreja
       if (P.beard) { px(c, hy + 9, 5, 1 + P.beard, P.beardC); px(c + 4, hy + 7, 1, 2 + P.beard, P.beardC); } // barba al frente
-      if (P.beardLong) { px(c + 1, hy + 12, 4, 2, P.beardC); px(c + 1, hy + 14, 4, 2, P.beardC); px(c + 2, hy + 16, 3, 2, dark(P.beardC, 0.05)); px(c + 2, hy + 18, 2, 2, dark(P.beardC, 0.08)); px(c + 3, hy + 20, 1, 2, dark(P.beardC, 0.12)); }  // barba larga (perfil)
+      if (P.beardLong) { px(c, hy + 9, 5, 1, P.beardC); px(c + 1, hy + 10, 4, 4, P.beardC); px(c + 2, hy + 14, 3, 3, dark(P.beardC, 0.05)); px(c + 2, hy + 17, 2, 2, dark(P.beardC, 0.1)); px(c + 3, hy + 19, 1, 2, dark(P.beardC, 0.14)); }  // barba larga (perfil) — arranca en la mandíbula (hy+9), sin hueco
       if (P.beardWild) { px(c - 1, hy + 8, 7, 5, P.beardC); px(c + 5, hy + 9, 1, 4, P.beardC); px(c, hy + 13, 6, 2, P.beardC); px(c + 1, hy + 15, 2, 3, P.beardC); px(c + 3, hy + 15, 2, 2, P.beardC); px(c - 1, hy + 8, 7, 1, dark(P.beardC, 0.18)); }  // barba HIRSUTA (perfil)
       if (P.beardStyle === 'perilla') { px(c + 1, hy + 7, 4, 1, P.beardC); px(c + 3, hy + 9, 2, 4, P.beardC); px(c + 3, hy + 13, 1, 2, dark(P.beardC, 0.1)); }  // PERILLA/candado (perfil)
       if (P.beardStyle === 'fumanchu') { px(c + 1, hy + 7, 4, 1, P.beardC); px(c + 4, hy + 8, 1, 5, P.beardC); px(c + 4, hy + 13, 1, 2, dark(P.beardC, 0.12)); }  // bigote CAÍDO 八字 (perfil)
@@ -839,7 +839,7 @@ const HacChar = (function () {
           px(c, hy + 6, 1, 3, P.skinDk);                                       // nariz
           px(c - 1, hy + 9, 3, 1, dark(P.skin, 0.3));                          // boca
           if (P.beard) { px(c - 2, hy + 9, 5, 1, P.beardC); px(c - 1, hy + 10, 3, P.beard === 2 ? 4 : 2, P.beardC); }
-          if (P.beardLong) { px(c - 1, hy + 14, 3, 2, P.beardC); px(c - 1, hy + 16, 3, 2, P.beardC); px(c, hy + 18, 2, 2, dark(P.beardC, 0.06)); px(c, hy + 20, 1, 2, dark(P.beardC, 0.12)); }  // barba larga (frente)
+          if (P.beardLong) { px(c - 2, hy + 9, 5, 1, P.beardC); px(c - 1, hy + 10, 3, 4, P.beardC); px(c - 1, hy + 14, 3, 3, dark(P.beardC, 0.05)); px(c, hy + 17, 2, 2, dark(P.beardC, 0.1)); px(c, hy + 19, 1, 2, dark(P.beardC, 0.14)); }  // barba larga (frente) — conecta con la barbilla
           if (P.beardWild) { px(c - 4, hy + 8, 9, 5, P.beardC); px(c - 5, hy + 9, 1, 3, P.beardC); px(c + 4, hy + 9, 1, 3, P.beardC); px(c - 4, hy + 13, 8, 2, P.beardC); px(c - 4, hy + 15, 2, 2, P.beardC); px(c - 1, hy + 15, 2, 3, P.beardC); px(c + 2, hy + 15, 2, 2, P.beardC); px(c - 4, hy + 8, 9, 1, dark(P.beardC, 0.18)); }  // barba HIRSUTA (frente)
           if (P.beardStyle === 'perilla') { px(c - 2, hy + 8, 5, 1, P.beardC); px(c - 1, hy + 10, 3, 3, P.beardC); px(c, hy + 13, 1, 2, dark(P.beardC, 0.1)); }  // PERILLA/candado (frente)
           if (P.beardStyle === 'fumanchu') { px(c - 2, hy + 8, 5, 1, P.beardC); px(c - 2, hy + 9, 1, 5, P.beardC); px(c + 2, hy + 9, 1, 5, P.beardC); px(c - 2, hy + 14, 1, 1, dark(P.beardC, 0.12)); px(c + 2, hy + 14, 1, 1, dark(P.beardC, 0.12)); }  // bigote CAÍDO 八字 (frente)
@@ -849,7 +849,7 @@ const HacChar = (function () {
           px(c + 4, hy + 6, 1, 2, P.skinDk);                                   // nariz (perfil insinuado)
           px(c + 1, hy + 9, 3, 1, dark(P.skin, 0.3));
           if (P.beard) { px(c, hy + 9, 5, 1, P.beardC); px(c + 1, hy + 10, 3, P.beard === 2 ? 4 : 2, P.beardC); }
-          if (P.beardLong) { px(c + 1, hy + 14, 3, 2, P.beardC); px(c + 1, hy + 16, 3, 2, P.beardC); px(c + 1, hy + 18, 2, 2, dark(P.beardC, 0.06)); px(c + 2, hy + 20, 1, 2, dark(P.beardC, 0.12)); }  // barba larga (¾)
+          if (P.beardLong) { px(c - 1, hy + 9, 5, 1, P.beardC); px(c, hy + 10, 4, 4, P.beardC); px(c + 1, hy + 14, 3, 3, dark(P.beardC, 0.05)); px(c + 1, hy + 17, 2, 2, dark(P.beardC, 0.1)); px(c + 2, hy + 19, 1, 2, dark(P.beardC, 0.14)); }  // barba larga (¾) — conecta con la barbilla
           if (P.beardWild) { px(c - 3, hy + 8, 9, 5, P.beardC); px(c + 5, hy + 9, 1, 3, P.beardC); px(c - 3, hy + 13, 8, 2, P.beardC); px(c - 2, hy + 15, 2, 2, P.beardC); px(c + 1, hy + 15, 2, 3, P.beardC); px(c + 3, hy + 15, 2, 2, P.beardC); px(c - 3, hy + 8, 9, 1, dark(P.beardC, 0.18)); }  // barba HIRSUTA (¾)
           if (P.beardStyle === 'perilla') { px(c, hy + 8, 5, 1, P.beardC); px(c + 1, hy + 10, 3, 3, P.beardC); px(c + 2, hy + 13, 1, 2, dark(P.beardC, 0.1)); }  // PERILLA/candado (¾)
           if (P.beardStyle === 'fumanchu') { px(c, hy + 8, 5, 1, P.beardC); px(c, hy + 9, 1, 5, P.beardC); px(c + 4, hy + 9, 1, 5, P.beardC); px(c, hy + 14, 1, 1, dark(P.beardC, 0.12)); px(c + 4, hy + 14, 1, 1, dark(P.beardC, 0.12)); }  // bigote CAÍDO 八字 (¾)
