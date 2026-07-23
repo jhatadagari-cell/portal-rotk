@@ -4781,31 +4781,36 @@
     // Pinta hasta 2 peers (uno a cada lado, aleatorio si hay más) contemplando el escaparate.
     function renderPeers() {
       if (!mktEl || mktEl.hidden) return;
-      const slots = [mktEl.querySelector('.hacp-mkt-peer.left'), mktEl.querySelector('.hacp-mkt-peer.right')];
+      const slots = [mktEl.querySelector('[data-peer="L"]'), mktEl.querySelector('[data-peer="R"]')];
       if (!slots[0]) return;
       const pool = (mkt.peers || []).slice();
-      // Baraja ligera (determinista no hace falta): elige hasta 2.
+      // Baraja ligera: hasta 2, uno en cada pared lateral (aleatorio si hay más).
       for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const t = pool[i]; pool[i] = pool[j]; pool[j] = t; }
       slots.forEach((slot, i) => {
         if (!slot) return; slot.innerHTML = '';
         const p = pool[i]; if (!p) { slot.classList.remove('on'); return; }
         slot.classList.add('on');
-        const cv = document.createElement('canvas'); cv.width = 120; cv.height = 168; slot.appendChild(cv);
-        if (window.HacChar) { try { HacChar.draw(cv, { aptitud: p.aptitud || '', aspecto: p.aspecto || {}, dir: i === 0 ? 'NE' : 'NW', pose: 'stand', frame: 0, scale: 3, outline: true }); } catch (e) {} }
+        const cv = document.createElement('canvas'); cv.width = 130; cv.height = 182; slot.appendChild(cv);
+        // Mira hacia el interior de la tienda (pared izq → mira a la derecha 'E'; der → 'W').
+        if (window.HacChar) { try { HacChar.draw(cv, { aptitud: p.aptitud || '', aspecto: p.aspecto || {}, dir: i === 0 ? 'E' : 'W', pose: 'stand', frame: 0, scale: 3.2, outline: true }); } catch (e) {} }
         const tag = document.createElement('div'); tag.className = 'hacp-mkt-peer-nm'; tag.textContent = p.nombre || 'Un comprador'; slot.appendChild(tag);
       });
     }
     // Reparte los artículos por la pared: rango X amplio (-26%..126%) en 2 alturas, de modo
     // que los de los extremos SOLO se ven al girar el cuello. Devuelve [{item, x, y}].
+    // Reparte el stock por las 3 paredes de la SALA: fondo (hasta 6 · 2 filas × 3), izquierda
+    // (2) y derecha (2). Los laterales solo se ven al girar. {it, wall, left(%), top(px)}.
     function mktLayout(items) {
-      const n = items.length; if (!n) return [];
-      const x0 = -26, x1 = 126, span = x1 - x0;
-      return items.map((it, i) => ({ it, x: x0 + (n === 1 ? span / 2 : span * i / (n - 1)), y: (i % 2) ? 30 : 4 }));
+      const out = [];
+      items.slice(0, 6).forEach((it, i) => out.push({ it, wall: 'back', left: 22 + (i % 3) * 28, top: i < 3 ? 62 : 250 }));
+      items.slice(6, 8).forEach((it, i) => out.push({ it, wall: 'left', left: 30 + i * 34, top: 90 + i * 150 }));
+      items.slice(8, 10).forEach((it, i) => out.push({ it, wall: 'right', left: 30 + i * 34, top: 90 + i * 150 }));
+      return out;
     }
     function mktItemHTML(o, vender) {
-      const it = o.it, id = it.id;
+      const it = o.it, id = it.id, pos = `left:${o.left}%;top:${o.top}px`;
       if (vender) {
-        return `<div class="hacp-mkt-item" data-sell="${esc(id)}" style="left:${o.x}%;top:${o.y}%">
+        return `<div class="hacp-mkt-item" data-sell="${esc(id)}" style="${pos}">
           <div class="hook"></div><div class="disc">${it.icon || '∎'}${(o.n || 1) > 1 ? `<span style="position:absolute;font-size:11px;color:#f0d98a;transform:translate(22px,20px)">×${o.n}</span>` : ''}</div>
           <span class="price">vender</span></div>`;
       }
@@ -4813,10 +4818,12 @@
       const cls = it.epico ? ' epic' : it.raro ? ' rare' : '';
       const noMoney = (window.HacStats ? HacStats.dinero(myId) : 0) < precio, locked = it.tier > tier || !!reqNoCumplido(it);
       const priceHTML = rebaja ? `<s>${base0}</s>${precio}` : `${precio}`;
-      return `<div class="hacp-mkt-item${cls}${(noMoney || locked) ? ' gris' : ''}" data-buy="${esc(id)}" style="left:${o.x}%;top:${o.y}%">
+      return `<div class="hacp-mkt-item${cls}${(noMoney || locked) ? ' gris' : ''}" data-buy="${esc(id)}" style="${pos}">
         <div class="hook"></div><div class="disc">${it.icon || '∎'}</div>
         <span class="price">💰${priceHTML}</span></div>`;
     }
+    // Artículos de una pared concreta.
+    const mktWallItems = (layout, w, vender) => layout.filter(o => o.wall === w).map(o => mktItemHTML(o, vender)).join('');
     function buildMercado() {
       const el = ensureMktEl();
       const money = window.HacStats ? HacStats.dinero(myId) : 0;
@@ -4831,26 +4838,23 @@
       }
       const doorHTML = `<div class="hacp-mkt-door"><div class="leaf l"></div><div class="leaf r"></div></div>`;
       const tab = (m, lbl) => `<button type="button" class="hacp-mkt-tab${mkt.mode === m ? ' on' : ''}" data-mkt-mode="${m}">${lbl}</button>`;
-      // Estantes de madera bajo cada fila de artículos (dan «tienda» a la pared).
-      const shelves = `<div class="hacp-mkt-shelf" style="top:19%"></div><div class="hacp-mkt-shelf" style="top:47%"></div>`;
+      const shelves = `<div class="hacp-mkt-shelf" style="top:150px"></div><div class="hacp-mkt-shelf" style="top:340px"></div>`;
       el.innerHTML = `
-        <div class="hacp-mkt-amb"></div>
-        <div class="hacp-mkt-lantern l"></div><div class="hacp-mkt-lantern r"></div>
-        <div class="hacp-mkt-stage">
-          <div class="hacp-mkt-wall">
-            ${shelves}
-            <div class="hacp-mkt-peer left" data-peer="L"></div>
-            <div class="hacp-mkt-peer right" data-peer="R"></div>
-            ${layout.map(o => mktItemHTML(o, vender)).join('')}
-          </div>
+        <div class="hacp-mkt-scene">
+          <div class="hacp-mkt-face back">${shelves}
+            <div class="hacp-mkt-lantern" style="left:30%"></div><div class="hacp-mkt-lantern" style="left:66%"></div>
+            ${mktWallItems(layout, 'back', vender)}</div>
+          <div class="hacp-mkt-face left"><div class="hacp-mkt-peer" style="left:46%" data-peer="L"></div>${mktWallItems(layout, 'left', vender)}</div>
+          <div class="hacp-mkt-face right"><div class="hacp-mkt-peer" style="left:54%" data-peer="R"></div>${mktWallItems(layout, 'right', vender)}</div>
+          <div class="hacp-mkt-face floor"></div>
+          <div class="hacp-mkt-face ceil"></div>
         </div>
         <div class="hacp-mkt-front">
           <div class="hacp-mkt-halo"></div>
-          <div class="hacp-mkt-counter">
-            <div class="hacp-mkt-props left"><span class="abaco"></span><span class="ingots"></span></div>
-            <div class="hacp-mkt-props right"><span class="scale"></span><span class="jar"></span></div>
-          </div>
-          <div class="hacp-mkt-merchant"><canvas width="200" height="280"></canvas><div class="hacp-mkt-cry" hidden></div></div>
+          <div class="hacp-mkt-props left"><span class="abaco"></span><span class="ingots"></span></div>
+          <div class="hacp-mkt-props right"><span class="scale"></span><span class="abaco"></span></div>
+          <div class="hacp-mkt-merchant"><canvas width="210" height="294"></canvas><div class="hacp-mkt-cry"></div></div>
+          <div class="hacp-mkt-counter"><div class="top"></div><div class="front"></div></div>
         </div>
         <button type="button" class="hacp-mkt-arrow left" data-mkt-turn="1">‹</button>
         <button type="button" class="hacp-mkt-arrow right" data-mkt-turn="-1">›</button>
@@ -4867,14 +4871,13 @@
       mkt.tipEl = el.querySelector('.hacp-mkt-tip');
       applyYaw();
       renderPeers();
-      // Mercader (sprite HacChar a escala).
       const mc = el.querySelector('.hacp-mkt-merchant canvas');
-      if (mc && window.HacChar) { try { HacChar.draw(mc, { aptitud: '', aspecto: MKT_MERC, dir: 'S', pose: 'stand', frame: 0, scale: 5, outline: true }); } catch (e) {} }
+      if (mc && window.HacChar) { try { HacChar.draw(mc, { aptitud: '', aspecto: MKT_MERC, dir: 'S', pose: 'stand', frame: 0, scale: 6, outline: true }); } catch (e) {} }
       wireMercado(el, vender);
     }
     function applyYaw() {
-      const wall = mktEl && mktEl.querySelector('.hacp-mkt-wall'); if (!wall) return;
-      wall.style.transform = `translateX(${mkt.yaw * 26}%) rotateY(${mkt.yaw * 9}deg)`;
+      const scene = mktEl && mktEl.querySelector('.hacp-mkt-scene'); if (!scene) return;
+      scene.style.setProperty('--yaw', (mkt.yaw * 32) + 'deg');   // girar el cuello → rota la sala
       const la = mktEl.querySelector('.hacp-mkt-arrow.left'), ra = mktEl.querySelector('.hacp-mkt-arrow.right');
       if (la) la.toggleAttribute('disabled', mkt.yaw > 0.98); if (ra) ra.toggleAttribute('disabled', mkt.yaw < -0.98);
     }
@@ -4941,7 +4944,7 @@
     function mktPopover(node, id, vender) {
       if (mkt.popEl) { mkt.popEl.remove(); mkt.popEl = null; }
       const it = HacTienda.get(id); if (!it) return;
-      if (vender) { closeMercado(); abrirRegateo(id); return; }   // vender → escena de regateo existente
+      if (vender) { closeMercado(); abrirRegateo(HacTienda.get(id)); return; }   // vender → escena de regateo (espera el ITEM, no el id)
       const precio = precioMercado(it), money = HacStats.dinero(myId);
       const rf = reqNoCumplido(it), locked = it.tier > tier, alMax = !!(it.efecto && it.efecto.capInv) && HacStats.capInventario(myId) >= 20;
       const motivo = locked ? `Requiere finca nivel ${it.tier}` : rf ? `Requiere ${DOM_GLYPH[rf]} ${it.req[rf]}` : alMax ? 'Mochila al máximo (20)' : (money < precio) ? 'No tienes suficiente dinero' : '';
