@@ -4702,17 +4702,29 @@
         const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
         const ctx = mkt._ac || (mkt._ac = new AC()); if (ctx.state === 'suspended') ctx.resume();
         const t0 = ctx.currentTime;
-        // Chirrido: sierra grave que baja, con vibrato, muy filtrada y con envolvente larga.
-        const osc = ctx.createOscillator(), lp = ctx.createBiquadFilter(), g = ctx.createGain();
-        osc.type = 'sawtooth'; osc.frequency.setValueAtTime(220, t0); osc.frequency.exponentialRampToValueAtTime(70, t0 + 0.9);
-        const lfo = ctx.createOscillator(), lfg = ctx.createGain(); lfo.frequency.value = 18; lfg.gain.value = 12; lfo.connect(lfg).connect(osc.frequency); lfo.start(t0); lfo.stop(t0 + 0.9);
-        lp.type = 'lowpass'; lp.frequency.value = 900; lp.Q.value = 6;
-        g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(0.09, t0 + 0.08); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.95);
-        osc.connect(lp).connect(g).connect(ctx.destination); osc.start(t0); osc.stop(t0 + 0.95);
-        // Golpe seco al final (la puerta topa).
-        const th = ctx.createOscillator(), tg = ctx.createGain(); th.type = 'sine'; th.frequency.setValueAtTime(120, t0 + 0.95); th.frequency.exponentialRampToValueAtTime(45, t0 + 1.1);
-        tg.gain.setValueAtTime(0.0001, t0 + 0.95); tg.gain.exponentialRampToValueAtTime(0.12, t0 + 0.98); tg.gain.exponentialRampToValueAtTime(0.0001, t0 + 1.2);
-        th.connect(tg).connect(ctx.destination); th.start(t0 + 0.95); th.stop(t0 + 1.2);
+        // CRUJIDO de bisagra: RUIDO filtrado con un paso-banda AGUDO cuya frecuencia sube
+        // (chirrido) y una envolvente ENTRECORTADA (stick-slip) — no un tono grave (eso
+        // sonaba a pedo). Cierra con un golpe seco grave y breve cuando la puerta topa.
+        const dur = 1.0, buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * dur), ctx.sampleRate);
+        const d = buf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+        const src = ctx.createBufferSource(); src.buffer = buf;
+        const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = 14;
+        bp.frequency.setValueAtTime(520, t0);
+        bp.frequency.linearRampToValueAtTime(1300, t0 + 0.72);
+        bp.frequency.linearRampToValueAtTime(980, t0 + 0.92);
+        const lfo = ctx.createOscillator(), lfg = ctx.createGain(); lfo.type = 'sine'; lfo.frequency.value = 6.5; lfg.gain.value = 240;
+        lfo.connect(lfg).connect(bp.frequency); lfo.start(t0); lfo.stop(t0 + 0.92);   // temblor del chirrido
+        const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t0);
+        // «Dientes» del stick-slip: varios crujidos cortos encadenados.
+        [[0.04, 0.05], [0.13, 0.032], [0.23, 0.05], [0.34, 0.03], [0.46, 0.055], [0.6, 0.038], [0.76, 0.05]]
+          .forEach(([dt, amp]) => { const tt = t0 + dt; g.gain.linearRampToValueAtTime(amp, tt); g.gain.linearRampToValueAtTime(0.01, tt + 0.055); });
+        g.gain.linearRampToValueAtTime(0.0001, t0 + 0.9);
+        src.connect(bp).connect(g).connect(ctx.destination); src.start(t0); src.stop(t0 + dur);
+        // Golpe seco final (ruido grave muy corto): la hoja topa contra el marco.
+        const th = ctx.createBufferSource(); th.buffer = buf;
+        const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 200;
+        const tg = ctx.createGain(); tg.gain.setValueAtTime(0.0001, t0 + 0.9); tg.gain.linearRampToValueAtTime(0.11, t0 + 0.94); tg.gain.exponentialRampToValueAtTime(0.0001, t0 + 1.12);
+        th.connect(lp).connect(tg).connect(ctx.destination); th.start(t0 + 0.9); th.stop(t0 + 1.15);
       } catch (e) {}
     }
     function ensureMktEl() {
