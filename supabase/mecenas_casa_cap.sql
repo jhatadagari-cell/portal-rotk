@@ -1,0 +1,11 @@
+-- ════════════════════════════════════════════════════════════════════════
+-- mecenas_casa_cap.sql — Capacidad del ALMACÉN DE CASA por mecenas.
+-- ────────────────────────────────────────────────────────────────────────
+-- El almacén de casa era ILIMITADO. Ahora tiene tope (base 12, ampliable con
+-- baúles de +4 hasta 36, coste creciente). Se guarda en `mecenas_stats.casa_cap`.
+-- El cliente degrada con elegancia si esta columna no existe (patrón caballo/venta_cd),
+-- así que ejecutar esto es lo que hace que la ampliación PERSISTA entre sesiones.
+--
+-- Ejecuta UNA vez en: Supabase → SQL Editor → New query → Run.
+-- ════════════════════════════════════════════════════════════════════════
+alter table public.mecenas_stats add column if not exists casa_cap integer not null default 12;

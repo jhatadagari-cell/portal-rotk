@@ -673,7 +673,14 @@
       + ((dom === 'cultural' && tieneT('estudiante')) ? 0.08 : 0)                            // 書生 Estudiante
       + buffHacXp();                                                                         // bono de hacienda (donación)
     const conBono = (base, frac) => Math.round((base || 0) * (1 + (frac || 0)));        // recompensa con bono
-    const precioMercado = (item) => Math.max(1, Math.round((item.precio || 0) * (1 - bonos.mercado - (tieneT('funcionario') ? 0.06 : 0))));   // descuento 政 + 吏 Funcionario
+    // Precio base del artículo. Las ALFORJAS (ef.capInv) tienen precio DINÁMICO: sube
+    // fuerte con las ranuras que ya tienes (ver HacStats.precioAlforja), en vez del fijo.
+    const precioBase = (item) => {
+      const ci = item && item.efecto && item.efecto.capInv;
+      if (ci && window.HacStats && HacStats.precioAlforja) return HacStats.precioAlforja(HacStats.capInventario(myId), ci);
+      return item.precio || 0;
+    };
+    const precioMercado = (item) => Math.max(1, Math.round(precioBase(item) * (1 - bonos.mercado - (tieneT('funcionario') ? 0.06 : 0))));   // descuento 政 + 吏 Funcionario
     const pct = (f) => Math.round((f || 0) * 100);
     const hayBonos = () => bonos.xp > 0 || bonos.dinero > 0 || bonos.mercado > 0 || bonos.xpMil > 0 || bonos.escBotin > 0;
     // Resumen legible de los bonos activos de la finca (solo los no nulos).
@@ -4586,19 +4593,24 @@
     }
     function itemCardHTML(item, locked) {
       const money = window.HacStats ? HacStats.dinero(myId) : 0;
-      const precio = precioMercado(item), rebaja = bonos.mercado > 0 && precio < item.precio;
+      const base0 = Math.round(precioBase(item));                       // precio sin descuento (DINÁMICO en alforjas)
+      const precio = precioMercado(item), rebaja = precio < base0;      // rebaja = descuento del pabellón 政
       const noMoney = money < precio;
       const owned = item.tipo === 'caballo' && window.HacStats && HacStats.cuadra && razasComprables().length === 0;
       const reqFail = reqNoCumplido(item);   // dominio cuyo nivel no llega (o null)
-      const disabled = locked || !myId || noMoney || owned || !!reqFail;
-      const precioHTML = rebaja ? `<s>${item.precio}</s> ${precio}` : `${item.precio}`;
+      // ALFORJA al tope: la mochila no puede crecer más de 20 ranuras.
+      const alMax = !!(item.efecto && item.efecto.capInv) && window.HacStats && HacStats.capInventario(myId) >= 20;
+      const disabled = locked || !myId || noMoney || owned || !!reqFail || alMax;
+      const precioHTML = rebaja ? `<s>${base0}</s> ${precio}` : `${precio}`;
       const btn = locked
         ? `<span class="hacp-item-lock">🔒 Nivel ${item.tier}</span>`
         : owned
           ? `<span class="hacp-item-owned">✔ Cuadra completa</span>`
-          : reqFail
-            ? `<span class="hacp-item-lock" title="Requiere ${DOM_GLYPH[reqFail]} ${item.req[reqFail]}">🔒 ${DOM_GLYPH[reqFail]} ${item.req[reqFail]}</span>`
-            : `<button type="button" class="hacp-item-buy" data-buy="${esc(item.id)}"${disabled ? ' disabled' : ''}>💰 ${precioHTML}</button>`;
+          : alMax
+            ? `<span class="hacp-item-owned" title="La mochila ya está al máximo (20 ranuras)">🎒 Mochila al máximo</span>`
+            : reqFail
+              ? `<span class="hacp-item-lock" title="Requiere ${DOM_GLYPH[reqFail]} ${item.req[reqFail]}">🔒 ${DOM_GLYPH[reqFail]} ${item.req[reqFail]}</span>`
+              : `<button type="button" class="hacp-item-buy" data-buy="${esc(item.id)}"${disabled ? ' disabled' : ''}>💰 ${precioHTML}</button>`;
       return `<div class="hacp-item${locked ? ' locked' : ''}${item.tipo ? ' t-' + item.tipo : ''}">
         <div class="hacp-item-ic">${item.icon || '∎'}</div>
         <div class="hacp-item-main">
@@ -5064,6 +5076,8 @@
       const pagado = casaOn && HacProdCasa.pagadoHoy(h.id, myId, dia);
       const mochila = HacStats.inventario(myId), casa = HacStats.casaInventario(myId);
       const cap = HacStats.capInventario(myId), nMo = mochila.reduce((s, i) => s + (i.n || 1), 0);
+      const capCasa = HacStats.capCasa ? HacStats.capCasa(myId) : 12, nCasa = casa.reduce((s, i) => s + (i.n || 1), 0);
+      const costeBaul = HacStats.costeAmpliarCasa ? HacStats.costeAmpliarCasa(myId) : null;   // null = al máximo
       const me = HacFolk.list().find(w => w.id === myId), nm = me ? me.name : 'tu mecenas';
       const moch = mochila.length ? mochila.map(it => objChip(it, 'store')).join('') : '<span class="hacp-inv-note">Mochila vacía</span>';
       const enc = casa.length ? casa.map(it => objChip(it, 'take')).join('') : '<span class="hacp-inv-note">Nada guardado</span>';
@@ -5096,12 +5110,15 @@
           </div>` : ''}
           <div class="hacp-home-objs">
             <div class="hacp-home-col"><div class="hacp-home-colh">🎒 Mochila <span>${nMo}/${cap}</span></div><div class="hacp-home-list">${moch}</div></div>
-            <div class="hacp-home-col"><div class="hacp-home-colh">🏠 Almacén de casa</div><div class="hacp-home-list">${enc}</div></div>
+            <div class="hacp-home-col"><div class="hacp-home-colh">🏠 Almacén de casa <span>${nCasa}/${capCasa}</span></div><div class="hacp-home-list">${enc}</div>
+              ${costeBaul != null
+                ? `<button type="button" class="hacp-linklike hacp-home-baul" data-act="home-baul"${(money + ahorro) >= costeBaul ? '' : ' disabled'}>📦 Ampliar almacén +4 · ${costeBaul}💰</button>`
+                : `<div class="hacp-home-baul-max">📦 Almacén al máximo (${capCasa})</div>`}
+            </div>
           </div>
           ${myPjEditable() ? `<button type="button" class="hacp-cp-btn hacp-home-aspecto" data-act="home-aspecto">🎨 Personalizar aspecto</button>` : ''}
         </div>`;
       el.querySelector('[data-act="home-close"]').addEventListener('click', closeHome);
-      bind('[data-act="home-aspecto"]', openAspecto);
       const refrescar = () => { buildHome(); if (charId) buildCharPanel(charId); };
       const amtEl = el.querySelector('[data-vault-amt]');
       const getAmt = () => Math.max(1, Math.floor(Number(amtEl && amtEl.value) || 0));
@@ -5114,6 +5131,8 @@
       bind('[data-act="home-store-all"]', () => { const n = HacStats.guardar(myId); if (n > 0) toast(`🏠 Guardaste ${n} 💰`); refrescar(); });
       bind('[data-act="home-take-all"]', () => { const n = HacStats.sacar(myId); if (n > 0) toast(`👛 Sacaste ${n} 💰`); refrescar(); });
       bind('[data-act="home-diezmo"]', (ev) => pagarDiezmo(ev.currentTarget));
+      bind('[data-act="home-aspecto"]', openAspecto);
+      bind('[data-act="home-baul"]', () => { const r = HacStats.ampliarCasa(myId); toast(r.ok ? `📦 Almacén ampliado a ${r.casaCap} huecos · −${r.coste}💰` : (r.motivo || 'No se pudo ampliar')); refrescar(); });
       el.querySelectorAll('[data-mov]').forEach(b => b.addEventListener('click', () => { const r = HacStats.meterEnCasa(myId, b.dataset.mov); if (!r.ok) toast(r.motivo); refrescar(); }));
       el.querySelectorAll('[data-take]').forEach(b => b.addEventListener('click', () => { const r = HacStats.sacarDeCasa(myId, b.dataset.take); if (!r.ok) toast(r.motivo); refrescar(); }));
     }

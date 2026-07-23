@@ -42,6 +42,7 @@ const HacStats = (function () {
       militar: Number(r.xp_militar) || 0, cultural: Number(r.xp_cultural) || 0,
       administrativo: Number(r.xp_administrativo) || 0,
       cap: Number(r.cap_inventario) || 8, inv: parseInv(r.inventario), ahorro: Number(r.ahorro) || 0,
+      casaCap: Number(r.casa_cap) || 12,
       casaPos: r.casa_pos || null, casaInv: parseInv(r.casa_inv), equipado: parseInv(r.equipado),
       heridas: Math.max(0, Math.min(3, Number(r.heridas) || 0)),
       secuelas: parseInv(r.secuelas),
@@ -65,7 +66,7 @@ const HacStats = (function () {
   function reload() { readyPromise = load(); return readyPromise; }
 
   function row(mid) { return cache.find(r => r.miembroId === mid) || null; }
-  function ensure(mid) { let r = row(mid); if (!r) { r = { miembroId: mid, dinero: 0, militar: 0, cultural: 0, administrativo: 0, cap: 8, inv: [], ahorro: 0, casaPos: null, casaInv: [], equipado: [], heridas: 0, secuelas: [], sendas: {}, caballo: null, ventaCd: {}, produccion: {} }; cache.push(r); } if (!r.sendas) r.sendas = {}; if (!r.ventaCd) r.ventaCd = {}; if (!r.produccion) r.produccion = {}; return r; }
+  function ensure(mid) { let r = row(mid); if (!r) { r = { miembroId: mid, dinero: 0, militar: 0, cultural: 0, administrativo: 0, cap: 8, inv: [], ahorro: 0, casaCap: 12, casaPos: null, casaInv: [], equipado: [], heridas: 0, secuelas: [], sendas: {}, caballo: null, ventaCd: {}, produccion: {} }; cache.push(r); } if (!r.sendas) r.sendas = {}; if (!r.ventaCd) r.ventaCd = {}; if (!r.produccion) r.produccion = {}; if (r.casaCap == null) r.casaCap = 12; return r; }
   // HERIDAS (0..3). Se infligen al fracasar/arriesgar en expediciones y escaramuzas.
   // PESAN: penalizan la recompensa (dinero+XP) y suben el riesgo; a 3 el mecenas
   // está MALHERIDO y no puede salir de la finca hasta curarse.
@@ -90,9 +91,30 @@ const HacStats = (function () {
   // miembroId (=personajeId) del dueño de una casa en "gx,gy", o null.
   function duenoDeCasa(pos) { const r = cache.find(x => x.casaPos === pos); return r ? r.miembroId : null; }
   function xp(mid, dom) { const r = row(mid); return r ? (r[dom] || 0) : 0; }
-  function capInventario(mid) { const r = row(mid); return r ? r.cap : 8; }
+  // ── LÍMITES de inventario (escalonados, tope alcanzable en endgame) ──────────
+  // Mochila: base 8, tope 20 (6 ampliaciones de +2). Casa: base 12, tope 36 (baúles
+  // de +4). El COSTE de cada ampliación sube fuerte (curva cuadrática) — ver
+  // precioAlforja / costeAmpliarCasa. Antes ambas eran ilimitadas y baratas.
+  const CAP_BASE = 8, CAP_MAX = 20, CASA_BASE = 12, CASA_MAX = 36;
+  function capInventario(mid) { const r = row(mid); return r ? Math.min(CAP_MAX, r.cap) : CAP_BASE; }
+  const capCasaMax = () => CAP_MAX;                                  // tope duro de mochila
+  function capCasa(mid) { const r = row(mid); return r ? (Number(r.casaCap) || CASA_BASE) : CASA_BASE; }
+  // Precio de una ampliación de MOCHILA (alforja) según las ranuras YA ganadas. Sube
+  // fuerte: base 8→20 cuesta ~4.100💰 en total. `capInv` = ranuras que da la pieza.
+  function precioAlforja(cap, capInv) {
+    const extra = Math.max(0, (Number(cap) || CAP_BASE) - CAP_BASE);
+    return Math.round(((Number(capInv) || 2) / 2) * (60 + 17 * extra * extra));
+  }
+  // Coste del SIGUIENTE baúl de casa (+4), o null si ya está al tope. Curva cuadrática:
+  // 90 · 360 · 810 · 1440 · 2250 · 3240 (total ~8.190💰 para el máximo).
+  function costeAmpliarCasa(mid) {
+    const cur = capCasa(mid); if (cur >= CASA_MAX) return null;
+    const n = Math.floor((cur - CASA_BASE) / 4);   // baúles ya comprados (0..)
+    return Math.round(90 * (n + 1) * (n + 1));
+  }
   function inventario(mid) { const r = row(mid); return r ? r.inv.slice() : []; }
   function casaInventario(mid) { const r = row(mid); return r ? r.casaInv.slice() : []; }
+  const casaOcupadas = (mid) => { const r = row(mid); return r ? r.casaInv.reduce((s, it) => s + (it.n || 1), 0) : 0; };
   function equipados(mid) { const r = row(mid); return r ? r.equipado.slice() : []; }
   function ocupadas(mid) { const r = row(mid); return r ? r.inv.reduce((s, it) => s + (it.n || 1), 0) : 0; }
   const MAX_EQUIP = 3;
@@ -171,9 +193,23 @@ const HacStats = (function () {
     const cap = it && it.efecto && it.efecto.capInv;
     if (!cap) return { ok: false, motivo: 'No amplía la mochila' };
     const r = ensure(mid);
+    if (r.cap >= CAP_MAX) return { ok: false, motivo: `La mochila ya está al máximo (${CAP_MAX} ranuras)` };
     if (!quita(r.inv, id)) return { ok: false, motivo: 'No lo llevas en la mochila' };
-    r.cap += cap; persist(r);
+    r.cap = Math.min(CAP_MAX, r.cap + cap); persist(r);
     return { ok: true, cap: r.cap };
+  }
+  // Amplía el ALMACÉN DE CASA en +4 huecos pagando el baúl (coste creciente). Cobra del
+  // monedero y, si no llega, del ahorro de casa. {ok, motivo, casaCap, coste}.
+  function ampliarCasa(mid) {
+    const r = ensure(mid), coste = costeAmpliarCasa(mid);
+    if (coste == null) return { ok: false, motivo: `El almacén ya está al máximo (${CASA_MAX} huecos)` };
+    if ((r.dinero + r.ahorro) < coste) return { ok: false, motivo: 'No tienes suficiente dinero (monedero + casa)' };
+    let falta = coste;
+    const delMon = Math.min(r.dinero, falta); r.dinero -= delMon; falta -= delMon;
+    if (falta > 0) r.ahorro -= falta;
+    r.casaCap = Math.min(CASA_MAX, (Number(r.casaCap) || CASA_BASE) + 4);
+    persist(r);
+    return { ok: true, casaCap: r.casaCap, coste };
   }
   // Recompensa semanal ASCENDENTE según el RANGO del edificio principal de la finca
   // (1..6 · 正殿→大殿→朝堂→宮殿→大宮→大院). A mayor rango, mayor % de XP y mayor suelo.
@@ -262,6 +298,7 @@ const HacStats = (function () {
   let caballoCol = true;   // false si la columna `caballo` aún no existe (falta caballo.sql)
   let ventaCdCol = true;   // false si la columna `venta_cd` aún no existe (falta el ALTER de mecenas_stats.sql)
   let prodCol = true;      // false si la columna `produccion` aún no existe (falta el ALTER de mecenas_stats.sql)
+  let casaCapCol = true;   // false si la columna `casa_cap` aún no existe (falta el ALTER de mecenas_stats.sql)
   async function persist(r) {
     // ── SEGURIDAD ANTI-PISOTÓN ────────────────────────────────────────────
     // persist() hace un UPSERT de la FILA COMPLETA (xp, dinero, inventario…).
@@ -289,6 +326,7 @@ const HacStats = (function () {
       if (caballoCol) rowData.caballo = r.caballo || null;
       if (ventaCdCol) rowData.venta_cd = r.ventaCd || {};
       if (prodCol) rowData.produccion = r.produccion || {};
+      if (casaCapCol) rowData.casa_cap = Number(r.casaCap) || 12;
       let { error } = await client.from(TABLE).upsert(rowData);
       // Si la columna `caballo` no existe todavía, reintenta SIN ella para no perder
       // el resto de stats (el caballo no persistirá hasta ejecutar caballo.sql).
@@ -304,6 +342,11 @@ const HacStats = (function () {
       // Ídem para `produccion` (falta el ALTER de mecenas_stats.sql).
       if (error && prodCol && /produccion/i.test(String(error.message || ''))) {
         prodCol = false; delete rowData.produccion;
+        ({ error } = await client.from(TABLE).upsert(rowData));
+      }
+      // Ídem para `casa_cap` (falta el ALTER de mecenas_stats.sql).
+      if (error && casaCapCol && /casa_cap/i.test(String(error.message || ''))) {
+        casaCapCol = false; delete rowData.casa_cap;
         ({ error } = await client.from(TABLE).upsert(rowData));
       }
       if (error) throw error;
@@ -416,10 +459,11 @@ const HacStats = (function () {
     // del objeto): comprarla con la energía llena ya no tira el dinero.
     const aInv = ef.guardable || ef.equip || ef.manual || ef.energia;
     if (r.dinero < precio) return { ok: false, motivo: 'No tienes suficiente dinero' };
-    if (aInv && ocupadas(mid) >= r.cap) return { ok: false, motivo: 'Inventario lleno' };
+    if (ef.capInv && r.cap >= CAP_MAX) return { ok: false, motivo: `La mochila ya está al máximo (${CAP_MAX} ranuras)` };
+    if (aInv && !ef.capInv && ocupadas(mid) >= r.cap) return { ok: false, motivo: 'Inventario lleno' };
     r.dinero -= precio;
     if (ef.xp) for (const d of DOMS) if (ef.xp[d]) r[d] += ef.xp[d];
-    if (ef.capInv) r.cap += ef.capInv;
+    if (ef.capInv) r.cap = Math.min(CAP_MAX, r.cap + ef.capInv);
     if (aInv) mete(r.inv, item.id);
     persist(r);
     return { ok: true };
@@ -439,6 +483,7 @@ const HacStats = (function () {
     // La PROPIEDAD de la casa vive en el mapa (construccion.dueno); la UI solo
     // muestra «guardar en casa» a quien la posee. Aquí solo movemos el objeto.
     const r = ensure(mid);
+    if (casaOcupadas(mid) >= capCasa(mid)) return { ok: false, motivo: `El almacén de casa está lleno (${capCasa(mid)} huecos) · amplíalo con un baúl` };
     if (!quita(r.inv, id)) return { ok: false, motivo: 'No llevas ese objeto' };
     mete(r.casaInv, id); persist(r); return { ok: true };
   }
@@ -572,6 +617,6 @@ const HacStats = (function () {
   function encargosHechos(mid, dia) { const p = prodObj(mid); if (p.encargos.dia !== dia) { p.encargos.dia = dia; p.encargos.hechos = []; } return p.encargos.hechos.slice(); }
   function marcarEncargo(mid, dia, id) { const p = prodObj(mid); if (p.encargos.dia !== dia) { p.encargos.dia = dia; p.encargos.hechos = []; } if (p.encargos.hechos.indexOf(id) < 0) { p.encargos.hechos.push(id); persist(ensure(mid)); } }
 
-  return { ready, reload, dinero, ahorro, pagar, casaPos, casasReclamadas, duenoDeCasa, comprarCasa, liberarCasa, abandonar, heridas, penHerida, malherido, herir, curar, secuelas, tieneSecuela, escaramuzaCd, bonusDinero, bonusExped, bonusPrestigio, bonusAntirrobo, bonusHeridaInmune, bonusInvestig, bonusBotin, bonusAuraBanda, usarManual, comerItem, usarAmpliacion, abrirRecompensaSemanal, xp, nivel, progresoNivel, bonus, nivelTotal, nivelPersonaje, setNiveles, puntosTalento, talentos, puntosGastados, puntosLibres, tieneTalento, aprenderTalento, equipados, equipar, desequipar, slotDe, MAX_EQUIP, bonusPct, bonusPctNiveles, torsoViste, vestir, otorgarArmaInicial, award, comprar, guardar, sacar, darItem, quitarItem, meterEnCasa, sacarDeCasa, inventario, casaInventario, capInventario, ocupadas, recompensaExped, caballo, tieneCaballo, cuadra, tieneVariante, comprarCaballo, montarCaballo, venderCaballo, venderItem, ventaCd, ventaEnfriada, ventaCdRestanteMs, enfriarVenta, bonusRegateo, recursos, recursoTotal, recursoDesdeCal, addLote, quitaRecurso, quitaCal, oficioNivel, subirOficio, recolectarRenta, rentaPendiente, encargosHechos, marcarEncargo, DOMS, dbOk: () => ok, TABLE };
+  return { ready, reload, dinero, ahorro, pagar, casaPos, casasReclamadas, duenoDeCasa, comprarCasa, liberarCasa, abandonar, heridas, penHerida, malherido, herir, curar, secuelas, tieneSecuela, escaramuzaCd, bonusDinero, bonusExped, bonusPrestigio, bonusAntirrobo, bonusHeridaInmune, bonusInvestig, bonusBotin, bonusAuraBanda, usarManual, comerItem, usarAmpliacion, ampliarCasa, capCasa, costeAmpliarCasa, precioAlforja, casaOcupadas,  abrirRecompensaSemanal, xp, nivel, progresoNivel, bonus, nivelTotal, nivelPersonaje, setNiveles, puntosTalento, talentos, puntosGastados, puntosLibres, tieneTalento, aprenderTalento, equipados, equipar, desequipar, slotDe, MAX_EQUIP, bonusPct, bonusPctNiveles, torsoViste, vestir, otorgarArmaInicial, award, comprar, guardar, sacar, darItem, quitarItem, meterEnCasa, sacarDeCasa, inventario, casaInventario, capInventario, ocupadas, recompensaExped, caballo, tieneCaballo, cuadra, tieneVariante, comprarCaballo, montarCaballo, venderCaballo, venderItem, ventaCd, ventaEnfriada, ventaCdRestanteMs, enfriarVenta, bonusRegateo, recursos, recursoTotal, recursoDesdeCal, addLote, quitaRecurso, quitaCal, oficioNivel, subirOficio, recolectarRenta, rentaPendiente, encargosHechos, marcarEncargo, DOMS, dbOk: () => ok, TABLE };
 })();
 if (typeof window !== 'undefined') window.HacStats = HacStats;
