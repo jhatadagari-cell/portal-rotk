@@ -4880,7 +4880,7 @@
       // VENDER: dibuja tus manos con las mangas de TU túnica + el pregón del mercader.
       if (vender) {
         const hc = el.querySelector('.hacp-mkt-hands canvas');
-        if (hc && window.HacChar && HacChar.firstPersonHands) { const yo = regYoAspecto(); try { HacChar.firstPersonHands(hc, { robe: yo.aspecto.robe, accent: yo.aspecto.accent, piel: yo.aspecto.piel, scale: 4 }); } catch (e) {} }
+        if (hc && window.HacChar && HacChar.firstPersonHands) { const yo = regYoAspecto(); try { HacChar.firstPersonHands(hc, { aspecto: yo.aspecto, scale: 4 }); } catch (e) {} }
         const cry = el.querySelector('.hacp-mkt-cry'); if (cry) { cry.textContent = '¿Qué tenéis para mí?'; cry.classList.add('show'); }
       }
       wireMercado(el, vender);

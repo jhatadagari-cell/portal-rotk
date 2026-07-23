@@ -1506,12 +1506,15 @@ const HacChar = (function () {
   // manos de su tono de piel. Se dibuja en lienzo lógico y se escala nítido.
   function firstPersonHands(canvas, opts) {
     if (!canvas) return; opts = opts || {};
-    const robe = okHex(opts.robe) ? opts.robe : '#5b4a8a';
-    const accent = okHex(opts.accent) ? opts.accent : '#d8b65a';
-    const skin = SKINS[(Number(opts.piel) || 0) % SKINS.length];
+    // Deriva TODOS los colores del MISMO motor que la figura (palette), a partir del
+    // aspecto del mecenas → la piel (incluida la rojiza de atuendos), la túnica y el acento
+    // salen idénticos a su personaje. Fallback a los campos sueltos si no se pasa aspecto.
+    const asp = opts.aspecto || { robe: opts.robe, accent: opts.accent, piel: opts.piel };
+    const P = palette('', asp);
+    const robe = P.robe, robeHi = P.robeHi, robeDk = P.robeDk, robeSh = P.robeSh;
+    const skin = P.skin, skinHi = P.skinHi, skinDk = P.skinDk;
+    const cuff = P.trim, cuffHi = P.trimHi;
     const scale = Math.max(1, Math.round(opts.scale || 6));
-    const robeHi = light(robe, 0.16), robeDk = dark(robe, 0.34), robeSh = dark(robe, 0.5);
-    const skinHi = light(skin, 0.12), skinDk = dark(skin, 0.24), cuff = accent, cuffHi = light(accent, 0.22);
     const W2 = 120, H2 = 62;
     const off = document.createElement('canvas'); off.width = W2; off.height = H2;
     const o = off.getContext('2d'); if (!o) return; o.imageSmoothingEnabled = false;
