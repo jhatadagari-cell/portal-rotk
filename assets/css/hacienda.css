@@ -2002,26 +2002,54 @@ button.hacp-slot.comida:hover{ background:rgba(127,201,160,.24); }
    (girar el cuello → ves los lados). Mercader TRAS un mostrador con volumen.
    ════════════════════════════════════════════════════════════════════════ */
 .hacp-mkt3d{ position:fixed; inset:0; z-index:200; overflow:hidden; user-select:none; touch-action:none;
-  perspective:820px; perspective-origin:50% 44%; background:linear-gradient(#0d0a06,#140f08);
-  font-family:'Noto Serif SC',serif; }
+  perspective:900px; perspective-origin:50% 46%; background:#2a1e10; font-family:'Noto Serif SC',serif; }
 .hacp-mkt3d[hidden]{ display:none; }
 .hacp-mkt3d, .hacp-mkt3d *{ box-sizing:border-box; }
+/* Vignette cálido general (encuadra la escena, mata las esquinas vacías) */
+.hacp-mkt3d::after{ content:""; position:absolute; inset:0; z-index:50; pointer-events:none;
+  box-shadow:inset 0 0 220px 60px rgba(0,0,0,.6); }
 
-/* La SALA (caja 3D) que rota con el cuello */
+/* La SALA (caja 3D) que rota con el cuello. Faces grandes para que NO se vea vacío al girar. */
 .hacp-mkt-scene{ position:absolute; left:50%; top:50%; width:0; height:0; transform-style:preserve-3d;
-  transform:translateZ(-40px) rotateY(var(--yaw,0deg)); transition:transform .14s ease-out; will-change:transform; }
+  transform:translateZ(-30px) rotateY(var(--yaw,0deg)); transition:transform .16s ease-out; will-change:transform; }
 .hacp-mkt-face{ position:absolute; transform-style:preserve-3d; }
-.hacp-mkt-face.back { width:1500px; height:680px; margin:-340px 0 0 -750px; transform:translateZ(-280px);
-  background:linear-gradient(#241a0e,#191106); border-top:6px solid #3a2a15; }
-.hacp-mkt-face.left { width:560px; height:680px; margin:-340px 0 0 0; transform-origin:left center;
-  transform:translateX(-750px) rotateY(90deg); background:linear-gradient(90deg,#1b130a,#241a0d); }
-.hacp-mkt-face.right{ width:560px; height:680px; margin:-340px 0 0 0; transform-origin:right center;
-  transform:translateX(750px) rotateY(-90deg); background:linear-gradient(90deg,#241a0d,#1b130a); }
-.hacp-mkt-face.floor{ width:1500px; height:560px; margin:-280px 0 0 -750px; transform-origin:center top;
-  transform:translateY(340px) rotateX(-90deg);
-  background:repeating-linear-gradient(90deg,#1a120a 0 72px,#221810 72px 74px), linear-gradient(#241a0e,#140d07); }
-.hacp-mkt-face.ceil { width:1500px; height:560px; margin:-280px 0 0 -750px; transform-origin:center bottom;
-  transform:translateY(-340px) rotateX(90deg); background:#100b06; box-shadow:inset 0 0 140px #000; }
+/* Madera de las paredes: tablones verticales + panel a media altura + luz cálida arriba */
+.hacp-mkt-face.back{ width:1680px; height:760px; margin:-380px 0 0 -840px; transform:translateZ(-300px);
+  background:
+    radial-gradient(120% 80% at 50% 8%, rgba(230,170,90,.18), transparent 55%),
+    repeating-linear-gradient(90deg, rgba(0,0,0,.16) 0 2px, transparent 2px 66px),
+    linear-gradient(#3a2a17, #2a1d10 55%, #1f1409);
+  box-shadow:inset 0 40px 70px rgba(0,0,0,.5), inset 0 -30px 60px rgba(0,0,0,.55); border-top:8px solid #4a361c; }
+.hacp-mkt-face.back::before{ content:""; position:absolute; left:0; right:0; top:47%; height:16px;
+  background:linear-gradient(#5a4326,#3a2a15); box-shadow:0 4px 8px rgba(0,0,0,.4); }   /* riel de madera */
+.hacp-mkt-face.left,.hacp-mkt-face.right{ width:600px; height:760px; margin:-380px 0 0 0;
+  background:
+    repeating-linear-gradient(90deg, rgba(0,0,0,.14) 0 2px, transparent 2px 60px),
+    linear-gradient(90deg,#341f0f,#241809);
+  box-shadow:inset 0 40px 70px rgba(0,0,0,.5), inset 0 -30px 60px rgba(0,0,0,.55); }
+.hacp-mkt-face.left { transform-origin:left center;  transform:translateX(-840px) rotateY(90deg); }
+.hacp-mkt-face.right{ transform-origin:right center; transform:translateX(840px) rotateY(-90deg);
+  background:
+    repeating-linear-gradient(90deg, rgba(0,0,0,.14) 0 2px, transparent 2px 60px),
+    linear-gradient(270deg,#341f0f,#241809); }
+/* borde interior (esquina con la pared del fondo) sombreado = «ambient occlusion» */
+.hacp-mkt-face.left::after{ content:""; position:absolute; right:0; top:0; bottom:0; width:60px; background:linear-gradient(270deg,rgba(0,0,0,.5),transparent); }
+.hacp-mkt-face.right::after{ content:""; position:absolute; left:0; top:0; bottom:0; width:60px; background:linear-gradient(90deg,rgba(0,0,0,.5),transparent); }
+/* Suelo de tablones cálido con charco de luz al frente y sombra al fondo */
+.hacp-mkt-face.floor{ width:1680px; height:640px; margin:-320px 0 0 -840px; transform-origin:center top;
+  transform:translateY(380px) rotateX(-90deg);
+  background:
+    radial-gradient(70% 90% at 50% 100%, rgba(230,180,90,.16), transparent 60%),
+    repeating-linear-gradient(90deg,#3a2a16 0 74px,#31230f 74px 78px),
+    linear-gradient(#160e06, #2e2110 55%);
+  box-shadow:inset 0 60px 90px rgba(0,0,0,.6); }
+/* Techo con vigas de madera (no negro plano) */
+.hacp-mkt-face.ceil{ width:1680px; height:640px; margin:-320px 0 0 -840px; transform-origin:center bottom;
+  transform:translateY(-380px) rotateX(90deg);
+  background:
+    repeating-linear-gradient(0deg,#241a0e 0 60px, #1a1207 60px 68px),
+    linear-gradient(#2a1e10,#160e06);
+  box-shadow:inset 0 0 160px rgba(0,0,0,.7); }
 
 /* Estantes + artículos colgados en las paredes */
 .hacp-mkt-shelf{ position:absolute; left:5%; right:5%; height:10px; background:linear-gradient(#5a4326,#3a2a15);

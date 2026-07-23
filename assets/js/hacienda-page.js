@@ -4914,13 +4914,9 @@
       });
       window.addEventListener('pointermove', mktOnMove);
       window.addEventListener('pointerup', mktOnUp);
-      // Hover en los bordes = girar (escritorio, si no se arrastra).
-      stage.addEventListener('pointermove', (e) => {
-        if (mkt.drag || e.pointerType === 'touch') return;
-        const r = el.getBoundingClientRect(), fx = (e.clientX - r.left) / r.width;
-        mkt.hold = fx < 0.16 ? -1 : fx > 0.84 ? 1 : 0;   // borde izq → mira izquierda; borde der → derecha
-      });
-      stage.addEventListener('pointerleave', () => { if (!mkt.drag) mkt.hold = 0; });
+      // El giro por HOVER solo ocurre sobre las FLECHAS laterales (ya pegadas a los bordes),
+      // no por pasar el cursor por la escena — así no gira «todo el rato». Girar además con
+      // las flechas al clic y arrastrando.
       // Artículos: hover = tooltip · clic = popover (comprar/vender).
       el.querySelectorAll('.hacp-mkt-item').forEach(node => {
         const id = node.dataset.buy || node.dataset.sell;
