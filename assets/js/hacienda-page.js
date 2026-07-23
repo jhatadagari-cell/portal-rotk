@@ -4793,25 +4793,24 @@
         if (!slot) return; slot.innerHTML = '';
         const p = pool[i]; if (!p) { slot.classList.remove('on'); return; }
         slot.classList.add('on');
-        const cv = document.createElement('canvas'); cv.width = 130; cv.height = 182; slot.appendChild(cv);
+        const cv = document.createElement('canvas'); cv.width = 150; cv.height = 210; slot.appendChild(cv);
         // Mira hacia el interior de la tienda (pared izq → mira a la derecha 'E'; der → 'W').
-        if (window.HacChar) { try { HacChar.draw(cv, { aptitud: p.aptitud || '', aspecto: p.aspecto || {}, dir: i === 0 ? 'E' : 'W', pose: 'stand', frame: 0, scale: 3.2, outline: true }); } catch (e) {} }
+        if (window.HacChar) { try { HacChar.draw(cv, { aptitud: p.aptitud || '', aspecto: p.aspecto || {}, dir: i === 0 ? 'E' : 'W', pose: 'stand', frame: 0, scale: 3.6, outline: true }); } catch (e) {} }
         const tag = document.createElement('div'); tag.className = 'hacp-mkt-peer-nm'; tag.textContent = p.nombre || 'Un comprador'; slot.appendChild(tag);
       });
     }
-    // Reparte los artículos por la pared: rango X amplio (-26%..126%) en 2 alturas, de modo
-    // que los de los extremos SOLO se ven al girar el cuello. Devuelve [{item, x, y}].
-    // Reparte el stock por las 3 paredes de la SALA: fondo (hasta 6 · 2 filas × 3), izquierda
-    // (2) y derecha (2). Los laterales solo se ven al girar. {it, wall, left(%), top(px)}.
+    // Reparte el stock por las 3 paredes de la SALA cerrada: fondo (hasta 6 · 2 filas × 3),
+    // izquierda (2) y derecha (2). Posición en % de la propia cara. Los laterales solo se
+    // ven al girar. {it, wall, left(%), top(%)}.
     function mktLayout(items) {
       const out = [];
-      items.slice(0, 6).forEach((it, i) => out.push({ it, wall: 'back', left: 22 + (i % 3) * 28, top: i < 3 ? 62 : 250 }));
-      items.slice(6, 8).forEach((it, i) => out.push({ it, wall: 'left', left: 30 + i * 34, top: 90 + i * 150 }));
-      items.slice(8, 10).forEach((it, i) => out.push({ it, wall: 'right', left: 30 + i * 34, top: 90 + i * 150 }));
+      items.slice(0, 6).forEach((it, i) => out.push({ it, wall: 'back', left: 20 + (i % 3) * 30, top: i < 3 ? 22 : 48 }));
+      items.slice(6, 8).forEach((it, i) => out.push({ it, wall: 'left', left: 26 + i * 40, top: 24 + i * 24 }));
+      items.slice(8, 10).forEach((it, i) => out.push({ it, wall: 'right', left: 26 + i * 40, top: 24 + i * 24 }));
       return out;
     }
     function mktItemHTML(o, vender) {
-      const it = o.it, id = it.id, pos = `left:${o.left}%;top:${o.top}px`;
+      const it = o.it, id = it.id, pos = `left:${o.left}%;top:${o.top}%`;
       if (vender) {
         return `<div class="hacp-mkt-item" data-sell="${esc(id)}" style="${pos}">
           <div class="hook"></div><div class="disc">${it.icon || '∎'}${(o.n || 1) > 1 ? `<span style="position:absolute;font-size:11px;color:#f0d98a;transform:translate(22px,20px)">×${o.n}</span>` : ''}</div>
@@ -4843,7 +4842,7 @@
       // innerHTML, cada rebuild (cambiar a Vender, comprar…) la regeneraría CERRADA y taparía
       // toda la escena — ese era el «bug» al pasar a Vender.
       const tab = (m, lbl) => `<button type="button" class="hacp-mkt-tab${mkt.mode === m ? ' on' : ''}" data-mkt-mode="${m}">${lbl}</button>`;
-      const shelves = `<div class="hacp-mkt-shelf" style="top:150px"></div><div class="hacp-mkt-shelf" style="top:340px"></div>`;
+      const shelves = `<div class="hacp-mkt-shelf" style="top:34%"></div><div class="hacp-mkt-shelf" style="top:60%"></div>`;
       el.innerHTML = `
         <div class="hacp-mkt-scene">
           <div class="hacp-mkt-face back">${shelves}
@@ -4858,7 +4857,7 @@
           <div class="hacp-mkt-halo"></div>
           <div class="hacp-mkt-props left"><span class="abaco"></span><span class="ingots"></span></div>
           <div class="hacp-mkt-props right"><span class="scale"></span><span class="abaco"></span></div>
-          <div class="hacp-mkt-merchant"><canvas width="210" height="294"></canvas><div class="hacp-mkt-cry"></div></div>
+          <div class="hacp-mkt-merchant"><canvas width="230" height="322"></canvas><div class="hacp-mkt-cry"></div></div>
           <div class="hacp-mkt-counter"><div class="top"></div><div class="front"></div></div>
         </div>
         <button type="button" class="hacp-mkt-arrow left" data-mkt-turn="-1">‹</button>
@@ -4876,13 +4875,13 @@
       applyYaw();
       renderPeers();
       const mc = el.querySelector('.hacp-mkt-merchant canvas');
-      if (mc && window.HacChar) { try { HacChar.draw(mc, { aptitud: '', aspecto: MKT_MERC, dir: 'S', pose: 'stand', frame: 0, scale: 6, outline: true }); } catch (e) {} }
+      if (mc && window.HacChar) { try { HacChar.draw(mc, { aptitud: '', aspecto: MKT_MERC, dir: 'S', pose: 'stand', frame: 0, scale: 7, outline: true }); } catch (e) {} }
       wireMercado(el, vender);
     }
     function applyYaw() {
       const scene = mktEl && mktEl.querySelector('.hacp-mkt-scene'); if (!scene) return;
       // yaw>0 = mirar a la DERECHA (rotateY positivo trae la pared derecha al centro).
-      scene.style.setProperty('--yaw', (mkt.yaw * 32) + 'deg');
+      scene.style.setProperty('--yaw', (mkt.yaw * 30) + 'deg');
       // El PRIMER PLANO (mostrador + mercader) se desplaza en sentido contrario (paralaje):
       // al mirar a la derecha, lo que tienes delante se va hacia la izquierda.
       const front = mktEl.querySelector('.hacp-mkt-front');

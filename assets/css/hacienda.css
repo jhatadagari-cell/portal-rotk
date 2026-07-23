@@ -2002,66 +2002,40 @@ button.hacp-slot.comida:hover{ background:rgba(127,201,160,.24); }
    (girar el cuello → ves los lados). Mercader TRAS un mostrador con volumen.
    ════════════════════════════════════════════════════════════════════════ */
 .hacp-mkt3d{ position:fixed; inset:0; z-index:200; overflow:hidden; user-select:none; touch-action:none;
-  perspective:900px; perspective-origin:50% 46%; background:#2a1e10; font-family:'Noto Serif SC',serif; }
+  --w:1700px; --h:1000px; --d:1100px;
+  perspective:760px; perspective-origin:50% 50%; font-family:'Noto Serif SC',serif;
+  background:radial-gradient(120% 100% at 50% 40%, #3a2a17, #1c1308 80%); }
 .hacp-mkt3d[hidden]{ display:none; }
 .hacp-mkt3d, .hacp-mkt3d *{ box-sizing:border-box; }
-/* Vignette cálido general (encuadra la escena, mata las esquinas vacías) */
-.hacp-mkt3d::after{ content:""; position:absolute; inset:0; z-index:50; pointer-events:none;
-  box-shadow:inset 0 0 220px 60px rgba(0,0,0,.6); }
 
-/* La SALA (caja 3D) que rota con el cuello. Faces grandes para que NO se vea vacío al girar. */
-.hacp-mkt-scene{ position:absolute; left:50%; top:50%; width:0; height:0; transform-style:preserve-3d;
-  transform:translateZ(-30px) rotateY(var(--yaw,0deg)); transition:transform .16s ease-out; will-change:transform; }
-.hacp-mkt-face{ position:absolute; transform-style:preserve-3d; }
-/* Madera de las paredes: tablones verticales + panel a media altura + luz cálida arriba */
-.hacp-mkt-face.back{ width:1680px; height:760px; margin:-380px 0 0 -840px; transform:translateZ(-300px);
-  background:
-    radial-gradient(120% 80% at 50% 8%, rgba(230,170,90,.18), transparent 55%),
-    repeating-linear-gradient(90deg, rgba(0,0,0,.16) 0 2px, transparent 2px 66px),
-    linear-gradient(#3a2a17, #2a1d10 55%, #1f1409);
-  box-shadow:inset 0 40px 70px rgba(0,0,0,.5), inset 0 -30px 60px rgba(0,0,0,.55); border-top:8px solid #4a361c; }
-.hacp-mkt-face.back::before{ content:""; position:absolute; left:0; right:0; bottom:0; height:150px;
-  background:linear-gradient(transparent, #140d06); }   /* zócalo oscuro: funde la unión pared–suelo (sin línea) */
-.hacp-mkt-face.left,.hacp-mkt-face.right{ width:600px; height:760px; margin:-380px 0 0 0;
-  background:
-    repeating-linear-gradient(90deg, rgba(0,0,0,.14) 0 2px, transparent 2px 60px),
-    linear-gradient(90deg,#341f0f,#241809);
-  box-shadow:inset 0 40px 70px rgba(0,0,0,.5), inset 0 -30px 60px rgba(0,0,0,.55); }
-.hacp-mkt-face.left { transform-origin:left center;  transform:translateX(-840px) rotateY(90deg); }
-.hacp-mkt-face.right{ transform-origin:right center; transform:translateX(840px) rotateY(-90deg);
-  background:
-    repeating-linear-gradient(90deg, rgba(0,0,0,.14) 0 2px, transparent 2px 60px),
-    linear-gradient(270deg,#341f0f,#241809); }
-/* borde interior (esquina con la pared del fondo) sombreado = «ambient occlusion» */
-.hacp-mkt-face.left::after{ content:""; position:absolute; right:0; top:0; bottom:0; width:60px; background:linear-gradient(270deg,rgba(0,0,0,.5),transparent); }
-.hacp-mkt-face.right::after{ content:""; position:absolute; left:0; top:0; bottom:0; width:60px; background:linear-gradient(90deg,rgba(0,0,0,.5),transparent); }
-/* Suelo de tablones cálido con charco de luz al frente y sombra al fondo */
-.hacp-mkt-face.floor{ width:1680px; height:640px; margin:-320px 0 0 -840px; transform-origin:center top;
-  transform:translateY(380px) rotateX(-90deg);
-  background:
-    linear-gradient(#0d0803 0 90px, transparent 220px),
-    radial-gradient(70% 90% at 50% 100%, rgba(230,180,90,.16), transparent 60%),
-    repeating-linear-gradient(90deg,#3a2a16 0 74px,#31230f 74px 78px),
-    linear-gradient(#160e06, #2e2110 55%);
-  box-shadow:inset 0 70px 110px rgba(0,0,0,.75); }
-/* Techo con vigas de madera (no negro plano) */
-.hacp-mkt-face.ceil{ width:1680px; height:640px; margin:-320px 0 0 -840px; transform-origin:center bottom;
-  transform:translateY(-380px) rotateX(90deg);
-  background:
-    repeating-linear-gradient(0deg,#241a0e 0 60px, #1a1207 60px 68px),
-    linear-gradient(#2a1e10,#160e06);
-  box-shadow:inset 0 0 160px rgba(0,0,0,.7); }
+/* La SALA es una CAJA 3D CERRADA (5 caras que comparten aristas) que rota con el cuello.
+   Cada cara se centra con translate(-50%,-50%) y se empuja a su sitio con translateZ =
+   mitad de la dimensión perpendicular → las paredes/suelo/techo encajan sin huecos. */
+.hacp-mkt-scene{ position:absolute; left:50%; top:50%; transform-style:preserve-3d;
+  transform:translateZ(360px) rotateY(var(--yaw,0deg)); transition:transform .16s ease-out; will-change:transform; }
+.hacp-mkt-face{ position:absolute; top:0; left:0; transform-style:preserve-3d;
+  background:repeating-linear-gradient(90deg, rgba(0,0,0,.13) 0 2px, transparent 2px 78px), linear-gradient(#3f2e19,#2c1f11); }
+.hacp-mkt-face.back { width:var(--w); height:var(--h); transform:translate(-50%,-50%) translateZ(calc(var(--d)/-2)); }
+.hacp-mkt-face.left { width:var(--d); height:var(--h); transform:translate(-50%,-50%) rotateY(90deg)  translateZ(calc(var(--w)/-2)); box-shadow:inset 0 0 220px rgba(0,0,0,.55); }
+.hacp-mkt-face.right{ width:var(--d); height:var(--h); transform:translate(-50%,-50%) rotateY(-90deg) translateZ(calc(var(--w)/-2)); box-shadow:inset 0 0 220px rgba(0,0,0,.55); }
+.hacp-mkt-face.floor{ width:var(--w); height:var(--d); transform:translate(-50%,-50%) rotateX(-90deg) translateZ(calc(var(--h)/-2));
+  background:repeating-linear-gradient(90deg,#3a2a16 0 82px,#31230f 82px 86px), linear-gradient(#241a0e,#160e06); }
+.hacp-mkt-face.ceil { width:var(--w); height:var(--d); transform:translate(-50%,-50%) rotateX(90deg)  translateZ(calc(var(--h)/-2));
+  background:repeating-linear-gradient(90deg,#241a0e 0 82px,#1a1207 82px 86px); box-shadow:inset 0 0 160px rgba(0,0,0,.5); }
+/* Luz cálida (farolillos) sobre la pared del fondo y charco en el suelo */
+.hacp-mkt-face.back::before{ content:""; position:absolute; inset:0; background:radial-gradient(70% 70% at 50% 38%, rgba(240,180,90,.26), transparent 62%); }
+.hacp-mkt-face.floor::before{ content:""; position:absolute; inset:0; background:radial-gradient(60% 70% at 50% 8%, rgba(240,180,90,.20), transparent 60%); }
 
 /* Estantes + artículos colgados en las paredes */
-.hacp-mkt-shelf{ position:absolute; left:5%; right:5%; height:10px; background:linear-gradient(#5a4326,#3a2a15);
-  border-top:2px solid #6b5327; box-shadow:0 6px 12px rgba(0,0,0,.5); }
-.hacp-mkt-item{ position:absolute; width:96px; margin-left:-48px; text-align:center; cursor:pointer;
+.hacp-mkt-shelf{ position:absolute; left:8%; right:8%; height:12px; background:linear-gradient(#5a4326,#39280f);
+  border-radius:2px; box-shadow:0 8px 16px rgba(0,0,0,.5); }
+.hacp-mkt-item{ position:absolute; width:104px; margin-left:-52px; text-align:center; cursor:pointer;
   transition:transform .12s ease, filter .12s ease; }
-.hacp-mkt-item .hook{ width:2px; height:14px; margin:0 auto; background:linear-gradient(#5a4a2e,#2e2416); }
-.hacp-mkt-item .disc{ width:74px; height:74px; margin:0 auto; border-radius:12px;
+.hacp-mkt-item .hook{ width:2px; height:16px; margin:0 auto; background:linear-gradient(#5a4a2e,#2e2416); }
+.hacp-mkt-item .disc{ width:82px; height:82px; margin:0 auto; border-radius:12px;
   background:radial-gradient(60% 60% at 50% 38%, #2e2414, #160f08); border:2px solid #6b5327;
-  box-shadow:0 6px 12px rgba(0,0,0,.55), inset 0 0 0 1px rgba(216,182,90,.18);
-  display:flex; align-items:center; justify-content:center; font-size:38px; line-height:1; }
+  box-shadow:0 8px 14px rgba(0,0,0,.55), inset 0 0 0 1px rgba(216,182,90,.18);
+  display:flex; align-items:center; justify-content:center; font-size:44px; line-height:1; }
 .hacp-mkt-item .price{ display:inline-block; margin-top:6px; padding:2px 9px; border-radius:999px;
   font:800 12px/1 ui-monospace,monospace; color:#f0d98a; background:rgba(20,14,7,.85); border:1px solid #6b5327;
   font-variant-numeric:tabular-nums; }
@@ -2081,7 +2055,7 @@ button.hacp-slot.comida:hover{ background:rgba(127,201,160,.24); }
 @keyframes mktLantern{ 0%,100%{ transform:rotate(-3deg); } 50%{ transform:rotate(3deg); } }
 
 /* Otro comprador (peer) contemplando el escaparate, en una pared lateral */
-.hacp-mkt-peer{ position:absolute; bottom:44px; width:130px; margin-left:-65px; text-align:center; display:none; }
+.hacp-mkt-peer{ position:absolute; bottom:60px; width:150px; margin-left:-75px; text-align:center; display:none; }
 .hacp-mkt-peer.on{ display:block; }
 .hacp-mkt-peer canvas{ image-rendering:pixelated; filter:drop-shadow(0 4px 6px rgba(0,0,0,.6)); }
 .hacp-mkt-peer-nm{ font:600 11px/1 ui-monospace,monospace; color:#c9b487; background:rgba(20,14,7,.85);
@@ -2089,22 +2063,22 @@ button.hacp-slot.comida:hover{ background:rgba(127,201,160,.24); }
 
 /* CAPA FRONTAL fija: mostrador con volumen + mercader DETRÁS + props */
 .hacp-mkt-front{ position:absolute; inset:0; z-index:6; pointer-events:none; overflow:hidden; }
-.hacp-mkt-halo{ position:absolute; left:50%; bottom:90px; width:380px; height:360px; margin-left:-190px;
+.hacp-mkt-halo{ position:absolute; left:50%; bottom:60px; width:400px; height:380px; margin-left:-200px;
   background:radial-gradient(50% 50% at 50% 50%, rgba(230,180,90,.20), transparent 68%); }
-.hacp-mkt-merchant{ position:absolute; left:50%; bottom:56px; transform:translateX(-50%); width:206px; height:288px; z-index:2; }
+.hacp-mkt-merchant{ position:absolute; left:50%; bottom:60px; transform:translateX(-50%); width:230px; height:322px; z-index:2; }
 .hacp-mkt-merchant canvas{ width:100%; height:100%; image-rendering:pixelated; filter:drop-shadow(0 8px 10px rgba(0,0,0,.6)); }
 .hacp-mkt-cry{ position:absolute; left:50%; top:-34px; transform:translateX(-50%) translateY(6px); white-space:nowrap;
   background:#f4ecd6; color:#3a2a15; font:700 12px/1 'Noto Sans SC',sans-serif; padding:7px 12px; border-radius:12px;
   box-shadow:0 4px 10px rgba(0,0,0,.4); opacity:0; transition:opacity .25s, transform .25s; }
 .hacp-mkt-cry::after{ content:""; position:absolute; left:50%; bottom:-6px; margin-left:-6px; border:6px solid transparent; border-top-color:#f4ecd6; border-bottom:0; }
 .hacp-mkt-cry.show{ opacity:1; transform:translateX(-50%) translateY(0); }
-.hacp-mkt-counter{ position:absolute; left:-42%; right:-42%; bottom:0; height:172px; z-index:3; }
-.hacp-mkt-counter .top{ position:absolute; left:0; right:0; top:0; height:46px; background:linear-gradient(#6a4e28,#4a361c);
-  transform:perspective(500px) rotateX(52deg); transform-origin:bottom; box-shadow:0 -6px 16px rgba(0,0,0,.4);
+.hacp-mkt-counter{ position:absolute; left:-30%; right:-30%; bottom:0; height:210px; z-index:3; }
+.hacp-mkt-counter .top{ position:absolute; left:0; right:0; top:0; height:54px; background:linear-gradient(#6e5230,#4a361c);
+  transform:perspective(600px) rotateX(56deg); transform-origin:bottom; box-shadow:0 -8px 20px rgba(0,0,0,.4);
   border-top:2px solid #7a5a2e; }
-.hacp-mkt-counter .front{ position:absolute; left:0; right:0; top:40px; bottom:0; background:linear-gradient(#3e2c16,#241a0e); border-top:3px solid #6b5327; }
-.hacp-mkt-counter .front::before{ content:""; position:absolute; inset:0; background:repeating-linear-gradient(90deg, transparent 0 84px, rgba(0,0,0,.2) 84px 87px); }
-.hacp-mkt-props{ position:absolute; bottom:150px; display:flex; gap:12px; align-items:flex-end; z-index:4; }
+.hacp-mkt-counter .front{ position:absolute; left:0; right:0; top:46px; bottom:0; border-top:3px solid #6b5327;
+  background:repeating-linear-gradient(90deg,#3e2c16 0 90px,#34240f 90px 94px), linear-gradient(#3e2c16,#241a0e); }
+.hacp-mkt-props{ position:absolute; bottom:172px; display:flex; gap:12px; align-items:flex-end; z-index:4; }
 .hacp-mkt-props.left{ left:15%; } .hacp-mkt-props.right{ right:15%; }
 .hacp-mkt-props .abaco{ width:44px; height:28px; border:2px solid #6b5327; border-radius:3px; background:#2e2110;
   background-image:linear-gradient(#d8b65a 2px,transparent 2px),linear-gradient(#d8b65a 2px,transparent 2px); background-size:100% 13px; background-position:0 6px,0 17px; }
@@ -2114,8 +2088,8 @@ button.hacp-slot.comida:hover{ background:rgba(127,201,160,.24); }
 .hacp-mkt-props .scale::after{ content:""; position:absolute; top:2px; left:2px; right:2px; height:6px; border:2px solid #d8b65a; border-top:0; border-radius:0 0 8px 8px; }
 
 /* Flechas de giro */
-.hacp-mkt-arrow{ position:absolute; top:0; bottom:190px; width:12%; z-index:9; cursor:pointer; pointer-events:auto;
-  display:flex; align-items:center; justify-content:center; font-size:46px; color:rgba(240,217,138,.5);
+.hacp-mkt-arrow{ position:absolute; top:0; bottom:210px; width:11%; z-index:9; cursor:pointer; pointer-events:auto;
+  display:flex; align-items:center; justify-content:center; font-size:48px; color:rgba(240,217,138,.55);
   border:0; background:linear-gradient(90deg, rgba(230,180,34,.14), transparent); transition:color .15s, background .15s; }
 .hacp-mkt-arrow.right{ right:0; background:linear-gradient(270deg, rgba(230,180,34,.14), transparent); }
 .hacp-mkt-arrow:hover{ color:#f4dd94; background:linear-gradient(90deg, rgba(230,180,34,.3), transparent); }
@@ -2133,7 +2107,7 @@ button.hacp-slot.comida:hover{ background:rgba(127,201,160,.24); }
 .hacp-mkt-tab.on{ color:#1a130a; background:linear-gradient(#e6c060,#c99a2e); border-color:#8a6a1e; }
 .hacp-mkt-x{ margin-left:auto; width:38px; height:38px; border-radius:10px; border:1px solid #6b5327; background:rgba(20,14,7,.7); color:#f0d98a; font-size:18px; cursor:pointer; }
 .hacp-mkt-x:hover{ background:rgba(180,60,40,.4); }
-.hacp-mkt-sign{ position:absolute; left:24px; bottom:200px; z-index:8; font:800 12px/1 'Cinzel Decorative',serif;
+.hacp-mkt-sign{ position:absolute; left:24px; bottom:224px; z-index:8; font:800 12px/1 'Cinzel Decorative',serif;
   letter-spacing:.06em; color:#f0d98a; text-shadow:0 2px 3px #000; background:rgba(20,14,7,.82); border:1px solid #6b5327;
   border-radius:8px; padding:6px 13px; pointer-events:none; box-shadow:0 4px 10px rgba(0,0,0,.4); }
 .hacp-mkt-hint{ position:absolute; bottom:8px; left:50%; transform:translateX(-50%); z-index:11;
