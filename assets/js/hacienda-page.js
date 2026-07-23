@@ -4678,8 +4678,216 @@
           <button type="button" class="hacp-item-buy" data-sell="${esc(item.id)}">Regatear</button>
         </div></div>`;
     }
-    function openShop() { if (!hasMarket) return; buildShop(); ensureShopEl().hidden = false; }
+    // El «mercado» clásico (overlay de tarjetas) queda como plano B; la entrada normal
+    // es la ESCENA INMERSIVA (openMercado). Los 3 disparadores llaman a openShop → escena.
+    function openShop() { if (!hasMarket) return; openMercado(); }
     function closeShop() { if (shopEl) shopEl.hidden = true; }
+    function shopRefresh() { if (mktEl && !mktEl.hidden) buildMercado(); else if (shopEl && !shopEl.hidden) buildShop(); }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // MERCADO INMERSIVO 市 — escena en 1.ª persona (sala en perspectiva) que cubre
+    // toda la hacienda. Puerta que se abre (crujido WebAudio), mercader tras el
+    // mostrador, artículos colgados de la pared, girar el «cuello» (yaw) con hover en
+    // los bordes / arrastrar (escritorio) o swipe / flechas (móvil).
+    // ══════════════════════════════════════════════════════════════════════════
+    const MKT_MERC = { robe: '#3f6e9c', accent: '#d4a83a', piel: 1, pelo: 1, barba: 1 };
+    let mktEl = null;
+    const mkt = { yaw: 0, target: 0, mode: 'comprar', raf: 0, hold: 0, drag: null, tipEl: null, popEl: null };
+    // Crujido de puerta de madera: ruido filtrado descendente + golpe seco (sintético).
+    function mktCrujido() {
+      try {
+        const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
+        const ctx = mkt._ac || (mkt._ac = new AC()); if (ctx.state === 'suspended') ctx.resume();
+        const t0 = ctx.currentTime;
+        // Chirrido: sierra grave que baja, con vibrato, muy filtrada y con envolvente larga.
+        const osc = ctx.createOscillator(), lp = ctx.createBiquadFilter(), g = ctx.createGain();
+        osc.type = 'sawtooth'; osc.frequency.setValueAtTime(220, t0); osc.frequency.exponentialRampToValueAtTime(70, t0 + 0.9);
+        const lfo = ctx.createOscillator(), lfg = ctx.createGain(); lfo.frequency.value = 18; lfg.gain.value = 12; lfo.connect(lfg).connect(osc.frequency); lfo.start(t0); lfo.stop(t0 + 0.9);
+        lp.type = 'lowpass'; lp.frequency.value = 900; lp.Q.value = 6;
+        g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(0.09, t0 + 0.08); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.95);
+        osc.connect(lp).connect(g).connect(ctx.destination); osc.start(t0); osc.stop(t0 + 0.95);
+        // Golpe seco al final (la puerta topa).
+        const th = ctx.createOscillator(), tg = ctx.createGain(); th.type = 'sine'; th.frequency.setValueAtTime(120, t0 + 0.95); th.frequency.exponentialRampToValueAtTime(45, t0 + 1.1);
+        tg.gain.setValueAtTime(0.0001, t0 + 0.95); tg.gain.exponentialRampToValueAtTime(0.12, t0 + 0.98); tg.gain.exponentialRampToValueAtTime(0.0001, t0 + 1.2);
+        th.connect(tg).connect(ctx.destination); th.start(t0 + 0.95); th.stop(t0 + 1.2);
+      } catch (e) {}
+    }
+    function ensureMktEl() {
+      if (mktEl) return mktEl;
+      mktEl = document.createElement('div'); mktEl.className = 'hacp-mkt3d'; mktEl.id = 'hacp-mkt'; mktEl.hidden = true;
+      overlayHost().appendChild(mktEl);
+      ['pointerdown', 'pointerup', 'wheel', 'click'].forEach(ev => mktEl.addEventListener(ev, (e) => e.stopPropagation(), { passive: false }));
+      return mktEl;
+    }
+    const mktReduce = () => !!(window.matchMedia && matchMedia('(prefers-reduced-motion:reduce)').matches);
+    function openMercado() {
+      if (!hasMarket) return;
+      const el = ensureMktEl(); mkt.yaw = 0; mkt.target = 0; mkt.mode = 'comprar';
+      buildMercado(); el.hidden = false;
+      mktCrujido();
+      // Puerta: arranca cerrada y se abre (salvo reduced-motion).
+      const door = el.querySelector('.hacp-mkt-door');
+      if (door && !mktReduce()) { requestAnimationFrame(() => door.classList.add('open')); setTimeout(() => { if (door) door.hidden = true; }, 1250); }
+      else if (door) door.hidden = true;
+      mktLoop();
+    }
+    function closeMercado() {
+      if (!mktEl) return; mktEl.hidden = true;
+      if (mkt.raf) { cancelAnimationFrame(mkt.raf); mkt.raf = 0; }
+      if (mkt.tipEl) mkt.tipEl.classList.remove('show');
+      if (mkt.popEl) { mkt.popEl.remove(); mkt.popEl = null; }
+    }
+    // Reparte los artículos por la pared: rango X amplio (-26%..126%) en 2 alturas, de modo
+    // que los de los extremos SOLO se ven al girar el cuello. Devuelve [{item, x, y}].
+    function mktLayout(items) {
+      const n = items.length; if (!n) return [];
+      const x0 = -26, x1 = 126, span = x1 - x0;
+      return items.map((it, i) => ({ it, x: x0 + (n === 1 ? span / 2 : span * i / (n - 1)), y: (i % 2) ? 30 : 4 }));
+    }
+    function mktItemHTML(o, vender) {
+      const it = o.it, id = it.id;
+      if (vender) {
+        return `<div class="hacp-mkt-item" data-sell="${esc(id)}" style="left:${o.x}%;top:${o.y}%">
+          <div class="hook"></div><div class="disc">${it.icon || '∎'}${(o.n || 1) > 1 ? `<span style="position:absolute;font-size:11px;color:#f0d98a;transform:translate(22px,20px)">×${o.n}</span>` : ''}</div>
+          <span class="price">vender</span></div>`;
+      }
+      const base0 = Math.round(precioBase(it)), precio = precioMercado(it), rebaja = precio < base0;
+      const cls = it.epico ? ' epic' : it.raro ? ' rare' : '';
+      const noMoney = (window.HacStats ? HacStats.dinero(myId) : 0) < precio, locked = it.tier > tier || !!reqNoCumplido(it);
+      const priceHTML = rebaja ? `<s>${base0}</s>${precio}` : `${precio}`;
+      return `<div class="hacp-mkt-item${cls}${(noMoney || locked) ? ' gris' : ''}" data-buy="${esc(id)}" style="left:${o.x}%;top:${o.y}%">
+        <div class="hook"></div><div class="disc">${it.icon || '∎'}</div>
+        <span class="price">💰${priceHTML}</span></div>`;
+    }
+    function buildMercado() {
+      const el = ensureMktEl();
+      const money = window.HacStats ? HacStats.dinero(myId) : 0;
+      const vender = mkt.mode === 'vender';
+      let layout;
+      if (vender) {
+        const inv = (window.HacStats ? HacStats.inventario(myId) : []).map(x => ({ ...x, ...(HacTienda.get(x.id) || {}) })).filter(x => x.id);
+        layout = mktLayout(inv).map((o, i) => ({ ...o, n: inv[i].n }));
+      } else {
+        const disp = (window.HacTienda ? (HacTienda.stockDelDia ? HacTienda.stockDelDia(tier, h.id) : HacTienda.disponibles(tier)) : []);
+        layout = mktLayout(disp);
+      }
+      const doorHTML = `<div class="hacp-mkt-door"><div class="leaf l"></div><div class="leaf r"></div></div>`;
+      const tab = (m, lbl) => `<button type="button" class="hacp-mkt-tab${mkt.mode === m ? ' on' : ''}" data-mkt-mode="${m}">${lbl}</button>`;
+      el.innerHTML = `
+        <div class="hacp-mkt-amb"></div>
+        <div class="hacp-mkt-stage">
+          <div class="hacp-mkt-wall">${layout.map(o => mktItemHTML(o, vender)).join('')}</div>
+        </div>
+        <div class="hacp-mkt-front">
+          <div class="hacp-mkt-counter"></div>
+          <div class="hacp-mkt-merchant"><canvas width="200" height="280"></canvas></div>
+        </div>
+        <button type="button" class="hacp-mkt-arrow left" data-mkt-turn="1">‹</button>
+        <button type="button" class="hacp-mkt-arrow right" data-mkt-turn="-1">›</button>
+        <div class="hacp-mkt-sign">${vender ? '換 Trae tu género' : '市 Género del día'}</div>
+        <div class="hacp-mkt-hud">
+          <span class="hacp-mkt-title"><span class="zh">市</span> Mercado</span>
+          ${myId ? `<span class="hacp-mkt-tabs">${tab('comprar', '市 Comprar')}${tab('vender', '換 Vender')}</span>` : ''}
+          <span class="hacp-mkt-money">💰 ${money}</span>
+          <button type="button" class="hacp-mkt-x" data-mkt-close aria-label="Salir">✕</button>
+        </div>
+        <div class="hacp-mkt-hint">Gira la vista: arrastra o lleva el cursor a los lados · toca un artículo para ${vender ? 'venderlo' : 'comprarlo'}</div>
+        <div class="hacp-mkt-tip"></div>
+        ${doorHTML}`;
+      mkt.tipEl = el.querySelector('.hacp-mkt-tip');
+      applyYaw();
+      // Mercader (sprite HacChar a escala).
+      const mc = el.querySelector('.hacp-mkt-merchant canvas');
+      if (mc && window.HacChar) { try { HacChar.draw(mc, { aptitud: '', aspecto: MKT_MERC, dir: 'S', pose: 'stand', frame: 0, scale: 5, outline: true }); } catch (e) {} }
+      wireMercado(el, vender);
+    }
+    function applyYaw() {
+      const wall = mktEl && mktEl.querySelector('.hacp-mkt-wall'); if (!wall) return;
+      wall.style.transform = `translateX(${mkt.yaw * 26}%) rotateY(${mkt.yaw * 9}deg)`;
+      const la = mktEl.querySelector('.hacp-mkt-arrow.left'), ra = mktEl.querySelector('.hacp-mkt-arrow.right');
+      if (la) la.toggleAttribute('disabled', mkt.yaw > 0.98); if (ra) ra.toggleAttribute('disabled', mkt.yaw < -0.98);
+    }
+    function mktLoop() {
+      if (mkt.raf) cancelAnimationFrame(mkt.raf);
+      const step = () => {
+        if (mkt.hold) mkt.target = Math.max(-1, Math.min(1, mkt.target + mkt.hold * 0.03));
+        if (mktReduce()) mkt.yaw = mkt.target; else mkt.yaw += (mkt.target - mkt.yaw) * 0.14;
+        applyYaw();
+        mkt.raf = requestAnimationFrame(step);
+      };
+      step();
+    }
+    function wireMercado(el, vender) {
+      el.querySelector('[data-mkt-close]').addEventListener('click', closeMercado);
+      el.querySelectorAll('[data-mkt-mode]').forEach(b => b.addEventListener('click', () => { mkt.mode = b.dataset.mktMode; mkt.yaw = 0; mkt.target = 0; buildMercado(); }));
+      // Flechas: escritorio = girar mientras hover; móvil/clic = un paso.
+      el.querySelectorAll('[data-mkt-turn]').forEach(b => {
+        const dir = Number(b.dataset.mktTurn);
+        b.addEventListener('pointerenter', (e) => { if (e.pointerType !== 'touch') mkt.hold = dir; });
+        b.addEventListener('pointerleave', () => { mkt.hold = 0; });
+        b.addEventListener('click', () => { mkt.hold = 0; mkt.target = Math.max(-1, Math.min(1, mkt.target + dir * 0.5)); });
+      });
+      // Arrastrar (escritorio y táctil) para panoramizar.
+      const stage = el;
+      stage.addEventListener('pointerdown', (e) => {
+        if (e.target.closest('.hacp-mkt-item,.hacp-mkt-arrow,.hacp-mkt-hud,.hacp-mkt-pop,.hacp-mkt-sign')) return;
+        mkt.drag = { x: e.clientX, yaw: mkt.target, w: el.clientWidth || 800 }; mkt.hold = 0;
+      });
+      window.addEventListener('pointermove', mktOnMove);
+      window.addEventListener('pointerup', mktOnUp);
+      // Hover en los bordes = girar (escritorio, si no se arrastra).
+      stage.addEventListener('pointermove', (e) => {
+        if (mkt.drag || e.pointerType === 'touch') return;
+        const r = el.getBoundingClientRect(), fx = (e.clientX - r.left) / r.width;
+        mkt.hold = fx < 0.16 ? 1 : fx > 0.84 ? -1 : 0;
+      });
+      stage.addEventListener('pointerleave', () => { if (!mkt.drag) mkt.hold = 0; });
+      // Artículos: hover = tooltip · clic = popover (comprar/vender).
+      el.querySelectorAll('.hacp-mkt-item').forEach(node => {
+        const id = node.dataset.buy || node.dataset.sell;
+        node.addEventListener('pointerenter', (e) => { if (e.pointerType !== 'touch') mktTip(node, id, vender); });
+        node.addEventListener('pointerleave', () => { if (mkt.tipEl) mkt.tipEl.classList.remove('show'); });
+        node.addEventListener('click', (e) => { e.stopPropagation(); mktPopover(node, id, vender); });
+      });
+    }
+    function mktOnMove(e) {
+      if (!mkt.drag || mktEl.hidden) return;
+      const dx = e.clientX - mkt.drag.x; mkt.target = Math.max(-1, Math.min(1, mkt.drag.yaw + (dx / mkt.drag.w) * 2.2));
+    }
+    function mktOnUp() { mkt.drag = null; }
+    function mktTip(node, id, vender) {
+      const it = HacTienda.get(id); if (!it || !mkt.tipEl) return;
+      const precio = vender ? null : precioMercado(it);
+      mkt.tipEl.innerHTML = `<div class="nm">${esc(it.nombre)}<span class="zh">${esc(it.zh || '')}</span></div>
+        <div class="ef">${esc(HacTienda.efectoTexto(it))}</div>
+        ${it.desc ? `<div class="ds">${esc(it.desc)}</div>` : ''}
+        ${precio != null ? `<div class="buy">💰 ${precio} · toca para comprar</div>` : `<div class="buy">toca para vender</div>`}`;
+      const r = node.getBoundingClientRect(), er = mktEl.getBoundingClientRect();
+      let left = r.left - er.left + r.width / 2 - 120; left = Math.max(8, Math.min(er.width - 248, left));
+      mkt.tipEl.style.left = left + 'px'; mkt.tipEl.style.top = (r.bottom - er.top + 8) + 'px';
+      mkt.tipEl.classList.add('show');
+    }
+    function mktPopover(node, id, vender) {
+      if (mkt.popEl) { mkt.popEl.remove(); mkt.popEl = null; }
+      const it = HacTienda.get(id); if (!it) return;
+      if (vender) { closeMercado(); abrirRegateo(id); return; }   // vender → escena de regateo existente
+      const precio = precioMercado(it), money = HacStats.dinero(myId);
+      const rf = reqNoCumplido(it), locked = it.tier > tier, alMax = !!(it.efecto && it.efecto.capInv) && HacStats.capInventario(myId) >= 20;
+      const motivo = locked ? `Requiere finca nivel ${it.tier}` : rf ? `Requiere ${DOM_GLYPH[rf]} ${it.req[rf]}` : alMax ? 'Mochila al máximo (20)' : (money < precio) ? 'No tienes suficiente dinero' : '';
+      const pop = document.createElement('div'); pop.className = 'hacp-mkt-pop';
+      pop.innerHTML = `<div class="pnm">${it.icon || ''} ${esc(it.nombre)} <span class="zh">${esc(it.zh || '')}</span></div>
+        <div class="pef">${esc(HacTienda.efectoTexto(it))}</div>
+        <div class="pds">${esc(it.desc || '')}</div>
+        <div class="pacts">
+          <button type="button" class="pcancel" data-pop-x>Volver</button>
+          <button type="button" class="pbuy" data-pop-buy${motivo ? ' disabled title="' + esc(motivo) + '"' : ''}>${motivo || `💰 Comprar · ${precio}`}</button>
+        </div>`;
+      mktEl.appendChild(pop); mkt.popEl = pop;
+      const er = mktEl.getBoundingClientRect();
+      pop.style.left = (er.width / 2 - pop.offsetWidth / 2) + 'px'; pop.style.top = (er.height / 2 - pop.offsetHeight / 2) + 'px';
+      pop.querySelector('[data-pop-x]').addEventListener('click', () => { pop.remove(); mkt.popEl = null; });
+      const bb = pop.querySelector('[data-pop-buy]'); if (bb && !bb.disabled) bb.addEventListener('click', () => { pop.remove(); mkt.popEl = null; buyItem(it); });
+    }
     function buyItem(item) {
       if (!item || !myId || !window.HacStats) return;
       if (item.tier > tier) { toast('🔒 Necesita una finca de nivel ' + item.tier); return; }
@@ -4698,7 +4906,7 @@
       toast(item.efecto && item.efecto.energia
         ? `🎒 ${item.icon || ''} ${item.nombre} · a la mochila (tócalo para comerlo)`.trim()
         : `${item.icon || ''} ${item.nombre} · ${HacTienda.efectoTexto(item)}`.trim());
-      buildShop();                 // refresca dinero y botones
+      shopRefresh();               // refresca la escena inmersiva (o el overlay plano)
       if (charId) buildCharPanel(charId);   // refresca monedero/inventario/energía
     }
 

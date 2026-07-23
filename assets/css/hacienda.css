@@ -1995,3 +1995,125 @@ button.hacp-slot.comida:hover{ background:rgba(127,201,160,.24); }
 @media (prefers-reduced-motion:reduce){
   .hacp-viaje-mark .dot, .hacp-folk-bubble{ animation:none; }
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   MERCADO INMERSIVO 市 — escena en 1.ª persona (sala en perspectiva).
+   Cubre toda el área de la hacienda. Puerta de madera que se abre, mercader
+   tras el mostrador, artículos colgados de la pared, giro de «cuello» (yaw).
+   ════════════════════════════════════════════════════════════════════════ */
+.hacp-mkt3d{ position:absolute; inset:0; z-index:60; overflow:hidden; user-select:none; touch-action:none;
+  background:
+    linear-gradient(#1c140b 0%, #241a0e 38%) top/100% 62% no-repeat,          /* techo/pared alta */
+    linear-gradient(#0e0a06, #171009) bottom/100% 40% no-repeat;               /* suelo */
+  perspective:1100px; perspective-origin:50% 46%; font-family:'Noto Serif SC',serif; }
+.hacp-mkt3d, .hacp-mkt3d *{ box-sizing:border-box; }
+/* Vigas del techo + zócalo, para dar «sala» */
+.hacp-mkt-amb{ position:absolute; inset:0; pointer-events:none; z-index:1;
+  background:
+    repeating-linear-gradient(90deg, transparent 0 12%, rgba(0,0,0,.28) 12% 12.6%) top/100% 16% no-repeat,
+    linear-gradient(180deg, rgba(0,0,0,.5), transparent 24%) top/100% 100% no-repeat; }
+.hacp-mkt-amb::after{ content:""; position:absolute; left:0; right:0; top:60%; height:3px; background:linear-gradient(90deg,transparent,rgba(216,182,90,.25),transparent); }
+
+/* La «sala» que rota con el yaw (girar el cuello) */
+.hacp-mkt-stage{ position:absolute; inset:0; transform-style:preserve-3d; z-index:2; }
+.hacp-mkt-wall{ position:absolute; left:0; right:0; top:2%; height:60%;
+  transform-origin:50% 50%; transition:transform .18s ease-out; will-change:transform; }
+/* Artículo colgado: gancho + icono + placa de precio */
+.hacp-mkt-item{ position:absolute; width:96px; margin-left:-48px; text-align:center; cursor:pointer;
+  transition:transform .12s ease, filter .12s ease; }
+.hacp-mkt-item .hook{ width:2px; height:14px; margin:0 auto; background:linear-gradient(#5a4a2e,#2e2416); }
+.hacp-mkt-item .disc{ width:76px; height:76px; margin:0 auto; border-radius:12px;
+  background:radial-gradient(60% 60% at 50% 38%, #2e2414, #1a130a); border:2px solid #6b5327;
+  box-shadow:0 6px 12px rgba(0,0,0,.55), inset 0 0 0 1px rgba(216,182,90,.18);
+  display:flex; align-items:center; justify-content:center; font-size:38px; line-height:1; }
+.hacp-mkt-item .price{ display:inline-block; margin-top:6px; padding:2px 9px; border-radius:999px;
+  font:800 12px/1 ui-monospace,monospace; color:#f0d98a; background:rgba(20,14,7,.85); border:1px solid #6b5327;
+  font-variant-numeric:tabular-nums; }
+.hacp-mkt-item .price s{ color:#9a875f; margin-right:4px; font-weight:600; }
+.hacp-mkt-item:hover{ transform:translateY(-4px) scale(1.05); filter:drop-shadow(0 0 10px rgba(230,180,34,.45)); z-index:5; }
+.hacp-mkt-item.epic .disc{ border-color:#e6b422; box-shadow:0 6px 14px rgba(0,0,0,.55), 0 0 14px rgba(230,180,34,.5), inset 0 0 0 1px rgba(230,180,34,.35); }
+.hacp-mkt-item.rare .disc{ border-color:#5aa6e6; box-shadow:0 6px 14px rgba(0,0,0,.55), 0 0 12px rgba(90,166,230,.45); }
+.hacp-mkt-item.gris{ opacity:.5; }
+.hacp-mkt-item.gris:hover{ transform:none; filter:grayscale(.4); }
+
+/* Mostrador + mercader (capa FIJA al frente, no rota) */
+.hacp-mkt-front{ position:absolute; inset:0; z-index:6; pointer-events:none; }
+.hacp-mkt-merchant{ position:absolute; left:50%; bottom:20%; transform:translateX(-50%);
+  width:200px; height:280px; }
+.hacp-mkt-merchant canvas{ width:100%; height:100%; image-rendering:pixelated; filter:drop-shadow(0 6px 10px rgba(0,0,0,.6)); }
+.hacp-mkt-counter{ position:absolute; left:-4%; right:-4%; bottom:0; height:26%;
+  background:linear-gradient(#4a361c, #3a2a15 40%, #241a0e);
+  border-top:4px solid #6b5327; box-shadow:0 -8px 20px rgba(0,0,0,.5), inset 0 3px 0 rgba(216,182,90,.25);
+  transform:perspective(600px) rotateX(9deg); transform-origin:bottom; }
+.hacp-mkt-counter::before{ content:""; position:absolute; inset:0; background:repeating-linear-gradient(90deg, transparent 0 60px, rgba(0,0,0,.18) 60px 62px); }
+.hacp-mkt-sign{ position:absolute; left:24px; bottom:calc(26% + 10px);
+  font:800 12px/1 'Cinzel Decorative',serif; letter-spacing:.06em; color:#f0d98a; text-shadow:0 2px 3px #000;
+  background:rgba(20,14,7,.82); border:1px solid #6b5327; border-radius:8px; padding:6px 13px; pointer-events:none; z-index:8;
+  box-shadow:0 4px 10px rgba(0,0,0,.4); }
+
+/* Flechas de giro (cuello) */
+.hacp-mkt-arrow{ position:absolute; top:0; bottom:26%; width:14%; z-index:9; cursor:pointer; pointer-events:auto;
+  display:flex; align-items:center; justify-content:center; font-size:44px; color:rgba(240,217,138,.5);
+  border:0; background:linear-gradient(90deg, rgba(230,180,34,.14), transparent); transition:color .15s, background .15s; }
+.hacp-mkt-arrow.right{ right:0; background:linear-gradient(270deg, rgba(230,180,34,.14), transparent); }
+.hacp-mkt-arrow:hover{ color:#f4dd94; background:linear-gradient(90deg, rgba(230,180,34,.3), transparent); }
+.hacp-mkt-arrow.right:hover{ background:linear-gradient(270deg, rgba(230,180,34,.3), transparent); }
+.hacp-mkt-arrow[disabled]{ opacity:0; pointer-events:none; }
+
+/* HUD: cerrar, monedero, pestañas comprar/vender */
+.hacp-mkt-hud{ position:absolute; top:0; left:0; right:0; z-index:12; display:flex; align-items:center; gap:12px;
+  padding:12px 16px; pointer-events:none; }
+.hacp-mkt-hud > *{ pointer-events:auto; }
+.hacp-mkt-title{ font:800 20px/1 'Cinzel Decorative',serif; color:#f0d98a; text-shadow:0 2px 4px #000; }
+.hacp-mkt-title .zh{ color:#d8b65a; }
+.hacp-mkt-money{ font:800 15px/1 ui-monospace,monospace; color:#f0d98a; background:rgba(20,14,7,.7); border:1px solid #6b5327; border-radius:999px; padding:6px 12px; }
+.hacp-mkt-tabs{ display:flex; gap:6px; }
+.hacp-mkt-tab{ font:700 13px/1 'Noto Sans SC',sans-serif; color:#c9b487; background:rgba(20,14,7,.6); border:1px solid #6b5327; border-radius:8px; padding:7px 14px; cursor:pointer; }
+.hacp-mkt-tab.on{ color:#1a130a; background:linear-gradient(#e6c060,#c99a2e); border-color:#8a6a1e; }
+.hacp-mkt-x{ margin-left:auto; width:38px; height:38px; border-radius:10px; border:1px solid #6b5327; background:rgba(20,14,7,.7); color:#f0d98a; font-size:18px; cursor:pointer; }
+.hacp-mkt-x:hover{ background:rgba(180,60,40,.4); }
+.hacp-mkt-hint{ position:absolute; bottom:8px; left:50%; transform:translateX(-50%); z-index:11;
+  font:500 11px/1 ui-monospace,monospace; letter-spacing:.06em; color:rgba(240,217,138,.55); pointer-events:none; text-align:center; }
+
+/* Tooltip de descripción al pasar por un artículo */
+.hacp-mkt-tip{ position:absolute; z-index:20; max-width:240px; pointer-events:none; opacity:0; transform:translateY(4px);
+  transition:opacity .12s, transform .12s; background:rgba(18,12,6,.96); border:1px solid #6b5327; border-radius:10px;
+  padding:10px 12px; box-shadow:0 10px 24px rgba(0,0,0,.6); }
+.hacp-mkt-tip.show{ opacity:1; transform:translateY(0); }
+.hacp-mkt-tip .nm{ font:800 14px/1.2 'Noto Serif SC',serif; color:#f0d98a; }
+.hacp-mkt-tip .nm .zh{ color:#d8b65a; font-size:.85em; margin-left:5px; }
+.hacp-mkt-tip .ef{ font:600 11.5px/1.3 'Noto Sans SC',sans-serif; color:#9fd6b0; margin-top:4px; }
+.hacp-mkt-tip .ds{ font:400 11.5px/1.4 'Noto Sans SC',sans-serif; color:#c9b487; margin-top:5px; }
+.hacp-mkt-tip .buy{ margin-top:8px; font:700 12px/1 ui-monospace,monospace; color:#f4dd94; }
+
+/* Popover de compra al tocar un artículo */
+.hacp-mkt-pop{ position:absolute; z-index:22; width:min(300px,80%); background:rgba(20,14,7,.98); border:1px solid #8a6a1e;
+  border-radius:14px; padding:16px; box-shadow:0 16px 40px rgba(0,0,0,.7); text-align:center; }
+.hacp-mkt-pop .pnm{ font:800 17px/1.2 'Noto Serif SC',serif; color:#f0d98a; }
+.hacp-mkt-pop .pnm .zh{ color:#d8b65a; font-size:.85em; }
+.hacp-mkt-pop .pef{ font:600 12px/1.35 'Noto Sans SC',sans-serif; color:#9fd6b0; margin:6px 0; }
+.hacp-mkt-pop .pds{ font:400 12px/1.45 'Noto Sans SC',sans-serif; color:#c9b487; margin-bottom:12px; }
+.hacp-mkt-pop .pacts{ display:flex; gap:8px; }
+.hacp-mkt-pop .pacts button{ flex:1; padding:10px; border-radius:9px; font:700 13px/1 'Noto Sans SC',sans-serif; cursor:pointer; border:1px solid #6b5327; }
+.hacp-mkt-pop .pbuy{ background:linear-gradient(#e6c060,#c99a2e); color:#1a130a; border-color:#8a6a1e; }
+.hacp-mkt-pop .pbuy:disabled{ opacity:.5; cursor:not-allowed; filter:grayscale(.5); }
+.hacp-mkt-pop .pcancel{ background:rgba(60,44,22,.5); color:#c9b487; }
+
+/* Puerta de madera que se abre al entrar */
+.hacp-mkt-door{ position:absolute; inset:0; z-index:40; display:flex; pointer-events:none; }
+.hacp-mkt-door .leaf{ flex:1; background:
+    repeating-linear-gradient(90deg, #3a2a15 0 26px, #2e2110 26px 30px),
+    linear-gradient(180deg,#4a361c,#241a0e);
+  border:3px solid #1a120a; box-shadow:inset 0 0 40px rgba(0,0,0,.6);
+  transform-origin:left center; transition:transform 1.1s cubic-bezier(.6,.02,.3,1); }
+.hacp-mkt-door .leaf.r{ transform-origin:right center; }
+.hacp-mkt-door .leaf::after{ content:""; position:absolute; top:50%; width:16px; height:44px; margin-top:-22px;
+  border-radius:8px; background:linear-gradient(#d8b65a,#8a6a1e); box-shadow:0 2px 4px rgba(0,0,0,.5); }
+.hacp-mkt-door .leaf.l::after{ right:14px; } .hacp-mkt-door .leaf.r::after{ left:14px; }
+.hacp-mkt-door.open .leaf.l{ transform:perspective(1200px) rotateY(-105deg); }
+.hacp-mkt-door.open .leaf.r{ transform:perspective(1200px) rotateY(105deg); }
+
+@media (prefers-reduced-motion:reduce){
+  .hacp-mkt-wall, .hacp-mkt-item{ transition:none; }
+  .hacp-mkt-door .leaf{ transition:none; }
+}
