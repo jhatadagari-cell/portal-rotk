@@ -2477,82 +2477,10 @@ const HacFolk = (function () {
   // DISCO de color por dominio (武 rojo · 文 verde · 政 azul) con su glifo, el
   // nombre y las ★ de servicio. Horneada a un canvas cacheado (0 coste/frame).
   const DOM_APT = {
-    militar:        { glifo: '武', c: '#b8331f', edge: '#6c190f' },
-    cultural:       { glifo: '文', c: '#2f8f5f', edge: '#14683f' },
-    administrativo: { glifo: '政', c: '#3a6ea5', edge: '#1d3f66' },
+    militar:        { glifo: '武', c: '#a5321f' },
+    cultural:       { glifo: '文', c: '#2f7d54' },
+    administrativo: { glifo: '政', c: '#37648f' },
   };
-  function talentKey(w, hot) {
-    return (w.aptitud || '') + '|' + String(w.name || '').slice(0, 16) + '|' + (Number(w.estrellas) || 0) + '|' + (hot ? 1 : 0);
-  }
-  function talentSprite(w, hot) {
-    const key = talentKey(w, hot);
-    let s = talentCache.get(key); if (s) return s;
-    const dm = DOM_APT[w.aptitud] || { glifo: '?', c: '#5a6b74', edge: '#33424a' };
-    const label = String(w.name || '').slice(0, 16);
-    const stars = Math.max(0, Math.min(5, Number(w.estrellas) || 0));
-    if (!bannerMeasure) bannerMeasure = document.createElement('canvas').getContext('2d');
-    bannerMeasure.font = '700 7.5px "Noto Sans SC",sans-serif';
-    const tw = bannerMeasure.measureText(label).width;
-    const disc = 8, gap = 3, padR = 6, starW = stars ? stars * 4 + 4 : 0;
-    const bw = Math.round(disc + gap + tw + starW + padR + 4), bh = 14;
-    const Wd = bw + 8, Hd = bh + 12, ax = bw / 2 + 4, ay = bh + 8;   // base del asta corta
-    const cv = document.createElement('canvas');
-    cv.width = Math.ceil(Wd * SCALE); cv.height = Math.ceil(Hd * SCALE);
-    const g = cv.getContext('2d'); g.scale(SCALE, SCALE);
-    paintTalentInto(g, ax, ay, bw, bh, dm, label, stars, hot);
-    s = { cv, ax, ay };
-    talentCache.set(key, s);
-    return s;
-  }
-  function paintTalentInto(g, cx, topY, bw, bh, dm, label, stars, hot) {
-    const bx = cx - bw / 2, by = topY - bh - 6;
-    g.strokeStyle = '#3a2c1a'; g.lineWidth = 1.2; g.beginPath(); g.moveTo(cx, topY); g.lineTo(cx, by + bh); g.stroke();   // asta corta
-    if (hot) { g.fillStyle = 'rgba(255,224,130,0.30)'; rr(g, bx - 2, by - 2, bw + 4, bh + 4, 4); g.fill(); }               // realce al seleccionar
-    rr(g, bx, by, bw, bh, 3); g.fillStyle = '#2b3740'; g.fill();                                                          // placa pizarra
-    g.strokeStyle = '#9c7b3a'; g.lineWidth = 1; rr(g, bx + 0.8, by + 0.8, bw - 1.6, bh - 1.6, 2.4); g.stroke();           // marco bronce
-    // Disco de dominio con su glifo.
-    const dcx = bx + 7.5, dcy = by + bh / 2, dr = 5.4;
-    g.fillStyle = dm.c; g.beginPath(); g.arc(dcx, dcy, dr, 0, 6.2832); g.fill();
-    g.strokeStyle = dm.edge; g.lineWidth = 1; g.beginPath(); g.arc(dcx, dcy, dr, 0, 6.2832); g.stroke();
-    g.fillStyle = '#fff'; g.font = '700 7px "Noto Serif SC","Noto Sans SC",serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
-    g.fillText(dm.glifo, dcx, dcy + 0.4);
-    // Nombre.
-    let tx = dcx + dr + 2.5;
-    g.fillStyle = '#eef0f2'; g.font = '700 7.5px "Noto Sans SC",sans-serif'; g.textAlign = 'left'; g.textBaseline = 'middle';
-    g.fillText(label, tx, dcy + 0.4);
-    // ★ de servicio (doradas) tras el nombre.
-    if (stars) {
-      tx += g.measureText(label).width + 3;
-      g.fillStyle = '#f2cf6b'; g.font = '700 6px "Noto Sans SC",sans-serif';
-      for (let i = 0; i < stars; i++) { g.fillText('★', tx + i * 4, dcy + 0.2); }
-    }
-  }
-  function talentBanner(g, cx, topY, w, hot) {
-    const s = talentSprite(w, hot);
-    g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.imageSmoothingEnabled = true;
-    g.drawImage(s.cv, Math.round((cx - s.ax) * SCALE), Math.round((topY - s.ay) * SCALE), s.cv.width, s.cv.height);
-    g.restore();
-  }
-
-  // ── Emblema de FACCIÓN (sello) ──────────────────────────────────────────────
-  // Medallón con anillo dorado y el glifo del reino (吳/蜀/魏…) sobre el color de la
-  // facción. Reutilizable en el banner del enviado y en los estandartes del portón.
-  function facColorOf(w) {
-    const f = (w && w.faccionId && window.HacFacciones && HacFacciones.get) ? HacFacciones.get(w.faccionId) : null;
-    return (f && f.color) || w.facColor || '#b23b2e';
-  }
-  function facMedallion(g, cx, cy, r, zh, color) {
-    const grad = g.createRadialGradient(cx - r * 0.35, cy - r * 0.4, r * 0.2, cx, cy, r);
-    grad.addColorStop(0, mixHex(color, '#ffffff', 0.35)); grad.addColorStop(1, color);
-    g.fillStyle = grad; g.beginPath(); g.arc(cx, cy, r, 0, 6.2832); g.fill();
-    g.strokeStyle = '#d8b65a'; g.lineWidth = 1.4; g.beginPath(); g.arc(cx, cy, r, 0, 6.2832); g.stroke();          // aro dorado
-    g.strokeStyle = 'rgba(0,0,0,.4)'; g.lineWidth = 0.8; g.beginPath(); g.arc(cx, cy, r + 1.1, 0, 6.2832); g.stroke();
-    if (zh) {
-      g.fillStyle = 'rgba(0,0,0,.4)'; g.font = '700 ' + (r * 1.5).toFixed(1) + 'px "Noto Serif SC","Noto Sans SC",serif';
-      g.textAlign = 'center'; g.textBaseline = 'middle';
-      g.fillText(zh, cx + 0.4, cy + 0.9); g.fillStyle = '#fff8e6'; g.fillText(zh, cx, cy + 0.4);
-    }
-  }
   // Mezcla lineal de dos colores hex (#rrggbb). t=0 → a, t=1 → b.
   function mixHex(a, b, t) {
     const pa = hex2rgb(a), pb = hex2rgb(b); if (!pa || !pb) return a;
@@ -2563,10 +2491,89 @@ const HacFolk = (function () {
     const m = /^#?([0-9a-f]{6})$/i.exec(String(h || '').trim()); if (!m) return null;
     const n = parseInt(m[1], 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
   }
+  function facColorOf(w) {
+    const f = (w && w.faccionId && window.HacFacciones && HacFacciones.get) ? HacFacciones.get(w.faccionId) : null;
+    return (f && f.color) || w.facColor || '#a5321f';
+  }
+  // ── Sello 印 (marca de autoridad Han): cuadrado, pasta de color, filete dorado y
+  //    glifo en crema. Es la pieza común de facción (reino) y dominio (talento). ──
+  function seal(g, cx, cy, size, zh, color) {
+    const s = size, x = cx - s / 2, y = cy - s / 2, r = s * 0.2;
+    rr(g, x - 0.5, y - 0.5, s + 1, s + 1, r + 0.7); g.fillStyle = 'rgba(0,0,0,.5)'; g.fill();     // reborde oscuro
+    const grad = g.createLinearGradient(0, y, 0, y + s);
+    grad.addColorStop(0, mixHex(color, '#ffffff', 0.26)); grad.addColorStop(1, mixHex(color, '#000000', 0.18));
+    rr(g, x, y, s, s, r); g.fillStyle = grad; g.fill();                                            // pasta del sello
+    g.lineWidth = 0.9; g.strokeStyle = '#e6c15a'; rr(g, x + 1.1, y + 1.1, s - 2.2, s - 2.2, r * 0.7); g.stroke();   // filete dorado
+    if (zh) {
+      g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.font = '700 ' + (s * 0.6).toFixed(1) + 'px "Noto Serif SC","Noto Sans SC",serif';
+      g.fillStyle = 'rgba(0,0,0,.4)'; g.fillText(zh, cx + 0.4, cy + 0.9);
+      g.fillStyle = '#fff4dc'; g.fillText(zh, cx, cy + 0.5);
+    }
+  }
+  // ── Tablilla colgante 牌: laca con veta, doble filete de bronce, tachones 泡釘 en
+  //    las esquinas y cordón de seda con nudo. Base común de talento y enviado. ──
+  function plaqueFrame(g, cx, topY, bx, by, bw, bh, top, bot, hot) {
+    g.strokeStyle = '#7a2f22'; g.lineWidth = 1.4; g.beginPath(); g.moveTo(cx, topY); g.lineTo(cx, by + bh); g.stroke();   // cordón de seda
+    g.fillStyle = '#caa24a'; g.beginPath(); g.arc(cx, by + bh + 0.4, 1, 0, 6.2832); g.fill();                            // nudo
+    if (hot) { g.fillStyle = 'rgba(255,224,130,0.32)'; rr(g, bx - 2, by - 2, bw + 4, bh + 4, 5); g.fill(); }             // realce al seleccionar
+    const grad = g.createLinearGradient(0, by, 0, by + bh); grad.addColorStop(0, top); grad.addColorStop(1, bot);
+    rr(g, bx, by, bw, bh, 3); g.fillStyle = grad; g.fill();                                                              // laca
+    g.save(); rr(g, bx, by, bw, bh, 3); g.clip(); g.globalAlpha = 0.09; g.strokeStyle = '#000'; g.lineWidth = 0.5;       // veta vertical
+    for (let vx = bx + 3; vx < bx + bw; vx += 3) { g.beginPath(); g.moveTo(vx, by); g.lineTo(vx, by + bh); g.stroke(); }
+    g.restore(); g.globalAlpha = 1;
+    g.lineWidth = 1.3; g.strokeStyle = '#8a6a2e'; rr(g, bx + 0.3, by + 0.3, bw - 0.6, bh - 0.6, 3); g.stroke();          // filete bronce
+    g.lineWidth = 0.7; g.strokeStyle = '#e2c061'; rr(g, bx + 1.9, by + 1.9, bw - 3.8, bh - 3.8, 2); g.stroke();          // filete dorado
+    g.fillStyle = '#edca62'; [[bx + 3, by + 3], [bx + bw - 3, by + 3], [bx + 3, by + bh - 3], [bx + bw - 3, by + bh - 3]].forEach(p => { g.beginPath(); g.arc(p[0], p[1], 0.85, 0, 6.2832); g.fill(); });   // tachones
+  }
+
+  function talentKey(w, hot) {
+    return (w.aptitud || '') + '|' + String(w.name || '').slice(0, 16) + '|' + (Number(w.estrellas) || 0) + '|' + (hot ? 1 : 0);
+  }
+  function talentSprite(w, hot) {
+    const key = talentKey(w, hot);
+    let s = talentCache.get(key); if (s) return s;
+    const dm = DOM_APT[w.aptitud] || { glifo: '?', c: '#5a6b74' };
+    const label = String(w.name || '').slice(0, 16);
+    const stars = Math.max(0, Math.min(5, Number(w.estrellas) || 0));
+    if (!bannerMeasure) bannerMeasure = document.createElement('canvas').getContext('2d');
+    bannerMeasure.font = '700 7.5px "Noto Serif SC","Noto Sans SC",serif';
+    const tw = bannerMeasure.measureText(label).width;
+    const sealS = 11, gap = 3.5, padR = 6, starW = stars ? stars * 4 + 4 : 0;
+    const bw = Math.round(3.5 + sealS + gap + tw + starW + padR), bh = 16;
+    const Wd = bw + 8, Hd = bh + 12, ax = bw / 2 + 4, ay = bh + 8;   // base del cordón
+    const cv = document.createElement('canvas');
+    cv.width = Math.ceil(Wd * SCALE); cv.height = Math.ceil(Hd * SCALE);
+    const g = cv.getContext('2d'); g.scale(SCALE, SCALE);
+    paintTalentInto(g, ax, ay, bw, bh, dm, label, stars, hot);
+    s = { cv, ax, ay };
+    talentCache.set(key, s);
+    return s;
+  }
+  function paintTalentInto(g, cx, topY, bw, bh, dm, label, stars, hot) {
+    const bx = cx - bw / 2, by = topY - bh - 6;
+    plaqueFrame(g, cx, topY, bx, by, bw, bh, '#3a2b1c', '#241a10', hot);   // laca marrón cálida
+    const sealS = 11, scx = bx + 3.5 + sealS / 2, scy = by + bh / 2;
+    seal(g, scx, scy, sealS, dm.glifo, dm.c);
+    let tx = scx + sealS / 2 + 3.5;
+    g.fillStyle = '#f0e2c2'; g.font = '700 7.5px "Noto Serif SC","Noto Sans SC",serif'; g.textAlign = 'left'; g.textBaseline = 'middle';
+    g.fillText(label, tx, scy + 0.3);
+    if (stars) {   // ★ de servicio (doradas) tras el nombre.
+      tx += g.measureText(label).width + 3;
+      g.fillStyle = '#f2cf6b'; g.font = '700 6px "Noto Sans SC",sans-serif';
+      for (let i = 0; i < stars; i++) { g.fillText('★', tx + i * 4, scy - 0.2); }
+    }
+  }
+  function talentBanner(g, cx, topY, w, hot) {
+    const s = talentSprite(w, hot);
+    g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.imageSmoothingEnabled = true;
+    g.drawImage(s.cv, Math.round((cx - s.ax) * SCALE), Math.round((topY - s.ay) * SCALE), s.cv.width, s.cv.height);
+    g.restore();
+  }
 
   // ── Banner del ENVIADO (visitante de una facción) ───────────────────────────
-  // Placa noble (parche oscuro, marco dorado) con el SELLO de su reino y el rótulo
-  // «Enviado de Wu»; el nombre solo aparece si ya has hablado con él (reveal).
+  // Tablilla noble (laca oscura) con el SELLO de su reino y el rótulo «Enviado de
+  // Wu»; el nombre solo aparece si ya has hablado con él (reveal).
   const envoyCache = new Map();
   function envoyKey(w, hot) {
     return 'e|' + (w.facZh || '') + '|' + (w.facNombre || '') + '|' + (w.reveal ? String(w.name || '') : '?') + '|' + (hot ? 1 : 0);
@@ -2582,8 +2589,8 @@ const HacFolk = (function () {
     const tw1 = bannerMeasure.measureText(rotulo).width;
     bannerMeasure.font = '600 6.5px "Noto Sans SC",sans-serif';
     const tw2 = bannerMeasure.measureText(sub).width;
-    const med = 9, txtW = Math.max(tw1, tw2);
-    const bw = Math.round(med * 2 + 4 + txtW + 8), bh = 20;
+    const sealS = 15, txtW = Math.max(tw1, tw2);
+    const bw = Math.round(4 + sealS + 4 + txtW + 8), bh = 22;
     const Wd = bw + 8, Hd = bh + 12, ax = bw / 2 + 4, ay = bh + 8;
     const cv = document.createElement('canvas');
     cv.width = Math.ceil(Wd * SCALE); cv.height = Math.ceil(Hd * SCALE);
@@ -2595,17 +2602,15 @@ const HacFolk = (function () {
   }
   function paintEnvoyInto(g, cx, topY, bw, bh, w, zh, rotulo, sub, hot) {
     const bx = cx - bw / 2, by = topY - bh - 6, col = facColorOf(w);
-    g.strokeStyle = '#3a2c1a'; g.lineWidth = 1.2; g.beginPath(); g.moveTo(cx, topY); g.lineTo(cx, by + bh); g.stroke();
-    if (hot) { g.fillStyle = 'rgba(255,224,130,0.30)'; rr(g, bx - 2, by - 2, bw + 4, bh + 4, 5); g.fill(); }
-    rr(g, bx, by, bw, bh, 3.5); g.fillStyle = '#221a12'; g.fill();                                          // parche noble
-    g.strokeStyle = '#d8b65a'; g.lineWidth = 1.1; rr(g, bx + 0.9, by + 0.9, bw - 1.8, bh - 1.8, 2.8); g.stroke();
-    facMedallion(g, bx + 11, by + bh / 2, 7.5, zh, col);                                                    // sello del reino
-    const tx = bx + 23;
+    plaqueFrame(g, cx, topY, bx, by, bw, bh, '#2a1d12', '#160e07', hot);   // laca noble oscura
+    const sealS = 15, scx = bx + 4 + sealS / 2, scy = by + bh / 2;
+    seal(g, scx, scy, sealS, zh, col);                                     // sello del reino
+    const tx = scx + sealS / 2 + 4;
     g.textAlign = 'left'; g.textBaseline = 'alphabetic';
     g.font = '700 8px "Noto Serif SC","Noto Sans SC",serif';
     g.fillStyle = '#f4e8c8'; g.fillText(rotulo, tx, by + bh / 2 - 0.5);
-    g.fillStyle = mixHex(col, '#ffffff', 0.45); g.font = '600 6.5px "Noto Sans SC",sans-serif';
-    g.fillText(sub, tx, by + bh / 2 + 8);
+    g.font = '600 6.5px "Noto Sans SC",sans-serif';
+    g.fillStyle = mixHex(col, '#ffffff', 0.5); g.fillText(sub, tx, by + bh / 2 + 8);
   }
   function envoyBanner(g, cx, topY, w, hot) {
     const s = envoySprite(w, hot);

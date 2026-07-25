@@ -188,12 +188,13 @@ html.hacp-pseudofs, html.hacp-pseudofs body{ overflow:hidden; }
 .hacp-folk-info{ display:flex; flex-direction:column; min-width:0; }
 .hacp-folk-name{ font-size:12.5px; color:var(--parch); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .hacp-folk-state{ font-size:10px; color:var(--parch2); opacity:.7; }
-/* Emblema (sello) de facción — reutilizable en listado y HUD. */
-.hac-fac-emblem{ flex:none; display:inline-flex; align-items:center; justify-content:center; width:20px; height:20px;
-  border-radius:50%; color:#fff8e6; font:700 11px 'Noto Serif SC','Noto Sans SC',serif;
-  background:radial-gradient(circle at 34% 30%, color-mix(in srgb,var(--fc,#b23b2e) 55%, #fff 45%), var(--fc,#b23b2e) 72%);
-  box-shadow:0 0 0 1.5px #d8b65a, 0 0 0 2.5px rgba(0,0,0,.45), 0 1px 3px rgba(0,0,0,.4);
-  text-shadow:0 1px 1px rgba(0,0,0,.5); }
+/* Sello 印 de facción — cuadrado, pasta de color con filete dorado (marca Han).
+   Reutilizable en listado y HUD; misma familia que los sellos del canvas. */
+.hac-fac-emblem{ flex:none; display:inline-flex; align-items:center; justify-content:center; width:21px; height:21px;
+  border-radius:4px; color:#fff4dc; font:700 12px 'Noto Serif SC','Noto Sans SC',serif;
+  background:linear-gradient(180deg, color-mix(in srgb,var(--fc,#a5321f) 74%, #fff 26%), color-mix(in srgb,var(--fc,#a5321f) 82%, #000 18%));
+  box-shadow:0 0 0 1px rgba(0,0,0,.5), inset 0 0 0 1.5px rgba(230,193,90,.9), 0 1px 2px rgba(0,0,0,.45);
+  text-shadow:0 1px 1px rgba(0,0,0,.55); }
 /* Enviado en el listado: fila con acento dorado y rótulo de reino. */
 .hacp-folk-item.envoy{ background:rgba(216,182,90,.07); border-color:rgba(216,182,90,.28); }
 .hacp-folk-item.envoy:hover{ background:rgba(216,182,90,.14); }
@@ -201,8 +202,8 @@ html.hacp-pseudofs, html.hacp-pseudofs body{ overflow:hidden; }
   filter:brightness(1.25); opacity:.95; }
 /* Talento (consejero) en el listado: distintivo de dominio + ★. */
 .hacp-folk-dom{ display:inline-flex; align-items:center; justify-content:center; width:15px; height:15px; vertical-align:-2px;
-  border-radius:4px; background:var(--dc,#c9a84c); color:#fff; font:700 9px 'Noto Serif SC','Noto Sans SC',serif;
-  box-shadow:0 0 0 1px rgba(0,0,0,.35) inset; margin-left:2px; }
+  border-radius:3px; background:var(--dc,#c9a84c); color:#fff4dc; font:700 9px 'Noto Serif SC','Noto Sans SC',serif;
+  box-shadow:0 0 0 1px rgba(0,0,0,.4), inset 0 0 0 1px rgba(230,193,90,.8); margin-left:2px; text-shadow:0 1px 1px rgba(0,0,0,.45); }
 .hacp-folk-stars{ color:#f2cf6b; font-size:9px; letter-spacing:.5px; margin-left:2px; }
 .hacp-folk-pop{
   position:fixed; z-index:70; min-width:120px; max-width:220px;
@@ -258,14 +259,15 @@ html.hacp-pseudofs, html.hacp-pseudofs body{ overflow:hidden; }
 .hacp-cp-elabel{ font-size:11px; color:var(--parch2); margin:4px 0 0; }
 .hacp-cp-elabel b{ color:#e0b85a; }
 /* Talento (consejero 部曲): aptitud + ★ + qué aporta + bio + quién lo trajo. */
-.hacp-cp-tal{ margin:9px 0 2px; padding:8px 10px; border-radius:8px;
-  background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(0,0,0,.06));
-  border:1px solid color-mix(in srgb, var(--tc,#c9a84c) 42%, transparent); border-left:3px solid var(--tc,#c9a84c); }
+.hacp-cp-tal{ margin:9px 0 2px; padding:8px 10px; border-radius:6px;
+  background:linear-gradient(180deg,rgba(58,43,28,.35),rgba(0,0,0,.10));
+  border:1px solid color-mix(in srgb, var(--tc,#c9a84c) 42%, transparent); border-left:3px solid var(--tc,#c9a84c);
+  box-shadow:inset 0 0 0 1px rgba(216,182,90,.14); }
 .hacp-cp-tal-h{ display:flex; align-items:center; gap:7px; font-size:12.5px; color:var(--parch); }
 .hacp-cp-tal-h b{ color:#f0e2c2; }
-.hacp-cp-tal-dom{ display:inline-flex; align-items:center; justify-content:center; width:20px; height:20px;
-  border-radius:50%; color:#fff; font:700 12px 'Noto Serif SC','Noto Sans SC',serif; flex:0 0 auto;
-  box-shadow:0 0 0 1px rgba(0,0,0,.35) inset; }
+.hacp-cp-tal-dom{ display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px;
+  border-radius:4px; color:#fff4dc; font:700 13px 'Noto Serif SC','Noto Sans SC',serif; flex:0 0 auto;
+  box-shadow:0 0 0 1px rgba(0,0,0,.45), inset 0 0 0 1.5px rgba(230,193,90,.85); text-shadow:0 1px 1px rgba(0,0,0,.5); }
 .hacp-cp-tal-stars{ margin-left:auto; color:#f2cf6b; font-size:11px; letter-spacing:1px; }
 .hacp-cp-tal-nostar{ margin-left:auto; color:var(--parch2); opacity:.7; font-size:10.5px; font-style:italic; }
 .hacp-cp-tal-aporte{ font-size:11.5px; color:var(--parch2); margin-top:6px; cursor:help; }

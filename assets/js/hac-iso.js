@@ -916,12 +916,15 @@ const HacIso = (function () {
       }
       const cb = top[0] + sway(1), yb = top[1] + 1 + L;
       poly([[cb - W, yb - 1], [cb - W, yb + 5], [cb, yb + 1.5], [cb + W, yb + 5], [cb + W, yb - 1]], sh(-0.12));   // cola de golondrina
-      // Glifo del reino (吳/蜀/魏) bordado en el paño, siguiendo el ondeo.
+      // Sello del reino (印) bordado en el paño, siguiendo el ondeo: cuadro oscuro
+      // con filete dorado y el glifo 吳/蜀/魏 en crema — rima con el resto de sellos.
       if (useFac && facZhH) {
-        const u = 0.34, gx = top[0] + sway(u), gy = top[1] + 1 + u * L + 3;
+        const u = 0.34, gx = top[0] + sway(u), gy = top[1] + 1 + u * L + 3, hs = 3.4;
         g.save(); g.setTransform(SCALE, 0, 0, SCALE, 0, 0);
-        g.fillStyle = 'rgba(0,0,0,.28)'; g.font = '700 6px "Noto Serif SC","Noto Sans SC",serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
-        g.fillText(facZhH, gx + 0.4, gy + 0.5); g.fillStyle = '#fff6df'; g.fillText(facZhH, gx, gy);
+        g.fillStyle = dark(flavP, .34); g.fillRect(gx - hs, gy - hs, hs * 2, hs * 2);
+        g.strokeStyle = '#e6c15a'; g.lineWidth = 0.6; g.strokeRect(gx - hs + 0.5, gy - hs + 0.5, hs * 2 - 1, hs * 2 - 1);
+        g.fillStyle = 'rgba(0,0,0,.35)'; g.font = '700 5.4px "Noto Serif SC","Noto Sans SC",serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+        g.fillText(facZhH, gx + 0.3, gy + 0.5); g.fillStyle = '#fff4dc'; g.fillText(facZhH, gx, gy + 0.2);
         g.restore();
       }
     };
