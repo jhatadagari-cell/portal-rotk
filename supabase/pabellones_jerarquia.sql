@@ -148,9 +148,10 @@ begin
   return jsonb_build_object('mapa', h.mapa, 'miembros', h.miembros);
 end; $$;
 
--- ── TALENTOS (F3 文): un miembro vuelve de expedición con un NPC ──────────────
--- Añade un NPC (p_npc: {id, nombre, npc:true, aptitud, puntos, desde}) a miembros.
--- p_npc NO lleva personajeId → no es controlable por ningún jugador.
+-- ── TALENTOS (招賢): reclutar un NPC desde el Tablón de Talentos ──────────────
+-- Añade un NPC (p_npc: {id, talentoId, nombre, cortesia, npc:true, aptitud,
+-- aspecto, estrellas, ...}) a miembros. p_npc NO lleva personajeId → no es
+-- controlable por ningún jugador. El cupo semanal aplica solo a los `talentoId`.
 create or replace function public.casa_reclutar(p_hac text, p_pj text, p_npc jsonb)
 returns jsonb language plpgsql security definer set search_path = public as $$
 declare h public.haciendas;
