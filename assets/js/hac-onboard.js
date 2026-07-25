@@ -419,6 +419,9 @@ const HacOnboard = (function () {
 
   function renderPending(user, pj, sol) {
     teardown();
+    // Marca para la Crónica de la Casa: cuando lo acepten y abra la finca ya
+    // como miembro, el cronista registrará su alta (hacienda-page la consume).
+    try { localStorage.setItem('rotk.cro.alta.' + pj.id, '1'); } catch (e) {}
     const h = window.HacStore ? HacStore.get(sol.haciendaId) : null;
     const nombre = h ? h.nombre : 'la hacienda';
     host.innerHTML = `

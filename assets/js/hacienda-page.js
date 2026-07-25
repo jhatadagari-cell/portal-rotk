@@ -452,6 +452,23 @@
     const _isMember = _myPj && (h.miembros || []).some(m => m.personajeId === _myPj.id);
     const myId = _isMember ? _myPj.id : null;
     const myApt = _myPj ? _myPj.aptitud : '';
+    // ── CRÓNICA DE LA CASA 史: registro COMPARTIDO que redacta el cronista ──
+    // Los hechos que importan a toda la casa se anotan UNA vez (clave única por
+    // hacienda; si varios clientes presencian el mismo evento, escribe el primero).
+    // Degrada en silencio si falta la tabla (cronica.sql).
+    const croNombre = (id) => { const m = (h.miembros || []).find(x => x.personajeId === id); return (m && m.nombre) || 'un mecenas'; };
+    function croLog(tipo, datos, clave) {
+      if (window.HacCronica && myId) HacCronica.log(h.id, tipo, datos, { clave, pj: myId });
+    }
+    // Alta de un mecenas nuevo: el onboarding deja una marca al solicitar entrada;
+    // la primera vez que abre la finca YA como miembro, el cronista lo recibe.
+    (function croAlta() {
+      if (!myId) return;
+      try {
+        const k = 'rotk.cro.alta.' + myId;
+        if (localStorage.getItem(k)) { localStorage.removeItem(k); croLog('alta', { nombre: croNombre(myId) }, 'alta:' + myId); }
+      } catch (e) {}
+    })();
     const hasMarket = ((h.mapa && h.mapa.construcciones) || []).some(c => c.tipo === 'mercado');
     // TABLÓN DE ANUNCIOS (告示牌): DESBLOQUEA las misiones (igual que el mercado
     // desbloquea la tienda). Es el punto de consulta al que camina el mecenas. Se
@@ -741,6 +758,7 @@
         HacStats.pagar(myId, PRECIO_CASA);
         toast(`🏠 ¡Compraste una casa por ${PRECIO_CASA} 💰!`);
         if (window.HacBitacora) HacBitacora.log(myId, 'progreso', `🏠 Compraste una casa (−${PRECIO_CASA}💰)`);
+        croLog('casa', { nombre: croNombre(myId) }, 'casa:' + myId);
         redrawIso(); buildCharPanel(charId);
       } catch (e) {
         const msg = String(e && e.message || '');
@@ -910,7 +928,13 @@
           if (em.xp) xpB = Math.max(0, Math.round(xpB * (1 + em.xp)));
           const nivAntes = (rec.dom && HacStats.nivel) ? HacStats.nivel(myId, rec.dom) : 0;
           HacStats.award(myId, { dinero: dinB, xp: rec.dom ? { [rec.dom]: xpB } : null });
-          if (rec.dom && HacStats.nivel && window.HacBitacora) { const nivD = HacStats.nivel(myId, rec.dom); if (nivD > nivAntes) HacBitacora.log(myId, 'progreso', `⬆ ${DOM_NOMBRE[rec.dom]} sube a nivel ${nivD}`); }
+          if (rec.dom && HacStats.nivel && window.HacBitacora) {
+            const nivD = HacStats.nivel(myId, rec.dom);
+            if (nivD > nivAntes) {
+              HacBitacora.log(myId, 'progreso', `⬆ ${DOM_NOMBRE[rec.dom]} sube a nivel ${nivD}`);
+              croLog('nivel', { nombre: croNombre(myId), dom: rec.dom, nivel: nivD }, `niv:${myId}:${rec.dom}:${nivD}`);
+            }
+          }
           extra = ` · +${dinB}💰 · +${xpB} XP ${DOM_GLYPH[rec.dom] || ''}`.trimEnd();
           if (hurt < 1) extra += ` · herido −${Math.round((1 - hurt) * 100)}%`;
           // BOTÍN: prob. baja (sube con la dificultad) de traer 1 objeto del pool
@@ -1420,6 +1444,10 @@
       const otro = (myId === d.hostId) ? d.invitadoNombre : d.hostNombre;
       const xpTxt = oc.doms.length ? ` · +${xpCada} XP (${oc.doms.map(dm => DOM_NOMBRE_XP[dm] || dm).join(', ')})` : '';
       if (window.HacBitacora) HacBitacora.log(myId, 'debate', `🗣 Debate de ${t ? t.nombre : d.tema} con ${otro || 'otro mecenas'}: ${soyGanador ? '✔ ganaste' : '✘ perdiste'}${xpTxt}${extra}`, { clave: 'debate:' + d.id });
+      // Crónica compartida (datos simétricos: ambos clientes redactan idéntico).
+      const croGan = (oc.ganador === d.hostId) ? d.hostNombre : d.invitadoNombre;
+      const croPer = (oc.ganador === d.hostId) ? d.invitadoNombre : d.hostNombre;
+      croLog('debate', { ganador: croGan || 'un mecenas', perdedor: croPer || 'otro mecenas', tema: t ? t.nombre : d.tema }, 'debate:' + d.id);
       if (cierroEnVivo) DEB.resolver(d.id, { ganador: oc.ganador, pHost: oc.pHost, libros: oc.libros }).then(() => DEB.reload().then(afterDebChange)).catch(() => {});
       else afterDebChange();
       if (cierroEnVivo) mostrarRevelacionDebate(d, oc, { won: soyGanador, xp: xpCada, doms: oc.doms, libro: (cal && libroOk) ? cal : null });
@@ -3100,6 +3128,7 @@
         await HacEscaramuzas.lanzar(id, myId, clock(), ESC_FAST ? 60000 : escDurMs(bandRating(band)), '');
         toast(ESC_FAST ? '⚔ ¡Parten! (modo test · ~1 min)' : '⚔ ¡La banda parte a la expedición!');
         if (window.HacBitacora) HacBitacora.log(myId, 'escaramuza', `⚔ Tu banda partió a la expedición`);
+        if (band && scn) croLog('escaramuza-salida', { nombres: (band.miembros || []).map(m => croNombre(m.id)), escenario: scn.nombre }, 'esc-out:' + band.id);
         syncEscaramuzaOrder(); syncEscaramuzaFolk();
       } catch (e) { toast((e && e.message) || 'No se pudo lanzar'); await HacEscaramuzas.reload(); }
       finally { escBusy = false; renderEscaramuzas(); }
@@ -3164,6 +3193,7 @@
       if (!myId || !window.HacBitacora || !window.HacEscaramuzas) return;
       const band = HacEscaramuzas.miBanda(h.id, myId);
       if (!band) return;
+      const croNoms = (band.miembros || []).map(m => croNombre(m.id));
       if (esPereg(band)) {
         if (band.exito === true && band.estado === 'resuelta')
           HacBitacora.log(myId, 'escaramuza', '⛰ Peregrinaje: ✔ hallasteis al gran sabio · heridas curadas', { clave: 'per-res:' + band.id });
@@ -3171,6 +3201,8 @@
           HacBitacora.log(myId, 'escaramuza', '⛰ Peregrinaje: ✘ el camino se torció · secuela permanente', { clave: 'per-res:' + band.id });
         else if (band.estado === 'abortando')
           HacBitacora.log(myId, 'escaramuza', '↩ Peregrinaje abandonado · el grupo regresa', { clave: 'per-abort:' + band.id });
+        if (band.estado === 'resuelta' && (band.exito === true || band.exito === false))
+          croLog('peregrinaje', { exito: band.exito === true, nombres: croNoms }, 'per-res:' + band.id);
         return;
       }
       // Reto semanal: cuenta la escaramuza al RESOLVERSE (éxito o fracaso, no al abortar),
@@ -3180,10 +3212,14 @@
       // Éxito: se registra tanto en 'botin' (botín pendiente) como en 'resuelta' (ya
       // repartido) — antes solo en 'botin', y se perdía si volvías tras cerrarse el reparto.
       const suf = '';
-      if (band.exito === true && (band.estado === 'botin' || band.estado === 'resuelta'))
+      const croScn = escenarioDef(band.escenario);
+      if (band.exito === true && (band.estado === 'botin' || band.estado === 'resuelta')) {
         HacBitacora.log(myId, 'escaramuza', '⚔ Escaramuza: ✔ éxito · volvisteis con botín' + suf, { clave: 'esc-res:' + band.id });
-      else if (band.exito === false && band.estado === 'resuelta')
+        croLog('escaramuza', { exito: true, nombres: croNoms, escenario: croScn && croScn.nombre }, 'esc-res:' + band.id);
+      } else if (band.exito === false && band.estado === 'resuelta') {
         HacBitacora.log(myId, 'escaramuza', '⚔ Escaramuza: ✘ fracaso · tu mecenas vuelve herido' + suf, { clave: 'esc-res:' + band.id });
+        croLog('escaramuza', { exito: false, nombres: croNoms, escenario: croScn && croScn.nombre }, 'esc-res:' + band.id);
+      }
       else if (band.estado === 'abortando')
         HacBitacora.log(myId, 'escaramuza', '↩ Escaramuza abortada · la banda regresa', { clave: 'esc-abort:' + band.id });
     }
@@ -3235,6 +3271,7 @@
         const k = relKey(x.rel); if (_relSeen.has(k)) return; _relSeen.add(k);
         mostrarRelacionForjada(x.rel, x.otro);
         if (window.HacBitacora) HacBitacora.log(myId, 'progreso', `縁 ${HacRelaciones.etiqueta(x.rel)} con ${nombreDe(x.otro)}`, { clave: 'rel:' + k });
+        croLog('vinculo', { etiqueta: HacRelaciones.etiqueta(x.rel), a: nombreDe(x.rel.a), b: nombreDe(x.rel.b) }, 'rel:' + k);
       });
     }
     let relEl = null;
@@ -3470,6 +3507,62 @@
       if (window.HacBitacora) HacBitacora.reload().then(() => { if (!el.hidden) renderBitacora(); });
     }
 
+    // ══════════════ CRÓNICA DE LA CASA 史 (pergamino compartido) ═══════════════
+    // El cronista redacta los hechos de TODOS (hac-cronica.js); aquí se leen en
+    // un pergamino común: días fechados por lunas, sello rojo por tipo de hecho,
+    // aviso en vivo (realtime) y distintivo de no-leído en el botón 史.
+    let croEl = null;
+    const CRO_SELLO = { 'alta': '迎', 'escaramuza': '兵', 'escaramuza-salida': '兵', 'peregrinaje': '山', 'debate': '論',
+      'vinculo': '縁', 'ascenso': '昇', 'faccion': '旗', 'obras': '營', 'terreno': '田', 'casa': '家', 'nivel': '進', 'caballo': '馬', 'pabellon': '部' };
+    function ensureCroEl() {
+      if (croEl) return croEl;
+      croEl = document.createElement('div'); croEl.className = 'hacp-shop hacp-cro-ov'; croEl.hidden = true;
+      overlayHost().appendChild(croEl);
+      ['pointerdown', 'pointerup', 'wheel', 'click'].forEach(ev => croEl.addEventListener(ev, (e) => e.stopPropagation(), { passive: false }));
+      croEl.addEventListener('click', (e) => { if (e.target === croEl) croEl.hidden = true; });
+      return croEl;
+    }
+    function renderCronica() {
+      const el = ensureCroEl();
+      const dbOk = !!(window.HacCronica && HacCronica.dbOk && HacCronica.dbOk());
+      const entradas = window.HacCronica ? HacCronica.listar(80) : [];
+      const hoyD = new Date(clock()).toDateString(), ayerD = new Date(clock() - 86400000).toDateString();
+      let body = '', dia = null;
+      entradas.forEach(e => {
+        const l = HacCronica.luna(e.ts);
+        if (l.dia !== dia) {
+          dia = l.dia;
+          const suf = l.dia === hoyD ? ' · hoy' : l.dia === ayerD ? ' · ayer' : '';
+          body += `<div class="hacp-bit-day">${esc(l.txt + suf)}</div>`;
+        }
+        body += `<div class="hacp-cro-row"><span class="hacp-cro-sello" aria-hidden="true">${CRO_SELLO[e.tipo] || '史'}</span><span class="hacp-cro-txt">${esc(e.texto)}</span><span class="hacp-bit-when">${fmtHora(e.ts)}</span></div>`;
+      });
+      if (!body) body = dbOk
+        ? '<div class="hacp-inv-note">El cronista aún no ha registrado hechos dignos de memoria. Salid en banda, debatid en los jardines o levantad obras: la casa escribirá su historia.</div>'
+        : '<div class="hacp-inv-note">La crónica no está disponible ahora mismo (reintenta en un momento).</div>';
+      el.innerHTML = `<div class="hacp-shop-box hacp-cro-box">
+        <button type="button" class="hacp-shop-x" data-cro-x aria-label="Cerrar">✕</button>
+        <div class="hacp-shop-h"><span class="hacp-shop-zh">史</span> Crónica de la Casa</div>
+        <div class="hacp-shop-sub">Lo que se cuenta de ${esc(h.nombre)} · el cronista lo escribe para toda la casa.</div>
+        <div class="hacp-bit-list hacp-cro-list">${body}</div></div>`;
+      el.querySelector('[data-cro-x]').addEventListener('click', () => { el.hidden = true; });
+    }
+    // Distintivo de no-leído del botón 史 (se actualiza EN SITIO, sin re-render del panel).
+    function refreshCroBadge() {
+      const b = charEl && charEl.querySelector('[data-act="cronica"]'); if (!b) return;
+      const n = (window.HacCronica && myId) ? HacCronica.unread(h.id, myId) : 0;
+      let bd = b.querySelector('.hacp-cp-badge');
+      if (n > 0) { if (!bd) { bd = document.createElement('span'); bd.className = 'hacp-cp-badge'; bd.setAttribute('aria-hidden', 'true'); b.prepend(bd); } bd.textContent = n > 99 ? '99' : String(n); }
+      else if (bd) bd.remove();
+    }
+    function openCronica() {
+      const el = ensureCroEl(); el.hidden = false; renderCronica();
+      if (window.HacCronica) {
+        HacCronica.marcarLeido(h.id, myId); refreshCroBadge();
+        HacCronica.reload(h.id).then(() => { if (!el.hidden) renderCronica(); });
+      }
+    }
+
     // ══════════════ ASCENSO DE LA HACIENDA (level up) ══════════════════════════
     // El nivel de la finca (mapa.tier) es un trinquete: cuando sube (residencia→
     // Mansión…), cada mecenas de la casa lo CELEBRA la primera vez que lo ve — un
@@ -3518,6 +3611,7 @@
       const to = HacCalc.tierPorNivel(nivel);
       // Aviso PARPADEANTE en la bitácora (dedup por clave: una vez por nivel).
       if (window.HacBitacora && to) HacBitacora.log(myId, 'ascenso', `⬆ ¡La casa asciende a ${to.zh || ''} ${to.nombre || ''}! (nivel ${nivel})`, { clave: 'ascenso:' + h.id + ':' + nivel });
+      if (to) croLog('ascenso', { tier: to.nombre || '', zh: to.zh || '', nivel }, 'ascenso:' + h.id + ':' + nivel);
       celebrarAscenso(seen, nivel);
       ascBusy = false;
     }
@@ -4245,6 +4339,7 @@
         puedeAmpliar() ? tool('ampliar', '昇', 'Ampliar', 0, ' hacp-cp-ampliar pulse') : '',
         esFundador() ? tool('obras', '營', 'Obras', 0, ' hacp-cp-obras') : '',
         (window.HacStore && HacStore.pabellones && HacStore.pabellones(h.id).length) ? tool('pabellon', '部', 'Pabellón', 0) : '',
+        window.HacCronica ? tool('cronica', '史', 'Crónica', myId ? HacCronica.unread(h.id, myId) : 0) : '',
       ]);
       return `<div class="hacp-cp-toolbar">${salir}${persona}${casa}</div>`;
     }
@@ -4453,6 +4548,7 @@
           if (window.HacFolk && HacFolk.setEnviado) HacFolk.setEnviado(null);
           const facNm = (r && r.faccionNombre) || 'la nueva facción';
           toast('⚑ Vuestra hacienda se une a ' + facNm);
+          croLog('faccion', { nombre: facNm, zh: (r && r.faccionZh) || '' }, 'faccion:' + h.id + ':' + (facId || facNm));
           redrawIso();   // los estandartes del portón ondean ya en el color del reino (sin recargar)
           deselect();
         } catch (e) { toast('No se pudo aceptar: ' + (e && e.message || '')); }
@@ -4533,6 +4629,8 @@
       if (escb) escb.addEventListener('click', openEscOverlay);
       const logb = charEl.querySelector('[data-act="log"]');
       if (logb) logb.addEventListener('click', openBitacora);
+      const crb = charEl.querySelector('[data-act="cronica"]');
+      if (crb) crb.addEventListener('click', openCronica);
       refreshRetoPulses();   // reaplica el aviso de «tu señor te espera» tras re-render
       refreshCasaPulses();   // recordatorios sin tarjeta: diezmo/tributo/debate como parpadeo
       const sdb = charEl.querySelector('[data-act="sendas"]');
@@ -5263,6 +5361,7 @@
         cerrarBautizo();
         toast(`🐎 ${esc(res.caballo.nombre)} · ¡tu ${esc(razaDe(varSel).nombre)} ronda ya por los campos!`);
         if (window.HacBitacora) HacBitacora.log(myId, 'compra', `🐎 Compraste un caballo y lo llamaste ${res.caballo.nombre}`);
+        croLog('caballo', { nombre: croNombre(myId), caballo: res.caballo.nombre }, 'caballo:' + myId + ':' + res.caballo.ms);
         syncCaballosFolk();          // que aparezca al instante
         buildShop();                 // refresca dinero y marca «ya lo tienes»
         if (charId) buildCharPanel(charId);
@@ -5823,6 +5922,7 @@
           if (d.mapa) h.mapa = d.mapa;
           toast(`🏕 Terreno exterior ampliado (nivel ${d.exteriorTier})`);
           if (window.HacBitacora) HacBitacora.log(myId, 'progreso', `🏕 El fundador amplió el terreno exterior (nivel ${d.exteriorTier})`);
+          croLog('terreno', { nivel: d.exteriorTier }, 'ext:' + h.id + ':' + d.exteriorTier);
           redrawIso(); buildObras();
         } else {
           toast(d && d.motivo === 'saldo' ? 'Prestigio insuficiente para el terreno' : 'No hay más terreno que comprar');
@@ -6964,7 +7064,10 @@
       if (!myId) return;
       try {
         if (kind === 'unir') { const d = await pabRPC('pab_unirse', { p_hac: h.id, p_pj: myId, p_pab_id: a || '' }); if (d && d.miembros) h.miembros = d.miembros; toast(a ? '部 Te uniste al pabellón' : 'Saliste del pabellón'); }
-        else if (kind === 'resp') { const d = await pabRPC('pab_responsable', { p_hac: h.id, p_pj: myId, p_pab_id: a, p_target: b || '' }); if (d && d.mapa) h.mapa = d.mapa; toast('責 Responsable actualizado'); }
+        else if (kind === 'resp') {
+          const d = await pabRPC('pab_responsable', { p_hac: h.id, p_pj: myId, p_pab_id: a, p_target: b || '' }); if (d && d.mapa) h.mapa = d.mapa; toast('責 Responsable actualizado');
+          if (b) { const pb = (window.HacStore && HacStore.pabellones ? HacStore.pabellones(h.id) : []).find(x => String(x.id) === String(a)); croLog('pabellon', { nombre: croNombre(b), pabellon: (pb && pb.nombre) || 'Pabellón de la casa' }, 'pabresp:' + a + ':' + b); }
+        }
         else if (kind === 'inv-start') { const def = invSiguiente(a); if (!def) { toast('🔬 Ya está todo investigado'); return; } if (def.licencia) { toast('🔒 Necesita una licencia especial (próximamente)'); return; } const yaEnCurso = !!(pabInvestig(a) && !pabInvestig(a).done); const d = await pabRPC('pab_investig_elegir', { p_hac: h.id, p_pj: myId, p_rol: a, p_id: def.id, p_ts: nowMs() }); if (d && d.mapa) h.mapa = d.mapa; toast(yaEnCurso ? '🔬 Esa investigación ya estaba en curso' : `🔬 Investigación iniciada: ${def.nombre}`); }
       } catch (e) { toast(String(e && e.message || e)); return; }
       buildPabPanel();
@@ -7174,6 +7277,7 @@
       } catch (e) { toast('No se pudo construir: ' + (e && e.message || e)); return; }
       toast(t.puerta && murosSust.length ? `營 ${t.nombre} colocado sobre el muro` : `營 Construido: ${t.nombre}`);
       if (window.HacBitacora) HacBitacora.log(myId, 'progreso', `營 El fundador levantó ${t.nombre}`);
+      croLog('obras', { edificio: '«' + t.nombre + '»' }, 'obra:' + h.id + ':' + t.id + ':' + clock());
       obrasSt.pos = null;
       redrawIso();
       buildObras();
@@ -7502,6 +7606,16 @@
     function onSharedChange() { if (sharedRT) return; sharedRT = setTimeout(() => { sharedRT = null; rerenderShared(); }, 150); }   // coalesce ráfagas
     if (window.HacStore && HacStore.subscribe) {
       HacStore.subscribe(h.id, onSharedChange);
+    }
+    // CRÓNICA en vivo: cada línea nueva llega por realtime a toda la casa. Si la
+    // escribió OTRO, se avisa con un toast (lo tuyo ya lo viviste tú).
+    if (window.HacCronica) {
+      HacCronica.ready(h.id).then(refreshCroBadge);
+      HacCronica.subscribe(h.id, (e, ajena, nueva) => {
+        if (nueva && ajena && e.texto) toast('史 ' + e.texto);
+        refreshCroBadge();
+        if (croEl && !croEl.hidden) renderCronica();
+      });
       window.addEventListener('beforeunload', () => { try { HacStore.unsubscribe(); } catch (e) {} });
     }
     // Carga órdenes + energía + competencias (compartidas); refresca por poll (≤5 s).
@@ -7539,6 +7653,7 @@
     if (window.HacProdCasa) HacProdCasa.ready().then(() => { if (charId) buildCharPanel(charId); });   // diezmo: bufo/debufo de prestigio + aviso
     if (window.HacMisTomadas) HacMisTomadas.ready();   // misiones ya cogidas hoy (para esconderlas del tablón)
     if (window.HacRetos) HacRetos.ready().then(checkConvocatoria);   // retos semanales: avisa si ya están cumplidos
+    let _croTick = 0;   // ritmo del refresco de la crónica (1 de cada 6 pulsos = 30 s)
     if (window.HacOrdenes) {
       HacOrdenes.ready().then(applyOrders);
       setInterval(() => {
@@ -7554,6 +7669,8 @@
         if (window.HacStore && HacStore.reloadOne) HacStore.reloadOne(h.id).then(ch => { if (ch) onSharedChange(); });   // red de seguridad si el realtime no llega
 
         HacOrdenes.reload().then(applyOrders);
+        // Crónica: red de seguridad si el realtime no llega (cada 30 s basta).
+        if (window.HacCronica && (_croTick = (_croTick + 1) % 6) === 0) HacCronica.reload(h.id).then(refreshCroBadge);
       }, 5000);
     }
     // MÓVIL: mientras tu banda se concentra en la puerta (recién lanzada), parpadea

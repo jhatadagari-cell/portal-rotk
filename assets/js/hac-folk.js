@@ -148,6 +148,9 @@ const HacFolk = (function () {
   const SCALE = (window.HacIso && HacIso.SCALE) || 2;   // px de dispositivo por px lógico
   const SPRITE_DISP = 1;                                // px de dispositivo por px del sprite (1 = ratio entero, nítido)
   const MERCHANT_LOOK = { robe: '#3f6e9c', accent: '#d4a83a', piel: 1, pelo: 1 };   // aspecto del mercader
+  const SCRIBE_LOOK = { robe: '#4a4258', accent: '#c9a84c', piel: 1, pelo: 1 };     // aspecto del cronista 史 (túnica tinta)
+  const SCR_LINES = ['La tinta aún está fresca…', 'Todo queda escrito', 'La casa hará historia', 'Pincel, tinta, memoria', 'Los hechos no se olvidan', 'Cada día, una línea más'];
+  const SCR_SALUDOS = ['¿Algún hecho que registrar?', 'La crónica os espera', 'Vuestro nombre ya figura'];
   const MKT_CRIES = ['¡Buen té!', '¡Pasad y ved!', '¡Té recién llegado!', '¡Té de las montañas!', '¡El mejor de la comarca!', '¡Probad, señor!', '¡Hojas de primavera!'];
   const BOARD_CRIES = ['¿Visteis la nueva recompensa?', 'Esa de la frontera es peligrosa…', 'Yo no me atrevería con esa', 'Buen botín para quien ose', '¿Recaudar tributos otra vez?', 'Necesitaría mejor equipo', 'Demasiado riesgo para mí', '¡Gloria al que la cumpla!', 'Mucho oro promete esa', 'Habrá que entrenar más', 'Ésta es para un veterano'];
   const MKT_SALUDOS = ['¡Bienvenido, señor!', '¡Adelante, adelante!', '¡Honráis mi puesto!', '¿Un buen té?'];
@@ -334,7 +337,29 @@ const HacFolk = (function () {
       });
     }
     const boardRng = { _r: 0x9e3779b9 };                  // RNG propio del tablón (no toca R)
-    return { set, cells, cam, camCells, garden, gardenCells, water, GW, GH, ownByMember, buildings, visitable, gates, merchants, clerks, mainBid, boardSlots, boardFocus, boardRng, exitCell, exitKey: exitCell ? exitCell[0] + ',' + exitCell[1] : null, outNear, outFar };
+    // CRONISTA 史: escriba fijo a un lado de la puerta del edificio PRINCIPAL.
+    // Recita la crónica de la casa (hac-cronica.js) y saluda al que pasa. Flavor
+    // LOCAL (RNG propio, como el mercader): no toca el stream compartido R.
+    let scribe = null;
+    if (window.HacCronica) {
+      let bestB = null, bestR = -1;
+      buildings.forEach(b => { const d = (B && B.tipo) ? B.tipo(b.tipo) : null; if (d && d.principal && (d.rango || 0) > bestR) { bestR = d.rango || 0; bestB = b; } });
+      if (bestB && bestB.approach) {
+        const ax = bestB.approach[0], ay = bestB.approach[1];
+        // A un LADO de la aproximación (esa celda la usan los mecenas al entrar).
+        const cand = [[ax + 1, ay], [ax - 1, ay], [ax + 1, ay + 1], [ax, ay + 1]]
+          .find(p => { const k = p[0] + ',' + p[1]; return set.has(k) && k !== bestB.approachKey; });
+        if (cand) {
+          let seed = 2166136261; const sid = 'scr@' + bestB.id; for (let i = 0; i < sid.length; i++) { seed = (seed ^ sid.charCodeAt(i)) * 16777619 >>> 0; }
+          const stations = [[cand[0], cand[1]]];
+          [[cand[0] + 1, cand[1]], [cand[0], cand[1] + 1]].forEach(([sx, sy]) => { const k = sx + ',' + sy; if (stations.length < 3 && set.has(k) && k !== bestB.approachKey) stations.push([sx, sy]); });
+          scribe = { id: sid, bid: bestB.id, name: 'Cronista', aptitud: '', aspecto: SCRIBE_LOOK,
+            fx: cand[0], fy: cand[1], tx: cand[0], ty: cand[1], dir: 'S', phase: 0, moving: false, state: 'idle', bowing: false,
+            stations, timer: 2 + (seed % 100) / 25, speech: null, speechT: 0, _r: seed, _lastCro: undefined };
+        }
+      }
+    }
+    return { set, cells, cam, camCells, garden, gardenCells, water, GW, GH, ownByMember, buildings, visitable, gates, merchants, clerks, scribe, mainBid, boardSlots, boardFocus, boardRng, exitCell, exitKey: exitCell ? exitCell[0] + ',' + exitCell[1] : null, outNear, outFar };
   }
 
   // Ruta de `start` a la primera celda de `goalKeys` sobre celdas transitables,
@@ -1576,6 +1601,7 @@ const HacFolk = (function () {
     hails(dt);
     stepGates(dt);
     stepMerchants(dt);
+    stepScribe(dt);
     stepBoard(dt);
     stepHorses(dt);
   }
@@ -1706,6 +1732,43 @@ const HacFolk = (function () {
       } else {                                                     // se gira a mirar
         mk.dir = MKT_DIRS[Math.floor(mrand(mk) * MKT_DIRS.length)]; mk.timer = 3 + mrand(mk) * 4;
       }
+    }
+  }
+
+  // Vida del CRONISTA 史 (flavor, local): monta guardia junto al salón, recita la
+  // última línea de la crónica, saluda 抱拳 al que pasa y da un paseíto corto.
+  function stepScribe(dt) {
+    const sc = wk && wk.scribe; if (!sc) return;
+    if (sc.speechT > 0) { sc.speechT -= dt; if (sc.speechT <= 0) sc.speech = null; }
+    // ¿Entrada NUEVA en la crónica? → la anuncia con el pincel aún húmedo.
+    const ult = (window.HacCronica && HacCronica.ultima) ? HacCronica.ultima() : null;
+    if (ult && sc._lastCro === undefined) sc._lastCro = ult.id;                       // línea base: no anuncia lo viejo
+    else if (ult && ult.id !== sc._lastCro) {
+      sc._lastCro = ult.id;
+      sc.speech = '✍ ' + (ult.texto.length > 40 ? ult.texto.slice(0, 39) + '…' : ult.texto);
+      sc.speechT = 3.2;
+    }
+    let near = false;
+    for (let i = 0; i < walkers.length; i++) { const w = walkers[i]; if (w.insideId || w.state === 'fuera') continue; const dx = w.fx - sc.fx, dy = w.fy - sc.fy; if (dx * dx + dy * dy <= 1.7 * 1.7) { near = true; break; } }
+    if (sc.state === 'walking') {
+      const dx = sc.tx - sc.fx, dy = sc.ty - sc.fy, d = Math.hypot(dx, dy);
+      if (d < 0.06) { sc.fx = sc.tx; sc.fy = sc.ty; sc.moving = false; sc.state = 'idle'; sc.timer = 3 + mrand(sc) * 5; sc.dir = 'S'; }
+      else { const s = Math.min(d, MKT_SPD * dt); sc.fx += dx / d * s; sc.fy += dy / d * s; sc.moving = true; sc.phase += dt * 6; const fd = faceFromGrid(dx, dy); if (fd) sc.dir = fd; }
+      sc.bowing = false;
+      return;
+    }
+    sc.bowing = near;
+    if (near && !sc.speech && mrand(sc) < 0.015) { sc.speech = SCR_SALUDOS[Math.floor(mrand(sc) * SCR_SALUDOS.length)]; sc.speechT = 2; }
+    sc.timer -= dt;
+    if (sc.timer > 0) return;
+    const r = mrand(sc);
+    if (r < 0.22 && sc.stations.length > 1) {                    // paseíto corto
+      let s, tries = 0; do { s = sc.stations[Math.floor(mrand(sc) * sc.stations.length)]; } while (++tries < 4 && s[0] === Math.round(sc.fx) && s[1] === Math.round(sc.fy));
+      sc.tx = s[0]; sc.ty = s[1]; sc.state = 'walking';
+    } else if (r < 0.5) {                                        // murmura su oficio
+      sc.speech = SCR_LINES[Math.floor(mrand(sc) * SCR_LINES.length)]; sc.speechT = 2.4; sc.timer = 9 + mrand(sc) * 9;
+    } else {                                                     // se gira a observar la finca
+      sc.dir = MKT_DIRS[Math.floor(mrand(sc) * MKT_DIRS.length)]; sc.timer = 5 + mrand(sc) * 6;
     }
   }
 
@@ -2808,6 +2871,12 @@ const HacFolk = (function () {
       if (OV) ovPeople.push(mk); else actors.push({ fx: mk.fx, fy: mk.fy, draw: (g, lx, ly) => drawWalker(g, lx, ly, mk, { banner: false }) });
       overlays.push({ draw: (g) => { const p = logic(mk.fx, mk.fy); npcBanner(g, p[0], p[1] - npcDy, mk.name, '市'); } });
     });
+    // Cronista: escriba fijo junto al edificio principal (mismo render que el mercader).
+    if (wk && wk.scribe) {
+      const sc = wk.scribe;
+      if (OV) ovPeople.push(sc); else actors.push({ fx: sc.fx, fy: sc.fy, draw: (g, lx, ly) => drawWalker(g, lx, ly, sc, { banner: false }) });
+      overlays.push({ draw: (g) => { const p = logic(sc.fx, sc.fy); npcBanner(g, p[0], p[1] - npcDy, sc.name, '史'); } });
+    }
     // Caballos sueltos: sprite como actor (con oclusión/profundidad) + su nombre encima.
     // Si su dueño está de VIAJE (lo va montando), el corcel no ronda: viaja con él.
     if (horses.length) {                               // caballos procedurales pastando
@@ -2886,6 +2955,8 @@ const HacFolk = (function () {
     });
     // Pregones del mercader.
     if (wk && wk.merchants) wk.merchants.forEach(mk => { if (mk.speech) overlays.push({ draw: (g) => { const p = logic(mk.fx, mk.fy); speechBubble(g, p[0], p[1], mk.speech); } }); });
+    // Murmullos del cronista.
+    if (wk && wk.scribe && wk.scribe.speech) overlays.push({ draw: (g) => { const p = logic(wk.scribe.fx, wk.scribe.fy); speechBubble(g, p[0], p[1], wk.scribe.speech); } });
 
     iso._hacSigns = signs;
     HacIso.frame(iso, actors, overlays);
@@ -3228,6 +3299,6 @@ const HacFolk = (function () {
     if (!running) paint();
   }
 
-  return { start, stop, list, select, selected, position, buildings, buildingTypes, setOrders, setEscaramuzas, setDebate, setHighlight, setCaballos, drawAvatar, mountSprite, MOUNT_NF: HORSE_FRAMES, goHome, consultar, consultando, dejarConsulta, mainBuildingId, repaintOverlay, refreshCargos, setCaravan, caravanHit, caravanActiva: () => !!caravan, setEnviado, esVisitante, revelarEnviado, enviadoAspecto, despedirEnviado };
+  return { start, stop, list, select, selected, position, buildings, buildingTypes, setOrders, setEscaramuzas, setDebate, setHighlight, setCaballos, drawAvatar, mountSprite, MOUNT_NF: HORSE_FRAMES, goHome, consultar, consultando, dejarConsulta, mainBuildingId, repaintOverlay, refreshCargos, setCaravan, caravanHit, caravanActiva: () => !!caravan, setEnviado, esVisitante, revelarEnviado, enviadoAspecto, despedirEnviado, cronista: () => (wk && wk.scribe) || null };
 })();
 if (typeof window !== 'undefined') window.HacFolk = HacFolk;

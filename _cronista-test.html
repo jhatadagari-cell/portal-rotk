@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Test · Cronista 史</title>
+<style>body{background:#10151a;margin:0;padding:20px;font-family:sans-serif;color:#ddd} canvas{width:100%;image-rendering:pixelated;display:block}</style>
+</head>
+<body>
+<p id="st">cargando…</p>
+<canvas id="cv"></canvas>
+<script src="assets/js/auth.js?v=4"></script>
+<script src="assets/js/hac-util.js?v=1"></script>
+<script src="assets/js/hac-rand.js?v=2"></script>
+<script src="assets/js/hac-clock.js?v=1"></script>
+<script src="assets/js/haciendas-data.js?v=11"></script>
+<script src="assets/js/hac-calc.js?v=7"></script>
+<script src="assets/js/hac-build.js?v=47"></script>
+<script src="assets/js/hac-tareas.js?v=2"></script>
+<script src="assets/js/personajes-data.js?v=2"></script>
+<script src="assets/js/hac-char.js?v=19"></script>
+<script src="assets/js/hac-render.js?v=5"></script>
+<script src="assets/js/hac-pixel.js?v=3"></script>
+<script src="assets/js/iso-sprites-meta.js?v=22"></script>
+<script src="assets/js/iso-sprites-extra.js?v=14"></script>
+<script src="assets/js/iso-sprites-wei.js?v=10"></script>
+<script src="assets/js/hac-flora.js?v=1"></script>
+<script src="assets/js/hac-iso.js?v=91"></script>
+<script src="assets/js/hac-dialog.js?v=2"></script>
+<script src="assets/js/hac-cronica.js?v=1"></script>
+<script src="assets/js/hac-folk.js?v=118"></script>
+<script>
+(function () {
+  const MAPA = { v: 1, estacion: 'verano', construcciones: [
+    { pos: [7, 6], tipo: 'salon', rot: 0, dueno: null, nivel: 1 },
+    { pos: [3, 6], tipo: 'mercado', rot: 0, dueno: null, nivel: 1 },
+    { pos: [12, 6], tipo: 'tablon', rot: 0, dueno: null, nivel: 1 },
+    { pos: [8, 10], tipo: 'camino' }, { pos: [8, 11], tipo: 'camino' }, { pos: [8, 12], tipo: 'camino' },
+    { pos: [7, 10], tipo: 'camino' }, { pos: [9, 10], tipo: 'camino' },
+    { pos: [3, 12], tipo: 'jardin-flores' }, { pos: [4, 12], tipo: 'jardin-flores' },
+  ] };
+  const MIEMBROS = [
+    { id: 't-a', nombre: 'Zhao Yun', puntos: 3000, desde: '2026', nota: '' },
+    { id: 't-b', nombre: 'Guan Yu', puntos: 600, desde: '2026', nota: '' },
+  ];
+  const cv = document.getElementById('cv');
+  try {
+    HacIso.draw(cv, { mapa: MAPA, tier: 2, color: '#b8842c', pabellones: [], estacion: 'verano' });
+    HacFolk.start(cv, { mapa: MAPA, tier: 2, color: '#b8842c', miembros: MIEMBROS, seedKey: 'cronista-test' });
+    document.getElementById('st').textContent = 'OK — salón en (7,6): el cronista 史 debe rondar junto a su puerta.';
+  } catch (e) { document.getElementById('st').textContent = 'ERROR: ' + e.message; console.error(e); }
+})();
+</script>
+</body>
+</html>

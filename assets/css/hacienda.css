@@ -1683,6 +1683,15 @@ button.hacp-slot.comida:hover{ background:rgba(127,201,160,.24); }
 .hacp-bit-txt{ flex:1; min-width:0; font:500 12.5px/1.4 'Noto Sans SC',sans-serif; color:var(--parch); }
 .hacp-bit-row.t-convocatoria .hacp-bit-txt{ font-weight:700; }
 .hacp-bit-act{ display:block; margin-top:7px; width:100%; }
+/* ── Crónica de la Casa 史 (pergamino compartido) ─────────────────────── */
+/* Papel envejecido sutil sobre la caja estándar; cada hecho lleva su sello 印. */
+.hacp-cro-box{ background:linear-gradient(180deg, rgba(233,215,170,.045), rgba(233,215,170,.015)), var(--panel,#141a20); }
+.hacp-cro-row{ display:flex; gap:9px; align-items:baseline; padding:7px 10px; border-radius:7px;
+  background:rgba(233,215,170,.045); border:1px solid rgba(201,168,76,.15); }
+.hacp-cro-sello{ flex:0 0 auto; width:20px; height:20px; display:grid; place-items:center; border-radius:5px;
+  background:linear-gradient(180deg,#a5321f,#7c2416); color:#f5e7c8; font:700 11px 'Noto Serif SC','Noto Sans SC',serif;
+  box-shadow:inset 0 0 0 1px rgba(230,193,90,.5), 0 1px 2px rgba(0,0,0,.35); align-self:center; }
+.hacp-cro-txt{ flex:1; min-width:0; font:500 12.5px/1.45 'Noto Sans SC',sans-serif; color:var(--parch); }
 /* ── Panel de RETOS SEMANALES ── */
 .hacp-retos-list{ display:flex; flex-direction:column; gap:10px; margin:4px 0 12px; }
 .hacp-reto{ padding:8px 10px; background:rgba(255,255,255,.035); border:1px solid rgba(201,168,76,.18); border-radius:9px; }
