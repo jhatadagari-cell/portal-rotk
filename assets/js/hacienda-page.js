@@ -121,6 +121,7 @@
             <p class="hacp-eyebrow">Mecenazgo · <b>${esc(tInfo.zh)}</b> ${esc(tInfo.nombre)} · Nivel ${tier}</p>
             <h1 class="hacp-name">${esc(h.nombre)}</h1>
             ${h.lema ? `<p class="hacp-lema">«${esc(h.lema)}»</p>` : ''}
+            ${_facH ? `<p class="hacp-fac-chip"><span class="hac-fac-emblem" style="--fc:${esc(_facH.color || '#b23b2e')}">${esc(_facH.zh || '⚑')}</span> Bajo el estandarte de <b>${esc(_facH.nombre)}</b></p>` : ''}
           </div>
           <span class="hacp-zh-big">${esc(glifo)}</span>
         </div>
@@ -3769,8 +3770,16 @@
       const it = HacFolk.list().find(w => w.id === id);
       if (!it) return null;
       const pj = window.HacPersonajes ? HacPersonajes.get(id) : null;
-      const aptId = pj ? pj.aptitud : '';
+      // Aptitud: del personaje vinculado; si es un NPC (talento) sale del propio walker.
+      const aptId = pj ? pj.aptitud : (it.aptitud || '');
       const aptDef = (window.HacPersonajeDefs && aptId) ? HacPersonajeDefs.aptitud(aptId) : null;
+      // TALENTO (consejero): su ficha vive en h.miembros; la bio, en la lista TALENTOS.
+      const mm = (h.miembros || []).find(m => String(m.personajeId || m.id) === String(id));
+      let talento = null;
+      if (mm && mm.npc) {
+        const tdef = mm.talentoId ? TALENTOS.find(t => t.id === mm.talentoId) : null;
+        talento = { estrellas: Number(mm.estrellas) || 0, apt: aptId, bio: (tdef && tdef.bio) || '', porNombre: mm.porNombre || '', desde: mm.desde || null };
+      }
       const eExact = window.HacEnergia ? HacEnergia.current(h.id, id) : 100;
       const e = Math.round(eExact);
       const eFull = window.HacEnergia && HacEnergia.tiempoLleno ? HacEnergia.tiempoLleno(h.id, id) : 0;   // seg hasta llenar
@@ -3805,7 +3814,7 @@
       const heridas = (window.HacStats && HacStats.heridas) ? HacStats.heridas(id) : 0;
       const secuelas = (window.HacStats && HacStats.secuelas) ? HacStats.secuelas(id) : [];
       const cargo = (window.HacCalc && HacCalc.cargoDef) ? HacCalc.cargoDef(((h.miembros || []).find(m => m.personajeId === id) || {}).cargo) : null;
-      return { it, aptId, aptDef, cargo, e, eFull, eRegenMin, activa, enTarea, fuera, exped, escaramuza, rest, mine: id === myId, puntos: puntosTotales(id), earned, money, home, ahorro, stats, equipN, heridas, secuelas };
+      return { it, aptId, aptDef, cargo, e, eFull, eRegenMin, activa, enTarea, fuera, exped, escaramuza, rest, mine: id === myId, puntos: puntosTotales(id), earned, money, home, ahorro, stats, equipN, heridas, secuelas, talento };
     }
     // ── ENVIADO: bloque de acciones en su panel ────────────────────────────
     // «Hablar» (cualquiera): abre la VENTANA de conversación (HacEnviadoVista).
@@ -4115,6 +4124,28 @@
       if (!DOM_ICON[dom]) return '';
       return `<svg class="dom-ic${cls ? ' ' + cls : ''}" viewBox="0 0 24 24" fill="${DOM_COLOR[dom]}" role="img" aria-label="${DOM_NOMBRE[dom] || dom}">${DOM_ICON[dom]}</svg>`;
     }
+    // Qué aporta EN PASIVO un consejero a la casa (1% por ★ · ver «SÉQUITO 部曲»).
+    function talentoAporteTxt(apt, stars) {
+      const p = Math.max(0, Number(stars) || 0);
+      if (apt === 'militar') return `+${p}% al dinero de escaramuza de la casa · acelera la investigación militar 武`;
+      if (apt === 'cultural') return `+${p}% a la XP de misiones de la casa · acelera la investigación cultural 文`;
+      if (apt === 'administrativo') return `−${p}% en los precios del mercado de la casa · acelera la investigación administrativa 政`;
+      return 'aún sin efecto (sin ★)';
+    }
+    // Panel del TALENTO (consejero): aptitud + ★ + qué aporta + bio + quién lo trajo.
+    // Sustituye a poder personal / equipo / heridas (irrelevantes en un NPC pasivo).
+    function talentoHTML(d) {
+      const t = d.talento; if (!t) return '';
+      const col = DOM_COLOR[t.apt] || '#c9a84c', glf = DOM_GLYPH[t.apt] || '', nom = DOM_NOMBRE[t.apt] || '';
+      const stars = Math.max(0, Math.min(5, t.estrellas || 0));
+      const starRow = stars ? `<span class="hacp-cp-tal-stars">${'★'.repeat(stars)}</span>` : '<span class="hacp-cp-tal-nostar">sin ★ · no aporta aún</span>';
+      return `<div class="hacp-cp-tal" style="--tc:${col}">
+        <div class="hacp-cp-tal-h"><span class="hacp-cp-tal-dom" style="background:${col}">${glf}</span><b>Consejero</b>${nom ? ` · ${esc(nom)}` : ''} ${starRow}</div>
+        <div class="hacp-cp-tal-aporte" data-tip="El séquito (部曲) rinde en pasivo: +1% por cada ★ y acelera la investigación de su pabellón.">⚑ Aporta a la casa: <b>${talentoAporteTxt(t.apt, stars)}</b></div>
+        ${t.bio ? `<div class="hacp-cp-tal-bio">“${esc(t.bio)}”</div>` : ''}
+        ${t.porNombre ? `<div class="hacp-cp-tal-by">招賢 Lo trajo a la casa <b>${esc(t.porNombre)}</b>${t.desde ? ` · desde el día ${esc(String(t.desde))}` : ''}</div>` : ''}
+      </div>`;
+    }
     function statsHTML(d) {
       if (!d.stats) return '';
       const chips = d.stats.map(s => {
@@ -4348,11 +4379,9 @@
           </div>
         </div>
         <div class="hacp-cp-act" id="hacp-cp-act">${d.it.inside ? '⌂ ' : ''}${esc(d.it.activity || 'Paseando por la finca')}</div>
-        <div class="hacp-cp-energy" data-tip="Energía: ${d.e}%. Se gasta al enviar tareas y expediciones, y se regenera con el tiempo. Sin energía no puedes salir." title="Energía ${d.e}%"><i id="hacp-cp-ebar" style="width:${d.e}%"></i></div>
-        <div class="hacp-cp-elabel" id="hacp-cp-elabel">${energyLabel(d)}</div>
-        ${statsHTML(d)}
-        ${equipoHTML(d)}
-        ${woundsHTML(d)}
+        ${d.talento ? '' : `<div class="hacp-cp-energy" data-tip="Energía: ${d.e}%. Se gasta al enviar tareas y expediciones, y se regenera con el tiempo. Sin energía no puedes salir." title="Energía ${d.e}%"><i id="hacp-cp-ebar" style="width:${d.e}%"></i></div>
+        <div class="hacp-cp-elabel" id="hacp-cp-elabel">${energyLabel(d)}</div>`}
+        ${d.talento ? talentoHTML(d) : `${statsHTML(d)}${equipoHTML(d)}${woundsHTML(d)}`}
         ${d.it.visitante ? envoyHTML(d) : ''}
         ${(esVisita && window.HacVisitaDialogo && HacVisitaDialogo.tiene(d.it.realName || d.it.name)) ? `<button type="button" class="hacp-cp-btn hacp-cp-talk" data-act="visita-talk">💬 Hablar con ${esc(d.it.name)}</button>` : ''}
         ${d.mine ? toolbarHTML(d) : ''}
@@ -4424,6 +4453,7 @@
           if (window.HacFolk && HacFolk.setEnviado) HacFolk.setEnviado(null);
           const facNm = (r && r.faccionNombre) || 'la nueva facción';
           toast('⚑ Vuestra hacienda se une a ' + facNm);
+          redrawIso();   // los estandartes del portón ondean ya en el color del reino (sin recargar)
           deselect();
         } catch (e) { toast('No se pudo aceptar: ' + (e && e.message || '')); }
       }
@@ -7387,19 +7417,41 @@
       openMissionBoard();                  // abre el listado DIRECTAMENTE (sin caminar al tablón)
     }
 
+    // Emblema (sello) de facción para el listado/HUD: glifo del reino sobre su color.
+    function facEmblemHTML(zh, color, cls) {
+      return `<span class="hac-fac-emblem${cls ? ' ' + cls : ''}" style="--fc:${esc(color || '#b23b2e')}">${esc(zh || '⚑')}</span>`;
+    }
     function itemHTML(m, sel) {
       const mine = m.id === myId;
+      // ── ENVIADO de una facción (visitante): fila propia con el SELLO de su reino y
+      //    el rótulo «Enviado de Wu». Su nombre solo se muestra si ya hablaste con él.
+      if (m.visitante) {
+        const fac = (m.faccionId && window.HacFacciones && HacFacciones.get) ? HacFacciones.get(m.faccionId) : null;
+        const facCol = (fac && fac.color) || '#b23b2e', facZh = m.facZh || (fac && fac.zh) || '', facNm = m.facNombre || (fac && fac.nombre) || 'otra casa';
+        const rotulo = m.reveal ? esc(m.name) : 'Enviado';
+        const bubble = m.quiereHablar ? ' <span class="hacp-folk-bubble" title="Quiere hablar contigo">💬</span>' : '';
+        return `<li><button class="hacp-folk-item envoy${m.id === sel ? ' on' : ''}" data-id="${esc(m.id)}">
+          ${facEmblemHTML(facZh, facCol)}
+          <span class="hacp-folk-info">
+            <span class="hacp-folk-name">${rotulo}${bubble} <em class="hacp-folk-tag" style="--fc:${esc(facCol)}">✉ Enviado de ${esc(facNm)}</em></span>
+            <span class="hacp-folk-state${m.inside ? ' inside' : ''}">${m.inside ? '⌂ ' : ''}${esc(m.activity || 'Aguarda ante el portón')}</span>
+          </span></button></li>`;
+      }
       const e = Math.round(window.HacEnergia ? HacEnergia.current(h.id, m.id) : 100);
       // Icono de "trabajando" (en misión): lo derivamos del estado COMPARTIDO, así
       // que todos los que miran la finca lo ven en ese mecenas.
       const work = m.onMission ? ' <span class="hacp-folk-work" title="En misión">⚒</span>' : '';
       const bubble = (esVisita && m.quiereHablar) ? ' <span class="hacp-folk-bubble" title="Tiene algo que decir">💬</span>' : '';
-      return `<li><button class="hacp-folk-item${m.id === sel ? ' on' : ''}${mine ? ' mine' : ''}" data-id="${esc(m.id)}">
+      // TALENTO (consejero): distintivo de dominio (武/文/政) + ★ junto al nombre.
+      const DGL = { militar: '武', cultural: '文', administrativo: '政' }, DCO = { militar: '#b23b2e', cultural: '#3a8a5a', administrativo: '#3a6ea5' };
+      const esTalento = m.npc && m.aptitud;
+      const domTag = esTalento ? ` <span class="hacp-folk-dom" style="--dc:${DCO[m.aptitud] || '#c9a84c'}" title="Consejero ${esc(m.aptitud)}">${DGL[m.aptitud] || ''}</span>${m.estrellas ? `<span class="hacp-folk-stars" title="${m.estrellas}★ de servicio">${'★'.repeat(Math.min(5, m.estrellas))}</span>` : ''}` : '';
+      return `<li><button class="hacp-folk-item${m.id === sel ? ' on' : ''}${mine ? ' mine' : ''}${esTalento ? ' talento' : ''}" data-id="${esc(m.id)}">
         <span class="hacp-folk-dot" style="--c:${esc(m.color)}"></span>
         <span class="hacp-folk-info">
-          <span class="hacp-folk-name">${esc(m.name)}${work}${bubble}${mine ? ' <em style="color:#7fc9a0;font-style:normal">(tú)</em>' : ''}</span>
+          <span class="hacp-folk-name">${esc(m.name)}${domTag}${work}${bubble}${mine ? ' <em style="color:#7fc9a0;font-style:normal">(tú)</em>' : ''}</span>
           <span class="hacp-folk-state${m.inside ? ' inside' : ''}">${m.inside ? '⌂ ' : ''}${esc(m.activity || 'Paseando por la finca')}</span>
-          <span class="hacp-folk-energy" title="Energía ${e}%" style="display:block;height:4px;margin-top:3px;border-radius:2px;background:rgba(255,255,255,.14);overflow:hidden"><i style="display:block;height:100%;width:${e}%;background:linear-gradient(90deg,#e0b85a,#7fc9a0)"></i></span>
+          ${esTalento ? '' : `<span class="hacp-folk-energy" title="Energía ${e}%" style="display:block;height:4px;margin-top:3px;border-radius:2px;background:rgba(255,255,255,.14);overflow:hidden"><i style="display:block;height:100%;width:${e}%;background:linear-gradient(90deg,#e0b85a,#7fc9a0)"></i></span>`}
         </span></button></li>`;
     }
     function renderList() {

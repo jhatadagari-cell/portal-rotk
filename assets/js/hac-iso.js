@@ -168,6 +168,10 @@ const HacIso = (function () {
     const dims = B ? B.gridDims(tier) : [2 + tier, 2 + tier];
     const GW = dims[0], GH = dims[1];
     const casa = safeColor(opts.color);
+    // FACCIÓN de la hacienda (si se adhirió a un reino): los estandartes del portón
+    // ondean en SU color con su glifo (吳/蜀/魏…) en vez del color liso de la casa.
+    const facH = (opts.mapa && opts.mapa.faccion && window.HacFacciones && HacFacciones.get) ? HacFacciones.get(opts.mapa.faccion) : null;
+    const facColH = facH ? safeColor(facH.color) : null, facZhH = (facH && facH.zh) || '';
 
     // Resolución de sprites por TEMA (arte a mano por hacienda): una clave que el
     // tema redefine usa SU meta (anclaje/tamaño) e imagen de 'tema/clave'; el resto
@@ -809,7 +813,7 @@ const HacIso = (function () {
       const eN = -M - 0.5 - wt / 2, eE = GW - 1 + M + 0.5 + wt / 2, eW = GH - 1 + M + 0.5 + wt / 2;
       const z0 = WD.towers ? WD.h + 31 : 0, zt = WD.towers ? WD.h + 50 : WD.h + 28;
       [[eN, eN], [eE, eN], [eN, eW]].forEach(([gx, gy], i) => pennants.push({ gx, gy, z0, zt, len: 14, phase: i * 1.3, box: [gx - 0.4, gy - 0.4, gx + 0.4, gy + 0.4] }));
-      if (WD.gate) [-2.3, 2.3].forEach((dx, i) => pennants.push({ gx: gateGc + dx, gy: FLi - 0.9, z0: 0, zt: WD.h + 24, len: 14, phase: i * 1.1 + 0.6, box: [gateGc + dx - 0.4, FLi - 1.3, gateGc + dx + 0.4, FLi - 0.5] }));
+      if (WD.gate) [-2.3, 2.3].forEach((dx, i) => pennants.push({ gx: gateGc + dx, gy: FLi - 0.9, z0: 0, zt: WD.h + 24, len: 14, phase: i * 1.1 + 0.6, fac: true, box: [gateGc + dx - 0.4, FLi - 1.3, gateGc + dx + 0.4, FLi - 0.5] }));
     }
     } else { drawWeiPerimeter(); }
 
@@ -896,6 +900,9 @@ const HacIso = (function () {
     const flav = casa;
     const shF = (t) => t >= 0 ? light(flav, t) : dark(flav, -t);
     const pennant = (p) => {
+      // Estandartes del portón: color de FACCIÓN si la hay; el resto, color de casa.
+      const useFac = !!(p.fac && facColH), flavP = useFac ? facColH : flav;
+      const sh = (t) => t >= 0 ? light(flavP, t) : dark(flavP, -t);
       const top = Pg(p.gx, p.gy, p.zt), base = Pg(p.gx, p.gy, p.z0), W = 3.2, L = p.len;
       seg(base, top, '#7a5a32'); seg([base[0] + 1, base[1]], [top[0] + 1, top[1]], '#5a4426');     // asta
       poly([[top[0], top[1] - 7], [top[0] - 1.5, top[1] - 2], [top[0] + 1.5, top[1] - 2]], '#d8b048');  // punta de lanza
@@ -904,11 +911,19 @@ const HacIso = (function () {
       const rows = 10;
       for (let i = 0; i < rows; i++) {
         const u = i / rows, u1 = (i + 1) / rows, cx = top[0] + sway(u), cx1 = top[0] + sway(u1), y = top[1] + 1 + u * L, y1 = top[1] + 1 + u1 * L;
-        poly([[cx - W, y], [cx + W, y], [cx1 + W, y1], [cx1 - W, y1]], shF((i % 2 ? -0.05 : 0.05) - u * 0.12));
-        seg([cx, y], [cx1, y1], shF(0.18));                          // franja central clara
+        poly([[cx - W, y], [cx + W, y], [cx1 + W, y1], [cx1 - W, y1]], sh((i % 2 ? -0.05 : 0.05) - u * 0.12));
+        seg([cx, y], [cx1, y1], sh(0.18));                          // franja central clara
       }
       const cb = top[0] + sway(1), yb = top[1] + 1 + L;
-      poly([[cb - W, yb - 1], [cb - W, yb + 5], [cb, yb + 1.5], [cb + W, yb + 5], [cb + W, yb - 1]], shF(-0.12));   // cola de golondrina
+      poly([[cb - W, yb - 1], [cb - W, yb + 5], [cb, yb + 1.5], [cb + W, yb + 5], [cb + W, yb - 1]], sh(-0.12));   // cola de golondrina
+      // Glifo del reino (吳/蜀/魏) bordado en el paño, siguiendo el ondeo.
+      if (useFac && facZhH) {
+        const u = 0.34, gx = top[0] + sway(u), gy = top[1] + 1 + u * L + 3;
+        g.save(); g.setTransform(SCALE, 0, 0, SCALE, 0, 0);
+        g.fillStyle = 'rgba(0,0,0,.28)'; g.font = '700 6px "Noto Serif SC","Noto Sans SC",serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+        g.fillText(facZhH, gx + 0.4, gy + 0.5); g.fillStyle = '#fff6df'; g.fillText(facZhH, gx, gy);
+        g.restore();
+      }
     };
 
     // ── Orden de pintado: comparador isométrico por caja de huella ─────────

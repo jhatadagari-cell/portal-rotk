@@ -188,6 +188,22 @@ html.hacp-pseudofs, html.hacp-pseudofs body{ overflow:hidden; }
 .hacp-folk-info{ display:flex; flex-direction:column; min-width:0; }
 .hacp-folk-name{ font-size:12.5px; color:var(--parch); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .hacp-folk-state{ font-size:10px; color:var(--parch2); opacity:.7; }
+/* Emblema (sello) de facción — reutilizable en listado y HUD. */
+.hac-fac-emblem{ flex:none; display:inline-flex; align-items:center; justify-content:center; width:20px; height:20px;
+  border-radius:50%; color:#fff8e6; font:700 11px 'Noto Serif SC','Noto Sans SC',serif;
+  background:radial-gradient(circle at 34% 30%, color-mix(in srgb,var(--fc,#b23b2e) 55%, #fff 45%), var(--fc,#b23b2e) 72%);
+  box-shadow:0 0 0 1.5px #d8b65a, 0 0 0 2.5px rgba(0,0,0,.45), 0 1px 3px rgba(0,0,0,.4);
+  text-shadow:0 1px 1px rgba(0,0,0,.5); }
+/* Enviado en el listado: fila con acento dorado y rótulo de reino. */
+.hacp-folk-item.envoy{ background:rgba(216,182,90,.07); border-color:rgba(216,182,90,.28); }
+.hacp-folk-item.envoy:hover{ background:rgba(216,182,90,.14); }
+.hacp-folk-tag{ font-style:normal; font-size:10px; font-weight:700; color:var(--fc,#e7c66a);
+  filter:brightness(1.25); opacity:.95; }
+/* Talento (consejero) en el listado: distintivo de dominio + ★. */
+.hacp-folk-dom{ display:inline-flex; align-items:center; justify-content:center; width:15px; height:15px; vertical-align:-2px;
+  border-radius:4px; background:var(--dc,#c9a84c); color:#fff; font:700 9px 'Noto Serif SC','Noto Sans SC',serif;
+  box-shadow:0 0 0 1px rgba(0,0,0,.35) inset; margin-left:2px; }
+.hacp-folk-stars{ color:#f2cf6b; font-size:9px; letter-spacing:.5px; margin-left:2px; }
 .hacp-folk-pop{
   position:fixed; z-index:70; min-width:120px; max-width:220px;
   background:rgba(18,14,9,.96); border:1px solid rgba(201,168,76,.4); border-radius:5px;
@@ -241,6 +257,22 @@ html.hacp-pseudofs, html.hacp-pseudofs body{ overflow:hidden; }
 .hacp-cp-energy i{ display:block; height:100%; background:linear-gradient(90deg,#e0b85a,#7fc9a0); transition:width .4s ease; }
 .hacp-cp-elabel{ font-size:11px; color:var(--parch2); margin:4px 0 0; }
 .hacp-cp-elabel b{ color:#e0b85a; }
+/* Talento (consejero 部曲): aptitud + ★ + qué aporta + bio + quién lo trajo. */
+.hacp-cp-tal{ margin:9px 0 2px; padding:8px 10px; border-radius:8px;
+  background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(0,0,0,.06));
+  border:1px solid color-mix(in srgb, var(--tc,#c9a84c) 42%, transparent); border-left:3px solid var(--tc,#c9a84c); }
+.hacp-cp-tal-h{ display:flex; align-items:center; gap:7px; font-size:12.5px; color:var(--parch); }
+.hacp-cp-tal-h b{ color:#f0e2c2; }
+.hacp-cp-tal-dom{ display:inline-flex; align-items:center; justify-content:center; width:20px; height:20px;
+  border-radius:50%; color:#fff; font:700 12px 'Noto Serif SC','Noto Sans SC',serif; flex:0 0 auto;
+  box-shadow:0 0 0 1px rgba(0,0,0,.35) inset; }
+.hacp-cp-tal-stars{ margin-left:auto; color:#f2cf6b; font-size:11px; letter-spacing:1px; }
+.hacp-cp-tal-nostar{ margin-left:auto; color:var(--parch2); opacity:.7; font-size:10.5px; font-style:italic; }
+.hacp-cp-tal-aporte{ font-size:11.5px; color:var(--parch2); margin-top:6px; cursor:help; }
+.hacp-cp-tal-aporte b{ color:#e7c66a; font-weight:700; }
+.hacp-cp-tal-bio{ font-size:11px; color:var(--parch2); opacity:.85; font-style:italic; margin-top:6px; line-height:1.35; }
+.hacp-cp-tal-by{ font-size:10.5px; color:var(--parch2); opacity:.75; margin-top:6px; }
+.hacp-cp-tal-by b{ color:var(--parch); }
 /* Stats 武/文/政: "Poder personal" — nivel por dominio (del XP) + bono de equipo. */
 .hacp-cp-stats{ margin:9px 0 2px; }
 .hacp-cp-statslbl{ font:700 10px 'Cinzel Decorative',serif; letter-spacing:.06em; text-transform:uppercase; color:var(--hac,var(--gold)); opacity:.85; margin-bottom:5px; }
